@@ -14,7 +14,19 @@ M.get_debug_dll = function()
 end
 
 local function find_dll_from_bin(folder, filename)
-  return require("plenary.scandir").scan_dir({ folder }, { search_pattern = filename, depth = 6 })[1]
+  if filename == ".dll" then
+    error("Cant find .dll")
+  end
+  local dlls = require("plenary.scandir").scan_dir({ folder }, {
+    search_pattern = function(i)
+      return i:match(filename)
+    end,
+    depth = 6
+  })
+  if #dlls == 0 then
+    error("Failed to find " .. filename .. " did you forget to build")
+  end
+  return dlls[1]
 end
 
 M.get_dll_for_solution_project = function(sln_file)
@@ -26,16 +38,17 @@ M.get_dll_for_solution_project = function(sln_file)
   if #runnable_projects == 0 then
     error("No runnable projects found")
   elseif #runnable_projects > 1 then
-    dll_name = require("easy-dotnet.picker").pick_sync(nil, runnable_projects, "Select project to debug")
+    dll_name = picker.pick_sync(nil, runnable_projects, "Select project to debug")
   end
 
   dll_name = dll_name or runnable_projects[1]
 
-  local path = dll_name.path
-  local lastIndex = path:find("[^/]*$")
-  local newPath = path:sub(1, lastIndex - 1) .. "bin"
+  if dll_name == nil then
+    error("No project selected")
+  end
+  local path = dll_name.path:gsub("([^\\/]+)%.csproj$", "")
   local filename = dll_name.name .. ".dll"
-  return find_dll_from_bin(newPath, filename)
+  return find_dll_from_bin(path, filename)
 end
 
 M.get_dll_for_csproject_project = function()
