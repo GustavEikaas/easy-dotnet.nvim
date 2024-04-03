@@ -1,14 +1,16 @@
 local extensions = require "easy-dotnet.extensions"
 local M = {}
 
-local function normalize_path(path)
-  return vim.fn.getcwd() .. "/" .. path:gsub("\\", "/")
+-- Generates a relative path from cwd to the project.csproj file
+local function generate_relative_path_for_project(path, slnpath)
+  return slnpath:gsub("([^\\/]+)%.sln$", "") .. path
 end
 
 M.get_projects_from_sln = function(solutionFilePath)
   local file = io.open(solutionFilePath, "r")
 
   if not file then
+    -- require("easy-dotnet.debug").write_to_log("Failed to open solution file: " .. solutionFilePath)
     error("Failed to open file " .. solutionFilePath)
   end
   local regexp = 'Project%("{(.-)}"%).*= "(.-)", "(.-)", "{.-}"'
@@ -23,13 +25,14 @@ M.get_projects_from_sln = function(solutionFilePath)
 
   local projects = extensions.map(projectLines, function(line)
     local id, name, path = line:match(regexp)
+    local project_file_path = generate_relative_path_for_project(path, solutionFilePath)
     return {
       display = name,
       name = name,
-      path = normalize_path(path),
+      path = project_file_path,
       id = id,
-      runnable = M.is_web_project(normalize_path(path)),
-      secrets = M.has_secrets(normalize_path(path))
+      runnable = M.is_web_project(project_file_path),
+      secrets = M.has_secrets(project_file_path)
     }
   end)
   file:close()
@@ -43,6 +46,7 @@ M.has_secrets = function(project_file_path)
   local pattern = "<UserSecretsId>([a-fA-F0-9%-]+)</UserSecretsId>"
   local file = io.open(project_file_path, "r")
   if not file then
+    -- require("easy-dotnet.debug").write_to_log("Failed to open project file: " .. project_file_path)
     return false, "File not found or cannot be opened"
   end
 
@@ -64,6 +68,7 @@ M.is_web_project = function(project_file_path)
 
   local file = io.open(project_file_path, "r")
   if not file then
+    -- require("easy-dotnet.debug").write_to_log("Failed to open project file: " .. project_file_path)
     vim.notify("Failed to open project file " .. project_file_path)
     return false, "File not found or cannot be opened"
   end
