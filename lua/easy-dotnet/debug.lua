@@ -1,9 +1,9 @@
 local M = {}
 
 M.write_to_log = function(message)
-  local lazypath = vim.fn.stdpath "data" .. "/easy-dotnet-log.txt"
+  local log_path = vim.fn.stdpath "data" .. "/easy-dotnet-log.txt"
   -- Open the file in append mode
-  local file, err = vim.loop.fs_open(lazypath, "a", 438) -- 438 is the octal value for file permissions 0666
+  local file, err = vim.loop.fs_open(log_path, "a", 438) -- 438 is the octal value for file permissions 0666
 
   if err then
     print("Error opening file: " .. err)
