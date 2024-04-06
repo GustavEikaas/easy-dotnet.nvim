@@ -29,7 +29,7 @@ M.run_test_picker = function(on_select)
     return
   end
 
-  -- Add an entry for the solutiuon file itself as it will run all tests in its definition
+  -- Add an entry for the solution file itself as it will run all tests in its definition
   table.insert(projects, {
     path = solutionFilePath,
     display = "All"

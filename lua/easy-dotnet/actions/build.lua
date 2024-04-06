@@ -29,7 +29,7 @@ M.build_project_picker = function(term)
     return
   end
 
-  -- Add an entry for the solutiuon file itself as it will run all tests in its definition
+  -- Add an entry for the solution file
   table.insert(projects, {
     path = solutionFilePath,
     display = "All"
