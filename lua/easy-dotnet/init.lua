@@ -1,7 +1,8 @@
+local options = require("easy-dotnet.options")
+
 local M = {}
 
-local options = require("easy-dotnet.options")
-local run_project = require("easy-dotnet.run_project")
+local actions = require("easy-dotnet.actions")
 local secrets = require("easy-dotnet.secrets")
 local debug = require("easy-dotnet.debugger")
 
@@ -18,12 +19,25 @@ end
 
 M.setup = function(opts)
   local merged_opts = merge_tables(options, opts or {})
+
   local commands = {
     secrets = function()
       secrets.edit_secrets_picker(merged_opts.secrets.on_select)
     end,
     run = function()
-      run_project.run_project_picker(merged_opts.run_project.on_select)
+      actions.run(merged_opts.terminal)
+    end,
+    test = function()
+      actions.test(merged_opts.terminal)
+    end,
+    install = function()
+      actions.restore(merged_opts.terminal)
+    end,
+    restore = function()
+      actions.restore(merged_opts.terminal)
+    end,
+    build = function()
+      actions.build(merged_opts.terminal)
     end
   }
 
@@ -40,12 +54,10 @@ M.setup = function(opts)
 
   vim.api.nvim_command('command! -nargs=* Dotnet lua handle_dotnet_command(<f-args>)')
 
-  M.run_project = function()
-    run_project.run_project_picker(merged_opts.run_project.on_select)
-  end
-  M.secrets = function()
-    secrets.edit_secrets_picker(merged_opts.secrets.on_select)
-  end
+  M.test_project = commands.test
+  M.run_project = commands.run
+  M.restore = commands.restore
+  M.secrets = commands.secrets
 end
 
 M.get_debug_dll = debug.get_debug_dll

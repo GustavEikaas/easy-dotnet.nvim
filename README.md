@@ -8,9 +8,16 @@ I wrote this plugin because I couldnt find any plugin that seems to seem this pr
 
 - [x] Solution support
 - [x] Csproj support
+- [ ] Actions
+    - [x] Build
+    - [x] Run
+    - [x] Test
+    - [x] Restore
 - [x] Get dll for debugging
-- [x] Resolve runnable webapi projects
-- [ ] Resolve test projects
+- [x] Resolve different types of projects
+    - [x] Web
+    - [x] Test
+    - [x] Console
 - [ ] .Net user secrets
     - [x] Open user-secrets in a buffer
     - [ ] Create new user-secrets
@@ -23,7 +30,29 @@ return {
   dependencies = { "nvim-lua/plenary.nvim", 'nvim-telescope/telescope.nvim', },
   config = function()
     local dotnet = require("easy-dotnet")
+    -- Options are not required
     dotnet.setup({
+      ---@param action "test"|"restore"|"build"|"run"
+      terminal = function(path, action)
+        local commands = {
+          run = function(path)
+            return "dotnet run --project " .. path
+          end,
+          test = function(path)
+            return "dotnet test " .. path
+          end,
+          restore = function(path)
+            return "dotnet restore " .. path
+          end,
+          build = function(path)
+            return "dotnet build " .. path
+          end
+        }
+        local command = commands[action](path) .. "\r"
+        vim.cmd('term')
+        vim.cmd('startinsert!')
+        vim.api.nvim_feedkeys(string.format("%s", command), 'n', true)
+      end,
       secrets = {
         on_select = function(selectedItem)
           local home_dir = vim.fn.expand('~')
@@ -37,13 +66,6 @@ return {
           end
         end
       },
-      run_project = {
-        on_select = function(selectedItem)
-          vim.cmd('terminal')
-          local command = "dotnet run --project " .. selectedItem.path .. "\r\n"
-          vim.api.nvim_feedkeys(command, 'n', true)
-        end
-      }
     })
 
     vim.api.nvim_create_user_command('Secrets', function()
