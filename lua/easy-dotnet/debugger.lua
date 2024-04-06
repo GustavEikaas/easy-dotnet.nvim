@@ -1,8 +1,9 @@
 local M = {}
 local extensions = require("easy-dotnet.extensions")
-local csproj_parse = require("easy-dotnet.csproj-parse")
-local sln_parse = require("easy-dotnet.sln-parse")
 local picker = require("easy-dotnet.picker")
+local parsers = require("easy-dotnet.parsers")
+local csproj_parse = parsers.csproj_parser
+local sln_parse = parsers.sln_parser
 
 M.get_debug_dll = function()
   local sln_file = sln_parse.find_solution_file()
