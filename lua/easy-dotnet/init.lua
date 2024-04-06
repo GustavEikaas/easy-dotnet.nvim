@@ -40,13 +40,12 @@ M.setup = function(opts)
 
   vim.api.nvim_command('command! -nargs=* Dotnet lua handle_dotnet_command(<f-args>)')
 
-  vim.api.nvim_create_user_command('Secrets', function()
-    secrets.edit_secrets_picker(merged_opts.secrets.on_select)
-  end, {})
-
-  vim.keymap.set("n", "<C-p>", function()
+  M.run_project = function()
     run_project.run_project_picker(merged_opts.run_project.on_select)
-  end)
+  end
+  M.secrets = function()
+    secrets.edit_secrets_picker(merged_opts.secrets.on_select)
+  end
 end
 
 M.get_debug_dll = debug.get_debug_dll
