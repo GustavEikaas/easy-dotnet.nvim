@@ -36,28 +36,29 @@ end
 
 -- Function to find the corresponding .csproj file
 M.get_project_from_csproj = function(csproj_file_path)
-  local name = extractProjectName(csproj_file_path)
+  local display = extractProjectName(csproj_file_path)
+  local name = display
   local isWebProject = M.is_web_project(csproj_file_path)
   local isConsoleProject = M.is_console_project(csproj_file_path)
   local isTestProject = M.is_test_project(csproj_file_path)
   local maybeSecretGuid = M.try_get_secret_id(csproj_file_path)
   local version = M.extract_version(csproj_file_path)
-  name = name .. "@" .. version
+  display = display .. "@" .. version
   if isTestProject then
-    name = name .. " 󰙨"
+    display = display .. " 󰙨"
   end
   if maybeSecretGuid then
-    name = name .. " "
+    display = display .. " "
   end
   if isWebProject then
-    name = name .. " 󱂛"
+    display = display .. " 󱂛"
   end
   if isConsoleProject then
-    name = name .. " 󰆍"
+    display = display .. " 󰆍"
   end
 
   return {
-    display = name,
+    display = display,
     path = csproj_file_path,
     name = name,
     version = version,
@@ -80,7 +81,7 @@ end
 
 M.is_console_project = function(project_file_path)
   return type(extract_from_project(project_file_path, '<%s*OutputType%s*>%s*(exe|winexe|library)%s*</%s*OutputType%s*>')) ==
-  "string"
+      "string"
 end
 
 M.is_test_project = function(project_file_path)
