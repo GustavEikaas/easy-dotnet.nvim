@@ -9,6 +9,7 @@ local function csproj_fallback(on_secret_selected)
   local csproj_path = csproj_parse.find_csproj_file()
   if (csproj_path == nil) then
     vim.notify("No .sln or .csproj file found in cwd")
+    return
   end
   local csproj = csproj_parse.get_project_from_csproj(csproj_path)
   if csproj.secrets == false then

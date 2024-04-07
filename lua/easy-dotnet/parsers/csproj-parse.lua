@@ -22,6 +22,10 @@ M.get_project_from_csproj = function(csproj_file_path)
 end
 
 M.try_get_secret_id = function(project_file_path)
+  if project_file_path == nil then
+    return false, "No path"
+  end
+
   local pattern = "<UserSecretsId>([a-fA-F0-9%-]+)</UserSecretsId>"
   local file = io.open(project_file_path, "r")
   if not file then
@@ -41,6 +45,9 @@ end
 
 -- Used for checking if a specific pattern is present in a file
 local function is_in_project_file(project_file_path, pattern)
+  if project_file_path == nil then
+    return false, "No path"
+  end
   local file = io.open(project_file_path, "r")
   if not file then
     return false, "File not found or cannot be opened"
@@ -68,7 +75,7 @@ end
 
 
 M.find_csproj_file = function()
-  local file = require("plenary.scandir").scan_dir({ ".", "./src" }, { search_pattern = "%.csproj$", depth = 3 })
+  local file = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.csproj$", depth = 3 })
   return file[1]
 end
 
