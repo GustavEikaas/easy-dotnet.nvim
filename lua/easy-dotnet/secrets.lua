@@ -4,6 +4,7 @@ local parsers = require("easy-dotnet.parsers")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local picker = require("easy-dotnet.picker")
+local error_messages = require("easy-dotnet.error-messages")
 
 --- Reads a file and returns the lines in a lua table
 ---@param filePath string
@@ -26,22 +27,20 @@ end
 --- Generates a secret preview for telescope
 ---@param self table Telescope self
 ---@param entry table
-local secrets_preview = function(self, entry)
+local secrets_preview = function(self, entry, get_secret_path)
   if entry.value.secrets == false then
     vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "Secrets file does not exist", "<CR> to create" })
     return
   end
-  local home_dir = vim.fn.expand('~')
-  local secret_path = home_dir ..
-      '\\AppData\\Roaming\\Microsoft\\UserSecrets\\' .. entry.value.secrets .. "\\secrets.json"
-  local content = readFile(secret_path)
+  local content = readFile(get_secret_path(entry.value.secrets))
   vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, content)
 end
 
 --- Initializes secrets for a given project
 ---@param project_file_path string
+---@param get_secret_path function
 ---@return string
-local init_secrets = function(project_file_path)
+local init_secrets = function(project_file_path, get_secret_path)
   local function extract_secret_guid(commandOutput)
     local guid = commandOutput:match("UserSecretsId to '([%a%d%-]+)'")
     return guid
@@ -52,33 +51,39 @@ local init_secrets = function(project_file_path)
     error("Failed to create user-secrets for " .. project_file_path)
   end
   local value = handler:read("*a")
-  require("easy-dotnet.debug").write_to_log(value)
   local guid = extract_secret_guid(value)
+  local path = get_secret_path(guid)
+  local parentDir = path:gsub("secrets%.json$", "")
+  os.execute("mkdir " .. parentDir)
+  os.execute("echo { } >> " .. path)
 
-  require("easy-dotnet.debug").write_to_log("secret_guid " .. guid)
   handler:close()
   vim.notify("User secrets created")
   return guid
 end
 
-local function csproj_fallback(on_secret_selected)
+local function csproj_fallback(get_secret_path)
   local csproj_path = csproj_parse.find_csproj_file()
   if (csproj_path == nil) then
-    vim.notify("No .sln or .csproj file found in cwd")
+    vim.notify(error_messages.no_project_definition_found)
     return
   end
+
   local csproj = csproj_parse.get_project_from_csproj(csproj_path)
   if csproj.secrets == false then
-    vim.notify(csproj_path .. " has no secret file")
-    return
+    local secret_id = init_secrets(csproj.path, get_secret_path)
+    csproj.secrets = secret_id
   end
-  picker.picker(nil, { csproj }, on_secret_selected, "Secrets")
+  picker.picker(nil, { csproj }, function(i)
+    local path = get_secret_path(i.secrets)
+    vim.cmd("edit! " .. path)
+  end, "Secrets")
 end
 
-M.edit_secrets_picker = function(on_secret_selected)
+M.edit_secrets_picker = function(get_secret_path)
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
-    csproj_fallback(on_secret_selected)
+    csproj_fallback(get_secret_path)
     return
   end
 
@@ -87,16 +92,20 @@ M.edit_secrets_picker = function(on_secret_selected)
   end)
 
   if #projectsWithSecrets == 0 then
-    vim.notify(" No secrets found")
+    vim.notify(error_messages.no_runnable_projects_found)
     return
   end
+
   picker.preview_picker(nil, projectsWithSecrets, function(item)
     if item.secrets == false then
-      local secret_id = init_secrets(item.path)
+      local secret_id = init_secrets(item.path, get_secret_path)
       item.secrets = secret_id
     end
-    on_secret_selected(item)
-  end, "Secrets", secrets_preview)
+    local path = get_secret_path(item.secrets)
+    vim.cmd("edit! " .. path)
+  end, "Secrets", function(self, entry)
+    secrets_preview(self, entry, get_secret_path)
+  end)
 end
 
 return M

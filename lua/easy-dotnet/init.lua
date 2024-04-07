@@ -21,7 +21,7 @@ M.setup = function(opts)
 
   local commands = {
     secrets = function()
-      secrets.edit_secrets_picker(merged_opts.secrets.on_select)
+      secrets.edit_secrets_picker(merged_opts.secrets.path)
     end,
     run = function()
       actions.run(merged_opts.terminal)
