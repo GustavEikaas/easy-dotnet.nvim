@@ -18,9 +18,11 @@ I wrote this plugin because I couldnt find any plugin that seems to seem this pr
     - [x] Web
     - [x] Test
     - [x] Console
-- [ ] .Net user secrets
+- [x] Resolve target-framework of project
+- [x] .Net user secrets
     - [x] Open user-secrets in a buffer
-    - [ ] Create new user-secrets
+    - [x] Create new user-secrets
+    - [x] Secrets preview in picker
 
 ## Setup
 ```lua

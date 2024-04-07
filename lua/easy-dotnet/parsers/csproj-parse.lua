@@ -42,17 +42,21 @@ M.get_project_from_csproj = function(csproj_file_path)
   }
 end
 
-M.extract_version = function(project_file_path)
+---
+---@param project_file_path string
+---@param pattern string
+---@return string | false
+local function extract_from_project(project_file_path, pattern)
   if project_file_path == nil then
-    return false, "No path"
+    return false
   end
 
   local file = io.open(project_file_path, "r")
   if not file then
-    return false, "File not found or cannot be opened"
+    return false
   end
-  local pattern = "<TargetFramework>net(.-)</TargetFramework>"
-  local contains_target_framework = extensions.find(file:lines(), function(line)
+
+  local contains_pattern = extensions.find(file:lines(), function(line)
     local value = line:match(pattern)
     if value then
       return true
@@ -60,29 +64,21 @@ M.extract_version = function(project_file_path)
     return false
   end)
 
-  return (type(contains_target_framework) == "string" and contains_target_framework:match(pattern)) or false
+  return (type(contains_pattern) == "string" and contains_pattern:match(pattern)) or false
 end
 
+---
+---@param project_file_path string
+---@return string|false
+M.extract_version = function(project_file_path)
+  return extract_from_project(project_file_path, "<TargetFramework>net(.-)</TargetFramework>")
+end
+
+---
+---@param project_file_path string
+---@return string|false
 M.try_get_secret_id = function(project_file_path)
-  if project_file_path == nil then
-    return false, "No path"
-  end
-
-  local pattern = "<UserSecretsId>([a-fA-F0-9%-]+)</UserSecretsId>"
-  local file = io.open(project_file_path, "r")
-  if not file then
-    return false, "File not found or cannot be opened"
-  end
-
-  local contains_secrets = extensions.find(file:lines(), function(line)
-    local value = line:match(pattern)
-    if value then
-      return true
-    end
-    return false
-  end)
-
-  return (type(contains_secrets) == "string" and contains_secrets:match(pattern)) or false
+  return extract_from_project(project_file_path, "<UserSecretsId>([a-fA-F0-9%-]+)</UserSecretsId>")
 end
 
 -- Used for checking if a specific pattern is present in a file
