@@ -1,6 +1,6 @@
-local options = require("easy-dotnet.options")
 local M = {}
 
+local options = require("easy-dotnet.options")
 local actions = require("easy-dotnet.actions")
 local secrets = require("easy-dotnet.secrets")
 local debug = require("easy-dotnet.debugger")
@@ -38,8 +38,8 @@ M.setup = function(opts)
   }
 
   vim.api.nvim_create_user_command('Dotnet',
-    function(opts)
-      local subcommand = opts.fargs[1]
+    function(commandOpts)
+      local subcommand = commandOpts.fargs[1]
       local func = commands[subcommand]
       if func then
         func()
