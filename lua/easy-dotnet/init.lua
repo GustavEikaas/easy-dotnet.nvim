@@ -55,9 +55,16 @@ M.setup = function(opts)
   vim.api.nvim_command('command! -nargs=* Dotnet lua handle_dotnet_command(<f-args>)')
 
   M.test_project = commands.test
+  M.test_solution = function()
+    actions.test_solution(merged_opts.terminal)
+  end
   M.run_project = commands.run
   M.restore = commands.restore
   M.secrets = commands.secrets
+  M.build = commands.build
+  M.build_solution = function()
+    actions.build_solution(merged_opts.terminal)
+  end
 end
 
 M.get_debug_dll = debug.get_debug_dll

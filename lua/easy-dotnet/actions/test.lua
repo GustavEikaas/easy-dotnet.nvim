@@ -38,4 +38,12 @@ M.run_test_picker = function(on_select)
   picker.picker(nil, projects, function(i) on_select(i.path, "test") end, "Run test")
 end
 
+M.test_solution = function(term)
+  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_csproj_file()
+  if solutionFilePath == nil then
+    error("No .sln file or .csproj file found")
+  end
+  term(solutionFilePath, "test")
+end
+
 return M

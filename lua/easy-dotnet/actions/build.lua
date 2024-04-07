@@ -40,4 +40,13 @@ M.build_project_picker = function(term)
   end, "Build project(s)")
 end
 
+
+M.build_solution = function(term)
+  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_csproj_file()
+  if solutionFilePath == nil then
+    error("No .sln file or .csproj file found")
+  end
+  term(solutionFilePath, "build")
+end
+
 return M
