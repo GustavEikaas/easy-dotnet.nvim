@@ -1,7 +1,6 @@
-local options = require("easy-dotnet.options")
-
 local M = {}
 
+local options = require("easy-dotnet.options")
 local actions = require("easy-dotnet.actions")
 local secrets = require("easy-dotnet.secrets")
 local debug = require("easy-dotnet.debugger")
@@ -22,16 +21,13 @@ M.setup = function(opts)
 
   local commands = {
     secrets = function()
-      secrets.edit_secrets_picker(merged_opts.secrets.on_select)
+      secrets.edit_secrets_picker(merged_opts.secrets.path)
     end,
     run = function()
       actions.run(merged_opts.terminal)
     end,
     test = function()
       actions.test(merged_opts.terminal)
-    end,
-    install = function()
-      actions.restore(merged_opts.terminal)
     end,
     restore = function()
       actions.restore(merged_opts.terminal)
@@ -41,23 +37,39 @@ M.setup = function(opts)
     end
   }
 
-  _G.handle_dotnet_command = function(...)
-    local args = { ... }
-    local subcommand = table.remove(args, 1)
-    local func = commands[subcommand]
-    if func then
-      func()
-    else
-      print("Invalid subcommand:", subcommand)
-    end
-  end
-
-  vim.api.nvim_command('command! -nargs=* Dotnet lua handle_dotnet_command(<f-args>)')
+  vim.api.nvim_create_user_command('Dotnet',
+    function(commandOpts)
+      local subcommand = commandOpts.fargs[1]
+      local func = commands[subcommand]
+      if func then
+        func()
+      else
+        print("Invalid subcommand:", subcommand)
+      end
+    end,
+    {
+      nargs = 1,
+      complete = function()
+        local completion = {}
+        for key, _ in pairs(commands) do
+          table.insert(completion, key)
+        end
+        return completion
+      end,
+    }
+  )
 
   M.test_project = commands.test
+  M.test_solution = function()
+    actions.test_solution(merged_opts.terminal)
+  end
   M.run_project = commands.run
   M.restore = commands.restore
   M.secrets = commands.secrets
+  M.build = commands.build
+  M.build_solution = function()
+    actions.build_solution(merged_opts.terminal)
+  end
 end
 
 M.get_debug_dll = debug.get_debug_dll

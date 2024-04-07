@@ -8,7 +8,7 @@ I wrote this plugin because I couldnt find any plugin that seems to seem this pr
 
 - [x] Solution support
 - [x] Csproj support
-- [ ] Actions
+- [x] Actions
     - [x] Build
     - [x] Run
     - [x] Test
@@ -18,9 +18,11 @@ I wrote this plugin because I couldnt find any plugin that seems to seem this pr
     - [x] Web
     - [x] Test
     - [x] Console
-- [ ] .Net user secrets
+- [x] Resolve target-framework of project
+- [x] .Net user secrets
     - [x] Open user-secrets in a buffer
-    - [ ] Create new user-secrets
+    - [x] Create new user-secrets
+    - [x] Secrets preview in picker
 
 ## Setup
 ```lua
@@ -29,49 +31,55 @@ return {
   "GustavEikaas/easy-dotnet.nvim",
   dependencies = { "nvim-lua/plenary.nvim", 'nvim-telescope/telescope.nvim', },
   config = function()
+    local function get_secret_path(secret_guid)
+      local path = ""
+      local home_dir = vim.fn.expand('~')
+      if require("easy-dotnet.extensions").isWindows() then
+        local secret_path = home_dir ..
+            '\\AppData\\Roaming\\Microsoft\\UserSecrets\\' .. secret_guid .. "\\secrets.json"
+        path = secret_path
+      else
+        local secret_path = home_dir .. "/.microsoft/usersecrets/" .. secret_guid .. "/secrets.json"
+        path = secret_path
+      end
+      return path
+    end
+
     local dotnet = require("easy-dotnet")
     -- Options are not required
     dotnet.setup({
       ---@param action "test"|"restore"|"build"|"run"
       terminal = function(path, action)
         local commands = {
-          run = function(path)
+          run = function()
             return "dotnet run --project " .. path
           end,
-          test = function(path)
+          test = function()
             return "dotnet test " .. path
           end,
-          restore = function(path)
+          restore = function()
             return "dotnet restore " .. path
           end,
-          build = function(path)
+          build = function()
             return "dotnet build " .. path
           end
         }
-        local command = commands[action](path) .. "\r"
+        local command = commands[action]() .. "\r"
         vim.cmd('term')
         vim.cmd('startinsert!')
         vim.api.nvim_feedkeys(string.format("%s", command), 'n', true)
       end,
       secrets = {
-        on_select = function(selectedItem)
-          local home_dir = vim.fn.expand('~')
-          if require("easy-dotnet.extensions").isWindows() then
-            local secret_path = home_dir ..
-                '\\AppData\\Roaming\\Microsoft\\UserSecrets\\' .. selectedItem.secrets .. "\\secrets.json"
-            vim.cmd("edit " .. vim.fn.fnameescape(secret_path))
-          else
-            local secret_path = home_dir .. "/.microsoft/usersecrets/" .. selectedItem.secrets .. "/secrets.json"
-            vim.cmd("edit " .. vim.fn.fnameescape(secret_path))
-          end
-        end
+        path = get_secret_path
       },
     })
 
+    -- Example command
     vim.api.nvim_create_user_command('Secrets', function()
       dotnet.secrets()
     end, {})
 
+    -- Example keybinding
     vim.keymap.set("n", "<C-p>", function()
       dotnet.run_project()
     end)
@@ -79,6 +87,29 @@ return {
 }
 ```
 
+## Commands
+
+```lua
+local dotnet = require("easy-dotnet")
+
+dotnet.test_project()
+dotnet.test_solution()
+dotnet.run_project()
+dotnet.restore()
+dotnet.secrets()
+dotnet.build()
+dotnet.build_solution()
+dotnet.get_debug_dll()
+```
+
+```
+-- Supports tabcompletion after Dotnet
+Dotnet run
+Dotnet test
+Dotnet restore
+Dotnet build
+Dotnet secrets
+```
 
 ## Contributions
 
