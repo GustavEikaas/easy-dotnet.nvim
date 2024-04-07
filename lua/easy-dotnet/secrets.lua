@@ -27,6 +27,7 @@ end
 --- Generates a secret preview for telescope
 ---@param self table Telescope self
 ---@param entry table
+---@param get_secret_path function
 local secrets_preview = function(self, entry, get_secret_path)
   if entry.value.secrets == false then
     vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "Secrets file does not exist", "<CR> to create" })
