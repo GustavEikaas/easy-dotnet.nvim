@@ -31,6 +31,9 @@ end
 ---@return string
 local function extractProjectName(path)
   local filename = path:match("[^/\\]+%.csproj$")
+  if filename == nil then
+    return "Unknown"
+  end
   return filename:gsub("%.csproj$", "")
 end
 
@@ -43,7 +46,9 @@ M.get_project_from_csproj = function(csproj_file_path)
   local isTestProject = M.is_test_project(csproj_file_path)
   local maybeSecretGuid = M.try_get_secret_id(csproj_file_path)
   local version = M.extract_version(csproj_file_path)
-  display = display .. "@" .. version
+  if version then
+    display = display .. "@" .. version
+  end
   if isTestProject then
     display = display .. " 󰙨"
   end
