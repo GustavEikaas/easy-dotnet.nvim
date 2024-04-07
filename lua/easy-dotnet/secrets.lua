@@ -5,10 +5,13 @@ local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local picker = require("easy-dotnet.picker")
 
+--- Reads a file and returns the lines in a lua table
+---@param filePath string
+---@return table | nil
 local function readFile(filePath)
   local file = io.open(filePath, "r")
   if not file then
-    return nil, "Failed to open file"
+    return nil
   end
 
   local content = {}
@@ -18,6 +21,21 @@ local function readFile(filePath)
 
   file:close()
   return content
+end
+
+--- Generates a secret preview for telescope
+---@param self table Telescope self
+---@param entry table
+local secrets_preview = function(self, entry)
+  if entry.value.secrets == false then
+    vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "Secrets file does not exist", "<CR> to create" })
+    return
+  end
+  local home_dir = vim.fn.expand('~')
+  local secret_path = home_dir ..
+      '\\AppData\\Roaming\\Microsoft\\UserSecrets\\' .. entry.value.secrets .. "\\secrets.json"
+  local content = readFile(secret_path)
+  vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, content)
 end
 
 --- Initializes secrets for a given project
@@ -78,17 +96,7 @@ M.edit_secrets_picker = function(on_secret_selected)
       item.secrets = secret_id
     end
     on_secret_selected(item)
-  end, "Secrets", function(self, entry, status)
-    if entry.value.secrets == false then
-      vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "Secrets file does not exist", "<CR> to create" })
-      return
-    end
-    local home_dir = vim.fn.expand('~')
-    local secret_path = home_dir ..
-        '\\AppData\\Roaming\\Microsoft\\UserSecrets\\' .. entry.value.secrets .. "\\secrets.json"
-    local content = readFile(secret_path)
-    vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, content)
-  end)
+  end, "Secrets", secrets_preview)
 end
 
 return M
