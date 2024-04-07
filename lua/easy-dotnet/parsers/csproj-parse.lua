@@ -1,6 +1,34 @@
 local extensions = require "easy-dotnet.extensions"
 local M = {}
 
+--- Extracts a pattern from a file
+---@param project_file_path string
+---@param pattern string
+---@return string | false
+local function extract_from_project(project_file_path, pattern)
+  if project_file_path == nil then
+    return false
+  end
+
+  local file = io.open(project_file_path, "r")
+  if not file then
+    return false
+  end
+
+  local contains_pattern = extensions.find(file:lines(), function(line)
+    local value = line:match(pattern)
+    if value then
+      return true
+    end
+    return false
+  end)
+
+  return (type(contains_pattern) == "string" and contains_pattern:match(pattern)) or false
+end
+
+---Extracts the project name from a path
+---@param path string
+---@return string
 local function extractProjectName(path)
   local filename = path:match("[^/\\]+%.csproj$")
   return filename:gsub("%.csproj$", "")
@@ -42,73 +70,26 @@ M.get_project_from_csproj = function(csproj_file_path)
   }
 end
 
----
----@param project_file_path string
----@param pattern string
----@return string | false
-local function extract_from_project(project_file_path, pattern)
-  if project_file_path == nil then
-    return false
-  end
-
-  local file = io.open(project_file_path, "r")
-  if not file then
-    return false
-  end
-
-  local contains_pattern = extensions.find(file:lines(), function(line)
-    local value = line:match(pattern)
-    if value then
-      return true
-    end
-    return false
-  end)
-
-  return (type(contains_pattern) == "string" and contains_pattern:match(pattern)) or false
-end
-
----
----@param project_file_path string
----@return string|false
 M.extract_version = function(project_file_path)
   return extract_from_project(project_file_path, "<TargetFramework>net(.-)</TargetFramework>")
 end
 
----
----@param project_file_path string
----@return string|false
 M.try_get_secret_id = function(project_file_path)
   return extract_from_project(project_file_path, "<UserSecretsId>([a-fA-F0-9%-]+)</UserSecretsId>")
 end
 
--- Used for checking if a specific pattern is present in a file
-local function is_in_project_file(project_file_path, pattern)
-  if project_file_path == nil then
-    return false, "No path"
-  end
-  local file = io.open(project_file_path, "r")
-  if not file then
-    return false, "File not found or cannot be opened"
-  end
-
-  local contains_output_type = extensions.any(file:lines(),
-    function(line) return line:find(pattern) end)
-
-  file:close()
-
-  return contains_output_type
-end
-
 M.is_console_project = function(project_file_path)
-  return is_in_project_file(project_file_path, '<%s*OutputType%s*>%s*(exe|winexe|library)%s*</%s*OutputType%s*>')
+  return type(extract_from_project(project_file_path, '<%s*OutputType%s*>%s*(exe|winexe|library)%s*</%s*OutputType%s*>')) ==
+  "string"
 end
 
 M.is_test_project = function(project_file_path)
-  return is_in_project_file(project_file_path, '<%s*IsTestProject%s*>%s*true%s*</%s*IsTestProject%s*>')
+  return type(extract_from_project(project_file_path, '<%s*IsTestProject%s*>%s*true%s*</%s*IsTestProject%s*>')) ==
+      "string"
 end
 
 M.is_web_project = function(project_file_path)
-  return is_in_project_file(project_file_path, '<Project%s+Sdk="Microsoft.NET.Sdk.Web"')
+  return type(extract_from_project(project_file_path, '<Project%s+Sdk="Microsoft.NET.Sdk.Web"')) == "string"
 end
 
 
