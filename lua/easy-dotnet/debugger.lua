@@ -24,6 +24,7 @@ local function find_dll_from_bin(folder, filename)
     end,
     depth = 6
   })
+
   if #dlls == 0 then
     error("Failed to find " .. filename .. " did you forget to build")
   end
@@ -49,6 +50,7 @@ M.get_dll_for_solution_project = function(sln_file)
   end
   local path = dll_name.path:gsub("([^\\/]+)%.csproj$", "")
   local filename = dll_name.name .. ".dll"
+  require("easy-dotnet.debug").write_to_log("Looking for " .. filename .. " in " .. path)
   return find_dll_from_bin(path, filename)
 end
 
