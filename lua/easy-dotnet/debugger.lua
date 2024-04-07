@@ -14,7 +14,10 @@ M.get_debug_dll = function()
   }
 end
 
-local function find_dll_from_bin(folder, filename)
+local function find_dll_from_bin(folder, filename, project_folder)
+  local cwd = vim.fn.getcwd()
+  vim.cmd("cd " .. project_folder)
+
   if filename == ".dll" then
     error("Cant find .dll")
   end
@@ -25,6 +28,7 @@ local function find_dll_from_bin(folder, filename)
     depth = 6
   })
 
+  vim.cmd("cd " .. cwd)
   if #dlls == 0 then
     error("Failed to find " .. filename .. " did you forget to build")
   end
@@ -50,11 +54,7 @@ M.get_dll_for_solution_project = function(sln_file)
   end
   local path = dll_name.path:gsub("([^\\/]+)%.csproj$", "")
   local filename = dll_name.name .. ".dll"
-  require("easy-dotnet.debug").write_to_log("Looking for " .. filename .. " in " .. path)
-  local cwd = vim.fn.getcwd()
-  vim.cmd("cd " .. path)
-  local dll = find_dll_from_bin("bin", filename)
-  vim.cmd("cd " .. cwd)
+  local dll = find_dll_from_bin("bin", filename, path)
   return {
     dll = dll,
     project = path
@@ -62,15 +62,15 @@ M.get_dll_for_solution_project = function(sln_file)
 end
 
 M.get_dll_for_csproject_project = function()
-  local project_file = csproj_parse.find_csproj_file()
-  if project_file == nil then
+  local project_file_path = csproj_parse.find_csproj_file()
+  if project_file_path == nil then
     error("No project or solution file found")
   end
-  local left_part = string.match(project_file, "(.-)%.")
-
-  local path = project_file.path:gsub("([^\\/]+)%.csproj$", "")
+  local project = csproj_parse.get_project_from_csproj(project_file_path)
+  local path = project.path:gsub("([^\\/]+)%.csproj$", "")
+  local dll = find_dll_from_bin("bin", project.name .. ".dll", path)
   return {
-    dll = find_dll_from_bin(".", left_part .. ".dll"),
+    dll = dll,
     project = path
   }
 end
