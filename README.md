@@ -95,6 +95,7 @@ dotnet.get_debug_dll()
 ```
 
 ```
+-- Supports tabcompletion after Dotnet
 Dotnet run
 Dotnet test
 Dotnet restore

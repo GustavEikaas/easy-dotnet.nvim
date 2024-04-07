@@ -1,5 +1,4 @@
 local options = require("easy-dotnet.options")
-
 local M = {}
 
 local actions = require("easy-dotnet.actions")
@@ -30,9 +29,6 @@ M.setup = function(opts)
     test = function()
       actions.test(merged_opts.terminal)
     end,
-    install = function()
-      actions.restore(merged_opts.terminal)
-    end,
     restore = function()
       actions.restore(merged_opts.terminal)
     end,
@@ -41,18 +37,27 @@ M.setup = function(opts)
     end
   }
 
-  _G.handle_dotnet_command = function(...)
-    local args = { ... }
-    local subcommand = table.remove(args, 1)
-    local func = commands[subcommand]
-    if func then
-      func()
-    else
-      print("Invalid subcommand:", subcommand)
-    end
-  end
-
-  vim.api.nvim_command('command! -nargs=* Dotnet lua handle_dotnet_command(<f-args>)')
+  vim.api.nvim_create_user_command('Dotnet',
+    function(opts)
+      local subcommand = opts.fargs[1]
+      local func = commands[subcommand]
+      if func then
+        func()
+      else
+        print("Invalid subcommand:", subcommand)
+      end
+    end,
+    {
+      nargs = 1,
+      complete = function()
+        local completion = {}
+        for key, _ in pairs(commands) do
+          table.insert(completion, key)
+        end
+        return completion
+      end,
+    }
+  )
 
   M.test_project = commands.test
   M.test_solution = function()
