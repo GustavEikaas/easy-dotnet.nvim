@@ -5,6 +5,21 @@ local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local picker = require("easy-dotnet.picker")
 
+local function readFile(filePath)
+  local file = io.open(filePath, "r")
+  if not file then
+    return nil, "Failed to open file"
+  end
+
+  local content = {}
+  for line in file:lines() do
+    table.insert(content, line)
+  end
+
+  file:close()
+  return content
+end
+
 --- Initializes secrets for a given project
 ---@param project_file_path string
 ---@return string
@@ -57,15 +72,23 @@ M.edit_secrets_picker = function(on_secret_selected)
     vim.notify(" No secrets found")
     return
   end
-  picker.picker(nil, projectsWithSecrets, function(item)
+  picker.preview_picker(nil, projectsWithSecrets, function(item)
     if item.secrets == false then
       local secret_id = init_secrets(item.path)
       item.secrets = secret_id
-      require("easy-dotnet.debug").write_to_log(item)
-      require("easy-dotnet.debug").write_to_log("after setting secret_id")
     end
     on_secret_selected(item)
-  end, "Secrets")
+  end, "Secrets", function(self, entry, status)
+    if entry.value.secrets == false then
+      vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "Secrets file does not exist", "<CR> to create" })
+      return
+    end
+    local home_dir = vim.fn.expand('~')
+    local secret_path = home_dir ..
+        '\\AppData\\Roaming\\Microsoft\\UserSecrets\\' .. entry.value.secrets .. "\\secrets.json"
+    local content = readFile(secret_path)
+    vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, content)
+  end)
 end
 
 return M
