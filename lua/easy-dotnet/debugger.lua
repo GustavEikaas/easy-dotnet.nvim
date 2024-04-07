@@ -7,11 +7,11 @@ local sln_parse = parsers.sln_parser
 
 M.get_debug_dll = function()
   local sln_file = sln_parse.find_solution_file()
-  local dll = sln_file ~= nil and M.get_dll_for_solution_project(sln_file) or M.get_dll_for_csproject_project()
-
-  vim.notify("Started debugging " .. dll)
-  print(dll)
-  return dll
+  local result = sln_file ~= nil and M.get_dll_for_solution_project(sln_file) or M.get_dll_for_csproject_project()
+  return {
+    dll_path = result.dll,
+    project_path = result.project
+  }
 end
 
 local function find_dll_from_bin(folder, filename)
@@ -51,7 +51,14 @@ M.get_dll_for_solution_project = function(sln_file)
   local path = dll_name.path:gsub("([^\\/]+)%.csproj$", "")
   local filename = dll_name.name .. ".dll"
   require("easy-dotnet.debug").write_to_log("Looking for " .. filename .. " in " .. path)
-  return find_dll_from_bin(path, filename)
+  local cwd = vim.fn.getcwd()
+  vim.cmd("cd " .. path)
+  local dll = find_dll_from_bin("bin", filename)
+  vim.cmd("cd " .. cwd)
+  return {
+    dll = dll,
+    project = path
+  }
 end
 
 M.get_dll_for_csproject_project = function()
@@ -61,7 +68,11 @@ M.get_dll_for_csproject_project = function()
   end
   local left_part = string.match(project_file, "(.-)%.")
 
-  return find_dll_from_bin(".", left_part .. ".dll")
+  local path = project_file.path:gsub("([^\\/]+)%.csproj$", "")
+  return {
+    dll = find_dll_from_bin(".", left_part .. ".dll"),
+    project = path
+  }
 end
 
 return M
