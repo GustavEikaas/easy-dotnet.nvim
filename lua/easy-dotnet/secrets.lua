@@ -5,6 +5,29 @@ local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local picker = require("easy-dotnet.picker")
 
+--- Initializes secrets for a given project
+---@param project_file_path string
+---@return string
+local init_secrets = function(project_file_path)
+  local function extract_secret_guid(commandOutput)
+    local guid = commandOutput:match("UserSecretsId to '([%a%d%-]+)'")
+    return guid
+  end
+
+  local handler = io.popen("Dotnet user-secrets init --project " .. project_file_path)
+  if handler == nil then
+    error("Failed to create user-secrets for " .. project_file_path)
+  end
+  local value = handler:read("*a")
+  require("easy-dotnet.debug").write_to_log(value)
+  local guid = extract_secret_guid(value)
+
+  require("easy-dotnet.debug").write_to_log("secret_guid " .. guid)
+  handler:close()
+  vim.notify("User secrets created")
+  return guid
+end
+
 local function csproj_fallback(on_secret_selected)
   local csproj_path = csproj_parse.find_csproj_file()
   if (csproj_path == nil) then
@@ -19,7 +42,6 @@ local function csproj_fallback(on_secret_selected)
   picker.picker(nil, { csproj }, on_secret_selected, "Secrets")
 end
 
-
 M.edit_secrets_picker = function(on_secret_selected)
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
@@ -28,14 +50,22 @@ M.edit_secrets_picker = function(on_secret_selected)
   end
 
   local projectsWithSecrets = extensions.filter(sln_parse.get_projects_from_sln(solutionFilePath), function(i)
-    return i.secrets ~= false and i.path ~= nil and i.runnable == true
+    return i.path ~= nil and i.runnable == true
   end)
 
   if #projectsWithSecrets == 0 then
     vim.notify(" No secrets found")
     return
   end
-  picker.picker(nil, projectsWithSecrets, on_secret_selected, "Secrets")
+  picker.picker(nil, projectsWithSecrets, function(item)
+    if item.secrets == false then
+      local secret_id = init_secrets(item.path)
+      item.secrets = secret_id
+      require("easy-dotnet.debug").write_to_log(item)
+      require("easy-dotnet.debug").write_to_log("after setting secret_id")
+    end
+    on_secret_selected(item)
+  end, "Secrets")
 end
 
 return M

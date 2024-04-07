@@ -6,6 +6,7 @@ local function generate_relative_path_for_project(path, slnpath)
   return slnpath:gsub("([^\\/]+)%.sln$", "") .. path
 end
 
+-- TODO: Investigate using dotnet sln list command
 M.get_projects_from_sln = function(solutionFilePath)
   local file = io.open(solutionFilePath, "r")
 
@@ -23,18 +24,11 @@ M.get_projects_from_sln = function(solutionFilePath)
   end)
 
   local projects = extensions.map(projectLines, function(line)
-    local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
-    local id, name, path = line:match(regexp)
+    local csproj_parser     = require("easy-dotnet.parsers.csproj-parse")
+    local id, name, path    = line:match(regexp)
     local project_file_path = generate_relative_path_for_project(path, solutionFilePath)
-    return {
-      display = name,
-      name = name,
-      path = project_file_path,
-      id = id,
-      runnable = csproj_parser.is_web_project(project_file_path),
-      isTestProject = csproj_parser.is_test_project(project_file_path),
-      secrets = csproj_parser.try_get_secret_id(project_file_path),
-    }
+    local project           = csproj_parser.get_project_from_csproj(project_file_path)
+    return project
   end)
   file:close()
   return projects

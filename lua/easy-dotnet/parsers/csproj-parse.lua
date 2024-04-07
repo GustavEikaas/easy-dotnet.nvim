@@ -1,17 +1,38 @@
 local extensions = require "easy-dotnet.extensions"
 local M = {}
 
+local function extractProjectName(path)
+  local filename = path:match("[^/\\]+%.csproj$")
+  return filename:gsub("%.csproj$", "")
+end
+
 -- Function to find the corresponding .csproj file
 M.get_project_from_csproj = function(csproj_file_path)
+  local name = extractProjectName(csproj_file_path)
   local isWebProject = M.is_web_project(csproj_file_path)
   local isConsoleProject = M.is_console_project(csproj_file_path)
   local isTestProject = M.is_test_project(csproj_file_path)
   local maybeSecretGuid = M.try_get_secret_id(csproj_file_path)
+  local version = M.extract_version(csproj_file_path)
+  name = name .. "@" .. version
+  if isTestProject then
+    name = name .. " 󰙨"
+  end
+  if maybeSecretGuid then
+    name = name .. " "
+  end
+  if isWebProject then
+    name = name .. " 󱂛"
+  end
+  if isConsoleProject then
+    name = name .. " 󰆍"
+  end
 
   return {
-    display = csproj_file_path,
+    display = name,
     path = csproj_file_path,
-    name = csproj_file_path,
+    name = name,
+    version = version,
     runnable = isWebProject or isConsoleProject,
     secrets = maybeSecretGuid,
 
@@ -19,6 +40,27 @@ M.get_project_from_csproj = function(csproj_file_path)
     isConsoleProject = isConsoleProject,
     isWebProject = isWebProject
   }
+end
+
+M.extract_version = function(project_file_path)
+  if project_file_path == nil then
+    return false, "No path"
+  end
+
+  local file = io.open(project_file_path, "r")
+  if not file then
+    return false, "File not found or cannot be opened"
+  end
+  local pattern = "<TargetFramework>net(.-)</TargetFramework>"
+  local contains_target_framework = extensions.find(file:lines(), function(line)
+    local value = line:match(pattern)
+    if value then
+      return true
+    end
+    return false
+  end)
+
+  return (type(contains_target_framework) == "string" and contains_target_framework:match(pattern)) or false
 end
 
 M.try_get_secret_id = function(project_file_path)
