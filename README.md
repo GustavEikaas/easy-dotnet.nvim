@@ -8,7 +8,7 @@ I wrote this plugin because I couldnt find any plugin that seems to seem this pr
 
 - [x] Solution support
 - [x] Csproj support
-- [ ] Actions
+- [x] Actions
     - [x] Build
     - [x] Run
     - [x] Test
@@ -35,20 +35,20 @@ return {
       ---@param action "test"|"restore"|"build"|"run"
       terminal = function(path, action)
         local commands = {
-          run = function(path)
+          run = function()
             return "dotnet run --project " .. path
           end,
-          test = function(path)
+          test = function()
             return "dotnet test " .. path
           end,
-          restore = function(path)
+          restore = function()
             return "dotnet restore " .. path
           end,
-          build = function(path)
+          build = function()
             return "dotnet build " .. path
           end
         }
-        local command = commands[action](path) .. "\r"
+        local command = commands[action]() .. "\r"
         vim.cmd('term')
         vim.cmd('startinsert!')
         vim.api.nvim_feedkeys(string.format("%s", command), 'n', true)
@@ -79,6 +79,28 @@ return {
 }
 ```
 
+## Commands
+
+```lua
+local dotnet = require("easy-dotnet")
+
+dotnet.test_project()
+dotnet.test_solution()
+dotnet.run_project()
+dotnet.restore()
+dotnet.secrets()
+dotnet.build()
+dotnet.build_solution()
+dotnet.get_debug_dll()
+```
+
+```
+Dotnet run
+Dotnet test
+Dotnet restore
+Dotnet build
+Dotnet secrets
+```
 
 ## Contributions
 

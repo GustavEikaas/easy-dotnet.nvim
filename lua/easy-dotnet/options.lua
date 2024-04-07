@@ -3,20 +3,20 @@ return {
   ---@param action "test"|"restore"|"build"|"run"
   terminal = function(path, action)
     local commands = {
-      run = function(path)
+      run = function()
         return "dotnet run --project " .. path
       end,
-      test = function(path)
+      test = function()
         return "dotnet test " .. path
       end,
-      restore = function(path)
+      restore = function()
         return "dotnet restore " .. path
       end,
-      build = function(path)
+      build = function()
         return "dotnet build " .. path
       end
     }
-    local command = commands[action](path) .. "\r"
+    local command = commands[action]() .. "\r"
     vim.cmd('term')
     vim.cmd('startinsert!')
     vim.api.nvim_feedkeys(string.format("%s", command), 'n', true)
@@ -35,4 +35,3 @@ return {
     end
   },
 }
-
