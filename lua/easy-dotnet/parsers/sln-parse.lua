@@ -17,7 +17,7 @@ M.get_projects_from_sln = function(solutionFilePath)
 
   local projectLines = extensions.filter(file:lines(), function(line)
     local id, name, path = line:match(regexp)
-    if id and name and path then
+    if id and name and path and path:match("%.csproj$") then
       return true
     end
     return false
