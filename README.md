@@ -2,7 +2,7 @@
 
 ## Motivation
 
-I wrote this plugin because I couldnt find any plugin that seems to seem this problem. Coming from Rider I was used to being able to just press a single button to run the project. Running projects using the terminal is easy but in bigger projects you usually have to write something like this `dotnet run --project src/AwesomeProject.Api`
+I wrote this plugin because I couldnt find any plugin that seems to solve this problem. Coming from Rider I was used to being able to just press a single button to run the project. Running projects using the terminal is easy but in bigger projects you usually have to write something like this `dotnet run --project src/AwesomeProject.Api`
 
 ## Features
 
