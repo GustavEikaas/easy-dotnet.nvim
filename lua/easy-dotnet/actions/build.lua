@@ -18,6 +18,7 @@ end
 
 ---@param term function
 M.build_project_picker = function(term)
+
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
     csproj_fallback(term)
