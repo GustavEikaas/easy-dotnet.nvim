@@ -118,7 +118,7 @@ dotnet.restore() -- Runs dotnet restore for the solution/csproj file
 dotnet.secrets() -- Opens .Net user-secrets in a new buffer for you to edit
 dotnet.build() -- Runs dotnet build in the project. If there are multiple a telescope picker opens
 dotnet.build_solution() -- Runs dotnet build in the solution
-dotnet.get_debug_dll() -- Returns the dll from the bin/debug folder. If there are multiple projects a telescope picker opens
+dotnet.get_debug_dll() -- Returns the dll from the bin/debug folder. If there are multiple projects a picker opens
 ```
 
 ### Vim commands
