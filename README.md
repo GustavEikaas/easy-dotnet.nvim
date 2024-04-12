@@ -1,4 +1,7 @@
 # Easy-dotnet.nvim
+<a href="https://dotfyle.com/plugins/GustavEikaas/easy-dotnet.nvim">
+	<img src="https://dotfyle.com/plugins/GustavEikaas/easy-dotnet.nvim/shield?style=flat" />
+</a>
 
 ## Motivation
 
