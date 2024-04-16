@@ -8,10 +8,41 @@ local sln_parse = parsers.sln_parser
 M.get_debug_dll = function()
   local sln_file = sln_parse.find_solution_file()
   local result = sln_file ~= nil and M.get_dll_for_solution_project(sln_file) or M.get_dll_for_csproject_project()
+
   return {
     dll_path = result.dll,
-    project_path = result.project
+    project_path = result.project,
+    project_name = result.projectName
   }
+end
+
+M.get_environment_variables = function(projectName)
+  local dlls = require("plenary.scandir").scan_dir({ "Properties" }, {
+    search_pattern = function(i)
+      return i:match("launchSettings.json")
+    end,
+    depth = 6
+  })
+
+  if #dlls == 0 then
+    return nil
+  end
+
+  local launchSettings = dlls[1]
+
+  local success, result = pcall(vim.fn.json_decode, vim.fn.readfile(launchSettings, ""))
+  if not success then
+    return nil, "Error parsing JSON: " .. result
+  end
+
+  local launchProfile = result.profiles[projectName]
+
+  if launchProfile == nil then
+    return nil
+  end
+
+  launchProfile.environmentVariables["ASPNETCORE_URLS"] = launchProfile.applicationUrl
+  return launchProfile.environmentVariables
 end
 
 local function find_dll_from_bin(folder, filename, project_folder)
@@ -57,7 +88,8 @@ M.get_dll_for_solution_project = function(sln_file)
   local dll = find_dll_from_bin("bin", filename, path)
   return {
     dll = dll,
-    project = path
+    project = path,
+    projectName = dll_name.name
   }
 end
 
@@ -71,7 +103,8 @@ M.get_dll_for_csproject_project = function()
   local dll = find_dll_from_bin("bin", project.name .. ".dll", path)
   return {
     dll = dll,
-    project = path
+    project = path,
+    projectName = project.name
   }
 end
 

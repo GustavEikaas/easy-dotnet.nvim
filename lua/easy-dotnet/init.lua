@@ -73,5 +73,6 @@ M.setup = function(opts)
 end
 
 M.get_debug_dll = debug.get_debug_dll
+M.get_environment_variables = debug.get_environment_variables
 
 return M
