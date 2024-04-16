@@ -3,30 +3,19 @@
 	<img src="https://dotfyle.com/plugins/GustavEikaas/easy-dotnet.nvim/shield?style=flat" />
 </a>
 
-## Motivation
+## Simplifying .NET development in Neovim
+Are you a .NET developer looking to harness the power of Neovim for your daily coding tasks? Look no further! easy-dotnet.nvim is here to streamline your workflow and make .NET development in Neovim a breeze.
 
-I wrote this plugin because I could not find any plugin that solved my problem. Coming from Rider I was used to being able to just press a single button to run the project. Running projects using the terminal is easy but in bigger projects you usually have to write something like this `dotnet run --project src/AwesomeProject.Api`
-When I started using neovim as my daily driver I missed a lot of features. Like editing user-secrets for a project. This plugin aims to make it easy to work with dotnet in Neovim.
+## Motivation
+As a developer transitioning from Rider to Neovim, I found myself missing the simplicity of running projects with just a single button click. Tired of typing out lengthy terminal commands for common tasks like running, testing, and managing user secrets, I decided to create easy-dotnet.nvim. This plugin aims to bridge the gap between the convenience of IDEs like Rider and the flexibility of Neovim.
 
 ## Features
 
-- [x] Solution support
-- [x] Csproj support
-- [x] Actions
-    - [x] Build
-    - [x] Run
-    - [x] Test
-    - [x] Restore
-- [x] Get dll for debugging
-- [x] Resolve different types of projects
-    - [x] Web
-    - [x] Test
-    - [x] Console
-- [x] Resolve target-framework of project
-- [x] .Net user secrets
-    - [x] Open user-secrets in a buffer
-    - [x] Create new user-secrets
-    - [x] Secrets preview in picker
+- Solution and Csproj Support: Seamlessly work with entire solutions or individual projects.
+- Action Commands: Execute common tasks like building, running, testing, and restoring with ease.
+- Project Type Resolution: Detect and handle different project types, including web, test, and console applications.
+- User Secrets Management: Edit, create, and preview .NET user secrets directly within Neovim.
+- Debugging Helpers: While easy-dotnet.nvim doesn't set up DAP (Debugger Adapter Protocol) for you, it provides useful helper functions for debugging. These include resolving the DLL you are debugging and rebuilding before launching DAP, ensuring a smooth debugging experience.
 
 ## Setup
 
@@ -108,17 +97,17 @@ When I started using neovim as my daily driver I missed a lot of features. Like 
 ## Commands
 
 ### Lua functions
+
 ```lua
 local dotnet = require("easy-dotnet")
-
-dotnet.test_project() -- Runs dotnet test in the project. If there are multiple a telescope picker opens
-dotnet.test_solution() -- Runs dotnet test in the solution/csproj
-dotnet.run_project() -- Runs dotnet run in the project. If there are multiple a telescope picker opens
-dotnet.restore() -- Runs dotnet restore for the solution/csproj file
-dotnet.secrets() -- Opens .Net user-secrets in a new buffer for you to edit
-dotnet.build() -- Runs dotnet build in the project. If there are multiple a telescope picker opens
-dotnet.build_solution() -- Runs dotnet build in the solution
-dotnet.get_debug_dll() -- Returns the dll from the bin/debug folder. If there are multiple projects a picker opens
+dotnet.test_project()       -- Run dotnet test in the project
+dotnet.test_solution()      -- Run dotnet test in the solution/csproj
+dotnet.run_project()        -- Run dotnet run in the project
+dotnet.restore()            -- Run dotnet restore for the solution/csproj file
+dotnet.secrets()            -- Open .NET user-secrets in a new buffer for editing
+dotnet.build()              -- Run dotnet build in the project
+dotnet.build_solution()     -- Run dotnet build in the solution
+dotnet.get_debug_dll()      -- Return the dll from the bin/debug folder
 ```
 
 ### Vim commands
@@ -131,7 +120,6 @@ Dotnet secrets
 ```
 
 ## Contributions
-
-I mainly created this project for my own use-case but I would love to help others. If you have any good ideas for this project create an issue describing the enchancement.
+While I initially developed this plugin to fulfill my own needs, I'm open to contributions and suggestions from the community. If you have any ideas or enhancements in mind, feel free to create an issue and let's discuss how we can make easy-dotnet.nvim even better!
 
 
