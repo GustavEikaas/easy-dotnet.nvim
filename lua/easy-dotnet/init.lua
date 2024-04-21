@@ -63,6 +63,9 @@ M.setup = function(opts)
   M.test_solution = function()
     actions.test_solution(merged_opts.terminal)
   end
+  M.watch_tests = function()
+    actions.test_watcher()
+  end
   M.run_project = commands.run
   M.restore = commands.restore
   M.secrets = commands.secrets
