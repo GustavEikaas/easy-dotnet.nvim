@@ -72,9 +72,8 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
           end
         }
         local command = commands[action]() .. "\r"
-        vim.cmd('term')
-        vim.cmd('startinsert!')
-        vim.api.nvim_feedkeys(string.format("%s", command), 'n', true)
+        vim.cmd("vsplit")
+        vim.cmd("term " .. command)
       end,
       secrets = {
         path = get_secret_path
