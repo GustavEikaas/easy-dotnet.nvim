@@ -121,6 +121,7 @@ Dotnet restore
 Dotnet build
 Dotnet secrets
 Dotnet testrunner
+Dotnet outdated
 ```
 
 
@@ -144,6 +145,9 @@ Integrated test runner inspired by Rider IDE
 - `<leader>r` -> Run test under cursor
 - `<leader>p` -> Peek stacktrace on failed test
 
+## Outdated
+
+Run the command Dotnet outdated in a .csproj file, virtual text with packages latest version will appear
 
 ## Contributions
 While I initially developed this plugin to fulfill my own needs, I'm open to contributions and suggestions from the community. If you have any ideas or enhancements in mind, feel free to create an issue and let's discuss how we can make easy-dotnet.nvim even better!

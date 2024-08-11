@@ -37,6 +37,9 @@ M.setup = function(opts)
     end,
     testrunner = function()
       require("easy-dotnet.test-runner.runner").runner(opts.test_runner)
+    end,
+    outdated = function()
+      require("easy-dotnet.outdated.outdated").outdated()
     end
   }
 
