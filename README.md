@@ -55,6 +55,10 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
     local dotnet = require("easy-dotnet")
     -- Options are not required
     dotnet.setup({
+      test_runner = {
+        noBuild = true,
+        noRestore = true,
+      },
       ---@param action "test"|"restore"|"build"|"run"
       terminal = function(path, action)
         local commands = {
@@ -116,7 +120,30 @@ Dotnet test
 Dotnet restore
 Dotnet build
 Dotnet secrets
+Dotnet testrunner
 ```
+
+
+## Testrunner
+
+Integrated test runner inspired by Rider IDE
+![image](https://github.com/user-attachments/assets/27955253-cb41-4f47-8586-2b4d068ec538)
+
+- [x] Basic test runner window
+  - [x] Grouped by namespace
+  - [x] Passed, skipped, failed
+  - [x] Unit test name
+  - [x] Collapsable hieararchy 
+  - [x] Peek stack trace
+- [x] Resolve test results from selected test scope
+
+### Keymaps
+- `W` -> Collapse all
+- `E` -> Expand all
+- `o` -> Expand/collapse under cursor
+- `<leader>r` -> Run test under cursor
+- `<leader>p` -> Peek stacktrace on failed test
+
 
 ## Contributions
 While I initially developed this plugin to fulfill my own needs, I'm open to contributions and suggestions from the community. If you have any ideas or enhancements in mind, feel free to create an issue and let's discuss how we can make easy-dotnet.nvim even better!
