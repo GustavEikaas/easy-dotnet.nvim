@@ -18,7 +18,13 @@ end
 
 M.setup = function(opts)
   local merged_opts = merge_tables(options, opts or {})
-
+  vim.api.nvim_set_hl(0, "EasyDotnetPackage", {
+    fg = '#000000',
+    bg = '#ffffff',
+    bold = true,
+    italic = false,
+    underline = false,
+  })
   local commands = {
     secrets = function()
       secrets.edit_secrets_picker(merged_opts.secrets.path)
@@ -37,6 +43,9 @@ M.setup = function(opts)
     end,
     testrunner = function()
       require("easy-dotnet.test-runner.runner").runner(opts.test_runner)
+    end,
+    outdated = function()
+      require("easy-dotnet.outdated.outdated").outdated()
     end
   }
 

@@ -16,6 +16,8 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 - Project Type Resolution: Detect and handle different project types, including web, test, and console applications.
 - User Secrets Management: Edit, create, and preview .NET user secrets directly within Neovim.
 - Debugging Helpers: While easy-dotnet.nvim doesn't set up DAP (Debugger Adapter Protocol) for you, it provides useful helper functions for debugging. These include resolving the DLL you are debugging and rebuilding before launching DAP, ensuring a smooth debugging experience.
+- Test runner: Test runner similiar to the one you find in Rider.
+- Outdated command: Makes checking outdated packages a breeze using virtual text
 
 ## Setup
 
@@ -121,6 +123,7 @@ Dotnet restore
 Dotnet build
 Dotnet secrets
 Dotnet testrunner
+Dotnet outdated
 ```
 
 
@@ -144,6 +147,14 @@ Integrated test runner inspired by Rider IDE
 - `<leader>r` -> Run test under cursor
 - `<leader>p` -> Peek stacktrace on failed test
 
+## Outdated
+
+Run the command Dotnet outdated in a .csproj file, virtual text with packages latest version will appear
+
+![image](https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113)
+
+### Requirements
+This functionality relies on dotnet-outdated-tool, install using `dotnet tool install -g dotnet-outdated-tool`
 
 ## Contributions
 While I initially developed this plugin to fulfill my own needs, I'm open to contributions and suggestions from the community. If you have any ideas or enhancements in mind, feel free to create an issue and let's discuss how we can make easy-dotnet.nvim even better!
