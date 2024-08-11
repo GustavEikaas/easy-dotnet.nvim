@@ -152,8 +152,7 @@ Run the command Dotnet outdated in a .csproj file, virtual text with packages la
 ![image](https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113)
 
 ### Requirements
-This functionality relies on dotnet-outdated-tool
-Install command `dotnet tool install -g dotnet-outdated-tool`
+This functionality relies on dotnet-outdated-tool, install using `dotnet tool install -g dotnet-outdated-tool`
 
 ## Contributions
 While I initially developed this plugin to fulfill my own needs, I'm open to contributions and suggestions from the community. If you have any ideas or enhancements in mind, feel free to create an issue and let's discuss how we can make easy-dotnet.nvim even better!

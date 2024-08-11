@@ -57,14 +57,14 @@ M.outdated = function()
             return
           end
           local bnr = vim.fn.bufnr('%')
-          local ns_id = vim.api.nvim_create_namespace('demo')
+          local ns_id = require("easy-dotnet.constants").ns_id
           for _, value in ipairs(deps) do
             local line = find_package_reference_in_buffer(value.Name)
             if line == nil then
               error("Failed to find package " .. value.Name)
             end
             vim.api.nvim_buf_set_extmark(bnr, ns_id, line - 1, 0, {
-              virt_text = { { string.format("%s -> %s", value.ResolvedVersion, value.LatestVersion), "TermCursor" } },
+              virt_text = { { string.format("%s -> %s", value.ResolvedVersion, value.LatestVersion), "EasyDotnetPackage" } },
               virt_text_pos = "eol",
               priority = 200,
             })
@@ -79,4 +79,3 @@ M.outdated = function()
   end
 end
 return M
-
