@@ -70,7 +70,7 @@ M.outdated = function()
             })
           end
         else
-          vim.notify("command failed")
+          vim.notify("Dotnet outdated tool not installed")
         end
       end,
     })
