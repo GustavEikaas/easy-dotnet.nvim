@@ -16,6 +16,8 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 - Project Type Resolution: Detect and handle different project types, including web, test, and console applications.
 - User Secrets Management: Edit, create, and preview .NET user secrets directly within Neovim.
 - Debugging Helpers: While easy-dotnet.nvim doesn't set up DAP (Debugger Adapter Protocol) for you, it provides useful helper functions for debugging. These include resolving the DLL you are debugging and rebuilding before launching DAP, ensuring a smooth debugging experience.
+- Test runner: Test runner similiar to the one you find in Rider.
+- Outdated command: Makes checking outdated packages a breeze using virtual text
 
 ## Setup
 
