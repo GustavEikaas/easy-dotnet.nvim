@@ -37,4 +37,8 @@ return {
   secrets = {
     path = get_secret_path,
   },
+  test_runner = {
+    noBuild = true,
+    noRestore = true,
+  }
 }

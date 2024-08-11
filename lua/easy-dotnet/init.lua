@@ -36,7 +36,7 @@ M.setup = function(opts)
       actions.build(merged_opts.terminal)
     end,
     testrunner = function()
-      require("easy-dotnet.test-runner.runner").runner()
+      require("easy-dotnet.test-runner.runner").runner(opts.test_runner)
     end
   }
 

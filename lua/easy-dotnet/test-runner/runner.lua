@@ -1,6 +1,4 @@
-local M = {
-
-}
+local M = {}
 
 local function trim(s)
   -- Match the string and capture the non-whitespace characters
@@ -61,7 +59,22 @@ local function extract_tests(lines)
 
   return expand_test_names_with_flags(tests)
 end
-M.runner = function()
+
+local function merge_tables(table1, table2)
+  local merged = {}
+  for k, v in pairs(table1) do
+    merged[k] = v
+  end
+  for k, v in pairs(table2) do
+    merged[k] = v
+  end
+  return merged
+end
+
+local default_options = require("easy-dotnet.options").test_runner
+
+M.runner = function(options)
+  local mergedOpts = merge_tables(default_options, options or {})
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
   local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
   local error_messages = require("easy-dotnet.error-messages")
@@ -77,34 +90,38 @@ M.runner = function()
     return
   end
 
-  vim.fn.jobstart(string.format("dotnet test -t --nologo --no-build --no-restore %s", solutionFilePath), {
-    stdout_buffered = true,
-    on_stdout = function(_, data)
-      if data then
-        local tests = extract_tests(data)
-        local lines = {}
-        for _, test in ipairs(tests) do
-          table.insert(lines,
-            {
-              value = test.value,
-              collapsable = test.is_full_path == false,
-              indent = test.indent,
-              preIcon = test.preIcon
-            })
-        end
+  local command = string.format("dotnet test -t --nologo %s %s %s", mergedOpts.noBuild == true and "--no-build" or "",
+    mergedOpts.noRestore == true and "--no-restore" or "", solutionFilePath)
+  vim.notify(command)
+  vim.fn.jobstart(
+    command, {
+      stdout_buffered = true,
+      on_stdout = function(_, data)
+        if data then
+          local tests = extract_tests(data)
+          local lines = {}
+          for _, test in ipairs(tests) do
+            table.insert(lines,
+              {
+                value = test.value,
+                collapsable = test.is_full_path == false,
+                indent = test.indent,
+                preIcon = test.preIcon
+              })
+          end
 
-        win.lines = lines
-        win.height = #lines > 20 and 20 or #lines
-        win.refresh()
+          win.lines = lines
+          win.height = #lines > 20 and 20 or #lines
+          win.refresh()
+        end
+      end,
+      on_exit = function(_, code)
+        if code ~= 0 then
+          win.lines = { value = "Failed to discover tests" }
+          win.refreshLines()
+        end
       end
-    end,
-    on_exit = function(_, code)
-      if code ~= 0 then
-        win.lines = { value = "Failed to discover tests" }
-        win.refreshLines()
-      end
-    end
-  })
+    })
 end
 
 return M
