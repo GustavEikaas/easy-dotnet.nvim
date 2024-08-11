@@ -138,11 +138,11 @@ Integrated test runner inspired by Rider IDE
 - [x] Resolve test results from selected test scope
 
 ### Keymaps
-`W` -> Collapse all
-`E` -> Expand all
-`o` -> Expand/collapse under cursor
-`<leader>r` -> Run test under cursor
-`<leader>p` -> Peek stacktrace on failed test
+- `W` -> Collapse all
+- `E` -> Expand all
+- `o` -> Expand/collapse under cursor
+- `<leader>r` -> Run test under cursor
+- `<leader>p` -> Peek stacktrace on failed test
 
 
 ## Contributions
