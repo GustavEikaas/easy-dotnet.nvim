@@ -51,7 +51,7 @@ local function extract_tests(lines)
 
   -- Extract lines that match the pattern for test names
   for _, line in ipairs(lines) do
-    if line:match("^%s*[%w%.]+%.[%w%.]+%.%w+%s*$") then
+    if not (line:match("^Test run for") or line:match("^No test is available in") or line:match("^The following Tests are available:") or line == "") then
       table.insert(tests, line)
     end
   end
