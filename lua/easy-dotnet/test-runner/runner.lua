@@ -79,16 +79,16 @@ M.runner = function(options)
   local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
   local error_messages = require("easy-dotnet.error-messages")
 
-  local win = require("easy-dotnet.test-runner.render")
-  win.buf_name = "Test manager"
-  win.filetype = "easy-dotnet"
-  win.setKeymaps(require("easy-dotnet.test-runner.keymaps")).render()
-
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_csproj_file()
   if solutionFilePath == nil then
     vim.notify(error_messages.no_project_definition_found)
     return
   end
+
+  local win = require("easy-dotnet.test-runner.render")
+  win.buf_name = "Test manager"
+  win.filetype = "easy-dotnet"
+  win.setKeymaps(require("easy-dotnet.test-runner.keymaps")).render()
 
   local command = string.format("dotnet test -t --nologo %s %s %s", mergedOpts.noBuild == true and "--no-build" or "",
     mergedOpts.noRestore == true and "--no-restore" or "", solutionFilePath)
