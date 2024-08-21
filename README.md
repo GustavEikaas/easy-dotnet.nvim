@@ -146,6 +146,7 @@ Integrated test runner inspired by Rider IDE
 - `E` -> Expand all
 - `o` -> Expand/collapse under cursor
 - `<leader>r` -> Run test under cursor
+- `<leader>R` -> Run all tests
 - `<leader>p` -> Peek stacktrace on failed test
 
 ## Outdated
