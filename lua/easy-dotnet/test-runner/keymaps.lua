@@ -1,3 +1,4 @@
+local messages = require "easy-dotnet.error-messages"
 local resultIcons = {
   passed = "✔",
   skipped = "⏸",
@@ -45,6 +46,9 @@ local function run_test_suite(name, win)
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
   local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_csproj_file()
+  if solutionFilePath == nil then
+    vim.notify(messages.no_project_definition_found)
+  end
   vim.fn.jobstart(
     string.format("dotnet test --filter='%s' --nologo --no-build --no-restore %s", suite_name, solutionFilePath), {
       on_stdout = function(_, data)
@@ -175,6 +179,9 @@ local keymaps = {
     local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
     line.icon = "<Running>"
     local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_csproj_file()
+    if solutionFilePath == nil then
+      vim.notify(messages.no_project_definition_found)
+    end
     vim.fn.jobstart(
       string.format("dotnet test --filter='%s' --nologo --no-build --no-restore %s", original_line, solutionFilePath), {
         stdout_buffered = true,
