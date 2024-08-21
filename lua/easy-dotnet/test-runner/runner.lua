@@ -92,7 +92,6 @@ M.runner = function(options)
 
   local command = string.format("dotnet test -t --nologo %s %s %s", mergedOpts.noBuild == true and "--no-build" or "",
     mergedOpts.noRestore == true and "--no-restore" or "", solutionFilePath)
-  vim.notify(command)
   vim.fn.jobstart(
     command, {
       stdout_buffered = true,

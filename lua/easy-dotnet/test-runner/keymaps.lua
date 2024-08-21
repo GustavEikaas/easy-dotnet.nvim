@@ -1,3 +1,4 @@
+local messages = require "easy-dotnet.error-messages"
 local resultIcons = {
   passed = "✔",
   skipped = "⏸",
@@ -42,64 +43,71 @@ local function run_test_suite(name, win)
     end
   end
   win.refreshLines()
-  vim.fn.jobstart(string.format("dotnet test --filter='%s' --nologo --no-build --no-restore ./src", suite_name), {
-    on_stdout = function(_, data)
-      if data == nil then
-        error("Failed to parse dotnet test output")
-      end
-      for stdoutIndex, stdout in ipairs(data) do
-        for _, match in ipairs(matches) do
-          local failed = stdout:match(string.format("%s %s", "Failed", match.line))
-          if failed ~= nil then
-            match.ref.icon = resultIcons.failed
-            match.ref.expand = peekStackTrace(stdoutIndex, data)
-          end
+  local sln_parse = require("easy-dotnet.parsers.sln-parse")
+  local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
+  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_csproj_file()
+  if solutionFilePath == nil then
+    vim.notify(messages.no_project_definition_found)
+  end
+  vim.fn.jobstart(
+    string.format("dotnet test --filter='%s' --nologo --no-build --no-restore %s", suite_name, solutionFilePath), {
+      on_stdout = function(_, data)
+        if data == nil then
+          error("Failed to parse dotnet test output")
+        end
+        for stdoutIndex, stdout in ipairs(data) do
+          for _, match in ipairs(matches) do
+            local failed = stdout:match(string.format("%s %s", "Failed", match.line))
+            if failed ~= nil then
+              match.ref.icon = resultIcons.failed
+              match.ref.expand = peekStackTrace(stdoutIndex, data)
+            end
 
-          local skipped = stdout:match(string.format("%s %s", "Skipped", match.line))
-          if skipped ~= nil then
-            match.ref.icon = resultIcons.skipped
+            local skipped = stdout:match(string.format("%s %s", "Skipped", match.line))
+            if skipped ~= nil then
+              match.ref.icon = resultIcons.skipped
+            end
           end
         end
-      end
-      win.refreshLines()
-    end,
-    on_exit = function(_, code)
-      -- If no stdout assume passed
-      for _, test in ipairs(matches) do
-        if (test.ref.icon == resultIcons.failed or test.ref.icon == resultIcons.skipped) then
-        elseif test.ref.collapsable == false then
-          test.ref.icon = resultIcons.passed
+        win.refreshLines()
+      end,
+      on_exit = function(_, code)
+        -- If no stdout assume passed
+        for _, test in ipairs(matches) do
+          if (test.ref.icon == resultIcons.failed or test.ref.icon == resultIcons.skipped) then
+          elseif test.ref.collapsable == false then
+            test.ref.icon = resultIcons.passed
+          end
         end
-      end
 
-      -- Aggregate namespace status
-      for _, namespace in ipairs(matches) do
-        if (namespace.ref.collapsable == true) then
-          local worstStatus = nil
-          --TODO: check array for worst status
-          for _, res in ipairs(matches) do
-            if res.line:match(namespace.line) then
-              if (res.ref.icon == resultIcons.failed) then
-                worstStatus = resultIcons.failed
-              elseif res.ref.icon == resultIcons.skipped then
-                if worstStatus ~= resultIcons.failed then
-                  worstStatus = resultIcons.skipped
+        -- Aggregate namespace status
+        for _, namespace in ipairs(matches) do
+          if (namespace.ref.collapsable == true) then
+            local worstStatus = nil
+            --TODO: check array for worst status
+            for _, res in ipairs(matches) do
+              if res.line:match(namespace.line) then
+                if (res.ref.icon == resultIcons.failed) then
+                  worstStatus = resultIcons.failed
+                elseif res.ref.icon == resultIcons.skipped then
+                  if worstStatus ~= resultIcons.failed then
+                    worstStatus = resultIcons.skipped
+                  end
                 end
               end
             end
+            namespace.ref.icon = worstStatus == nil and resultIcons.passed or worstStatus
           end
-          namespace.ref.icon = worstStatus == nil and resultIcons.passed or worstStatus
         end
+        win.refreshLines()
+        if code ~= 0 then
+          -- if (line.value:match("<Running>")) then
+          --   line.value = original_line .. " <Panic! command failed>"
+          --   win.refreshLines()
+        end
+        -- end
       end
-      win.refreshLines()
-      if code ~= 0 then
-        -- if (line.value:match("<Running>")) then
-        --   line.value = original_line .. " <Panic! command failed>"
-        --   win.refreshLines()
-      end
-      -- end
-    end
-  })
+    })
 end
 
 
@@ -167,42 +175,48 @@ local keymaps = {
       return
     end
     local original_line = line.value
-
+    local sln_parse = require("easy-dotnet.parsers.sln-parse")
+    local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
     line.icon = "<Running>"
-    vim.fn.jobstart(string.format("dotnet test --filter='%s' --nologo --no-build --no-restore ./src", original_line), {
-      stdout_buffered = true,
-      on_stdout = function(_, data)
-        if data then
-          local result = nil
-          for index, stdout_line in ipairs(data) do
-            local failed = stdout_line:match(string.format("%s %s", "Failed", line.value))
-            if failed ~= nil then
-              line.expand = peekStackTrace(index, data)
-              result = "Failed"
-            end
-            local skipped = stdout_line:match(string.format("%s %s", "Skipped", line.value))
+    local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_csproj_file()
+    if solutionFilePath == nil then
+      vim.notify(messages.no_project_definition_found)
+    end
+    vim.fn.jobstart(
+      string.format("dotnet test --filter='%s' --nologo --no-build --no-restore %s", original_line, solutionFilePath), {
+        stdout_buffered = true,
+        on_stdout = function(_, data)
+          if data then
+            local result = nil
+            for index, stdout_line in ipairs(data) do
+              local failed = stdout_line:match(string.format("%s %s", "Failed", line.value))
+              if failed ~= nil then
+                line.expand = peekStackTrace(index, data)
+                result = "Failed"
+              end
+              local skipped = stdout_line:match(string.format("%s %s", "Skipped", line.value))
 
-            if skipped ~= nil then
-              result = "Skipped"
+              if skipped ~= nil then
+                result = "Skipped"
+              end
             end
-          end
-          if result == nil then
-            result = "Passed"
-          end
+            if result == nil then
+              result = "Passed"
+            end
 
-          line.icon = getIcon(result)
-          win.refreshLines()
-        end
-      end,
-      on_exit = function(_, code)
-        if code ~= 0 then
-          if (line.icon == "<Running>") then
-            line.icon = "<Panic! command failed>"
+            line.icon = getIcon(result)
             win.refreshLines()
           end
+        end,
+        on_exit = function(_, code)
+          if code ~= 0 then
+            if (line.icon == "<Running>") then
+              line.icon = "<Panic! command failed>"
+              win.refreshLines()
+            end
+          end
         end
-      end
-    })
+      })
 
     win.refreshLines()
   end
