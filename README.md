@@ -112,6 +112,7 @@ dotnet.restore()            -- Run dotnet restore for the solution/csproj file
 dotnet.secrets()            -- Open .NET user-secrets in a new buffer for editing
 dotnet.build()              -- Run dotnet build in the project
 dotnet.build_solution()     -- Run dotnet build in the solution
+dotnet.build_quickfix()     -- Build dotnet project and open build errors in quickfix list
 dotnet.get_debug_dll()      -- Return the dll from the bin/debug folder
 ```
 

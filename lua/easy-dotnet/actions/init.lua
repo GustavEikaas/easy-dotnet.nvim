@@ -1,6 +1,7 @@
 local M = {}
 
 M.build = require("easy-dotnet.actions.build").build_project_picker
+M.build_quickfix = require("easy-dotnet.actions.build").build_project_quickfix
 M.build_solution = require("easy-dotnet.actions.build").build_solution
 M.restore = require("easy-dotnet.actions.restore").restore
 M.test = require("easy-dotnet.actions.test").run_test_picker

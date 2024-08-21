@@ -85,6 +85,7 @@ M.setup = function(opts)
   M.build_solution = function()
     actions.build_solution(merged_opts.terminal)
   end
+  M.build_quickfix = actions.build_quickfix
 end
 
 M.get_debug_dll = debug.get_debug_dll
