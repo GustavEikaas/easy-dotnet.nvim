@@ -73,9 +73,24 @@ M.setKeymaps = function(mappings)
   return M
 end
 
+local function buffer_exists(name)
+  local bufs = vim.api.nvim_list_bufs()
+  for _, buf_id in ipairs(bufs) do
+    if vim.api.nvim_buf_is_valid(buf_id) then
+      local buf_name = vim.api.nvim_buf_get_name(buf_id)
+      local buf_filename = vim.fn.fnamemodify(buf_name, ":t")
+      if buf_filename == name then
+        return buf_id
+      end
+    end
+  end
+  return nil
+end
 --- Renders the buffer
 M.render = function()
-  M.buf = vim.api.nvim_create_buf(true, true) -- false for not listing, true for scratchend
+  -- if buf exists, restore
+  local existing_buf = buffer_exists(M.buf_name)
+  M.buf = existing_buf or vim.api.nvim_create_buf(true, true) -- false for not listing, true for scratchend
   vim.cmd("split")
   vim.api.nvim_win_set_buf(0, M.buf)
   vim.api.nvim_set_current_buf(M.buf)
