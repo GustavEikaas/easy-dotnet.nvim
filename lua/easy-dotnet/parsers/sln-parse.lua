@@ -3,7 +3,11 @@ local M = {}
 
 -- Generates a relative path from cwd to the project.csproj file
 local function generate_relative_path_for_project(path, slnpath)
-  return slnpath:gsub("([^\\/]+)%.sln$", "") .. path
+  local relative_path = slnpath:gsub("([^\\/]+)%.sln$", "") .. path
+  if not extensions.isWindows() then
+    relative_path = relative_path:gsub("\\", "/")
+  end
+  return relative_path
 end
 
 -- TODO: Investigate using dotnet sln list command
