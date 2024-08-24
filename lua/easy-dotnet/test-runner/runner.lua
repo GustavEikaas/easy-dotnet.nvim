@@ -94,6 +94,7 @@ M.runner = function(options)
   if #win.lines > 2 then
     return
   end
+
   local command = string.format("dotnet test -t --nologo %s %s %s", mergedOpts.noBuild == true and "--no-build" or "",
     mergedOpts.noRestore == true and "--no-restore" or "", solutionFilePath)
   vim.fn.jobstart(
@@ -101,26 +102,31 @@ M.runner = function(options)
       stdout_buffered = true,
       on_stdout = function(_, data)
         if data then
-          local tests = extract_tests(data)
-          local lines = {}
-          for _, test in ipairs(tests) do
-            table.insert(lines,
-              {
-                value = test.value,
-                collapsable = test.is_full_path == false,
-                indent = test.indent,
-                preIcon = test.preIcon
-              })
-          end
+          --TODO:find a better way to handle this
+          if #data == 1 then
+            win.lines = { { value = "Failed to discover tests", preIcon = "❌" } }
+          else
+            local tests = extract_tests(data)
+            local lines = {}
+            for _, test in ipairs(tests) do
+              table.insert(lines,
+                {
+                  value = test.value,
+                  collapsable = test.is_full_path == false,
+                  indent = test.indent,
+                  preIcon = test.preIcon
+                })
+            end
 
-          win.lines = lines
-          win.height = #lines > 20 and 20 or #lines
-          win.refresh()
+            win.lines = lines
+            win.height = #lines > 20 and 20 or #lines
+          end
+          win.refreshLines()
         end
       end,
       on_exit = function(_, code)
         if code ~= 0 then
-          win.lines = { value = "Failed to discover tests" }
+          win.lines = { { value = "Failed to discover tests", preIcon = "❌" } }
           win.refreshLines()
         end
       end
