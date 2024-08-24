@@ -90,6 +90,10 @@ M.runner = function(options)
   win.filetype = "easy-dotnet"
   win.setKeymaps(require("easy-dotnet.test-runner.keymaps")).render()
 
+  -- TODO: figure out a better way to check if buffer was reused
+  if #win.lines > 2 then
+    return
+  end
   local command = string.format("dotnet test -t --nologo %s %s %s", mergedOpts.noBuild == true and "--no-build" or "",
     mergedOpts.noRestore == true and "--no-restore" or "", solutionFilePath)
   vim.fn.jobstart(
