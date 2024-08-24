@@ -1,6 +1,6 @@
 local M = {
   lines = {
-    { value = "Discovering tests...", icon = "🔃" }
+    { value = "Discovering tests...", preIcon = "🔃" }
   },
   buf = nil,
   height = 10,
