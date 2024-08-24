@@ -126,7 +126,7 @@ M.runner = function(options)
       end,
       on_exit = function(_, code)
         if code ~= 0 then
-          win.lines = { { value = "Failed to discover tests" } }
+          win.lines = { { value = "Failed to discover tests", preIcon = "❌" } }
           win.refreshLines()
         end
       end
