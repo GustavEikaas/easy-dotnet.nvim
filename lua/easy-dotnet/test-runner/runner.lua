@@ -97,9 +97,17 @@ M.runner = function(options)
 
   local command = string.format("dotnet test -t --nologo %s %s %s", mergedOpts.noBuild == true and "--no-build" or "",
     mergedOpts.noRestore == true and "--no-restore" or "", solutionFilePath)
+  local err_lines = {}
   vim.fn.jobstart(
     command, {
       stdout_buffered = true,
+      on_stderr = function(_, data)
+        for _, line in ipairs(data) do
+          if #line > 0 then
+            table.insert(err_lines, { value = line, preIcon = "❌" })
+          end
+        end
+      end,
       on_stdout = function(_, data)
         if data then
           --TODO:find a better way to handle this
@@ -126,7 +134,9 @@ M.runner = function(options)
       end,
       on_exit = function(_, code)
         if code ~= 0 then
-          win.lines = { { value = "Failed to discover tests", preIcon = "❌" } }
+          vim.notify("command failed")
+          -- win.lines = { { value = "Failed to discover tests", preIcon = "❌" } }
+          win.lines = err_lines
           win.refreshLines()
         end
       end
