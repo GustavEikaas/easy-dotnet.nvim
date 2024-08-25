@@ -74,6 +74,10 @@ M.setup = function(opts)
     }
   )
 
+  if merged_opts.csproj_mappings == true then
+    require("easy-dotnet.csproj-mappings").attach_mappings()
+  end
+
   M.test_project = commands.test
   M.test_solution = function()
     actions.test_solution(merged_opts.terminal)

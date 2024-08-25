@@ -18,6 +18,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 - Debugging Helpers: While easy-dotnet.nvim doesn't set up DAP (Debugger Adapter Protocol) for you, it provides useful helper functions for debugging. These include resolving the DLL you are debugging and rebuilding before launching DAP, ensuring a smooth debugging experience.
 - Test runner: Test runner similiar to the one you find in Rider.
 - Outdated command: Makes checking outdated packages a breeze using virtual text
+- Csproj mappings: Keymappings for .csproj files are automatically available
 
 ## Setup
 
@@ -84,6 +85,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
       secrets = {
         path = get_secret_path
       },
+      csproj_mappings = true
     })
 
     -- Example command
@@ -157,6 +159,14 @@ Integrated test runner inspired by Rider IDE
 Run the command Dotnet outdated in a .csproj file, virtual text with packages latest version will appear
 
 ![image](https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113)
+
+## Csproj mappings
+
+Key mappings are available automatically within `.csproj` files
+
+### Add reference
+`<leader>ar` -> Opens a telescope picker for selecting which project reference to add
+![image](https://github.com/user-attachments/assets/dec096be-8a87-4dd8-aaec-8c22849d1640)
 
 ### Requirements
 This functionality relies on dotnet-outdated-tool, install using `dotnet tool install -g dotnet-outdated-tool`

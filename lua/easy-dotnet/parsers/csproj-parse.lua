@@ -26,6 +26,27 @@ local function extract_from_project(project_file_path, pattern)
   return (type(contains_pattern) == "string" and contains_pattern:match(pattern)) or false
 end
 
+M.get_project_references_from_projects = function(project_path)
+  local projects = {}
+  local output = vim.fn.systemlist(string.format("dotnet list %s reference", project_path))
+
+  for _, line in ipairs(output) do
+    line = line:gsub("\\", "/")
+    local filename = line:match("[^/\\]+%.csproj")
+    if filename ~= nil then
+      local project_name = filename:gsub("%.csproj$", "")
+      table.insert(projects, project_name)
+    end
+  end
+
+  local exit_code = vim.v.shell_error
+  if exit_code ~= 0 then
+    vim.notify("Command failed")
+    return {}
+  end
+  return projects
+end
+
 ---Extracts the project name from a path
 ---@param path string
 ---@return string
