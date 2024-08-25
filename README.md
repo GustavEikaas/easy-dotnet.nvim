@@ -9,6 +9,43 @@ Are you a .NET developer looking to harness the power of Neovim for your daily c
 ## Motivation
 As a developer transitioning from Rider to Neovim, I found myself missing the simplicity of running projects with just a single button click. Tired of typing out lengthy terminal commands for common tasks like running, testing, and managing user secrets, I decided to create easy-dotnet.nvim. This plugin aims to bridge the gap between the convenience of IDEs like Rider and the flexibility of Neovim.
 
+---
+
+# Table of Contents
+
+1. [Easy-dotnet.nvim](#easy-dotnetnvim)
+2. [Simplifying .NET development in Neovim](#simplifying-net-development-in-neovim)
+3. [Motivation](#motivation)
+4. [Features](#features)
+   - [Solution and Csproj Support](#solution-and-csproj-support)
+   - [Action Commands](#action-commands)
+   - [Project Type Resolution](#project-type-resolution)
+   - [User Secrets Management](#user-secrets-management)
+   - [Debugging Helpers](#debugging-helpers)
+   - [Test runner](#test-runner)
+   - [Outdated command](#outdated-command)
+   - [Csproj mappings](#csproj-mappings)
+   - [Create dotnet templates like with `dotnet new`](#create-dotnet-templates-like-with-dotnet-new)
+5. [Setup](#setup)
+   - [Without options](#without-options)
+   - [With options](#with-options)
+6. [Commands](#commands)
+   - [Lua functions](#lua-functions)
+   - [Vim commands](#vim-commands)
+7. [Testrunner](#testrunner)
+   - [Keymaps](#keymaps)
+8. [Outdated](#outdated)
+   - [Requirements](#requirements)
+9. [Csproj mappings](#csproj-mappings)
+   - [Add reference](#add-reference)
+10. [New](#new)
+    - [Project](#project)
+    - [Configuration file](#configuration-file)
+11. [Advanced configurations](#advanced-configurations)
+    - [Overseer](#overseer)
+
+---
+
 ## Features
 
 - Solution and Csproj Support: Seamlessly work with entire solutions or individual projects.
@@ -175,18 +212,17 @@ Key mappings are available automatically within `.csproj` files
 ![image](https://github.com/user-attachments/assets/dec096be-8a87-4dd8-aaec-8c22849d1640)
 
 ## New
-
 Create dotnet templates as with `dotnet new <templatename>`
-If a template project is selected it will
-1. Find your solution file
-2. Prompt to enter name of project to create
-3. Place the project in the same folder as the solution file with the name of the solution + name you entered
-4. Link the newly created project to your solution file
+Try it out by running `Dotnet new`
+
+### Project
+https://github.com/user-attachments/assets/aa067c17-3611-4490-afc8-41d98a526729
+
+### Configuration file
 
 If a configuration file is selected it will
 1. Create the configuration file and place it next to your solution file. (solution files and gitignore files are placed in cwd)
 
-https://github.com/user-attachments/assets/aa067c17-3611-4490-afc8-41d98a526729
 
 ## Advanced configurations
 
