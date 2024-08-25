@@ -41,5 +41,6 @@ return {
     noBuild = true,
     noRestore = true,
   },
-  csproj_mappings = true
+  csproj_mappings = true,
+  auto_bootstrap_namespace = true
 }

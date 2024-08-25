@@ -123,7 +123,8 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
       secrets = {
         path = get_secret_path
       },
-      csproj_mappings = true
+      csproj_mappings = true,
+      auto_bootstrap_namespace = true
     })
 
     -- Example command
