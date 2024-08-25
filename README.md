@@ -129,6 +129,7 @@ Dotnet clean
 Dotnet secrets
 Dotnet testrunner
 Dotnet outdated
+Dotnet new
 ```
 
 
@@ -173,6 +174,19 @@ This functionality relies on dotnet-outdated-tool, install using `dotnet tool in
 
 ## Contributions
 While I initially developed this plugin to fulfill my own needs, I'm open to contributions and suggestions from the community. If you have any ideas or enhancements in mind, feel free to create an issue and let's discuss how we can make easy-dotnet.nvim even better!
+
+
+## New
+
+Create dotnet templates as with `dotnet new <templatename>`
+If a template project is selected it will
+1. Find your solution file
+2. Prompt to enter name of project to create
+3. Place the project in the same folder as the solution file with the name of the solution + name you entered
+4. Link the newly created project to your solution file
+
+If a configuration file is selected it will
+1. Create the configuration file and place it next to your solution file. (solution files and gitignore files are placed in cwd)
 
 
 ## Advanced configurations
