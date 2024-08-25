@@ -31,12 +31,18 @@ M.run_test_picker = function(on_select)
   end
 
   -- Add an entry for the solution file itself as it will run all tests in its definition
-  table.insert(projects, {
-    path = solutionFilePath,
-    display = "All"
-  })
+  local choices = {
+    {
+      path = solutionFilePath,
+      display = "Solution"
+    }
+  }
 
-  picker.picker(nil, projects, function(i) on_select(i.path, "test") end, "Run test")
+  for _, value in ipairs(projects) do
+    table.insert(choices, value)
+  end
+
+  picker.picker(nil, choices, function(i) on_select(i.path, "test") end, "Run test")
 end
 
 M.test_solution = function(term)
