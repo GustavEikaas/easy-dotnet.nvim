@@ -19,6 +19,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 - Test runner: Test runner similiar to the one you find in Rider.
 - Outdated command: Makes checking outdated packages a breeze using virtual text
 - Csproj mappings: Keymappings for .csproj files are automatically available
+- Create dotnet templates like with `dotnet new`
 
 ## Setup
 
