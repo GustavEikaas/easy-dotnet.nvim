@@ -179,6 +179,7 @@ While I initially developed this plugin to fulfill my own needs, I'm open to con
 
 ## New
 
+
 Create dotnet templates as with `dotnet new <templatename>`
 If a template project is selected it will
 1. Find your solution file
@@ -188,6 +189,9 @@ If a template project is selected it will
 
 If a configuration file is selected it will
 1. Create the configuration file and place it next to your solution file. (solution files and gitignore files are placed in cwd)
+
+![image](https://github.com/user-attachments/assets/aa067c17-3611-4490-afc8-41d98a526729)
+
 
 
 ## Advanced configurations
