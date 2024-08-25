@@ -40,5 +40,6 @@ return {
   test_runner = {
     noBuild = true,
     noRestore = true,
-  }
+  },
+  csproj_mappings = true
 }
