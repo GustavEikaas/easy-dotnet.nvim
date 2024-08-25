@@ -81,6 +81,10 @@ M.setup = function(opts)
     require("easy-dotnet.csproj-mappings").attach_mappings()
   end
 
+  if merged_opts.auto_bootstrap_namespace == true then
+    require("easy-dotnet.cs-mappings").auto_bootstrap_namespace()
+  end
+
   M.test_project = commands.test
   M.test_solution = function()
     actions.test_solution(merged_opts.terminal)
