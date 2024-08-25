@@ -46,6 +46,9 @@ M.setup = function(opts)
     end,
     outdated = function()
       require("easy-dotnet.outdated.outdated").outdated()
+    end,
+    clean = function()
+      require("easy-dotnet.actions.clean").clean_solution()
     end
   }
 
@@ -82,6 +85,7 @@ M.setup = function(opts)
   M.restore = commands.restore
   M.secrets = commands.secrets
   M.build = commands.build
+  M.clean = commands.clean
   M.build_solution = function()
     actions.build_solution(merged_opts.terminal)
   end
