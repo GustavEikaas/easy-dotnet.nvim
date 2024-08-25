@@ -12,7 +12,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 ## Features
 
 - Solution and Csproj Support: Seamlessly work with entire solutions or individual projects.
-- Action Commands: Execute common tasks like building, running, testing, and restoring with ease.
+- Action Commands: Execute common tasks like building, running, testing, cleaning and restoring with ease.
 - Project Type Resolution: Detect and handle different project types, including web, test, and console applications.
 - User Secrets Management: Edit, create, and preview .NET user secrets directly within Neovim.
 - Debugging Helpers: While easy-dotnet.nvim doesn't set up DAP (Debugger Adapter Protocol) for you, it provides useful helper functions for debugging. These include resolving the DLL you are debugging and rebuilding before launching DAP, ensuring a smooth debugging experience.
@@ -113,6 +113,7 @@ dotnet.secrets()            -- Open .NET user-secrets in a new buffer for editin
 dotnet.build()              -- Run dotnet build in the project
 dotnet.build_solution()     -- Run dotnet build in the solution
 dotnet.build_quickfix()     -- Build dotnet project and open build errors in quickfix list
+dotnet.clean()              -- Run dotnet clean in the project
 dotnet.get_debug_dll()      -- Return the dll from the bin/debug folder
 ```
 
@@ -122,6 +123,7 @@ Dotnet run
 Dotnet test
 Dotnet restore
 Dotnet build
+Dotnet clean
 Dotnet secrets
 Dotnet testrunner
 Dotnet outdated
