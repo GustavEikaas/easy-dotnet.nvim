@@ -49,6 +49,9 @@ M.setup = function(opts)
     end,
     clean = function()
       require("easy-dotnet.actions.clean").clean_solution()
+    end,
+    new = function()
+      require("easy-dotnet.actions.new").new()
     end
   }
 
