@@ -165,8 +165,8 @@ Run the command Dotnet outdated in a .csproj file, virtual text with packages la
 Key mappings are available automatically within `.csproj` files
 
 ### Add reference
-
 `<leader>ar` -> Opens a telescope picker for selecting which project reference to add
+![image](https://github.com/user-attachments/assets/dec096be-8a87-4dd8-aaec-8c22849d1640)
 
 ### Requirements
 This functionality relies on dotnet-outdated-tool, install using `dotnet tool install -g dotnet-outdated-tool`
