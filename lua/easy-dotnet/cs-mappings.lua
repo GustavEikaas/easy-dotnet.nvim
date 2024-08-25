@@ -8,7 +8,7 @@ local function find_csproj_for_cs_file(cs_file_path)
   local function find_csproj_in_directory(dir)
     local result = vim.fn.globpath(dir, "*.csproj", false, true)
     if #result > 0 then
-      return result[1] -- Return the first found .csproj file
+      return result[1]
     end
     return nil
   end
@@ -59,10 +59,8 @@ local function generate_csharp_namespace(cs_file_path, csproj_path)
 end
 
 local function is_buffer_empty(buf)
-  -- Get all lines in the buffer
   local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 
-  -- Check if all lines are empty
   for _, line in ipairs(lines) do
     if line ~= "" then
       return false
