@@ -163,3 +163,91 @@ This functionality relies on dotnet-outdated-tool, install using `dotnet tool in
 While I initially developed this plugin to fulfill my own needs, I'm open to contributions and suggestions from the community. If you have any ideas or enhancements in mind, feel free to create an issue and let's discuss how we can make easy-dotnet.nvim even better!
 
 
+## Advanced configurations
+
+### Overseer
+Thanks to [franroa](https://github.com/franroa) for sharing his configuration with the community
+
+- It watches the run and test commands
+- It creates a list of tasks to have a history
+- other things that can be configured with overseer, like running those tasks in the order you want
+- If used with resession, the tasks are run automatically on opening the project (this is specially interesting if you have errors in your build and have to leave the coding session. It will pop up the quickfix list in the next day)
+
+```
+return {
+  {
+    "GustavEikaas/easy-dotnet.nvim",
+    dependencies = { "nvim-lua/plenary.nvim", "nvim-telescope/telescope.nvim" },
+    config = function()
+      local logPath = vim.fn.stdpath("data") .. "/easy-dotnet/build.log"
+      local dotnet = require("easy-dotnet")
+
+      dotnet.setup({
+        terminal = function(path, action)
+          local commands = {
+            run = function()
+              return "dotnet run --project " .. path
+            end,
+            test = function()
+              return "dotnet test " .. path
+            end,
+            restore = function()
+              return "dotnet restore --configfile " .. os.getenv("NUGET_CONFIG") .. " " .. path
+            end,
+            build = function()
+              return "dotnet build  " .. path .. " /flp:v=q /flp:logfile=" .. logPath
+            end,
+          }
+
+          local function filter_warnings(line)
+            if not line:find("warning") then
+              return line:match("^(.+)%((%d+),(%d+)%)%: (.+)$")
+            end
+          end
+
+          local overseer_components = {
+            { "on_complete_dispose", timeout = 30 },
+            "default",
+            { "unique", replace = true },
+            {
+              "on_output_parse",
+              parser = {
+                diagnostics = {
+                  { "extract", filter_warnings, "filename", "lnum", "col", "text" },
+                },
+              },
+            },
+            {
+              "on_result_diagnostics_quickfix",
+              open = true,
+              close = true,
+            },
+          }
+
+          if action == "run" or action == "test" then
+            table.insert(overseer_components, { "restart_on_save", paths = { LazyVim.root.git() } })
+          end
+
+          local command = commands[action]()
+          local task = require("overseer").new_task({
+            strategy = {
+              "toggleterm",
+              use_shell = false,
+              direction = "horizontal",
+              open_on_start = false,
+            },
+            name = action,
+            cmd = command,
+            cwd = LazyVim.root.git(),
+            components = overseer_components,
+          })
+          task:start()
+        end
+      })
+    end,
+  },
+}
+
+```
+
+
