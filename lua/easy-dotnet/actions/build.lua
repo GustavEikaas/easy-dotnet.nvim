@@ -30,14 +30,15 @@ M.build_project_picker = function(term)
     vim.notify(error_messages.no_projects_found)
     return
   end
+  local choices = {
+    { path = solutionFilePath, display = "Solution" }
+  }
 
-  -- Add an entry for the solution file
-  table.insert(projects, {
-    path = solutionFilePath,
-    display = "All"
-  })
+  for _, project in ipairs(projects) do
+    table.insert(choices, project)
+  end
 
-  picker.picker(nil, projects, function(i)
+  picker.picker(nil, choices, function(i)
     term(i.path, "build")
   end, "Build project(s)")
 end
