@@ -183,8 +183,39 @@ local function run_test_suite(name, win)
     })
 end
 
+local function isAnyErr(lines)
+  local err = false
+  for _, value in ipairs(lines) do
+    if value.icon == resultIcons.failed then
+      err = true
+      return err
+    end
+  end
+
+  return err
+end
+
+local function filter_failed_tests(win)
+  if win.filter == nil and isAnyErr(win.lines) then
+    for _, value in ipairs(win.lines) do
+      if value.icon ~= resultIcons.failed then
+        value.hidden = true
+      end
+    end
+    win.filter = "failed"
+  else
+    for _, value in ipairs(win.lines) do
+      value.hidden = false
+    end
+    win.filter = nil
+  end
+  win.refreshLines()
+end
 
 local keymaps = {
+  ["<leader>fe"] = function(_, _, win)
+    filter_failed_tests(win)
+  end,
   ["E"] = function(_, _, win)
     for _, value in ipairs(win.lines) do
       value.hidden = false

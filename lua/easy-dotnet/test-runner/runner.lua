@@ -86,12 +86,12 @@ M.runner = function(options)
   end
 
   local win = require("easy-dotnet.test-runner.render")
+  local is_reused = win.buf ~= nil
   win.buf_name = "Test manager"
   win.filetype = "easy-dotnet"
   win.setKeymaps(require("easy-dotnet.test-runner.keymaps")).render()
 
-  -- TODO: figure out a better way to check if buffer was reused
-  if #win.lines > 2 then
+  if is_reused then
     return
   end
 
