@@ -7,6 +7,7 @@ local M = {
   modifiable = false,
   buf_name = "",
   filetype = "",
+  filter = nil,
   keymap = {}
 }
 

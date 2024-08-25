@@ -148,6 +148,7 @@ Integrated test runner inspired by Rider IDE
 - `<leader>r` -> Run test under cursor
 - `<leader>R` -> Run all tests
 - `<leader>p` -> Peek stacktrace on failed test
+- `<leader>fe` -> Show only failed tests
 
 ## Outdated
 
