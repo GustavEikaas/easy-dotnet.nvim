@@ -111,8 +111,23 @@ M.is_console_project = function(project_file_path)
 end
 
 M.is_test_project = function(project_file_path)
-  return type(extract_from_project(project_file_path, '<%s*IsTestProject%s*>%s*true%s*</%s*IsTestProject%s*>')) ==
-      "string"
+  if type(extract_from_project(project_file_path, '<%s*IsTestProject%s*>%s*true%s*</%s*IsTestProject%s*>')) == "string" then
+    return true
+  end
+  if type(extract_from_project(project_file_path, '<PackageReference Include="Microsoft%.NET%.Test%.Sdk" Version=".-" />')) == "string" then
+    return true
+  end
+  if type(extract_from_project(project_file_path, '<PackageReference Include="MSTest%.TestFramework" Version=".-" />')) == "string" then
+    return true
+  end
+  if type(extract_from_project(project_file_path, '<PackageReference Include="NUnit" Version=".-" />')) == "string" then
+    return true
+  end
+  if type(extract_from_project(project_file_path, '<PackageReference Include="xunit" Version=".-" />')) == "string" then
+    return true
+  end
+
+  return false
 end
 
 M.is_web_project = function(project_file_path)
