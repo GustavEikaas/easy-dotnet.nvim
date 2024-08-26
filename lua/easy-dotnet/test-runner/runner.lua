@@ -18,6 +18,11 @@ local function expand_test_names_with_flags(test_names)
       segment_count = segment_count + 1
     end
 
+    if segment_count == 1 then
+      full_test_name = "unnamed." .. trim(full_test_name)
+    end
+    segment_count = 2
+
     -- Reset the parts and segment_count for actual processing
     parts = {}
     local current_count = 0
