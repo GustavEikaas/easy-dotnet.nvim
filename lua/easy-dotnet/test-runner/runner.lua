@@ -18,10 +18,12 @@ local function expand_test_names_with_flags(test_names)
       segment_count = segment_count + 1
     end
 
+    local is_flat = false
     if segment_count == 1 then
       full_test_name = "unnamed." .. trim(full_test_name)
+      segment_count = 2
+      is_flat = true
     end
-    segment_count = 2
 
     -- Reset the parts and segment_count for actual processing
     parts = {}
@@ -38,8 +40,10 @@ local function expand_test_names_with_flags(test_names)
         local is_full_path = (current_count == segment_count)
         table.insert(expanded,
           {
-            value = concatenated,
+            ns = concatenated,
+            value = trim(part),
             is_full_path = is_full_path,
+            is_flat = is_flat,
             indent = current_count - 1,
             preIcon = is_full_path == false and "📂" or "🧪"
           })
@@ -125,6 +129,7 @@ M.runner = function(options)
               table.insert(lines,
                 {
                   value = test.value,
+                  ns = test.ns,
                   collapsable = test.is_full_path == false,
                   indent = test.indent,
                   preIcon = test.preIcon

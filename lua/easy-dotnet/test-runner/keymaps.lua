@@ -34,7 +34,7 @@ end
 local function run_all(win)
   local matches = {}
   for _, line in ipairs(win.lines) do
-    table.insert(matches, { ref = line, line = line.value })
+    table.insert(matches, { ref = line, line = line.ns })
     line.icon = "<Running>"
   end
   win.refreshLines()
@@ -110,8 +110,8 @@ local function run_test_suite(name, win)
   local matches = {}
   local suite_name = name
   for _, line in ipairs(win.lines) do
-    if line.value:match(suite_name) then
-      table.insert(matches, { ref = line, line = line.value })
+    if line.ns:match(suite_name) then
+      table.insert(matches, { ref = line, line = line.ns })
       line.icon = "<Running>"
     end
   end
@@ -239,7 +239,7 @@ local keymaps = {
 
     local newLines = {}
     for _, lineDef in ipairs(win.lines) do
-      if lineDef.value:match(line.value) then
+      if lineDef.ns:match(line.ns) then
         if lineDef ~= line then
           lineDef.hidden = action == "collapse" and true or false
         end
@@ -278,10 +278,10 @@ local keymaps = {
   end,
   ["<leader>r"] = function(_, line, win)
     if line.collapsable then
-      run_test_suite(line.value, win)
+      run_test_suite(line.ns, win)
       return
     end
-    local original_line = line.value
+    local original_line = line.ns
     local sln_parse = require("easy-dotnet.parsers.sln-parse")
     local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
     line.icon = "<Running>"
@@ -296,12 +296,12 @@ local keymaps = {
           if data then
             local result = nil
             for index, stdout_line in ipairs(data) do
-              local failed = stdout_line:match(string.format("%s %s", "Failed", line.value))
+              local failed = stdout_line:match(string.format("%s %s", "Failed", line.ns))
               if failed ~= nil then
                 line.expand = peekStackTrace(index, data)
                 result = "Failed"
               end
-              local skipped = stdout_line:match(string.format("%s %s", "Skipped", line.value))
+              local skipped = stdout_line:match(string.format("%s %s", "Skipped", line.ns))
 
               if skipped ~= nil then
                 result = "Skipped"
