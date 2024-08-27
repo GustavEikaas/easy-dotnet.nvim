@@ -33,7 +33,7 @@ M.setup = function(opts)
       actions.run(merged_opts.terminal, false)
     end,
     test = function()
-      actions.test(merged_opts.terminal)
+      actions.test(merged_opts.terminal, false)
     end,
     restore = function()
       actions.restore(merged_opts.terminal)
@@ -99,8 +99,11 @@ M.setup = function(opts)
   M.run_default = function()
     actions.run(merged_opts.terminal, true)
   end
-  M.build_default = function()
+  M.build_default_quickfix = function()
     actions.build_quickfix(true)
+  end
+  M.build_default = function()
+    actions.build(merged_opts.terminal, true)
   end
 
   M.restore = commands.restore
