@@ -8,39 +8,32 @@ local sln_parse = parsers.sln_parser
 M.get_debug_dll = function()
   local sln_file = sln_parse.find_solution_file()
   local result = sln_file ~= nil and M.get_dll_for_solution_project(sln_file) or M.get_dll_for_csproject_project()
-
+  local relative_dll_path = vim.fs.joinpath(vim.fn.getcwd(), result.project .. result.dll)
+  local relative_project_path = vim.fs.joinpath(vim.fn.getcwd(), result.project)
   return {
     dll_path = result.dll,
     project_path = result.project,
-    project_name = result.projectName
+    project_name = result.projectName,
+    relative_dll_path = relative_dll_path,
+    relative_project_path = relative_project_path
   }
 end
 
-M.get_environment_variables = function(projectName)
-  local dlls = require("plenary.scandir").scan_dir({ "Properties" }, {
-    search_pattern = function(i)
-      return i:match("launchSettings.json")
-    end,
-    depth = 6
-  })
-
-  if #dlls == 0 then
-    return nil
-  end
-
-  local launchSettings = dlls[1]
+M.get_environment_variables = function(project_name, relative_project_path)
+  local launchSettings = vim.fs.joinpath(relative_project_path, "Properties", "launchSettings.json")
 
   local success, result = pcall(vim.fn.json_decode, vim.fn.readfile(launchSettings, ""))
   if not success then
     return nil, "Error parsing JSON: " .. result
   end
 
-  local launchProfile = result.profiles[projectName]
+  local launchProfile = result.profiles[project_name]
 
   if launchProfile == nil then
     return nil
   end
 
+  --TODO: Is there more env vars in launchsetttings.json?
   launchProfile.environmentVariables["ASPNETCORE_URLS"] = launchProfile.applicationUrl
   return launchProfile.environmentVariables
 end
