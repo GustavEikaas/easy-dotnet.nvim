@@ -225,6 +225,107 @@ If a configuration file is selected it will
 1. Create the configuration file and place it next to your solution file. (solution files and gitignore files are placed in cwd)
 
 
+## Nvim-dap configuration
+
+While its out of the scope of this plugin to setup dap, we do provide a few helpful functions to make it easier.
+
+## Example
+
+### Lua
+
+```lua
+local M = {}
+
+--- Rebuilds the project before starting the debug session
+---@param co thread
+local function rebuild_project(co, path)
+  vim.notify("Building project")
+  vim.fn.jobstart(string.format("dotnet build %s", path), {
+    on_exit = function(_, return_code)
+      if return_code == 0 then
+        vim.notify("Built successfully")
+      else
+        vim.notify("Build failed with exit code " .. return_code)
+      end
+      coroutine.resume(co)
+    end,
+  })
+  coroutine.yield()
+end
+
+M.register_net_dap = function()
+  local dap = require("dap")
+  local dotnet = require("easy-dotnet")
+
+  local debug_dll = nil
+  local function ensure_dll()
+    if debug_dll ~= nil then
+      return debug_dll
+    end
+    local dll = dotnet.get_debug_dll()
+    debug_dll = dll
+    return dll
+  end
+
+  dap.configurations.cs = {
+    {
+      type = "coreclr",
+      name = "launch - netcoredbg",
+      request = "launch",
+      env = function()
+        local dll = ensure_dll()
+        -- Reads the launchsettingsjson file looking for a profile with the name of your project
+        local vars = dotnet.get_environment_variables(dll.project_name, dll.relative_project_path)
+        return vars or nil
+      end,
+      program = function()
+        local dll = ensure_dll()
+        local co = coroutine.running()
+        rebuild_project(co, dll.project_path)
+        return dll.relative_dll_path
+      end,
+      cwd = function()
+        local dll = ensure_dll()
+        return dll.relative_project_path
+      end,
+
+    }
+  }
+
+  dap.listeners.before['event_terminated']['easy-dotnet'] = function()
+    debug_dll = nil
+  end
+
+  dap.adapters.coreclr = {
+    type = "executable",
+    command = "netcoredbg",
+    args = { "--interpreter=vscode" },
+  }
+end
+
+return M
+```
+
+### Launchsettings.json (optional)
+For profiles to be read it must contain a profile with the name of your csproject
+The file is expected to be in the Properties/launchsettings.json relative to your .csproject file
+```json
+{
+  "profiles": {
+    "NeovimDebugProject.Api": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:7073;http://localhost:7071"
+    }
+}
+```
+
+
 ## Advanced configurations
 
 ### Overseer
