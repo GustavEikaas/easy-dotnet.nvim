@@ -5,6 +5,35 @@ local messages = require("easy-dotnet.error-messages")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
+local default_manager = require("easy-dotnet.default-manager")
+
+
+local function select_project(solution_file_path, cb, use_default)
+  local default = default_manager.check_default_project(solution_file_path, "build")
+  if default ~= nil and use_default == true then
+    return cb(default)
+  end
+
+  local projects = sln_parse.get_projects_from_sln(solution_file_path)
+
+  if #projects == 0 then
+    vim.notify(error_messages.no_projects_found)
+    return
+  end
+  local choices = {
+    { path = solution_file_path, display = "Solution", name = "Solution" }
+  }
+
+  for _, project in ipairs(projects) do
+    table.insert(choices, project)
+  end
+
+  picker.picker(nil, choices, function(project)
+    cb(project)
+    default_manager.set_default_project(project, solution_file_path, "build")
+  end, "Build project(s)")
+end
+
 
 local function csproj_fallback(term)
   local csproj_path = csproj_parse.find_csproj_file()
@@ -18,29 +47,17 @@ local function csproj_fallback(term)
 end
 
 ---@param term function
-M.build_project_picker = function(term)
+---@param use_default boolean
+M.build_project_picker = function(term, use_default)
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
     csproj_fallback(term)
     return
   end
-  local projects = sln_parse.get_projects_from_sln(solutionFilePath)
 
-  if #projects == 0 then
-    vim.notify(error_messages.no_projects_found)
-    return
-  end
-  local choices = {
-    { path = solutionFilePath, display = "Solution" }
-  }
-
-  for _, project in ipairs(projects) do
-    table.insert(choices, project)
-  end
-
-  picker.picker(nil, choices, function(i)
-    term(i.path, "build")
-  end, "Build project(s)")
+  select_project(solutionFilePath, function(project)
+    term(project.path, "build")
+  end, use_default)
 end
 
 local function populate_quickfix_from_file(filename)
@@ -78,7 +95,9 @@ local function populate_quickfix_from_file(filename)
   vim.cmd("copen")
 end
 
-M.build_project_quickfix = function()
+
+---@param use_default boolean
+M.build_project_quickfix = function(use_default)
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
     local csproj = csproj_parse.find_csproj_file()
@@ -100,23 +119,14 @@ M.build_project_quickfix = function()
 
     return
   end
-  local projects = sln_parse.get_projects_from_sln(solutionFilePath)
 
-  if #projects == 0 then
-    vim.notify(error_messages.no_projects_found)
-    return
-  end
-
-  -- Add an entry for the solution file
-  table.insert(projects, {
-    path = solutionFilePath,
-    display = "All"
-  })
-
-  picker.picker(nil, projects, function(i)
+  select_project(solutionFilePath, function(project)
+    if project == nil then
+      return
+    end
     vim.notify("Building...")
     local logPath = vim.fn.stdpath "data" .. "/easy-dotnet/build.log"
-    local command = "dotnet build " .. i.path .. " /flp:v=q /flp:logfile=" .. logPath
+    local command = "dotnet build " .. project.path .. " /flp:v=q /flp:logfile=" .. logPath
     vim.fn.jobstart(command, {
       on_exit = function(_, b, _)
         if b == 0 then
@@ -127,7 +137,7 @@ M.build_project_quickfix = function()
         end
       end,
     })
-  end, "Build project(s)")
+  end, use_default)
 end
 
 

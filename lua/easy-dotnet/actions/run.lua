@@ -18,13 +18,22 @@ local function csproj_fallback(term)
 end
 
 ---@param term function
-M.run_project_picker = function(term)
-  local solutionFilePath = sln_parse.find_solution_file()
-  if solutionFilePath == nil then
+---@param use_default boolean
+M.run_project_picker = function(term, use_default)
+  local default_manager = require("easy-dotnet.default-manager")
+  local solution_file_path = sln_parse.find_solution_file()
+  if solution_file_path == nil then
     csproj_fallback(term)
     return
   end
-  local projects = extensions.filter(sln_parse.get_projects_from_sln(solutionFilePath), function(i)
+
+  local default = default_manager.check_default_project(solution_file_path, "run")
+  if default ~= nil and use_default == true then
+    term(default.path, "run")
+    return
+  end
+
+  local projects = extensions.filter(sln_parse.get_projects_from_sln(solution_file_path), function(i)
     return i.runnable == true
   end)
 
@@ -32,7 +41,10 @@ M.run_project_picker = function(term)
     vim.notify(error_messages.no_runnable_projects_found)
     return
   end
-  picker.picker(nil, projects, function(i) term(i.path, "run") end, "Run project")
+  picker.picker(nil, projects, function(i)
+    term(i.path, "run")
+    default_manager.set_default_project(i, solution_file_path, "run")
+  end, "Run project")
 end
 
 return M
