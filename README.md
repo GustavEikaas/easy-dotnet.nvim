@@ -229,9 +229,7 @@ If a configuration file is selected it will
 
 While its out of the scope of this plugin to setup dap, we do provide a few helpful functions to make it easier.
 
-## Example
-
-### Lua
+### Basic example
 
 ```lua
 local M = {}
@@ -306,7 +304,6 @@ end
 return M
 ```
 
-### Launchsettings.json (optional)
 For profiles to be read it must contain a profile with the name of your csproject
 The file is expected to be in the Properties/launchsettings.json relative to your .csproject file
 ```json
@@ -324,6 +321,83 @@ The file is expected to be in the Properties/launchsettings.json relative to you
     }
 }
 ```
+
+## Advanced example
+
+### Dependencies:
+- overseer (for the preLaunchTask)
+- which-key (with hydra mode)
+- easy-dotnet (path resolution)
+
+```lua
+return {
+  {
+    "mfussenegger/nvim-dap",
+    opts = function(_, opts)
+      local dap = require("dap")
+      if not dap.adapters["netcoredbg"] then
+        require("dap").adapters["netcoredbg"] = {
+          type = "executable",
+          command = vim.fn.exepath("netcoredbg"),
+          args = { "--interpreter=vscode" },
+        }
+      end
+      for _, lang in ipairs({ "cs", "fsharp", "vb" }) do
+        local debug_dll = nil
+        dap.configurations[lang] = {
+          {
+            log_level = "DEBUG",
+            type = "netcoredbg",
+            justMyCode = false,
+            stopAtEntry = false,
+            name = "Default",
+            request = "launch",
+            env = {
+              ASPNETCORE_ENVIRONMENT = function()
+                return "Development"
+              end,
+              ASPNETCORE_URLS = function()
+                return "https://localhost:5005;http://localhost:5006"
+              end,
+            },
+            ---@diagnostic disable-next-line: redundant-parameter
+            program = function()
+              require("overseer").enable_dap()
+              debug_dll = require("easy-dotnet").get_debug_dll()
+              return vim.fn.getcwd() .. "/" .. debug_dll.project_path .. debug_dll.dll_path
+            end,
+            cwd = function()
+              return vim.fn.getcwd() .. "/" .. debug_dll.project_path
+            end,
+            preLaunchTask = "Build .NET App", -- custom overseer task
+          },
+        }
+        -- end
+      end
+    end,
+    keys = {
+      {
+        "<leader>d<space>",
+        function()
+         -- NOTE: the delay is set to prevent the which-key hints to appear
+          require("which-key").show({ delay = 1000000000, keys = "<leader>d", loop = true })
+        end,
+        desc = "DAP Hydra Mode (which-key)",
+      },
+      {
+        "<leader>dR",
+        function()
+          local dap = require("dap")
+          local extension = vim.fn.expand("%:e")
+          dap.run(dap.configurations[extension][1])
+        end,
+        desc = "Run default configuration",
+      },
+    },
+  },
+}
+```
+
 
 
 ## Advanced configurations
