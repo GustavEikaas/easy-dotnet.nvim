@@ -22,6 +22,11 @@ end
 M.get_environment_variables = function(project_name, relative_project_path)
   local launchSettings = vim.fs.joinpath(relative_project_path, "Properties", "launchSettings.json")
 
+  local stat = vim.loop.fs_stat(launchSettings)
+  if stat == nil then
+    return nil
+  end
+
   local success, result = pcall(vim.fn.json_decode, vim.fn.readfile(launchSettings, ""))
   if not success then
     return nil, "Error parsing JSON: " .. result
