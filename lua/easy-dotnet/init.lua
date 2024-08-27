@@ -30,16 +30,16 @@ M.setup = function(opts)
       secrets.edit_secrets_picker(merged_opts.secrets.path)
     end,
     run = function()
-      actions.run(merged_opts.terminal)
+      actions.run(merged_opts.terminal, false)
     end,
     test = function()
-      actions.test(merged_opts.terminal)
+      actions.test(merged_opts.terminal, false)
     end,
     restore = function()
       actions.restore(merged_opts.terminal)
     end,
     build = function()
-      actions.build(merged_opts.terminal)
+      actions.build(merged_opts.terminal, false)
     end,
     testrunner = function()
       require("easy-dotnet.test-runner.runner").runner(opts.test_runner)
@@ -86,6 +86,9 @@ M.setup = function(opts)
   end
 
   M.test_project = commands.test
+  M.test_default = function()
+    actions.test(merged_opts.terminal, true)
+  end
   M.test_solution = function()
     actions.test_solution(merged_opts.terminal)
   end
@@ -93,6 +96,16 @@ M.setup = function(opts)
     actions.test_watcher()
   end
   M.run_project = commands.run
+  M.run_default = function()
+    actions.run(merged_opts.terminal, true)
+  end
+  M.build_default_quickfix = function()
+    actions.build_quickfix(true)
+  end
+  M.build_default = function()
+    actions.build(merged_opts.terminal, true)
+  end
+
   M.restore = commands.restore
   M.secrets = commands.secrets
   M.build = commands.build
