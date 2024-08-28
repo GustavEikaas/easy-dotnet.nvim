@@ -1,10 +1,13 @@
 local M = {}
 
+---@param s string
+---@return string
 local function trim(s)
   -- Match the string and capture the non-whitespace characters
   return s:match("^%s*(.-)%s*$")
 end
 
+---@param test_names string[]
 local function expand_test_names_with_flags(test_names)
   local expanded = {}
   local seen = {}
@@ -60,6 +63,7 @@ local function expand_test_names_with_flags(test_names)
 end
 
 local function extract_tests(lines)
+  ---@type string[]
   local tests = {}
 
   -- Extract lines that match the pattern for test names
@@ -96,100 +100,54 @@ local default_options = require("easy-dotnet.options").test_runner
 --- @field collapsable boolean
 --- @field indent number
 --- @field hidden boolean
---- @field expand table
---- @field icon string
+--- @field expand table | nil
+--- @field icon string | nil
 
 
--- local function discover_tests_for_project(project_path, solution_file_path, co)
---   local command = string.format("dotnet test -t --nologo --no-build --no-restore %s", project_path)
---   local err_lines = {}
---   local lines = {}
---
---   vim.fn.jobstart(
---     command, {
---       stdout_buffered = true,
---       on_stderr = function(_, data)
---         for _, line in ipairs(data) do
---           if #line > 0 then
---             table.insert(err_lines, { value = line, preIcon = "❌" })
---           end
---         end
---       end,
---       on_stdout = function(_, data)
---         if data then
---           --TODO:find a better way to handle this
---           if #data == 1 then
---             --TODO: error handling
---           else
---             local tests = extract_tests(data)
---             for _, test in ipairs(tests) do
---               ---@type Test
---               local test_item = {
---                 name = test.value,
---                 preIcon = test.preIcon,
---                 indent = test.indent,
---                 collapsable = test.is_full_path == false,
---                 type = test.is_full_path == true and "test" or "namespace",
---                 namespace = test.ns,
---                 solution_file_path = solution_file_path,
---                 cs_project_path = project_path
---               }
---               table.insert(lines, test_item)
---             end
---           end
---         end
---       end,
---       on_exit = function(_, code)
---         coroutine.resume(co)
---         if code ~= 0 then
---           vim.notify("command failed")
---           -- -- win.lines = { { value = "Failed to discover tests", preIcon = "❌" } }
---           -- win.lines = err_lines
---           -- win.refreshLines()
---         end
---       end
---     })
---   coroutine.yield()
---   return lines
--- end
---
---
 ---@return Test[]
-local function discover_tests_for_project(project_path, solution_file_path)
-  local command = string.format(
-    "dotnet test -t --nologo --no-build --no-restore %s",
-    project_path
-  )
+---@param project Test
+local function discover_tests_for_project_and_update_lines(project, win)
+  local command = string.format("dotnet test -t --nologo --no-build --no-restore %s", project.cs_project_path)
 
-  -- Use vim.fn.system to run the command synchronously
-  local output = vim.fn.system(command)
-  local exit_code = vim.v.shell_error
-
-  if exit_code ~= 0 then
-    vim.notify("Command failed with exit code: " .. exit_code, vim.log.levels.ERROR)
-    return {}
-  end
-
+  ---@type Test[]
   local lines = {}
-  local tests = extract_tests(vim.split(output, "\n", { trimempty = true }))
+  table.insert(lines, project)
 
-  for _, test in ipairs(tests) do
-    ---@type Test
-    local test_item = {
-      name = test.value,
-      preIcon = test.preIcon,
-      indent = test.indent + 3,
-      collapsable = not test.is_full_path,
-      type = test.is_full_path and "test" or "namespace",
-      namespace = test.ns,
-      solution_file_path = solution_file_path,
-      cs_project_path = project_path,
-      hidden = true
-    }
-    table.insert(lines, test_item)
-  end
+  vim.fn.jobstart(command, {
+    stdout_buffered = true,
+    ---@param data string[]
+    on_stdout = function(_, data)
+      local tests = extract_tests(data)
 
-  return lines
+      for _, test in ipairs(tests) do
+        ---@type Test
+        local test_item = {
+          name = test.value,
+          preIcon = test.preIcon,
+          indent = test.indent + 3,
+          collapsable = not test.is_full_path,
+          type = test.is_full_path and "test" or "namespace",
+          namespace = test.ns,
+          solution_file_path = project.solution_file_path,
+          cs_project_path = project.cs_project_path,
+          hidden = true,
+          expand = {},
+          icon = "",
+        }
+        table.insert(lines, test_item)
+      end
+      for _, value in ipairs(lines) do
+        table.insert(win.lines, value)
+      end
+      win.refreshLines()
+    end,
+    ---@param code number
+    on_exit = function(_, code)
+      if code ~= 0 then
+        vim.notify(string.format("Discovering tests for %s failed", project.name))
+      end
+    end
+  })
 end
 
 M.runner = function(options)
@@ -226,9 +184,12 @@ M.runner = function(options)
     preIcon = "",
     name = solutionFilePath:match("([^/\\]+)$"),
     indent = 0,
-    collapsable = true,
     namespace = "",
-    hidden = false
+    hidden = false,
+    collapsable = true,
+    icon = "",
+    expand = {}
+
   }
   table.insert(lines, sln)
 
@@ -238,7 +199,7 @@ M.runner = function(options)
     if value.isTestProject == true then
       ---@type Test
       local project = {
-        collapsable = true,
+        collapsble = true,
         cs_project_path = value.path,
         solution_file_path = solutionFilePath,
         namespace = "",
@@ -246,21 +207,18 @@ M.runner = function(options)
         name = value.name,
         indent = 2,
         preIcon = "",
-        hidden = false
+        hidden = false,
+        collapsable = true,
+        icon = "",
+        expand = {}
       }
-      table.insert(lines, project)
-      local tests = discover_tests_for_project(value.path, solutionFilePath)
-      for _, test in ipairs(tests) do
-        table.insert(lines, test)
-      end
+      discover_tests_for_project_and_update_lines(project, win)
     end
   end
 
 
   win.lines = lines
   win.height = #lines > 20 and 20 or #lines
-
-  -- find csprojects and foreach
 
   win.refreshLines()
 end

@@ -368,8 +368,10 @@ local keymaps = {
   ---@param line Test
   ["<leader>r"] = function(_, line, win)
     if line.type == "sln" then
-      vim.notify("Running sln")
-      run_sln(win)
+      local projects = require("easy-dotnet.parsers.sln-parse").get_projects_from_sln(line.solution_file_path)
+      for _, value in ipairs(projects) do
+        run_csproject(win, value.path)
+      end
     elseif line.type == "csproject" then
       vim.notify("Running csproject")
       run_csproject(win, line.cs_project_path)
