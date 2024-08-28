@@ -9,6 +9,18 @@ local function expand_test_names_with_flags(test_names)
   local expanded = {}
   local seen = {}
 
+  -- Sort the test_names based on the number of segments and lexicographically
+  table.sort(test_names, function(a, b)
+    local a_segment_count = #a:gsub("[^.]+", "")
+    local b_segment_count = #b:gsub("[^.]+", "")
+
+    if a_segment_count == b_segment_count then
+      return a < b -- Lexicographical order if segment counts are the same
+    else
+      return a_segment_count < b_segment_count
+    end
+  end)
+
   for _, full_test_name in ipairs(test_names) do
     local parts = {}
     local segment_count = 0
