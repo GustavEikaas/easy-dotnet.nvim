@@ -15,34 +15,50 @@ local function csproj_fallback(on_select)
     function(i) on_select(i.path, "test") end, "Run test")
 end
 
-M.run_test_picker = function(on_select)
-  local solutionFilePath = sln_parse.find_solution_file()
-  if solutionFilePath == nil then
-    csproj_fallback(on_select)
-    return
+local function select_project(solution_file_path, cb, use_default)
+  local default_manager = require("easy-dotnet.default-manager")
+  local default = default_manager.check_default_project(solution_file_path, "test")
+  if default ~= nil and use_default == true then
+    return cb(default)
   end
-  local projects = extensions.filter(sln_parse.get_projects_from_sln(solutionFilePath), function(i)
-    return i.isTestProject == true
-  end)
+
+  local projects = extensions.filter(sln_parse.get_projects_from_sln(solution_file_path),
+    function(i)
+      return i.isTestProject == true
+    end)
+
 
   if #projects == 0 then
     vim.notify(error_messages.no_test_projects_found)
     return
   end
 
-  -- Add an entry for the solution file itself as it will run all tests in its definition
   local choices = {
-    {
-      path = solutionFilePath,
-      display = "Solution"
-    }
+    { path = solution_file_path, display = "Solution", name = "Solution" }
   }
 
-  for _, value in ipairs(projects) do
-    table.insert(choices, value)
+  for _, project in ipairs(projects) do
+    table.insert(choices, project)
   end
 
-  picker.picker(nil, choices, function(i) on_select(i.path, "test") end, "Run test")
+  picker.picker(nil, choices, function(project)
+    cb(project)
+    default_manager.set_default_project(project, solution_file_path, "test")
+  end, "Run test(s)")
+end
+
+
+---@param use_default boolean
+M.run_test_picker = function(on_select, use_default)
+  local solutionFilePath = sln_parse.find_solution_file()
+  if solutionFilePath == nil then
+    csproj_fallback(on_select)
+    return
+  end
+
+  select_project(solutionFilePath, function(project)
+    on_select(project.path, "test")
+  end, use_default)
 end
 
 M.test_solution = function(term)
