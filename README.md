@@ -9,23 +9,12 @@ Are you a .NET developer looking to harness the power of Neovim for your daily c
 ## Motivation
 As a developer transitioning from Rider to Neovim, I found myself missing the simplicity of running projects with just a single button click. Tired of typing out lengthy terminal commands for common tasks like running, testing, and managing user secrets, I decided to create easy-dotnet.nvim. This plugin aims to bridge the gap between the convenience of IDEs like Rider and the flexibility of Neovim.
 
----
-
 # Table of Contents
 
-1. [Easy-dotnet.nvim](#easy-dotnetnvim)
-2. [Simplifying .NET development in Neovim](#simplifying-net-development-in-neovim)
+1. [Easy-dotnet.nvim](#easy-dotnet.nvim)
+2. [Simplifying .NET development in Neovim](#simplifying-.net-development-in-neovim)
 3. [Motivation](#motivation)
 4. [Features](#features)
-   - [Solution and Csproj Support](#solution-and-csproj-support)
-   - [Action Commands](#action-commands)
-   - [Project Type Resolution](#project-type-resolution)
-   - [User Secrets Management](#user-secrets-management)
-   - [Debugging Helpers](#debugging-helpers)
-   - [Test runner](#test-runner)
-   - [Outdated command](#outdated-command)
-   - [Csproj mappings](#csproj-mappings)
-   - [Create dotnet templates like with `dotnet new`](#create-dotnet-templates-like-with-dotnet-new)
 5. [Setup](#setup)
    - [Without options](#without-options)
    - [With options](#with-options)
@@ -41,10 +30,11 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 10. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
-11. [Advanced configurations](#advanced-configurations)
+11. [Nvim-dap configuration](#nvim-dap-configuration)
+    - [Basic example](#basic-example)
+    - [Advanced example](#advanced-example)
+12. [Advanced configurations](#advanced-configurations)
     - [Overseer](#overseer)
-
----
 
 ## Features
 
@@ -322,6 +312,302 @@ The file is expected to be in the Properties/launchsettings.json relative to you
 }
 ```
 
+### Advanced example
+
+Dependencies:
+- which-key
+- overseer
+- netcoredbg
+- dap
+- easy-dotnet
+
+**Overseer template:**
+
+```
+local tmpl = {
+  name = "Build .NET App With Spinner",
+  builder = function(params)
+    local logPath = vim.fn.stdpath("data") .. "/easy-dotnet/build.log"
+    function filter_warnings(line)
+      if not line:find("warning") then
+        return line:match("^(.+)%((%d+),(%d+)%)%: (.+)$")
+      end
+    end
+    return {
+      name = "build",
+      cmd = "dotnet build /flp:v=q /flp:logfile=" .. logPath,
+      components = {
+        { "on_complete_dispose", timeout = 30 },
+        "default",
+        "show_spinner",
+        { "unique", replace = true },
+        {
+          "on_output_parse",
+          parser = {
+            diagnostics = {
+              { "extract", filter_warnings, "filename", "lnum", "col", "text" },
+            },
+          },
+        },
+        {
+          "on_result_diagnostics_quickfix",
+          open = true,
+          close = true,
+        },
+      },
+      cwd = require("easy-dotnet").get_debug_dll().relative_project_path,
+    }
+  end,
+}
+return tmpl
+
+```
+
+**Overseer component**
+```
+return {
+  desc = "Show Spinner",
+  -- Define parameters that can be passed in to the component
+  -- The params passed in will match the params defined above
+  constructor = function(params)
+    local num = 0
+    local spinner_frames = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" }
+
+    local notification = vim.notify(spinner_frames[1] .. " Building", "info", {
+      timeout = false,
+    })
+
+    local timer = vim.loop.new_timer()
+
+    return {
+      on_init = function(self, task)
+        timer:start(
+          100,
+          100,
+          vim.schedule_wrap(function()
+            num = num + 1
+            local new_spinner = num % #spinner_frames
+            notification =
+              vim.notify(spinner_frames[new_spinner + 1] .. " Building", "info", { replace = notification })
+          end)
+        )
+      end,
+      on_complete = function(self, task, code)
+        vim.notify("", "info", { replace = notification, timeout = 1 })
+        timer:stop()
+        return code
+      end,
+    }
+  end,
+}
+
+```
+
+**Dap Config**
+
+```
+return {
+  {
+    "mfussenegger/nvim-dap",
+    opts = function(_, opts)
+      local dap = require("dap")
+      if not dap.adapters["netcoredbg"] then
+        require("dap").adapters["netcoredbg"] = {
+          type = "executable",
+          command = vim.fn.exepath("netcoredbg"),
+          args = { "--interpreter=vscode" },
+          -- console = "internalConsole",
+        }
+      end
+
+      local dotnet = require("easy-dotnet")
+      local debug_dll = nil
+      local function ensure_dll()
+        if debug_dll ~= nil then
+          return debug_dll
+        end
+        local dll = dotnet.get_debug_dll()
+        debug_dll = dll
+        return dll
+      end
+
+      for _, lang in ipairs({ "cs", "fsharp", "vb" }) do
+        dap.configurations[lang] = {
+          {
+            log_level = "DEBUG",
+            type = "netcoredbg",
+            justMyCode = false,
+            stopAtEntry = false,
+            name = "Default",
+            request = "launch",
+            env = function()
+              local dll = ensure_dll()
+              local vars = dotnet.get_environment_variables(dll.project_name, dll.relative_project_path)
+              return vars or nil
+            end,
+            program = function()
+              require("overseer").enable_dap()
+              local dll = ensure_dll()
+              return dll.relative_dll_path
+            end,
+            cwd = function()
+              local dll = ensure_dll()
+              return dll.relative_project_path
+            end,
+            preLaunchTask = "Build .NET App With Spinner",
+          },
+        }
+
+        dap.listeners.before["event_terminated"]["easy-dotnet"] = function()
+          debug_dll = nil
+        end
+      end
+    end,
+    keys = {
+      { "<leader>d", "", desc = "+debug", mode = { "n", "v" } },
+      -- HYDRA MODE
+      -- NOTE: the delay is set to prevent the which-key hints to appear
+      {
+        "<leader>d<space>",
+        function()
+          require("which-key").show({ delay = 1000000000, keys = "<leader>d", loop = true })
+        end,
+        desc = "DAP Hydra Mode (which-key)",
+      },
+      {
+        "<leader>dR",
+        function()
+          local dap = require("dap")
+          local extension = vim.fn.expand("%:e")
+          dap.run(dap.configurations[extension][1])
+        end,
+        desc = "Run default configuration",
+      },
+      {
+        "<leader>dB",
+        function()
+          require("dap").set_breakpoint(vim.fn.input("Breakpoint condition: "))
+        end,
+        desc = "Breakpoint Condition",
+      },
+      {
+        "<leader>db",
+        function()
+          require("dap").toggle_breakpoint()
+        end,
+        desc = "Toggle Breakpoint",
+      },
+      {
+        "<leader>dc",
+        function()
+          require("dap").continue()
+        end,
+        desc = "Continue",
+      },
+      {
+        "<leader>da",
+        function()
+          require("dap").continue({ before = get_args })
+        end,
+        desc = "Run with Args",
+      },
+      {
+        "<leader>dC",
+        function()
+          require("dap").run_to_cursor()
+        end,
+        desc = "Run to Cursor",
+      },
+      {
+        "<leader>dg",
+        function()
+          require("dap").goto_()
+        end,
+        desc = "Go to Line (No Execute)",
+      },
+      {
+        "<leader>di",
+        function()
+          require("dap").step_into()
+        end,
+        desc = "Step Into",
+      },
+      {
+        "<leader>dj",
+        function()
+          require("dap").down()
+        end,
+        desc = "Down",
+      },
+      {
+        "<leader>dk",
+        function()
+          require("dap").up()
+        end,
+        desc = "Up",
+      },
+      {
+        "<leader>dl",
+        function()
+          require("dap").run_last()
+        end,
+        desc = "Run Last",
+      },
+      {
+        "<leader>do",
+        function()
+          require("dap").step_out()
+        end,
+        desc = "Step Out",
+      },
+      {
+        "<leader>dO",
+        function()
+          require("dap").step_over()
+        end,
+        desc = "Step Over",
+      },
+      {
+        "<leader>dp",
+        function()
+          require("dap").pause()
+        end,
+        desc = "Pause",
+      },
+      {
+        "<leader>dr",
+        function()
+          require("dap").repl.toggle()
+        end,
+        desc = "Toggle REPL",
+      },
+      {
+        "<leader>ds",
+        function()
+          require("dap").session()
+        end,
+        desc = "Session",
+      },
+      {
+        "<leader>dt",
+        function()
+          require("dap").terminate()
+        end,
+        desc = "Terminate",
+      },
+      {
+        "<leader>dw",
+        function()
+          require("dap.ui.widgets").hover()
+        end,
+        desc = "Widgets",
+      },
+    },
+  },
+}
+
+```
+
 ## Advanced example
 
 ### Dependencies:
@@ -486,5 +772,7 @@ return {
 }
 
 ```
+
+
 
 
