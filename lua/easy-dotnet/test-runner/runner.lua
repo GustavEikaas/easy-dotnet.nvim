@@ -9,6 +9,18 @@ local function expand_test_names_with_flags(test_names)
   local expanded = {}
   local seen = {}
 
+  -- Sort the test_names based on the number of segments and lexicographically
+  table.sort(test_names, function(a, b)
+    local a_segment_count = #a:gsub("[^.]+", "")
+    local b_segment_count = #b:gsub("[^.]+", "")
+
+    if a_segment_count == b_segment_count then
+      return a < b -- Lexicographical order if segment counts are the same
+    else
+      return a_segment_count < b_segment_count
+    end
+  end)
+
   for _, full_test_name in ipairs(test_names) do
     local parts = {}
     local segment_count = 0
@@ -33,7 +45,8 @@ local function expand_test_names_with_flags(test_names)
         local is_full_path = (current_count == segment_count)
         table.insert(expanded,
           {
-            value = concatenated,
+            ns = concatenated,
+            value = trim(part),
             is_full_path = is_full_path,
             indent = current_count - 1,
             preIcon = is_full_path == false and "📂" or "🧪"
@@ -51,7 +64,7 @@ local function extract_tests(lines)
 
   -- Extract lines that match the pattern for test names
   for _, line in ipairs(lines) do
-    if not (line:match("^Test run for") or line:match("^No test is available in") or line:match("^The following Tests are available:") or line == "") then
+    if not #(trim(line)) == 0 or not (line:match("^Test run for") or line:match("^No test is available in") or line:match("^The following Tests are available:") or line == "") then
       table.insert(tests, line)
     end
   end
@@ -120,6 +133,7 @@ M.runner = function(options)
               table.insert(lines,
                 {
                   value = test.value,
+                  ns = test.ns,
                   collapsable = test.is_full_path == false,
                   indent = test.indent,
                   preIcon = test.preIcon
