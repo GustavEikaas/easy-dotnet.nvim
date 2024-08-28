@@ -327,7 +327,7 @@ Dependencies:
 
 **Overseer template:**
 
-```
+```lua
 local tmpl = {
   name = "Build .NET App With Spinner",
   builder = function(params)
@@ -368,7 +368,7 @@ return tmpl
 ```
 
 **Overseer component**
-```
+```lua
 return {
   desc = "Show Spinner",
   -- Define parameters that can be passed in to the component
@@ -409,7 +409,7 @@ return {
 
 **Dap Config**
 
-```
+```lua
 return {
   {
     "mfussenegger/nvim-dap",
@@ -700,7 +700,7 @@ Thanks to [franroa](https://github.com/franroa) for sharing his configuration wi
 - other things that can be configured with overseer, like running those tasks in the order you want
 - If used with resession, the tasks are run automatically on opening the project (this is specially interesting if you have errors in your build and have to leave the coding session. It will pop up the quickfix list in the next day)
 
-```
+```lua
 return {
   {
     "GustavEikaas/easy-dotnet.nvim",
