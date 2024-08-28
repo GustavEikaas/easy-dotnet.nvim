@@ -24,7 +24,7 @@ local function printLines()
   for _, line in ipairs(M.lines) do
     if line.hidden == false or line.hidden == nil then
       local formatted = string.format("%s%s%s%s", string.rep(" ", line.indent or 0),
-        line.preIcon and (line.preIcon .. " ") or "", line.value,
+        line.preIcon and (line.preIcon .. " ") or "", line.name,
         line.icon and (" " .. line.icon) or "")
       table.insert(stringLines, formatted)
     end
