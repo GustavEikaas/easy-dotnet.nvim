@@ -46,12 +46,14 @@ local function apply_highlights()
   for _, value in ipairs(M.lines) do
     if value.hidden == false or value.hidden == nil then
       shadow_index = shadow_index + 1
-      if value.highlight ~= nil then
-        if type(value.highlight) == "string" then
-          vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, shadow_index - 1, 0, -1)
-        else
-          vim.notify("hl not supported as table")
-        end
+      if value.icon == "❌" then
+        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "ErrorMsg", shadow_index - 1, 0, -1)
+      elseif value.icon == "<Running>" then
+        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "SpellCap", shadow_index - 1, 0, -1)
+      elseif value.icon == "✔" then
+        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "Character", shadow_index - 1, 0, -1)
+      elseif value.highlight ~= nil and type(value.highlight) == "string" then
+        vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, shadow_index - 1, 0, -1)
       end
     end
   end
@@ -64,7 +66,7 @@ local function printLines()
     if line.hidden == false or line.hidden == nil then
       local formatted = string.format("%s%s%s%s", string.rep(" ", line.indent or 0),
         line.preIcon and (line.preIcon .. " ") or "", line.name,
-        line.icon and (" " .. line.icon) or "")
+        line.icon and line.icon ~= "✔" and (" " .. line.icon) or "")
       table.insert(stringLines, formatted)
     end
   end

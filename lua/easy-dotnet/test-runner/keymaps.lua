@@ -362,8 +362,11 @@ local keymaps = {
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, line.expand)
     vim.api.nvim_buf_set_option(buf, 'modifiable', false)
   end,
-  ["<leader>R"] = function(_, _, win)
-    run_sln(win)
+  ["<leader>R"] = function(_, line, win)
+    local projects = require("easy-dotnet.parsers.sln-parse").get_projects_from_sln(line.solution_file_path)
+    for _, value in ipairs(projects) do
+      run_csproject(win, value.path)
+    end
   end,
   ---@param line Test
   ["<leader>r"] = function(_, line, win)
