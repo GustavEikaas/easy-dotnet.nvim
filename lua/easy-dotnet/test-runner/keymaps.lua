@@ -373,13 +373,10 @@ local keymaps = {
         run_csproject(win, value.path)
       end
     elseif line.type == "csproject" then
-      vim.notify("Running csproject")
       run_csproject(win, line.cs_project_path)
     elseif line.type == "namespace" then
-      vim.notify("Running namespace")
       run_test_suite(line, win)
     elseif line.type == "test" then
-      vim.notify("Running Test ")
       line.icon = "<Running>"
       vim.fn.jobstart(
         string.format("dotnet test --filter='%s' --nologo --no-build --no-restore %s", line.namespace,

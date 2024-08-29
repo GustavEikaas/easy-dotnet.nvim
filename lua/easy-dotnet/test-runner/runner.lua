@@ -90,6 +90,11 @@ end
 
 local default_options = require("easy-dotnet.options").test_runner
 
+--- @class Highlight
+--- @field group string
+--- @field column_start number | nil
+--- @field column_end number | nil
+
 --- @class Test
 --- @field type "csproject" | "sln" | "namespace" | "test"
 --- @field solution_file_path string
@@ -102,6 +107,7 @@ local default_options = require("easy-dotnet.options").test_runner
 --- @field hidden boolean
 --- @field expand table | nil
 --- @field icon string | nil
+--- @field highlight string | Highlight| nil
 
 
 ---@return Test[]
@@ -188,7 +194,8 @@ M.runner = function(options)
     hidden = false,
     collapsable = true,
     icon = "",
-    expand = {}
+    expand = {},
+    highlight = "Question"
 
   }
   table.insert(lines, sln)
@@ -210,7 +217,8 @@ M.runner = function(options)
         hidden = false,
         collapsable = true,
         icon = "",
-        expand = {}
+        expand = {},
+        highlight = "Character"
       }
       discover_tests_for_project_and_update_lines(project, win)
     end
