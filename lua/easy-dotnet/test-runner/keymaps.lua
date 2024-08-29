@@ -1,4 +1,5 @@
-local messages = require "easy-dotnet.error-messages"
+local messages    = require "easy-dotnet.error-messages"
+local window      = require "easy-dotnet.test-runner.window"
 local resultIcons = {
   passed = "✔",
   skipped = "⏸",
@@ -280,6 +281,23 @@ local function filter_failed_tests(win)
   win.refreshLines()
 end
 
+
+local function get_path_from_stack_trace(stack_trace)
+  stack_trace = table.concat(stack_trace)
+  -- Pattern to match the file path and line number
+  local pattern = "in%s+(.-):line%s+(%d+)"
+
+  -- Search for the first match
+  local path, line = stack_trace:match(pattern)
+
+  -- Return the result as a table
+  if path and line then
+    return { path = path, line = tonumber(line) }
+  else
+    return nil -- Return nil if no match is found
+  end
+end
+
 local keymaps = {
   ["<leader>fe"] = function(_, _, win)
     filter_failed_tests(win)
@@ -343,24 +361,31 @@ local keymaps = {
     if line.expand == nil then
       return
     end
-    local buf = vim.api.nvim_create_buf(false, true)
-    local width = 70
-    local height = 10
 
-    local opts = {
-      relative = 'editor',
-      width = width,
-      height = height,
-      col = (vim.o.columns - width) / 2,
-      row = (vim.o.lines - height) / 2,
-      style = 'minimal',
-      border = 'single',
-    }
-    local win = vim.api.nvim_open_win(buf, true, opts)
-    vim.api.nvim_buf_set_keymap(buf, 'n', 'q', '<cmd>lua vim.api.nvim_win_close(' .. win .. ', true)<CR>',
-      { noremap = true, silent = true })
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, line.expand)
-    vim.api.nvim_buf_set_option(buf, 'modifiable', false)
+    local path = get_path_from_stack_trace(line.expand)
+
+    if path ~= nil then
+      local contents = vim.fn.readfile(path.path)
+
+      local file_float = window.new_float():pos_center():write_buf(contents):buf_set_filetype("csharp"):create()
+
+      vim.api.nvim_win_set_cursor(file_float.win, { path.line, 0 })
+      local ns_id = require("easy-dotnet.constants").ns_id
+      -- vim.api.nvim_buf_add_highlight(file_float.buf, ns_id, "ErrorMsg", path.line - 1, 0, -1)
+
+      local s = {}
+      for _, value in ipairs(line.expand) do
+        table.insert(s, { value, "ErrorMsg" })
+      end
+
+      vim.api.nvim_buf_set_virtual_text(file_float.buf, ns_id, path.line - 1, s, {})
+
+      -- vim.api.nvim_buf_set_extmark(file_float.buf, ns_id, path.line - 1, 0, {
+      --   virt_text = s,
+      --   virt_text_pos = "eol",
+      --   priority = 200,
+      -- })
+    end
   end,
   ["<leader>R"] = function(_, line, win)
     local projects = require("easy-dotnet.parsers.sln-parse").get_projects_from_sln(line.solution_file_path)
