@@ -150,6 +150,7 @@ dotnet.build_quickfix()                     -- Build dotnet project and open bui
 dotnet.build_default_quickfix()             -- Will build the last selected project and open build errors in quickfix list
 dotnet.clean()                              -- Run dotnet clean in the project
 dotnet.get_debug_dll()                      -- Return the dll from the bin/debug folder
+dotnet.is_dotnet_project()                  -- Returns true if a csproject or sln file is present in cwd or some folders down
 ```
 
 ### Vim commands
