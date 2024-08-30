@@ -7,22 +7,28 @@ local function trim(s)
   return s:match("^%s*(.-)%s*$")
 end
 
+local function sort_tests(tests)
+  table.sort(tests, function(a, b)
+    -- Extract the base names (without arguments) for comparison
+    local base_a = a:match("([^(]+)") or a
+    local base_b = b:match("([^(]+)") or b
+
+    -- Compare the base names lexicographically
+    if base_a == base_b then
+      -- If base names are the same, keep the original order (consider the entire string)
+      return a < b
+    else
+      return base_a < base_b
+    end
+  end)
+end
+
 ---@param test_names string[]
 local function expand_test_names_with_flags(test_names)
   local expanded = {}
   local seen = {}
 
-  -- Sort the test_names based on the number of segments and lexicographically
-  table.sort(test_names, function(a, b)
-    local a_segment_count = #a:gsub("[^.]+", "")
-    local b_segment_count = #b:gsub("[^.]+", "")
-
-    if a_segment_count == b_segment_count then
-      return a < b -- Lexicographical order if segment counts are the same
-    else
-      return a_segment_count < b_segment_count
-    end
-  end)
+  sort_tests(test_names)
 
   for _, full_test_name in ipairs(test_names) do
     -- Extract the base name without arguments, or use the full name if there are no arguments
@@ -60,21 +66,20 @@ local function expand_test_names_with_flags(test_names)
           })
         seen[concatenated] = true
       end
+    end
 
-
-      -- Add the full test name with arguments (if any) or just the base name
-      if (current_count == segment_count) and has_arguments and not seen[full_test_name] then
-        table.insert(expanded,
-          {
-            ns = trim(full_test_name),
-            value = trim(full_test_name):match("([^.]+%b())$"),
-            is_full_path = true,
-            indent = (segment_count * 2),
-            preIcon = "🧪",
-            type = "subcase"
-          })
-        seen[full_test_name] = true
-      end
+    -- -- Add the full test name with arguments (if any) or just the base name
+    if has_arguments and not seen[full_test_name] then
+      table.insert(expanded,
+        {
+          ns = trim(full_test_name),
+          value = trim(full_test_name):match("([^.]+%b())$"),
+          is_full_path = true,
+          indent = (segment_count * 2),
+          preIcon = "🧪",
+          type = "subcase"
+        })
+      seen[full_test_name] = true
     end
   end
 
