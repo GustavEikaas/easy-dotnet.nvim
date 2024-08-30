@@ -136,13 +136,17 @@ local function discover_tests_for_project_and_update_lines(project, win)
 
   ---@type Test[]
   local lines = {}
-  table.insert(lines, project)
+  -- table.insert(lines, project)
 
   vim.fn.jobstart(command, {
     stdout_buffered = true,
     ---@param data string[]
     on_stdout = function(_, data)
       local tests = extract_tests(data)
+      if #tests == 0 then
+        return
+      end
+      table.insert(lines, project)
 
       for _, test in ipairs(tests) do
         ---@type Test
