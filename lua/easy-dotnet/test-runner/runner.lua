@@ -91,7 +91,6 @@ local function extract_tests(lines)
     end
   end
 
-
   return expand_test_names_with_flags(tests)
 end
 

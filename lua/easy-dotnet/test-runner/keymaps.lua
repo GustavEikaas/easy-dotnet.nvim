@@ -5,6 +5,64 @@ local resultIcons = {
   failed = "❌"
 }
 
+
+local function aggregateStatus(matches)
+  for _, namespace in ipairs(matches) do
+    if (namespace.ref.collapsable == true) then
+      local worstStatus = nil
+      --TODO: check array for worst status
+      for _, res in ipairs(matches) do
+        if res.line:match(namespace.line) then
+          if (res.ref.icon == resultIcons.failed) then
+            worstStatus = resultIcons.failed
+            namespace.ref.expand = res.ref.expand
+          elseif res.ref.icon == resultIcons.skipped then
+            if worstStatus ~= resultIcons.failed then
+              worstStatus = resultIcons.skipped
+            end
+          end
+        end
+      end
+      namespace.ref.icon = worstStatus == nil and resultIcons.passed or worstStatus
+    end
+  end
+end
+
+
+local function parse_status(result, test_line)
+  --TODO: handle more cases like cancelled etc...
+  if result.outcome == "Passed" then
+    test_line.icon = resultIcons.passed
+  elseif result.outcome == "Failed" then
+    test_line.icon = resultIcons.failed
+    test_line.expand = vim.split(result.stackTrace, "\n")
+  elseif result.outcome == "NotExecuted" then
+    test_line.icon = resultIcons.skipped
+  else
+    test_line.icon = "??"
+  end
+end
+
+
+local function parse_log_file(relative_log_file_path, win, matches)
+  require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
+    ---@param unit_test_results TestCase[]
+    function(unit_test_results)
+      for _, match in ipairs(matches) do
+        local test_line = match.ref
+        if test_line.type == "test" or test_line.type == "subcase" then
+          local result = unit_test_results[match.line]
+          if result == nil then
+            error(string.format("Status of %s was not present in xml file", match.line))
+          end
+          parse_status(result, test_line)
+        end
+      end
+      aggregateStatus(matches)
+      win.refreshLines()
+    end)
+end
+
 local function run_csproject(win, cs_project_path)
   local log_file_name = string.format("%s.xml", cs_project_path:match("([^/\\]+)$"))
   local normalized_path = cs_project_path:gsub('\\', '/')
@@ -25,78 +83,8 @@ local function run_csproject(win, cs_project_path)
   vim.fn.jobstart(
     string.format("dotnet test --nologo --no-build --no-restore %s --logger='trx;logFileName=%s'", cs_project_path,
       log_file_name), {
-      on_stdout = function(_, data)
-        -- if data == nil then
-        --   error("Failed to parse dotnet test output")
-        -- end
-        -- for stdoutIndex, stdout in ipairs(data) do
-        --   for _, match in ipairs(matches) do
-        --     local failed = stdout:match(string.format("%s %s", "Failed", match.line))
-        --     if failed ~= nil then
-        --       match.ref.icon = resultIcons.failed
-        --       match.ref.expand = peekStackTrace(stdoutIndex, data)
-        --     end
-        --
-        --     local skipped = stdout:match(string.format("%s %s", "Skipped", match.line))
-        --     if skipped ~= nil then
-        --       match.ref.icon = resultIcons.skipped
-        --     end
-        --   end
-        -- end
-        -- win.refreshLines()
-      end,
       on_exit = function(_, code)
-        require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
-          ---@param unit_test_results TestCase[]
-          function(unit_test_results)
-            for _, test_line in ipairs(win.lines) do
-              local result = unit_test_results[test_line.namespace]
-
-              if result == nil then
-                --TODO: some fatal error here or sumtin
-              end
-
-              if result ~= nil then
-                --TODO: handle more cases like cancelled etc...
-                if result.outcome == "Passed" then
-                  test_line.icon = resultIcons.passed
-                elseif result.outcome == "Failed" then
-                  test_line.icon = resultIcons.failed
-                  test_line.expand = vim.split(result.stackTrace, "\n")
-                elseif result.outcome == "NotExecuted" then
-                  test_line.icon = resultIcons.skipped
-                else
-                  test_line.icon = "??"
-                end
-              end
-            end
-
-            --aggregate namespaces/csproject status
-            for _, namespace in ipairs(matches) do
-              if (namespace.ref.collapsable == true) then
-                local worstStatus = nil
-                --TODO: check array for worst status
-                for _, res in ipairs(matches) do
-                  if res.line:match(namespace.line) then
-                    if (res.ref.icon == resultIcons.failed) then
-                      worstStatus = resultIcons.failed
-                      namespace.ref.expand = res.ref.expand
-                    elseif res.ref.icon == resultIcons.skipped then
-                      if worstStatus ~= resultIcons.failed then
-                        worstStatus = resultIcons.skipped
-                      end
-                    end
-                  end
-                end
-                namespace.ref.icon = worstStatus == nil and resultIcons.passed or worstStatus
-              end
-            end
-            win.refreshLines()
-          end)
-
-        -- if code ~= 0 then
-        --   vim.notify("dotnet test command failed")
-        -- end
+        parse_log_file(relative_log_file_path, win, matches)
       end
     })
 end
@@ -123,77 +111,8 @@ local function run_test_group(line, win)
     string.format("dotnet test --filter='%s' --nologo --no-build --no-restore %s --logger='trx;logFileName=%s'",
       suite_name, line.cs_project_path, log_file_name),
     {
-      on_stdout = function(_, data)
-        -- if data == nil then
-        --   error("Failed to parse dotnet test output")
-        -- end
-        -- for stdoutIndex, stdout in ipairs(data) do
-        --   for _, match in ipairs(matches) do
-        --     local failed = stdout:match(string.format("%s %s", "Failed", match.line))
-        --     if failed ~= nil then
-        --       match.ref.icon = resultIcons.failed
-        --       match.ref.expand = peekStackTrace(stdoutIndex, data)
-        --     end
-        --
-        --     local skipped = stdout:match(string.format("%s %s", "Skipped", match.line))
-        --     if skipped ~= nil then
-        --       match.ref.icon = resultIcons.skipped
-        --     end
-        --   end
-        -- end
-        -- win.refreshLines()
-      end,
-      on_exit = function(_, code)
-        require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
-          ---@param unit_test_results TestCase[]
-          function(unit_test_results)
-            for _, test_line in ipairs(win.lines) do
-              local result = unit_test_results[test_line.namespace]
-              if result ~= nil then
-                --TODO: handle more cases like cancelled etc...
-                if result.outcome == "Passed" then
-                  test_line.icon = resultIcons.passed
-                elseif result.outcome == "Failed" then
-                  test_line.icon = resultIcons.failed
-                  test_line.expand = vim.split(result.stackTrace, "\n")
-                elseif result.outcome == "NotExecuted" then
-                  test_line.icon = resultIcons.skipped
-                else
-                  test_line.icon = "??"
-                end
-              else
-                --TODO: throw fatal error
-              end
-            end
-
-
-            for _, namespace in ipairs(matches) do
-              if (namespace.ref.collapsable == true) then
-                local worstStatus = nil
-                --TODO: check array for worst status
-                for _, res in ipairs(matches) do
-                  if res.line:match(namespace.line) then
-                    if (res.ref.icon == resultIcons.failed) then
-                      worstStatus = resultIcons.failed
-                      namespace.ref.expand = res.ref.expand
-                    elseif res.ref.icon == resultIcons.skipped then
-                      if worstStatus ~= resultIcons.failed then
-                        worstStatus = resultIcons.skipped
-                      end
-                    end
-                  end
-                end
-                namespace.ref.icon = worstStatus == nil and resultIcons.passed or worstStatus
-              end
-            end
-
-
-            win.refreshLines()
-          end)
-
-        -- if code ~= 0 then
-        --   vim.notify("dotnet test command failed")
-        -- end
+      on_exit = function()
+        parse_log_file(relative_log_file_path, win, matches)
       end
     })
 end
@@ -221,77 +140,8 @@ local function run_test_suite(line, win)
     string.format("dotnet test --filter='%s' --nologo --no-build --no-restore %s --logger='trx;logFileName=%s'",
       suite_name, line.cs_project_path, log_file_name),
     {
-      on_stdout = function(_, data)
-        -- if data == nil then
-        --   error("Failed to parse dotnet test output")
-        -- end
-        -- for stdoutIndex, stdout in ipairs(data) do
-        --   for _, match in ipairs(matches) do
-        --     local failed = stdout:match(string.format("%s %s", "Failed", match.line))
-        --     if failed ~= nil then
-        --       match.ref.icon = resultIcons.failed
-        --       match.ref.expand = peekStackTrace(stdoutIndex, data)
-        --     end
-        --
-        --     local skipped = stdout:match(string.format("%s %s", "Skipped", match.line))
-        --     if skipped ~= nil then
-        --       match.ref.icon = resultIcons.skipped
-        --     end
-        --   end
-        -- end
-        -- win.refreshLines()
-      end,
-      on_exit = function(_, code)
-        require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
-          ---@param unit_test_results TestCase[]
-          function(unit_test_results)
-            for _, test_line in ipairs(win.lines) do
-              local result = unit_test_results[test_line.namespace]
-              if result ~= nil then
-                --TODO: handle more cases like cancelled etc...
-                if result.outcome == "Passed" then
-                  test_line.icon = resultIcons.passed
-                elseif result.outcome == "Failed" then
-                  test_line.icon = resultIcons.failed
-                  test_line.expand = vim.split(result.stackTrace, "\n")
-                elseif result.outcome == "NotExecuted" then
-                  test_line.icon = resultIcons.skipped
-                else
-                  test_line.icon = "??"
-                end
-              else
-                --TODO: throw fatal error
-              end
-            end
-
-
-            for _, namespace in ipairs(matches) do
-              if (namespace.ref.collapsable == true) then
-                local worstStatus = nil
-                --TODO: check array for worst status
-                for _, res in ipairs(matches) do
-                  if res.line:match(namespace.line) then
-                    if (res.ref.icon == resultIcons.failed) then
-                      worstStatus = resultIcons.failed
-                      namespace.ref.expand = res.ref.expand
-                    elseif res.ref.icon == resultIcons.skipped then
-                      if worstStatus ~= resultIcons.failed then
-                        worstStatus = resultIcons.skipped
-                      end
-                    end
-                  end
-                end
-                namespace.ref.icon = worstStatus == nil and resultIcons.passed or worstStatus
-              end
-            end
-
-
-            win.refreshLines()
-          end)
-
-        -- if code ~= 0 then
-        --   vim.notify("dotnet test command failed")
-        -- end
+      on_exit = function()
+        parse_log_file(relative_log_file_path, win, matches)
       end
     })
 end
@@ -424,21 +274,19 @@ local keymaps = {
       vim.api.nvim_buf_set_virtual_text(file_float.buf, ns_id, path.line - 1, s, {})
     end
   end,
-  ["<leader>R"] = function(_, line, win)
-    local projects = require("easy-dotnet.parsers.sln-parse").get_projects_from_sln(line.solution_file_path)
-    for _, value in ipairs(projects) do
-      if value.isTestProject == true then
-        run_csproject(win, value.path)
+  ["<leader>R"] = function(_, _, win)
+    for _, value in ipairs(win.lines) do
+      if value.type == "csproject" then
+        run_csproject(win, value.cs_project_path)
       end
     end
   end,
   ---@param line Test
   ["<leader>r"] = function(_, line, win)
     if line.type == "sln" then
-      local projects = require("easy-dotnet.parsers.sln-parse").get_projects_from_sln(line.solution_file_path)
-      for _, value in ipairs(projects) do
-        if value.isTestProject == true then
-          run_csproject(win, value.path)
+      for _, value in ipairs(win.lines) do
+        if value.type == "csproject" and value.solution_file_path == line.solution_file_path then
+          run_csproject(win, value.cs_project_path)
         end
       end
     elseif line.type == "csproject" then
@@ -446,12 +294,10 @@ local keymaps = {
     elseif line.type == "namespace" then
       run_test_suite(line, win)
     elseif line.type == "test_group" then
-      vim.notify("Run test group")
       run_test_group(line, win)
     elseif line.type == "subcase" then
       vim.notify("Running specific subcases is not supported")
     elseif line.type == "test" then
-      vim.notify(line.cs_project_path)
       local log_file_name = string.format("%s.xml", line.name)
       local normalized_path = line.cs_project_path:gsub('\\', '/')
       local directory_path = normalized_path:match('^(.*)/[^/]*$')
@@ -465,63 +311,17 @@ local keymaps = {
       line.icon = "<Running>"
       vim.fn.jobstart(
         command, {
-          stdout_buffered = true,
-          on_stdout = function(_, data)
-            -- if data then
-            --   local result = nil
-            --   for index, stdout_line in ipairs(data) do
-            --     local failed = stdout_line:match(string.format("%s %s", "Failed", line.namespace))
-            --     if failed ~= nil then
-            --       line.expand = peekStackTrace(index, data)
-            --       result = "Failed"
-            --     end
-            --     local skipped = stdout_line:match(string.format("%s %s", "Skipped", line.namespace))
-            --
-            --     if skipped ~= nil then
-            --       result = "Skipped"
-            --     end
-            --   end
-            --   if result == nil then
-            --     result = "Passed"
-            --   end
-            --
-            --   line.icon = getIcon(result)
-            --   win.refreshLines()
-          end,
-          on_exit = function(_, code)
+          on_exit = function()
             require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
               ---@param unit_test_results TestCase
               function(unit_test_results)
-                require("easy-dotnet.debug").write_to_log("peek")
-                require("easy-dotnet.debug").write_to_log(unit_test_results)
                 local result = unit_test_results[line.namespace]
-
-                if result ~= nil then
-                  if result.outcome == "Passed" then
-                    line.icon = resultIcons.passed
-                  elseif result.outcome == "Failed" then
-                    line.icon = resultIcons.failed
-                    line.expand = vim.split(unit_test_results.stackTrace, "\n")
-                  elseif result.outcome == "NotExecuted" then
-                    line.icon = resultIcons.skipped
-                  else
-                    line.icon = "??"
-                  end
-                else
-                  --TODO: throw fatal error
+                if result == nil then
+                  error(string.format("Status of %s was not present in xml file", line.namespace))
                 end
-
+                parse_status(result, line)
                 win.refreshLines()
               end)
-
-
-            -- TODO: If the tests are failing then exit code 1 is expected
-            -- if code ~= 0 then
-            --   if (line.icon == "<Running>") then
-            --     line.icon = "<Panic! command failed>"
-            --     win.refreshLines()
-            --   end
-            -- end
           end
         })
 
