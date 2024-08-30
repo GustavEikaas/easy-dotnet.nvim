@@ -191,6 +191,125 @@ local function get_path_from_stack_trace(stack_trace)
   end
 end
 
+
+local function run_test(line, win)
+  local log_file_name = string.format("%s.xml", line.name)
+  local normalized_path = line.cs_project_path:gsub('\\', '/')
+  local directory_path = normalized_path:match('^(.*)/[^/]*$')
+  local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
+
+  local command = string.format(
+    "dotnet test --filter='%s' --nologo --no-build --no-restore %s --logger='trx;logFileName=%s'",
+    line.namespace:gsub("%b()", ""), line.cs_project_path, log_file_name)
+
+  line.icon = "<Running>"
+  vim.fn.jobstart(
+    command, {
+      on_exit = function()
+        require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
+          ---@param unit_test_results TestCase
+          function(unit_test_results)
+            local result = unit_test_results[line.namespace]
+            if result == nil then
+              error(string.format("Status of %s was not present in xml file", line.namespace))
+            end
+            parse_status(result, line)
+            win.refreshLines()
+          end)
+      end
+    })
+
+  win.refreshLines()
+end
+
+
+local function open_stack_trace(line)
+  if line.expand == nil then
+    return
+  end
+
+  local path = get_path_from_stack_trace(line.expand)
+
+  if path ~= nil then
+    local ns_id = require("easy-dotnet.constants").ns_id
+    local contents = vim.fn.readfile(path.path)
+
+    local file_float = window.new_float():pos_left():write_buf(contents):buf_set_filetype("csharp"):create()
+
+    local stack_trace = window:new_float():link_close(file_float):pos_right():write_buf(line.expand):create()
+
+    local function go_to_file()
+      vim.api.nvim_win_close(file_float.win, true)
+      vim.cmd(string.format("edit %s", path.path))
+      vim.api.nvim_win_set_cursor(0, { path.line, 0 })
+      vim.api.nvim_buf_add_highlight(0, ns_id, "ErrorMsg", path.line - 1, 0, -1)
+    end
+
+    vim.keymap.set("n", "<leader>gf", function()
+      go_to_file()
+    end, { silent = true, noremap = true, buffer = file_float.buf })
+
+    vim.keymap.set("n", "<leader>gf", function()
+      go_to_file()
+    end, { silent = true, noremap = true, buffer = stack_trace.buf })
+
+
+    vim.api.nvim_win_set_cursor(file_float.win, { path.line, 0 })
+  end
+end
+
+local function expand_section(line, index, win)
+  local newLines = {}
+  local action = win.lines[index + 1].hidden == true and "expand" or "collapse"
+
+  if line.type == "sln" then
+    for _, lineDef in ipairs(win.lines) do
+      if line.solution_file_path == lineDef.solution_file_path then
+        if lineDef ~= line then
+          lineDef.hidden = action == "collapse" and true or false
+        end
+      end
+      table.insert(newLines, lineDef)
+    end
+  elseif line.type == "csproject" then
+    for _, lineDef in ipairs(win.lines) do
+      if line.cs_project_path == lineDef.cs_project_path and line.solution_file_path == lineDef.solution_file_path then
+        if lineDef ~= line then
+          lineDef.hidden = action == "collapse" and true or false
+        end
+      end
+      table.insert(newLines, lineDef)
+    end
+  elseif line.type == "namespace" then
+    for _, lineDef in ipairs(win.lines) do
+      if lineDef.namespace:match(line.namespace) and line.cs_project_path == lineDef.cs_project_path and line.solution_file_path == lineDef.solution_file_path then
+        if lineDef ~= line then
+          lineDef.hidden = action == "collapse" and true or false
+        end
+      end
+      table.insert(newLines, lineDef)
+    end
+  elseif line.type == "test_group" then
+    for _, test_line in ipairs(win.lines) do
+      if test_line.type == "subcase" and line.namespace == test_line.namespace:gsub("%b()", "") then
+        if line ~= test_line then
+          test_line.hidden = action == "collapse" and true or false
+        end
+      end
+      table.insert(newLines, test_line)
+    end
+  elseif line.type == "test" or line.type == "subcase" then
+    --TODO: go to file
+    return
+  else
+    error(string.format("Unknown linetype %s", line.type))
+  end
+
+
+  win.lines = newLines
+  win.refreshLines()
+end
+
 local keymaps = {
   ["<leader>fe"] = function(_, _, win)
     filter_failed_tests(win)
@@ -212,86 +331,10 @@ local keymaps = {
   ---@param index number
   ---@param line Test
   ["o"] = function(index, line, win)
-    local newLines = {}
-    local action = win.lines[index + 1].hidden == true and "expand" or "collapse"
-
-    if line.type == "sln" then
-      for _, lineDef in ipairs(win.lines) do
-        if line.solution_file_path == lineDef.solution_file_path then
-          if lineDef ~= line then
-            lineDef.hidden = action == "collapse" and true or false
-          end
-        end
-        table.insert(newLines, lineDef)
-      end
-    elseif line.type == "csproject" then
-      for _, lineDef in ipairs(win.lines) do
-        if line.cs_project_path == lineDef.cs_project_path and line.solution_file_path == lineDef.solution_file_path then
-          if lineDef ~= line then
-            lineDef.hidden = action == "collapse" and true or false
-          end
-        end
-        table.insert(newLines, lineDef)
-      end
-    elseif line.type == "namespace" then
-      for _, lineDef in ipairs(win.lines) do
-        if lineDef.namespace:match(line.namespace) and line.cs_project_path == lineDef.cs_project_path and line.solution_file_path == lineDef.solution_file_path then
-          if lineDef ~= line then
-            lineDef.hidden = action == "collapse" and true or false
-          end
-        end
-        table.insert(newLines, lineDef)
-      end
-    elseif line.type == "test_group" then
-      for _, test_line in ipairs(win.lines) do
-        if test_line.type == "subcase" and line.namespace == test_line.namespace:gsub("%b()", "") then
-          if line ~= test_line then
-            test_line.hidden = action == "collapse" and true or false
-          end
-        end
-        table.insert(newLines, test_line)
-      end
-    elseif line.type == "test" then
-      --TODO: go to file
-      return
-    end
-
-    win.lines = newLines
-    win.refreshLines()
+    expand_section(line, index, win)
   end,
   ["<leader>p"] = function(_, line)
-    if line.expand == nil then
-      return
-    end
-
-    local path = get_path_from_stack_trace(line.expand)
-
-    if path ~= nil then
-      local ns_id = require("easy-dotnet.constants").ns_id
-      local contents = vim.fn.readfile(path.path)
-
-      local file_float = window.new_float():pos_left():write_buf(contents):buf_set_filetype("csharp"):create()
-
-      local stack_trace = window:new_float():link_close(file_float):pos_right():write_buf(line.expand):create()
-
-      local function go_to_file()
-        vim.api.nvim_win_close(file_float.win, true)
-        vim.cmd(string.format("edit %s", path.path))
-        vim.api.nvim_win_set_cursor(0, { path.line, 0 })
-        vim.api.nvim_buf_add_highlight(0, ns_id, "ErrorMsg", path.line - 1, 0, -1)
-      end
-
-      vim.keymap.set("n", "<leader>gf", function()
-        go_to_file()
-      end, { silent = true, noremap = true, buffer = file_float.buf })
-
-      vim.keymap.set("n", "<leader>gf", function()
-        go_to_file()
-      end, { silent = true, noremap = true, buffer = stack_trace.buf })
-
-
-      vim.api.nvim_win_set_cursor(file_float.win, { path.line, 0 })
-    end
+    open_stack_trace(line)
   end,
   ["<leader>R"] = function(_, _, win)
     for _, value in ipairs(win.lines) do
@@ -317,33 +360,7 @@ local keymaps = {
     elseif line.type == "subcase" then
       vim.notify("Running specific subcases is not supported")
     elseif line.type == "test" then
-      local log_file_name = string.format("%s.xml", line.name)
-      local normalized_path = line.cs_project_path:gsub('\\', '/')
-      local directory_path = normalized_path:match('^(.*)/[^/]*$')
-      local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
-
-      local command = string.format(
-        "dotnet test --filter='%s' --nologo --no-build --no-restore %s --logger='trx;logFileName=%s'",
-        line.namespace:gsub("%b()", ""), line.cs_project_path, log_file_name)
-
-      line.icon = "<Running>"
-      vim.fn.jobstart(
-        command, {
-          on_exit = function()
-            require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
-              ---@param unit_test_results TestCase
-              function(unit_test_results)
-                local result = unit_test_results[line.namespace]
-                if result == nil then
-                  error(string.format("Status of %s was not present in xml file", line.namespace))
-                end
-                parse_status(result, line)
-                win.refreshLines()
-              end)
-          end
-        })
-
-      win.refreshLines()
+      run_test(line, win)
     else
       vim.notify("Unknown line type " .. line.type)
       return

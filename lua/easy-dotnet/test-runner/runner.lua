@@ -184,8 +184,6 @@ local function discover_tests_for_project_and_update_lines(project, win)
   })
 end
 
-
-
 M.runner = function(options)
   local mergedOpts = merge_tables(default_options, options or {})
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
