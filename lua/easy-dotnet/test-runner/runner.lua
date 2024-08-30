@@ -93,7 +93,7 @@ local function extract_tests(lines)
   -- Extract lines that match the pattern for test names
   for _, line in ipairs(lines) do
     if line:match("^%s%s%s%s%S") ~= nil then
-      table.insert(tests, line)
+      table.insert(tests, trim(line))
     end
   end
 

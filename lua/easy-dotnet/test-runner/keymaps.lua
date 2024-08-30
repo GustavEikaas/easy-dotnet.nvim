@@ -267,18 +267,24 @@ local keymaps = {
     local path = get_path_from_stack_trace(line.expand)
 
     if path ~= nil then
+      local ns_id = require("easy-dotnet.constants").ns_id
       local contents = vim.fn.readfile(path.path)
 
       local file_float = window.new_float():pos_center():write_buf(contents):buf_set_filetype("csharp"):create()
-
-      vim.api.nvim_win_set_cursor(file_float.win, { path.line, 0 })
-      local ns_id = require("easy-dotnet.constants").ns_id
 
       local s = {}
       for _, value in ipairs(line.expand) do
         table.insert(s, { value, "ErrorMsg" })
       end
 
+      vim.keymap.set("n", "<leader>gf", function()
+        vim.api.nvim_win_close(file_float.win, true)
+        vim.cmd(string.format("edit %s", path.path))
+        vim.api.nvim_win_set_cursor(0, { path.line, 0 })
+        vim.api.nvim_buf_add_highlight(0, ns_id, "ErrorMsg", path.line - 1, 0, -1)
+      end, { silent = true, noremap = true, buffer = file_float.buf })
+
+      vim.api.nvim_win_set_cursor(file_float.win, { path.line, 0 })
       vim.api.nvim_buf_set_virtual_text(file_float.buf, ns_id, path.line - 1, s, {})
     end
   end,
