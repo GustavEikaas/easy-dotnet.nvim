@@ -243,6 +243,17 @@ local keymaps = {
         end
         table.insert(newLines, lineDef)
       end
+    elseif line.type == "test_group" then
+      for _, test_line in ipairs(win.lines) do
+        if test_line.type == "subcase" and line.namespace == test_line.namespace:gsub("%b()", "") then
+          if line ~= test_line then
+            test_line.hidden = action == "collapse" and true or false
+          end
+        end
+        table.insert(newLines, test_line)
+      end
+
+      --TODO: open all children
     elseif line.type == "test" then
       --TODO: go to file
       return
