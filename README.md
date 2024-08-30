@@ -179,7 +179,9 @@ Integrated test runner inspired by Rider IDE
   - [x] Unit test name
   - [x] Collapsable hieararchy 
   - [x] Peek stack trace
-- [x] Resolve test results from selected test scope
+  - [x] Run sln,project,namespace,test
+  - [x] Aggregate test results
+  - [x] Go to file (only for failed tests)
 
 ### Keymaps
 - `W` -> Collapse all
