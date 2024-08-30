@@ -104,6 +104,7 @@ M.build_project_quickfix = function(use_default)
     if csproj == nil then
       vim.notify(messages.no_project_definition_found)
     end
+    --TODO: constants.get_data_dir
     local logPath = vim.fn.stdpath "data" .. "/easy-dotnet/build.log"
     local command = "dotnet build " .. csproj .. " /flp:v=q /flp:logfile=" .. logPath
     vim.fn.jobstart(command, {
@@ -125,6 +126,7 @@ M.build_project_quickfix = function(use_default)
       return
     end
     vim.notify("Building...")
+    --TODO: constans.get_data_directory
     local logPath = vim.fn.stdpath "data" .. "/easy-dotnet/build.log"
     local command = "dotnet build " .. project.path .. " /flp:v=q /flp:logfile=" .. logPath
     vim.fn.jobstart(command, {

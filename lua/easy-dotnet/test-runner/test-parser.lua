@@ -72,9 +72,7 @@ main fsi.CommandLineArgs.[1..]
 ]]
 
 local ensure_and_get_fsx_path = function()
-  local dir = vim.fs.joinpath(vim.fn.stdpath("data"), "easy-dotnet")
-  local file_utils = require("easy-dotnet.file-utils")
-  file_utils.ensure_directory_exists(dir)
+  local dir = require("easy-dotnet.constants").get_data_directory()
   local filepath = vim.fs.joinpath(dir, "test_parser.fsx")
   local file = io.open(filepath, "r")
   if file then
