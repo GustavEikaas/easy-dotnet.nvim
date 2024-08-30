@@ -114,6 +114,7 @@ local function buffer_exists(name)
   end
   return nil
 end
+---
 --- Renders the buffer
 M.render = function()
   -- if buf exists, restore
@@ -126,7 +127,6 @@ M.render = function()
   printLines()
   setBufferOptions()
   setMappings()
-  --TODO: add highlights
   return M
 end
 
