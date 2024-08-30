@@ -252,8 +252,6 @@ local keymaps = {
         end
         table.insert(newLines, test_line)
       end
-
-      --TODO: open all children
     elseif line.type == "test" then
       --TODO: go to file
       return
@@ -318,7 +316,6 @@ local keymaps = {
         "dotnet test --filter='%s' --nologo --no-build --no-restore %s --logger='trx;logFileName=%s'",
         line.namespace:gsub("%b()", ""), line.cs_project_path, log_file_name)
 
-      require("easy-dotnet.debug").write_to_log(command)
       line.icon = "<Running>"
       vim.fn.jobstart(
         command, {
@@ -343,4 +340,5 @@ local keymaps = {
     end
   end
 }
+
 return keymaps
