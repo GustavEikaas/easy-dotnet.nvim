@@ -76,22 +76,24 @@ local function run_csproject(win, cs_project_path)
         require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
           ---@param unit_test_results TestCase[]
           function(unit_test_results)
-            for _, test_result in ipairs(unit_test_results) do
-              local test_name = test_result["@testName"]
-              local outcome = test_result["@outcome"]
-              for _, test_line in ipairs(win.lines) do
-                if test_line.cs_project_path == cs_project_path and test_line.type == "test" and test_line.namespace == test_name then
-                  --TODO: handle more cases like cancelled etc...
-                  if outcome == "Passed" then
-                    test_line.icon = resultIcons.passed
-                  elseif outcome == "Failed" then
-                    test_line.icon = resultIcons.failed
-                    test_line.expand = vim.split(test_result.Output.ErrorInfo.StackTrace, "\n")
-                  elseif outcome == "NotExecuted" then
-                    test_line.icon = resultIcons.skipped
-                  else
-                    test_line.icon = "??"
-                  end
+            for _, test_line in ipairs(win.lines) do
+              local result = unit_test_results[test_line.namespace]
+
+              if result == nil then
+                --TODO: some fatal error here or sumtin
+              end
+
+              if result ~= nil then
+                --TODO: handle more cases like cancelled etc...
+                if result.outcome == "Passed" then
+                  test_line.icon = resultIcons.passed
+                elseif result.outcome == "Failed" then
+                  test_line.icon = resultIcons.failed
+                  test_line.expand = vim.split(result.stackTrace, "\n")
+                elseif result.outcome == "NotExecuted" then
+                  test_line.icon = resultIcons.skipped
+                else
+                  test_line.icon = "??"
                 end
               end
             end
@@ -172,23 +174,22 @@ local function run_test_suite(line, win)
         require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
           ---@param unit_test_results TestCase[]
           function(unit_test_results)
-            for _, test_result in ipairs(unit_test_results) do
-              local test_name = test_result["@testName"]
-              local outcome = test_result["@outcome"]
-              for _, test_line in ipairs(win.lines) do
-                if test_line.cs_project_path == line.cs_project_path and test_line.type == "test" and test_line.namespace == test_name then
-                  --TODO: handle more cases like cancelled etc...
-                  if outcome == "Passed" then
-                    test_line.icon = resultIcons.passed
-                  elseif outcome == "Failed" then
-                    test_line.icon = resultIcons.failed
-                    test_line.expand = vim.split(test_result.Output.ErrorInfo.StackTrace, "\n")
-                  elseif outcome == "NotExecuted" then
-                    test_line.icon = resultIcons.skipped
-                  else
-                    test_line.icon = "??"
-                  end
+            for _, test_line in ipairs(win.lines) do
+              local result = unit_test_results[test_line.namespace]
+              if result ~= nil then
+                --TODO: handle more cases like cancelled etc...
+                if result.outcome == "Passed" then
+                  test_line.icon = resultIcons.passed
+                elseif result.outcome == "Failed" then
+                  test_line.icon = resultIcons.failed
+                  test_line.expand = vim.split(result.stackTrace, "\n")
+                elseif result.outcome == "NotExecuted" then
+                  test_line.icon = resultIcons.skipped
+                else
+                  test_line.icon = "??"
                 end
+              else
+                --TODO: throw fatal error
               end
             end
 
@@ -413,20 +414,23 @@ local keymaps = {
             require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
               ---@param unit_test_results TestCase
               function(unit_test_results)
-                local test_name = unit_test_results["@testName"]
-                local outcome = unit_test_results["@outcome"]
+                require("easy-dotnet.debug").write_to_log("peek")
+                require("easy-dotnet.debug").write_to_log(unit_test_results)
+                local result = unit_test_results[line.namespace]
 
-                if test_name == line.namespace then
-                  if outcome == "Passed" then
+                if result ~= nil then
+                  if result.outcome == "Passed" then
                     line.icon = resultIcons.passed
-                  elseif outcome == "Failed" then
+                  elseif result.outcome == "Failed" then
                     line.icon = resultIcons.failed
-                    line.expand = vim.split(unit_test_results.Output.ErrorInfo.StackTrace, "\n")
-                  elseif outcome == "NotExecuted" then
+                    line.expand = vim.split(unit_test_results.stackTrace, "\n")
+                  elseif result.outcome == "NotExecuted" then
                     line.icon = resultIcons.skipped
                   else
                     line.icon = "??"
                   end
+                else
+                  --TODO: throw fatal error
                 end
 
                 win.refreshLines()

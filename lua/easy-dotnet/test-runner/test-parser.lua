@@ -3,7 +3,6 @@ local M = {}
 local file_template = [[
 //v1
 #r "nuget: Newtonsoft.Json"
-
 open System
 open System.IO
 open System.Xml
@@ -11,16 +10,38 @@ open Newtonsoft.Json.Linq
 open Newtonsoft.Json
 
 let xmlToJson (xml: string) : JObject =
-    // Load the XML string into an XmlDocument
     let xmlDoc = new XmlDocument()
     xmlDoc.LoadXml(xml)
-    // Convert the XmlDocument to JSON and parse it into a JObject
     let jsonString = JsonConvert.SerializeXmlNode(xmlDoc, Newtonsoft.Json.Formatting.Indented)
     JObject.Parse(jsonString)
 
-let extractResults (jsonObj: JObject) : JObject option =
-    // Extract the "Results" object from the JSON object
-    jsonObj.SelectToken("$.TestRun.Results") :?> JObject |> Option.ofObj
+let transformTestCase (testCase: JObject) : JProperty =
+    let testName = testCase.["@testName"].ToString()
+    let newTestCase = new JObject()
+    newTestCase.["outcome"] <- testCase.["@outcome"]
+
+    let errorInfo = testCase.SelectToken("$.Output.ErrorInfo")
+    if errorInfo <> null && errorInfo.["StackTrace"] <> null then
+        newTestCase.["stackTrace"] <- errorInfo.["StackTrace"]
+
+    new JProperty(testName, newTestCase)
+
+let extractAndTransformResults (jsonObj: JObject) : JObject option =
+    let resultsToken = jsonObj.SelectToken("$.TestRun.Results.UnitTestResult")
+    match resultsToken with
+    | null -> None
+    | _ ->
+        let results =
+            match resultsToken.Type with
+            | JTokenType.Array -> resultsToken :?> JArray
+            | _ -> new JArray(resultsToken)
+
+        let transformedResults = new JObject(
+            results
+            |> Seq.map (fun testCase -> transformTestCase (testCase :?> JObject))
+        )
+
+        Some transformedResults
 
 let main (argv: string[]) =
     if argv.Length <> 1 then
@@ -32,9 +53,9 @@ let main (argv: string[]) =
             if File.Exists(filePath) then
                 let xmlContent = File.ReadAllText(filePath)
                 let jsonObj = xmlToJson(xmlContent)
-                match extractResults(jsonObj) with
+                match extractAndTransformResults(jsonObj) with
                 | Some results ->
-                    printfn "%s" (results.ToString(Formatting.Indented))
+                    printf "%s" (results.ToString())
                     0
                 | None ->
                     printfn "Error: 'Results' object not found in the JSON output."
@@ -72,30 +93,11 @@ local ensure_and_get_fsx_path = function()
   return filepath
 end
 
---- @class TestResult
---- @field UnitTestResult TestCase[]
 
+--key of the object is the testname
 --- @class TestCase
---- @field ["@executionId"] string
---- @field ["@testId"] string
---- @field ["@testName"] string
---- @field ["@computerName"] string
---- @field ["@duration"] string
---- @field ["@startTime"] string
---- @field ["@endTime"] string
---- @field ["@testType"] string
---- @field ["@outcome"] string
---- @field ["@testListId"] string
---- @field ["@relativeResultsDirectory"] string
---- @field Output Output
-
---- @class Output
---- @field ErrorInfo? ErrorInfo
---- @field StdOut? string
-
---- @class ErrorInfo
---- @field Message string
---- @field StackTrace string
+--- @field stackTrace string | nil
+--- @field outcome string
 
 ---@param xml_path string
 M.xml_to_json = function(xml_path, cb)
@@ -108,17 +110,11 @@ M.xml_to_json = function(xml_path, cb)
     ---@param data string[]
     on_stdout = function(_, data)
       local output = table.concat(data)
-      local pos = output:find("{")
 
-      if pos == nil then
-        require("easy-dotnet.debug").write_to_log(output)
-        error("Invalid json returned from fsx script")
-      end
+      ---@type TestCase[]
+      local test_summary = vim.fn.json_decode(output)
 
-      ---@type TestResult
-      local test_summary = vim.fn.json_decode(output:sub(pos))
-
-      cb(test_summary.UnitTestResult)
+      cb(test_summary)
     end,
     on_exit = function(_, code)
       if code ~= 0 then
