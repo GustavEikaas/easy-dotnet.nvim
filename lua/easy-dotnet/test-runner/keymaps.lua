@@ -1,16 +1,15 @@
-local window      = require "easy-dotnet.test-runner.window"
+local window = require "easy-dotnet.test-runner.window"
+
 local resultIcons = {
   passed = "✔",
   skipped = "⏸",
   failed = "❌"
 }
 
-
 local function aggregateStatus(matches)
   for _, namespace in ipairs(matches) do
     if (namespace.ref.collapsable == true) then
       local worstStatus = nil
-      --TODO: check array for worst status
       for _, res in ipairs(matches) do
         if res.line:match(namespace.line) then
           if (res.ref.icon == resultIcons.failed) then

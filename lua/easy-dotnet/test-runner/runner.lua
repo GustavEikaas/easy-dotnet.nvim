@@ -177,6 +177,7 @@ local function discover_tests_for_project_and_update_lines(project, win)
     ---@param code number
     on_exit = function(_, code)
       if code ~= 0 then
+        --TODO: check if project was not built
         vim.notify(string.format("Discovering tests for %s failed", project.name))
       end
     end
