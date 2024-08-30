@@ -60,20 +60,21 @@ local function expand_test_names_with_flags(test_names)
           })
         seen[concatenated] = true
       end
-    end
 
-    -- Add the full test name with arguments (if any) or just the base name
-    if has_arguments and not seen[full_test_name] then
-      table.insert(expanded,
-        {
-          ns = trim(full_test_name),
-          value = trim(full_test_name):match("([^.]+%b())$"),
-          is_full_path = true,
-          indent = (segment_count * 2),
-          preIcon = "🧪",
-          type = "subcase"
-        })
-      seen[full_test_name] = true
+
+      -- Add the full test name with arguments (if any) or just the base name
+      if (current_count == segment_count) and has_arguments and not seen[full_test_name] then
+        table.insert(expanded,
+          {
+            ns = trim(full_test_name),
+            value = trim(full_test_name):match("([^.]+%b())$"),
+            is_full_path = true,
+            indent = (segment_count * 2),
+            preIcon = "🧪",
+            type = "subcase"
+          })
+        seen[full_test_name] = true
+      end
     end
   end
 
