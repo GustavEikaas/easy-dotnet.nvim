@@ -50,7 +50,7 @@ local function expand_test_names_with_flags(test_names)
     for part in base_name:gmatch("[^.]+") do
       table.insert(parts, part)
       current_count = current_count + 1
-      local concatenated = trim(table.concat(parts, "."))
+      local concatenated = table.concat(parts, ".")
 
       if not seen[concatenated] then
         -- Set is_full_path to true only if we are at the last segment
@@ -58,7 +58,7 @@ local function expand_test_names_with_flags(test_names)
         table.insert(expanded,
           {
             ns = concatenated,
-            value = trim(part),
+            value = part,
             is_full_path = is_full_path and not has_arguments,
             indent = (current_count * 2) - 1,
             preIcon = is_full_path == false and "📂" or has_arguments and "📦" or "🧪",
@@ -72,8 +72,8 @@ local function expand_test_names_with_flags(test_names)
     if has_arguments and not seen[full_test_name] then
       table.insert(expanded,
         {
-          ns = trim(full_test_name),
-          value = trim(full_test_name):match("([^.]+%b())$"),
+          ns = full_test_name,
+          value = full_test_name:match("([^.]+%b())$"),
           is_full_path = true,
           indent = (segment_count * 2),
           preIcon = "🧪",
