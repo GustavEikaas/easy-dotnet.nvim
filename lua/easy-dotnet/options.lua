@@ -1,3 +1,7 @@
+---@class TestRunnerOptions
+---@field noBuild boolean
+---@field noRestore boolean
+
 local function get_secret_path(secret_guid)
   local path = ""
   local home_dir = vim.fn.expand('~')
@@ -37,6 +41,7 @@ return {
   secrets = {
     path = get_secret_path,
   },
+  ---@type TestRunnerOptions
   test_runner = {
     noBuild = true,
     noRestore = true,

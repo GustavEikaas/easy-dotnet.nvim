@@ -135,12 +135,13 @@ local default_options = require("easy-dotnet.options").test_runner
 
 ---@return Test[]
 ---@param project Test
-local function discover_tests_for_project_and_update_lines(project, win)
-  local command = string.format("dotnet test -t --nologo --no-build --no-restore %s", project.cs_project_path)
+---@param options TestRunnerOptions
+local function discover_tests_for_project_and_update_lines(project, win, options)
+  local command = string.format("dotnet test -t --nologo %s %s %s", options.noBuild == true and "--no-build" or "",
+    options.noRestore == true and "--no-restore" or "", project.cs_project_path)
 
   ---@type Test[]
   local lines = {}
-  -- table.insert(lines, project)
 
   vim.fn.jobstart(command, {
     stdout_buffered = true,
@@ -185,6 +186,7 @@ local function discover_tests_for_project_and_update_lines(project, win)
 end
 
 M.runner = function(options)
+  ---@type TestRunnerOptions
   local mergedOpts = merge_tables(default_options, options or {})
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
   local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
@@ -248,7 +250,7 @@ M.runner = function(options)
         expand = {},
         highlight = "Character"
       }
-      discover_tests_for_project_and_update_lines(project, win)
+      discover_tests_for_project_and_update_lines(project, win, mergedOpts)
     end
   end
 
