@@ -86,9 +86,8 @@ local function extract_tests(lines)
 
   -- Extract lines that match the pattern for test names
   for _, line in ipairs(lines) do
-    if not #(trim(line)) == 0 or not (line:match("^Test run for") or line:match("^No test is available in") or line:match("^The following Tests are available:") or line == "") then
+    if line:match("^%s%s%s%s%S") ~= nil then
       table.insert(tests, line)
-      -- :gsub("%b()", "")
     end
   end
 
