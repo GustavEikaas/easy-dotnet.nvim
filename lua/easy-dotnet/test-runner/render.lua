@@ -18,23 +18,6 @@ local function setBufferOptions()
   vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
 end
 
-local function printLines()
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
-  local stringLines = {}
-  for _, line in ipairs(M.lines) do
-    if line.hidden == false or line.hidden == nil then
-      local formatted = string.format("%s%s%s%s", string.rep(" ", line.indent or 0),
-        line.preIcon and (line.preIcon .. " ") or "", line.value,
-        line.icon and (" " .. line.icon) or "")
-      table.insert(stringLines, formatted)
-    end
-  end
-
-  vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, stringLines)
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
-end
-
-
 -- Translates line num to M.lines index accounting for hidden lines
 local function translateIndex(line_num)
   local i = 0
@@ -53,6 +36,50 @@ local function translateIndex(line_num)
 
   return r
 end
+
+
+local function apply_highlights()
+  local ns_id = require("easy-dotnet.constants").ns_id
+
+  --Some lines are hidden so tracking the actual line numbers using shadow_index
+  local shadow_index = 0
+  for _, value in ipairs(M.lines) do
+    if value.hidden == false or value.hidden == nil then
+      shadow_index = shadow_index + 1
+      if value.icon == "❌" then
+        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "ErrorMsg", shadow_index - 1, 0, -1)
+      elseif value.icon == "<Running>" then
+        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "SpellCap", shadow_index - 1, 0, -1)
+      elseif value.icon == "✔" then
+        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "Character", shadow_index - 1, 0, -1)
+      elseif value.highlight ~= nil and type(value.highlight) == "string" then
+        vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, shadow_index - 1, 0, -1)
+      end
+    end
+  end
+end
+
+local function printLines()
+  vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
+  local stringLines = {}
+  for _, line in ipairs(M.lines) do
+    if line.hidden == false or line.hidden == nil then
+      local formatted = string.format("%s%s%s%s", string.rep(" ", line.indent or 0),
+        line.preIcon and (line.preIcon .. " ") or "", line.name,
+        line.icon and line.icon ~= "✔" and (" " .. line.icon) or "")
+      table.insert(stringLines, formatted)
+    end
+  end
+
+  vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, stringLines)
+  vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
+
+  apply_highlights()
+end
+
+
+
+
 
 local function setMappings()
   if M.keymap == nil then
@@ -87,6 +114,7 @@ local function buffer_exists(name)
   end
   return nil
 end
+---
 --- Renders the buffer
 M.render = function()
   -- if buf exists, restore
@@ -99,7 +127,6 @@ M.render = function()
   printLines()
   setBufferOptions()
   setMappings()
-  --TODO: add highlights
   return M
 end
 

@@ -20,6 +20,7 @@ local function get_property(type)
 end
 
 local function get_or_create_cache_dir()
+  --TODO: constants.get_data_dir
   local dir = vim.fs.joinpath(vim.fn.stdpath("data"), "easy-dotnet")
   local file_utils = require("easy-dotnet.file-utils")
   file_utils.ensure_directory_exists(dir)

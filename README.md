@@ -170,7 +170,8 @@ Dotnet new
 ## Testrunner
 
 Integrated test runner inspired by Rider IDE
-![image](https://github.com/user-attachments/assets/27955253-cb41-4f47-8586-2b4d068ec538)
+![image](https://github.com/user-attachments/assets/d05d0f3a-d03a-4184-9dd4-e5502eedc061)
+![image](https://github.com/user-attachments/assets/4855bd73-265d-4b53-91e8-0728612a2016)
 
 - [x] Basic test runner window
   - [x] Grouped by namespace
@@ -178,7 +179,9 @@ Integrated test runner inspired by Rider IDE
   - [x] Unit test name
   - [x] Collapsable hieararchy 
   - [x] Peek stack trace
-- [x] Resolve test results from selected test scope
+  - [x] Run sln,project,namespace,test
+  - [x] Aggregate test results
+  - [x] Go to file (only for failed tests)
 
 ### Keymaps
 - `W` -> Collapse all
@@ -188,6 +191,7 @@ Integrated test runner inspired by Rider IDE
 - `<leader>R` -> Run all tests
 - `<leader>p` -> Peek stacktrace on failed test
 - `<leader>fe` -> Show only failed tests
+- `<leader>gf` -> Go to file (only works inside stacktrace float)
 
 ## Outdated
 
