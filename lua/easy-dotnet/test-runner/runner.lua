@@ -25,11 +25,14 @@ local function expand_test_names_with_flags(test_names)
   end)
 
   for _, full_test_name in ipairs(test_names) do
+    -- Extract the base name without arguments, or use the full name if there are no arguments
+    local base_name = full_test_name:match("([^%(]+)") or full_test_name
+    local has_arguments = full_test_name:find("%(") ~= nil
     local parts = {}
     local segment_count = 0
 
-    -- Count the total number of segments
-    for _ in full_test_name:gmatch("[^.]+") do
+    -- Count the total number of segments in the base name
+    for _ in base_name:gmatch("[^.]+") do
       segment_count = segment_count + 1
     end
 
@@ -37,8 +40,8 @@ local function expand_test_names_with_flags(test_names)
     parts = {}
     local current_count = 0
 
-    -- Split the test name by dot and process
-    for part in full_test_name:gmatch("[^.]+") do
+    -- Split the base name by dot and process
+    for part in base_name:gmatch("[^.]+") do
       table.insert(parts, part)
       current_count = current_count + 1
       local concatenated = trim(table.concat(parts, "."))
@@ -50,12 +53,27 @@ local function expand_test_names_with_flags(test_names)
           {
             ns = concatenated,
             value = trim(part),
-            is_full_path = is_full_path,
+            is_full_path = is_full_path and not has_arguments,
             indent = (current_count * 2) - 1,
-            preIcon = is_full_path == false and "📂" or "🧪"
+            preIcon = is_full_path == false and "📂" or has_arguments and "📦" or "🧪",
+            type = is_full_path == false and "namespace" or has_arguments and "test_group" or "test"
           })
         seen[concatenated] = true
       end
+    end
+
+    -- Add the full test name with arguments (if any) or just the base name
+    if has_arguments and not seen[full_test_name] then
+      table.insert(expanded,
+        {
+          ns = trim(full_test_name),
+          value = trim(full_test_name):match("([^.]+%b())$"),
+          is_full_path = true,
+          indent = (segment_count * 2),
+          preIcon = "🧪",
+          type = "subcase"
+        })
+      seen[full_test_name] = true
     end
   end
 
@@ -70,6 +88,7 @@ local function extract_tests(lines)
   for _, line in ipairs(lines) do
     if not #(trim(line)) == 0 or not (line:match("^Test run for") or line:match("^No test is available in") or line:match("^The following Tests are available:") or line == "") then
       table.insert(tests, line)
+      -- :gsub("%b()", "")
     end
   end
 
@@ -96,7 +115,7 @@ local default_options = require("easy-dotnet.options").test_runner
 --- @field column_end number | nil
 
 --- @class Test
---- @field type "csproject" | "sln" | "namespace" | "test"
+--- @field type "csproject" | "sln" | "namespace" | "test" | "subcase" | "test_group"
 --- @field solution_file_path string
 --- @field cs_project_path string
 --- @field name string
@@ -132,7 +151,7 @@ local function discover_tests_for_project_and_update_lines(project, win)
           preIcon = test.preIcon,
           indent = test.indent + 3,
           collapsable = not test.is_full_path,
-          type = test.is_full_path and "test" or "namespace",
+          type = test.type,
           namespace = test.ns,
           solution_file_path = project.solution_file_path,
           cs_project_path = project.cs_project_path,
