@@ -46,8 +46,8 @@ end
 M.outdated = function()
   local path = vim.fn.expand("%")
   if path:match(".csproj$") then
-    --TODO: constants.get_data_dir
-    local outPath = vim.fn.stdpath("data") .. "/easy-dotnet/package.json"
+    local dir = require("easy-dotnet.constants").get_data_directory()
+    local outPath = vim.fs.joinpath(dir, "package.json")
     local cmd = string.format("dotnet-outdated %s --output %s", path, outPath)
     vim.fn.jobstart(cmd, {
       on_exit = function(_, b)

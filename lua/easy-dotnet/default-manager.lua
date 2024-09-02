@@ -19,13 +19,6 @@ local function get_property(type)
   return string.format("default_%s_project", type)
 end
 
-local function get_or_create_cache_dir()
-  --TODO: constants.get_data_dir
-  local dir = vim.fs.joinpath(vim.fn.stdpath("data"), "easy-dotnet")
-  local file_utils = require("easy-dotnet.file-utils")
-  file_utils.ensure_directory_exists(dir)
-  return dir
-end
 
 local function extract_sln_name(solution_file_path)
   return solution_file_path:match("([^/\\]+)$")
@@ -34,7 +27,7 @@ end
 local function get_or_create_cache_file(solution_file_path)
   local sln_name = extract_sln_name(solution_file_path)
   local file_utils = require("easy-dotnet.file-utils")
-  local dir = get_or_create_cache_dir()
+  local dir = require("easy-dotnet.constants").get_data_directory()
   local file = vim.fs.joinpath(dir, sln_name .. ".json")
   file_utils.ensure_json_file_exists(file)
 
@@ -44,7 +37,6 @@ local function get_or_create_cache_file(solution_file_path)
     ---@type SolutionContent|nil
     decoded = decoded
   }
-
 end
 
 ---Checks for the default project in the solution file.
@@ -58,7 +50,7 @@ M.check_default_project = function(solution_file_path, type)
   local project = file.decoded[get_property(type)]
   if project ~= nil then
     local projects = sln_parse.get_projects_from_sln(solution_file_path)
-    --TODO: improve 
+    --TODO: improve
     table.insert(projects, { path = solution_file_path, display = "Solution", name = "Solution" })
 
     for _, value in ipairs(projects) do
@@ -77,11 +69,11 @@ M.set_default_project = function(project, solution_file_path, type)
   local file = get_or_create_cache_file(solution_file_path)
 
   if file.decoded == nil then
-    file.decoded = {} 
+    file.decoded = {}
   end
 
   file.decoded[get_property(type)] = project.name
-    local file_utils = require("easy-dotnet.file-utils")
+  local file_utils = require("easy-dotnet.file-utils")
   file_utils.overwrite_file(file.file, vim.fn.json_encode(file.decoded))
 end
 

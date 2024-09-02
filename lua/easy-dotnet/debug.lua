@@ -1,8 +1,8 @@
 local M = {}
 
 M.write_to_log = function(message)
-  --TODO: constants.get_data_dir
-  local log_path = vim.fn.stdpath "data" .. "/easy-dotnet-log.txt"
+  local dir = require("easy-dotnet.constants").get_data_directory()
+  local log_path = vim.fs.joinpath(dir, "debug.log")
   -- Open the file in append mode
   local file, err = vim.loop.fs_open(log_path, "a", 438) -- 438 is the octal value for file permissions 0666
 
