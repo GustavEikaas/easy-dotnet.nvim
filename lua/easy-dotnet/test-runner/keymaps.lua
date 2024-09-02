@@ -314,6 +314,17 @@ local keymaps = {
   ["<leader>fe"] = function(_, _, win)
     filter_failed_tests(win)
   end,
+  ---@param line Test
+  ["g"] = function(_, line, win)
+    if line.type == "test" or line.type == "subcase" or line.type == "test_group" then
+      if line.file_path ~= nil then
+        vim.cmd("edit " .. line.file_path)
+        vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
+      end
+    else
+      vim.notify("Cant go to " .. line.type)
+    end
+  end,
   ["E"] = function(_, _, win)
     for _, value in ipairs(win.lines) do
       value.hidden = false
