@@ -11,6 +11,8 @@ local function generate_relative_path_for_project(path, slnpath)
 end
 
 -- TODO: Investigate using dotnet sln list command
+---@param solutionFilePath string
+---@return CSProject[]
 M.get_projects_from_sln = function(solutionFilePath)
   local file = io.open(solutionFilePath, "r")
 

@@ -1,6 +1,19 @@
 local extensions = require "easy-dotnet.extensions"
 local M = {}
 
+---@class CSProject
+---@field display string
+---@field path string
+---@field name string
+---@field version string
+---@field runnable boolean
+---@field secrets string
+---@field bin_path string
+---@field dll_path string
+---@field isTestProject boolean
+---@field isConsoleProject boolean
+---@field isWebProject boolean
+
 --- Extracts a pattern from a file
 ---@param project_file_path string
 ---@param pattern string
@@ -58,7 +71,9 @@ local function extractProjectName(path)
   return filename:gsub("%.csproj$", "")
 end
 
--- Function to find the corresponding .csproj file
+-- Get the project definition from a csproj file
+---@param csproj_file_path string
+---@return CSProject
 M.get_project_from_csproj = function(csproj_file_path)
   local display = extractProjectName(csproj_file_path)
   local name = display
@@ -67,6 +82,9 @@ M.get_project_from_csproj = function(csproj_file_path)
   local isTestProject = M.is_test_project(csproj_file_path)
   local maybeSecretGuid = M.try_get_secret_id(csproj_file_path)
   local version = M.extract_version(csproj_file_path)
+  local bin_path = vim.fs.joinpath(vim.fs.dirname(csproj_file_path), "bin", "Debug", "net" .. version)
+  local dll_path = vim.fs.joinpath(bin_path, name .. ".dll")
+
   if version then
     display = display .. "@" .. version
   end
@@ -90,7 +108,8 @@ M.get_project_from_csproj = function(csproj_file_path)
     version = version,
     runnable = isWebProject or isConsoleProject,
     secrets = maybeSecretGuid,
-
+    bin_path = bin_path,
+    dll_path = dll_path,
     isTestProject = isTestProject,
     isConsoleProject = isConsoleProject,
     isWebProject = isWebProject
