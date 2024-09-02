@@ -177,7 +177,6 @@ end
 local function discover_tests_for_project_and_update_lines(project, win, options, dll_path)
   local absolute_dll_path = vim.fs.joinpath(vim.fn.getcwd(), dll_path)
   local script_path = ensure_and_get_fsx_path()
-  vim.notify(options.vstest_path)
   local vstest_path = options.vstest_path
 
   local command = string.format("dotnet fsi %s '%s' '%s'", script_path, vstest_path, absolute_dll_path)
