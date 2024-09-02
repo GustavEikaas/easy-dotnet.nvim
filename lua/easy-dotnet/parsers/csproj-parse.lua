@@ -67,6 +67,9 @@ M.get_project_from_csproj = function(csproj_file_path)
   local isTestProject = M.is_test_project(csproj_file_path)
   local maybeSecretGuid = M.try_get_secret_id(csproj_file_path)
   local version = M.extract_version(csproj_file_path)
+  local bin_path = vim.fs.joinpath(vim.fs.dirname(csproj_file_path), "bin", "Debug", "net" .. version)
+  local dll_path = vim.fs.joinpath(bin_path, name .. ".dll")
+
   if version then
     display = display .. "@" .. version
   end
@@ -90,7 +93,8 @@ M.get_project_from_csproj = function(csproj_file_path)
     version = version,
     runnable = isWebProject or isConsoleProject,
     secrets = maybeSecretGuid,
-
+    bin_path = bin_path,
+    dll_path = dll_path,
     isTestProject = isTestProject,
     isConsoleProject = isConsoleProject,
     isWebProject = isWebProject
