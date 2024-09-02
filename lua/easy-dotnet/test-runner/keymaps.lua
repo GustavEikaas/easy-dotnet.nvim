@@ -71,6 +71,7 @@ local function run_csproject(win, cs_project_path)
 
   local matches = {}
   for _, line in ipairs(win.lines) do
+    --TODO: ensure sln
     if line.cs_project_path == cs_project_path then
       table.insert(matches, { ref = line, line = line.namespace, })
       line.icon = "<Running>"
