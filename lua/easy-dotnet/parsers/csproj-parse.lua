@@ -1,6 +1,19 @@
 local extensions = require "easy-dotnet.extensions"
 local M = {}
 
+---@class CSProject
+---@field display string
+---@field path string
+---@field name string
+---@field version string
+---@field runnable boolean
+---@field secrets string
+---@field bin_path string
+---@field dll_path string
+---@field isTestProject boolean
+---@field isConsoleProject boolean
+---@field isWebProject boolean
+
 --- Extracts a pattern from a file
 ---@param project_file_path string
 ---@param pattern string
@@ -58,7 +71,9 @@ local function extractProjectName(path)
   return filename:gsub("%.csproj$", "")
 end
 
--- Function to find the corresponding .csproj file
+-- Get the project definition from a csproj file
+---@param csproj_file_path string
+---@return CSProject
 M.get_project_from_csproj = function(csproj_file_path)
   local display = extractProjectName(csproj_file_path)
   local name = display
