@@ -7,30 +7,33 @@ local function trim(s)
   return s:match("^%s*(.-)%s*$")
 end
 
+---@param tests Test[]
 local function sort_tests(tests)
   table.sort(tests, function(a, b)
     -- Extract the base names (without arguments) for comparison
-    local base_a = a:match("([^(]+)") or a
-    local base_b = b:match("([^(]+)") or b
+    local base_a = a.namespace:match("([^(]+)") or a
+    local base_b = b.namespace:match("([^(]+)") or b
 
     -- Compare the base names lexicographically
     if base_a == base_b then
       -- If base names are the same, keep the original order (consider the entire string)
-      return a < b
+      return a.namespace < b.namespace
     else
       return base_a < base_b
     end
   end)
 end
 
----@param test_names string[]
-local function expand_test_names_with_flags(test_names)
+---@param tests Test[]
+local function expand_test_names_with_flags(tests)
+  ---@type Test[]
   local expanded = {}
   local seen = {}
 
-  sort_tests(test_names)
+  sort_tests(tests)
 
-  for _, full_test_name in ipairs(test_names) do
+  for _, test in ipairs(tests) do
+    local full_test_name = test.namespace
     -- Extract the base name without arguments, or use the full name if there are no arguments
     local base_name = full_test_name:match("([^%(]+)") or full_test_name
     local has_arguments = full_test_name:find("%(") ~= nil
@@ -55,49 +58,58 @@ local function expand_test_names_with_flags(test_names)
       if not seen[concatenated] then
         -- Set is_full_path to true only if we are at the last segment
         local is_full_path = (current_count == segment_count)
-        table.insert(expanded,
-          {
-            ns = concatenated,
-            value = part,
-            is_full_path = is_full_path and not has_arguments,
-            indent = (current_count * 2) - 1,
-            preIcon = is_full_path == false and "📂" or has_arguments and "📦" or "🧪",
-            type = is_full_path == false and "namespace" or has_arguments and "test_group" or "test"
-          })
+        ---@type Test
+        local entry = {
+          name = part,
+          full_name = test.full_name,
+          solution_file_path = test.solution_file_path,
+          cs_project_path = test.cs_project_path,
+          highlight = test.highlight,
+          hidden = test.hidden,
+          expand = test.expand,
+          icon = test.icon,
+          collapsable = test.collapsable,
+          namespace = concatenated,
+          value = part,
+          is_full_path = is_full_path and not has_arguments,
+          indent = (current_count * 2) - 1,
+          preIcon = is_full_path == false and "📂" or has_arguments and "📦" or "🧪",
+          type = is_full_path == false and "namespace" or has_arguments and "test_group" or "test",
+          line_number = is_full_path and test.line_number or nil,
+          file_path = is_full_path and test.file_path or nil
+        }
+        table.insert(expanded, entry)
         seen[concatenated] = true
       end
     end
 
     -- -- Add the full test name with arguments (if any) or just the base name
     if has_arguments and not seen[full_test_name] then
-      table.insert(expanded,
-        {
-          ns = full_test_name,
-          value = full_test_name:match("([^.]+%b())$"),
-          is_full_path = true,
-          indent = (segment_count * 2),
-          preIcon = "🧪",
-          type = "subcase"
-        })
+      ---@type Test
+      local entry = {
+        namespace = full_test_name,
+        name = full_test_name:match("([^.]+%b())$"),
+        full_name = test.full_name,
+        is_full_path = true,
+        indent = (segment_count * 2),
+        preIcon = "🧪",
+        type = "subcase",
+        collapsable = false,
+        icon = nil,
+        expand = test.expand,
+        highlight = test.highlight,
+        cs_project_path = test.cs_project_path,
+        solution_file_path = test.solution_file_path,
+        hidden = test.hidden,
+        line_number = test.line_number,
+        file_path = test.file_path
+      }
+      table.insert(expanded, entry)
       seen[full_test_name] = true
     end
   end
 
   return expanded
-end
-
-local function extract_tests(lines)
-  ---@type string[]
-  local tests = {}
-
-  -- Extract lines that match the pattern for test names
-  for _, line in ipairs(lines) do
-    if line:match("^%s%s%s%s%S") ~= nil then
-      table.insert(tests, trim(line))
-    end
-  end
-
-  return expand_test_names_with_flags(tests)
 end
 
 local function merge_tables(table1, table2)
@@ -123,6 +135,7 @@ local default_options = require("easy-dotnet.options").test_runner
 --- @field solution_file_path string
 --- @field cs_project_path string
 --- @field name string
+--- @field full_name string
 --- @field namespace string
 --- @field preIcon string
 --- @field collapsable boolean
@@ -131,46 +144,60 @@ local default_options = require("easy-dotnet.options").test_runner
 --- @field expand table | nil
 --- @field icon string | nil
 --- @field highlight string | Highlight| nil
-
+--- @field file_path string | nil
+--- @field line_number number | nil
 
 ---@return Test[]
 ---@param project Test
 ---@param options TestRunnerOptions
-local function discover_tests_for_project_and_update_lines(project, win, options)
-  local command = string.format("dotnet test -t --nologo %s %s %s", options.noBuild == true and "--no-build" or "",
-    options.noRestore == true and "--no-restore" or "", project.cs_project_path)
+local function discover_tests_for_project_and_update_lines(project, win, options, dll_path)
+  local absolute_dll_path = vim.fs.joinpath(vim.fn.getcwd(), dll_path)
+  local script_path = "C:/Users/Gustav/AppData/Local/nvim-data/easy-dotnet/discover-tests.fsx"
+  local vstest_path =
+  "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/TestWindow/vstest.console.exe"
 
-  ---@type Test[]
-  local lines = {}
+  local command = string.format("dotnet fsi %s '%s' '%s'", script_path, vstest_path, absolute_dll_path)
+
 
   vim.fn.jobstart(command, {
     stdout_buffered = true,
     ---@param data string[]
     on_stdout = function(_, data)
-      local tests = extract_tests(data)
-      if #tests == 0 then
+      local firstline = trim(data[1])
+      if not data or #data == 0 or #firstline == 0 then
+        vim.notify("Failed to get tests for: " .. project.name, vim.log.levels.ERROR)
         return
       end
-      table.insert(lines, project)
+      local tests = vim.fn.json_decode(data)
 
-      for _, test in ipairs(tests) do
+      ---@type Test[]
+      local converted = {}
+      for _, value in ipairs(tests) do
         ---@type Test
-        local test_item = {
-          name = test.value,
-          preIcon = test.preIcon,
-          indent = test.indent + 3,
-          collapsable = not test.is_full_path,
-          type = test.type,
-          namespace = test.ns,
-          solution_file_path = project.solution_file_path,
-          cs_project_path = project.cs_project_path,
-          hidden = true,
-          expand = {},
+        local test = {
+          id = value.Id,
+          name = value.Name,
+          full_name = value.Name,
+          namespace = value.Name,
+          file_path = value.FilePath,
+          line_number = value.Linenumber,
+          preIcon = "",
+          indent = 0,
+          collapsable = true,
+          type = "test",
           icon = "",
+          hidden = false,
+          expand = {},
+          highlight = nil,
+          cs_project_path = project.cs_project_path,
+          solution_file_path = project.solution_file_path
         }
-        table.insert(lines, test_item)
+        table.insert(converted, test)
       end
-      for _, value in ipairs(lines) do
+      local expanded = expand_test_names_with_flags(converted)
+
+      table.insert(win.lines, project)
+      for _, value in ipairs(expanded) do
         table.insert(win.lines, value)
       end
       win.refreshLines()
@@ -219,6 +246,7 @@ M.runner = function(options)
     type = "sln",
     preIcon = "",
     name = solutionFilePath:match("([^/\\]+)$"),
+    full_name = solutionFilePath:match("([^/\\]+)$"),
     indent = 0,
     namespace = "",
     hidden = false,
@@ -242,6 +270,7 @@ M.runner = function(options)
         namespace = "",
         type = "csproject",
         name = value.name,
+        full_name = value.name,
         indent = 2,
         preIcon = "",
         hidden = false,
@@ -250,7 +279,7 @@ M.runner = function(options)
         expand = {},
         highlight = "Character"
       }
-      discover_tests_for_project_and_update_lines(project, win, mergedOpts)
+      discover_tests_for_project_and_update_lines(project, win, mergedOpts, value.dll_path)
     end
   end
 
