@@ -17,6 +17,7 @@ let xmlToJson (xml: string) : JObject =
 
 let transformTestCase (testCase: JObject) : JProperty =
     let testName = testCase.["@testName"].ToString()
+    let testId = testCase.["@id"].ToString()
     let newTestCase = new JObject()
     newTestCase.["outcome"] <- testCase.["@outcome"]
 
@@ -24,7 +25,7 @@ let transformTestCase (testCase: JObject) : JProperty =
     if errorInfo <> null && errorInfo.["StackTrace"] <> null then
         newTestCase.["stackTrace"] <- errorInfo.["StackTrace"]
 
-    new JProperty(testName, newTestCase)
+    new JProperty(testId, newTestCase)
 
 let extractAndTransformResults (jsonObj: JObject) : JObject option =
     let resultsToken = jsonObj.SelectToken("$.TestRun.Results.UnitTestResult")
@@ -102,9 +103,10 @@ M.xml_to_json = function(xml_path, cb)
   local fsx_file = ensure_and_get_fsx_path()
   local command = string.format("dotnet fsi %s '%s'", fsx_file, xml_path)
 
-
   vim.fn.jobstart(command, {
     stdout_buffered = true,
+    on_stderr = function(_, data)
+    end,
     ---@param data string[]
     on_stdout = function(_, data)
       local output = table.concat(data)

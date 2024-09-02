@@ -60,6 +60,7 @@ local function expand_test_names_with_flags(tests)
         local is_full_path = (current_count == segment_count)
         ---@type Test
         local entry = {
+          id = test.id,
           name = part,
           full_name = test.full_name,
           solution_file_path = test.solution_file_path,
@@ -87,6 +88,7 @@ local function expand_test_names_with_flags(tests)
     if has_arguments and not seen[full_test_name] then
       ---@type Test
       local entry = {
+        id = test.id,
         namespace = full_test_name,
         name = full_test_name:match("([^.]+%b())$"),
         full_name = test.full_name,
@@ -131,6 +133,7 @@ local default_options = require("easy-dotnet.options").test_runner
 --- @field column_end number | nil
 
 --- @class Test
+--- @field id string
 --- @field type "csproject" | "sln" | "namespace" | "test" | "subcase" | "test_group"
 --- @field solution_file_path string
 --- @field cs_project_path string
@@ -147,14 +150,35 @@ local default_options = require("easy-dotnet.options").test_runner
 --- @field file_path string | nil
 --- @field line_number number | nil
 
+local ensure_and_get_fsx_path = function()
+  local dir = require("easy-dotnet.constants").get_data_directory()
+  local filepath = vim.fs.joinpath(dir, "test_discovery.fsx")
+  local file = io.open(filepath, "r")
+  if file then
+    file:close()
+  else
+    file = io.open(filepath, "w")
+    if file == nil then
+      print("Failed to create the file: " .. filepath)
+      return
+    end
+    file:write(require("easy-dotnet.test-runner.discovery").script_template)
+
+    file:close()
+  end
+
+  return filepath
+end
+
+
 ---@return Test[]
 ---@param project Test
 ---@param options TestRunnerOptions
 local function discover_tests_for_project_and_update_lines(project, win, options, dll_path)
   local absolute_dll_path = vim.fs.joinpath(vim.fn.getcwd(), dll_path)
-  local script_path = "C:/Users/Gustav/AppData/Local/nvim-data/easy-dotnet/discover-tests.fsx"
-  local vstest_path =
-  "C:/Program Files/Microsoft Visual Studio/2022/Community/Common7/IDE/CommonExtensions/Microsoft/TestWindow/vstest.console.exe"
+  local script_path = ensure_and_get_fsx_path()
+  vim.notify(options.vstest_path)
+  local vstest_path = options.vstest_path
 
   local command = string.format("dotnet fsi %s '%s' '%s'", script_path, vstest_path, absolute_dll_path)
 
@@ -241,6 +265,7 @@ M.runner = function(options)
   --Find sln
   ---@type Test
   local sln = {
+    id = "",
     solution_file_path = solutionFilePath,
     cs_project_path = "",
     type = "sln",
@@ -264,6 +289,7 @@ M.runner = function(options)
     if value.isTestProject == true then
       ---@type Test
       local project = {
+        id = "",
         collapsble = true,
         cs_project_path = value.path,
         solution_file_path = solutionFilePath,

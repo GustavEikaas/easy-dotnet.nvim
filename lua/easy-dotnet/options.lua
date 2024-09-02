@@ -1,6 +1,7 @@
 ---@class TestRunnerOptions
 ---@field noBuild boolean
 ---@field noRestore boolean
+---@field vstest_path string | nil
 
 local function get_secret_path(secret_guid)
   local path = ""
@@ -45,6 +46,7 @@ return {
   test_runner = {
     noBuild = true,
     noRestore = true,
+    vstest_path = nil
   },
   csproj_mappings = true,
   auto_bootstrap_namespace = true
