@@ -50,7 +50,6 @@ local function parse_log_file(relative_log_file_path, win, matches)
       for _, match in ipairs(matches) do
         local test_line = match.ref
         if test_line.type == "test" or test_line.type == "subcase" then
-          --TODO: match id instead
           local result = unit_test_results[match.id]
           if result == nil then
             error(string.format("Status of %s was not present in xml file", match.ref.name))

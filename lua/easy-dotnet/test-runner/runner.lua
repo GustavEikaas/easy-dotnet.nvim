@@ -26,6 +26,7 @@ end
 
 ---@param tests Test[]
 local function expand_test_names_with_flags(tests)
+  local offset_indent = 2
   ---@type Test[]
   local expanded = {}
   local seen = {}
@@ -73,7 +74,7 @@ local function expand_test_names_with_flags(tests)
           namespace = concatenated,
           value = part,
           is_full_path = is_full_path and not has_arguments,
-          indent = (current_count * 2) - 1,
+          indent = (current_count * 2) - 1 + offset_indent,
           preIcon = is_full_path == false and "📂" or has_arguments and "📦" or "🧪",
           type = is_full_path == false and "namespace" or has_arguments and "test_group" or "test",
           line_number = is_full_path and test.line_number or nil,
@@ -93,7 +94,7 @@ local function expand_test_names_with_flags(tests)
         name = full_test_name:match("([^.]+%b())$"),
         full_name = test.full_name,
         is_full_path = true,
-        indent = (segment_count * 2),
+        indent = (segment_count * 2) + offset_indent,
         preIcon = "🧪",
         type = "subcase",
         collapsable = false,
@@ -171,16 +172,12 @@ local ensure_and_get_fsx_path = function()
 end
 
 
----@return Test[]
 ---@param project Test
 ---@param options TestRunnerOptions
 local function discover_tests_for_project_and_update_lines(project, win, options, dll_path)
   local absolute_dll_path = vim.fs.joinpath(vim.fn.getcwd(), dll_path)
-  local script_path = ensure_and_get_fsx_path()
-  local vstest_path = options.vstest_path
-
-  local command = string.format("dotnet fsi %s '%s' '%s'", script_path, vstest_path, absolute_dll_path)
-
+  local command = string.format("dotnet fsi %s '%s' '%s'", ensure_and_get_fsx_path(), options.vstest_path,
+    absolute_dll_path)
 
   vim.fn.jobstart(command, {
     stdout_buffered = true,
