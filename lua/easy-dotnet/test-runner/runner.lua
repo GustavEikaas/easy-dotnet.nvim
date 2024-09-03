@@ -235,12 +235,14 @@ local function discover_tests_for_project_and_update_lines(project, win, options
         ---@type Test[]
         local converted = {}
         for _, value in ipairs(tests) do
+          --HACK: This is necessary for MSTest cases where name is not a namespace.classname but rather classname
+          local name = value.Name:find("%.") and value.Name or value.Namespace
           ---@type Test
           local test = {
             id = value.Id,
-            name = value.Name,
-            full_name = value.Name,
-            namespace = value.Name,
+            name = name,
+            full_name = name,
+            namespace = name,
             file_path = value.FilePath,
             line_number = value.Linenumber,
             preIcon = "",
