@@ -17,7 +17,7 @@ let xmlToJson (xml: string) : JObject =
 
 let transformTestCase (testCase: JObject) : JProperty =
     let testName = testCase.["@testName"].ToString()
-    let testId = testCase.["@id"].ToString()
+    let testId = testCase.["@testId"].ToString()
     let newTestCase = new JObject()
     newTestCase.["outcome"] <- testCase.["@outcome"]
 
