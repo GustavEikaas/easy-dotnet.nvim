@@ -26,7 +26,7 @@ module TestDiscovery =
               if testCases |> List.isEmpty |> not then
                   let tests = testCases |> List.map (fun s -> { Id = s.Id; Namespace = s.FullyQualifiedName; Name = s.DisplayName; FilePath = s.CodeFilePath; Linenumber = s.LineNumber })
                   for test in tests do
-                    let json = JsonConvert.SerializeObject(test, Formatting.None)
+                    let json = JsonConvert.SerializeObject(test, Formatting.None).Replace("\n", "").Replace("\r", "")
                     printfn "%s" (json.ToString())
 
               else
