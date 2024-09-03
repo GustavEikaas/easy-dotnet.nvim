@@ -1,7 +1,7 @@
 local M = {}
 
 local file_template = [[
-//v2
+//v3
 #r "nuget: Newtonsoft.Json"
 open System
 open System.IO
@@ -46,20 +46,22 @@ let extractAndTransformResults (jsonObj: JObject) : JObject option =
         Some transformedResults
 
 let main (argv: string[]) =
-    if argv.Length <> 1 then
-        printfn "Usage: fsi script.fsx <xml-file-path>"
+    if argv.Length <> 2 then
+        printfn "Usage: fsi script.fsx <xml-file-path> <out-file-path>"
         1
     else
         try
             let filePath = argv.[0]
+            let outputFilePath = argv.[1]
             if File.Exists(filePath) then
                 let xmlContent = File.ReadAllText(filePath)
                 let jsonObj = xmlToJson(xmlContent)
                 match extractAndTransformResults(jsonObj) with
                 | Some results ->
+                    use writer = new StreamWriter(outputFilePath, append = true)
                     for result in results.Properties() do
                         let resultJson = JsonConvert.SerializeObject(result.Value, Formatting.None)
-                        printfn "%s" resultJson
+                        writer.WriteLine(resultJson)
                     0
                 | None ->
                     printfn "Error: 'Results' object not found in the JSON output."
@@ -75,23 +77,32 @@ let main (argv: string[]) =
 main fsi.CommandLineArgs.[1..]
 ]]
 
+local script_name = "test_parser.fsx"
+
+---@param file file*
+---@param filepath string
+local function check_and_upgrade_script(file, filepath)
+  local v = file:read("l"):match("//v(%d+)")
+  file:close()
+  local new_v = file_template:match("//v(%d+)")
+  if v ~= new_v then
+    local overwrite_file = io.open(filepath, "w+")
+    if overwrite_file == nil then
+      error("Failed to create the file: " .. filepath)
+    end
+    vim.notify("Updating " .. script_name, vim.log.levels.INFO)
+    overwrite_file:write(file_template)
+    overwrite_file:close()
+  end
+end
+
+
 local ensure_and_get_fsx_path = function()
   local dir = require("easy-dotnet.constants").get_data_directory()
-  local filepath = vim.fs.joinpath(dir, "test_parser.fsx")
+  local filepath = vim.fs.joinpath(dir, script_name)
   local file = io.open(filepath, "r")
   if file then
-    local v = file:read("l"):match("//v(%d+)")
-    file:close()
-    local new_v = file_template:match("//v(%d+)")
-    if v ~= new_v then
-      local overwrite_file = io.open(filepath, "w+")
-      if overwrite_file == nil then
-        error("Failed to create the file: " .. filepath)
-      end
-      vim.notify("Updating test_parser.fsx", vim.log.levels.INFO)
-      overwrite_file:write(file_template)
-      overwrite_file:close()
-    end
+    check_and_upgrade_script(file, filepath)
   else
     file = io.open(filepath, "w")
     if file == nil then
@@ -126,7 +137,6 @@ M.xml_to_json = function(xml_path, cb)
         vim.notify("Command failed with exit code: " .. code, vim.log.levels.ERROR)
         return {}
       else
-
         local file = io.open(outfile)
         if file == nil then
           error("Discovery script emitted no file for " .. xml_path)

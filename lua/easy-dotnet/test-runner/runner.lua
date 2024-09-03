@@ -151,44 +151,14 @@ local default_options = require("easy-dotnet.options").test_runner
 --- @field file_path string | nil
 --- @field line_number number | nil
 
-local ensure_and_get_fsx_path = function()
-  local file_template = require("easy-dotnet.test-runner.discovery").script_template
-  local dir = require("easy-dotnet.constants").get_data_directory()
-  local filepath = vim.fs.joinpath(dir, "test_discovery.fsx")
-  local file = io.open(filepath, "r")
-  if file then
-    local v = file:read("l"):match("//v(%d+)")
-    file:close()
-    local new_v = file_template:match("//v(%d+)")
-    if v ~= new_v then
-      local overwrite_file = io.open(filepath, "w+")
-      if overwrite_file == nil then
-        error("Failed to create the file: " .. filepath)
-      end
-      vim.notify("Updating test_discovery.fsx", vim.log.levels.INFO)
-      overwrite_file:write(file_template)
-      overwrite_file:close()
-    end
-  else
-    file = io.open(filepath, "w")
-    if file == nil then
-      print("Failed to create the file: " .. filepath)
-      return
-    end
-    file:write(file_template)
-
-    file:close()
-  end
-
-  return filepath
-end
 
 ---@param project Test
 ---@param options TestRunnerOptions
 local function discover_tests_for_project_and_update_lines(project, win, options, dll_path)
   local absolute_dll_path = vim.fs.joinpath(vim.fn.getcwd(), dll_path)
   local outfile = os.tmpname()
-  local command = string.format("dotnet fsi %s '%s' '%s' '%s'", ensure_and_get_fsx_path(), options.vstest_path,
+  local script_path = require("easy-dotnet.test-runner.discovery").get_script_path()
+  local command = string.format("dotnet fsi %s '%s' '%s' '%s'", script_path, options.vstest_path,
     absolute_dll_path, outfile)
 
   local tests = {}
