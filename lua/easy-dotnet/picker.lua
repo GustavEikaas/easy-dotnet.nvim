@@ -98,6 +98,11 @@ M.preview_picker = function(bufnr, options, on_select_cb, title, previewer)
   picker:find()
 end
 
+---@generic T
+---@param options T[]
+---@param title string
+---@param bufnr integer | nil
+---@return T
 M.pick_sync = function(bufnr, options, title)
   local co = coroutine.running()
   local selected = nil

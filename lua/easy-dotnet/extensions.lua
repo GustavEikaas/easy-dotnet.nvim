@@ -82,6 +82,10 @@ local function filter_iterator(tbl, cb)
   return results
 end
 
+---@generic T
+---@param tbl T[]
+---@param cb fun(a: T): boolean
+---@return T[]
 E.filter = function(tbl, cb)
   local table_type = type(tbl)
   if table_type == "function" then
@@ -109,6 +113,11 @@ local function map_iterator(tbl, cb)
   return results
 end
 
+---@generic T
+---@generic X
+---@param tbl T[]
+---@param cb fun(a: T): X
+---@return X[]
 E.map = function(tbl, cb)
   local table_type = type(tbl)
   if table_type == "function" then
@@ -132,6 +141,10 @@ local function foreach_iterator(tbl, cb)
   end
 end
 
+---@generic T
+---@param tbl T[]
+---@param cb fun(a: T)
+---@return nil
 E.foreach = function(tbl, cb)
   local table_type = type(tbl)
   if table_type == "function" then
@@ -189,10 +202,10 @@ local function find_iterator(tbl, cb)
   return false
 end
 
----
----@param tbl table A table to search through
----@param cb function A function to run on every item
----@return boolean|string|table
+---@generic T
+---@param tbl T[]
+---@param cb fun(a: T): boolean
+---@return boolean | T
 E.find = function(tbl, cb)
   local table_type = type(tbl)
   if table_type == "function" then
@@ -220,6 +233,10 @@ local function every_iterator(tbl, cb)
   return true
 end
 
+---@generic T
+---@param tbl T[]
+---@param cb fun(a: T): boolean
+---@return boolean
 E.every = function(tbl, cb)
   local table_type = type(tbl)
   if table_type == "function" then

@@ -66,28 +66,30 @@ end
 
 M.get_dll_for_solution_project = function(sln_file)
   local projects = sln_parse.get_projects_from_sln(sln_file)
+  ---@type CSProject[]
   local runnable_projects = extensions.filter(projects, function(i)
     return i.runnable == true
   end)
-  local dll_name
+  
+  ---@type CSProject
+  local project
   if #runnable_projects == 0 then
     error("No runnable projects found")
   elseif #runnable_projects > 1 then
-    dll_name = picker.pick_sync(nil, runnable_projects, "Select project to debug")
+    project = picker.pick_sync(nil, runnable_projects, "Select project to debug")
   end
 
-  dll_name = dll_name or runnable_projects[1]
+  project = project or runnable_projects[1]
 
-  if dll_name == nil then
+  if project == nil then
     error("No project selected")
   end
-  local path = dll_name.path:gsub("([^\\/]+)%.csproj$", "")
-  local filename = dll_name.name .. ".dll"
-  local dll = find_dll_from_bin("bin", filename, path)
+
+  local path = project.path:gsub("([^\\/]+)%.csproj$", "")
   return {
-    dll = dll,
+    dll = project.dll_path,
     project = path,
-    projectName = dll_name.name
+    projectName = project.name
   }
 end
 
@@ -98,11 +100,10 @@ M.get_dll_for_csproject_project = function()
   end
   local project = csproj_parse.get_project_from_csproj(project_file_path)
   local path = project.path:gsub("([^\\/]+)%.csproj$", "")
-  local dll = find_dll_from_bin("bin", project.name .. ".dll", path)
   return {
-    dll = dll,
-    project = path,
-    projectName = project.name
+    projectName = project.name,
+    dll = project.dll_path,
+    project = path
   }
 end
 
