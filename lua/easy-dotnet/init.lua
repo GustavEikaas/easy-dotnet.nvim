@@ -42,7 +42,7 @@ M.setup = function(opts)
       actions.build(merged_opts.terminal, false)
     end,
     testrunner = function()
-      require("easy-dotnet.test-runner.runner").runner(opts.test_runner)
+      require("easy-dotnet.test-runner.runner").runner(merged_opts.test_runner)
     end,
     outdated = function()
       require("easy-dotnet.outdated.outdated").outdated()
