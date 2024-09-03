@@ -1,6 +1,7 @@
 local M = {}
 
 M.script_template = [[
+//v2
 #r "nuget: Microsoft.TestPlatform.TranslationLayer, 17.11.0"
 #r "nuget: Microsoft.VisualStudio.TestPlatform, 14.0.0"
 #r "nuget: MSTest.TestAdapter, 3.3.1"
@@ -24,8 +25,10 @@ module TestDiscovery =
               let testCases = Seq.toList discoveredTestCases
               if testCases |> List.isEmpty |> not then
                   let tests = testCases |> List.map (fun s -> { Id = s.Id; Namespace = s.FullyQualifiedName; Name = s.DisplayName; FilePath = s.CodeFilePath; Linenumber = s.LineNumber })
-                  let json = JsonConvert.SerializeObject(tests, Formatting.Indented)
-                  Console.WriteLine(json)
+                  for test in tests do
+                    let json = JsonConvert.SerializeObject(test, Formatting.None)
+                    printfn "%s" (json.ToString())
+
               else
                   ()
           member _.HandleDiscoveryComplete(_: DiscoveryCompleteEventArgs, _: IEnumerable<TestCase>): unit =
