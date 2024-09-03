@@ -101,7 +101,7 @@ local function run_test_group(line, win)
   local suite_name = line.namespace
   for _, test_line in ipairs(win.lines) do
     if line.name == test_line.name:gsub("%b()", "") and line.cs_project_path == test_line.cs_project_path and line.solution_file_path == test_line.solution_file_path then
-      table.insert(matches, { ref = test_line, line = test_line.namespace, id = line.id })
+      table.insert(matches, { ref = test_line, line = test_line.namespace, id = test_line.id })
       test_line.icon = "<Running>"
     end
   end

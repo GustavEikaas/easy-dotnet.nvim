@@ -1,7 +1,7 @@
 local M = {}
 
 M.script_template = [[
-//v2
+//v3
 #r "nuget: Microsoft.TestPlatform.TranslationLayer, 17.11.0"
 #r "nuget: Microsoft.VisualStudio.TestPlatform, 14.0.0"
 #r "nuget: MSTest.TestAdapter, 3.3.1"
@@ -13,24 +13,26 @@ open Microsoft.VisualStudio.TestPlatform.ObjectModel
 open Microsoft.VisualStudio.TestPlatform.ObjectModel.Client
 open System
 open System.Collections.Generic
+open System.IO
 open Newtonsoft.Json
 
 module TestDiscovery =
 
     type Test = { Id: Guid; Namespace: string; Name: string; FilePath: string; Linenumber: int }
 
-    type PlaygroundTestDiscoveryHandler() =
+    type PlaygroundTestDiscoveryHandler(outputFilePath: string) =
         interface ITestDiscoveryEventsHandler2 with
           member _.HandleDiscoveredTests(discoveredTestCases: IEnumerable<TestCase>) =
               let testCases = Seq.toList discoveredTestCases
               if testCases |> List.isEmpty |> not then
                   let tests = testCases |> List.map (fun s -> { Id = s.Id; Namespace = s.FullyQualifiedName; Name = s.DisplayName; FilePath = s.CodeFilePath; Linenumber = s.LineNumber })
+                  use writer = new StreamWriter(outputFilePath, append = true)
                   for test in tests do
                     let json = JsonConvert.SerializeObject(test, Formatting.None).Replace("\n", "").Replace("\r", "")
-                    printfn "%s" (json.ToString())
-
+                    writer.WriteLine(json)
               else
-                  ()
+                  use writer = new StreamWriter(outputFilePath, append = true)
+                  writer.WriteLine("[]")
           member _.HandleDiscoveryComplete(_: DiscoveryCompleteEventArgs, _: IEnumerable<TestCase>): unit =
               ()
           member _.HandleLogMessage(_: Logging.TestMessageLevel, _: string): unit =
@@ -57,8 +59,8 @@ module TestDiscovery =
         and set(value) = testSessionInfo <- value
 
     let main(argv: string[]) =
-      if argv.Length <> 2 then
-        printfn "Usage: fsi script.fsx <vstest-console-path> <test-dll-path>"
+      if argv.Length <> 3 then
+        printfn "Usage: fsi script.fsx <vstest-console-path> <test-dll-path> <output-file-path>"
         1
       else
         let console = argv.[0]
@@ -68,7 +70,8 @@ module TestDiscovery =
             </RunSettings>
             """
 
-        let sources = argv.[1..]
+        let sources = argv.[1..1]
+        let outputFilePath = argv.[2]
 
         let environmentVariables = Dictionary<string, string>()
         environmentVariables.Add("VSTEST_CONNECTION_TIMEOUT", "999")
@@ -81,7 +84,7 @@ module TestDiscovery =
 
         let r = VsTestConsoleWrapper(console, ConsoleParameters(EnvironmentVariables = environmentVariables))
         let sessionHandler = TestSessionHandler()
-        let discoveryHandler = PlaygroundTestDiscoveryHandler()
+        let discoveryHandler = PlaygroundTestDiscoveryHandler(outputFilePath)
         let testSession =
           match sessionHandler.TestSessionInfo with
           | Some info -> info

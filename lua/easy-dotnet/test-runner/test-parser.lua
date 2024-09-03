@@ -115,32 +115,45 @@ end
 ---@param xml_path string
 M.xml_to_json = function(xml_path, cb)
   local fsx_file = ensure_and_get_fsx_path()
-  local command = string.format("dotnet fsi %s '%s'", fsx_file, xml_path)
+  local outfile = os.tmpname()
+  local command = string.format("dotnet fsi %s '%s' %s", fsx_file, xml_path, outfile)
   ---@type TestCase[]
   local tests = {}
   vim.fn.jobstart(command, {
     stdout_buffered = true,
-    on_stderr = function(_, data)
-    end,
-    ---@param data string[]
-    on_stdout = function(_, data)
-      --Emitting line by line to avoid memory issues with json parsing in vim
-      for _, stdout_line in ipairs(data) do
-        if stdout_line:match("{") then
-          local success, test = pcall(function() return vim.fn.json_decode(stdout_line) end)
-          if success ~= false then
-            table.insert(tests, test)
-          else
-            print("Malformed json: " .. success)
-          end
-        end
-      end
-      cb(tests)
-    end,
     on_exit = function(_, code)
       if code ~= 0 then
         vim.notify("Command failed with exit code: " .. code, vim.log.levels.ERROR)
         return {}
+      else
+
+        local file = io.open(outfile)
+        if file == nil then
+          error("Discovery script emitted no file for " .. xml_path)
+        end
+
+        for line in file:lines() do
+          local success, json_test = pcall(function()
+            return vim.fn.json_decode(line)
+          end)
+
+          if success then
+            if #line ~= 2 then
+              table.insert(tests, json_test)
+            end
+          else
+            print("Malformed JSON: " .. line)
+          end
+        end
+
+        local success = pcall(function()
+          os.remove(outfile)
+        end)
+
+        if not success then
+          print("Failed to delete tmp file " .. outfile)
+        end
+        cb(tests)
       end
     end
   })
@@ -148,4 +161,3 @@ end
 
 
 return M
-

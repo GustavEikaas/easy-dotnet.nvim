@@ -187,8 +187,9 @@ end
 ---@param options TestRunnerOptions
 local function discover_tests_for_project_and_update_lines(project, win, options, dll_path)
   local absolute_dll_path = vim.fs.joinpath(vim.fn.getcwd(), dll_path)
-  local command = string.format("dotnet fsi %s '%s' '%s'", ensure_and_get_fsx_path(), options.vstest_path,
-    absolute_dll_path)
+  local outfile = os.tmpname()
+  local command = string.format("dotnet fsi %s '%s' '%s' '%s'", ensure_and_get_fsx_path(), options.vstest_path,
+    absolute_dll_path, outfile)
 
   local tests = {}
   vim.fn.jobstart(command, {
@@ -198,25 +199,39 @@ local function discover_tests_for_project_and_update_lines(project, win, options
         error("Failed")
       end
     end,
-    ---@param data string[]
-    on_stdout = function(_, data)
-      for _, stdout_line in ipairs(data) do
-        if stdout_line:match("{") then
-          local success, test = pcall(function() return vim.fn.json_decode(stdout_line) end)
-          if success == true then
-            table.insert(tests, test)
-          else
-            print("Malformed json: " .. test)
-          end
-        end
-      end
-    end,
     ---@param code number
     on_exit = function(_, code)
       if code ~= 0 then
         --TODO: check if project was not built
         vim.notify(string.format("Discovering tests for %s failed", project.name))
       else
+        local file = io.open(outfile)
+        if file == nil then
+          error("Discovery script emitted no file for " .. project.name)
+        end
+
+        for line in file:lines() do
+          local success, json_test = pcall(function()
+            return vim.fn.json_decode(line)
+          end)
+
+          if success then
+            if #line ~= 2 then
+              table.insert(tests, json_test)
+            end
+          else
+            print("Malformed JSON: " .. line)
+          end
+        end
+
+        local success = pcall(function()
+          os.remove(outfile)
+        end)
+
+        if not success then
+          print("Failed to delete tmp file " .. outfile)
+        end
+
         ---@type Test[]
         local converted = {}
         for _, value in ipairs(tests) do
