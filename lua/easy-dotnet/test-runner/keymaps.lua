@@ -50,13 +50,14 @@ local function parse_log_file(relative_log_file_path, win, matches)
       for _, match in ipairs(matches) do
         local test_line = match.ref
         if test_line.type == "test" or test_line.type == "subcase" then
-          local result = unit_test_results[match.id]
-          if result == nil then
-            error(string.format("Status of %s was not present in xml file", match.ref.name))
+          for _, value in ipairs(unit_test_results) do
+            if match.id == value.id then
+              parse_status(value, test_line)
+            end
           end
-          parse_status(result, test_line)
         end
       end
+
       aggregateStatus(matches)
       win.refreshLines()
     end)
@@ -209,7 +210,7 @@ local function run_test(line, win)
         require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
           ---@param unit_test_results TestCase
           function(unit_test_results)
-            local result = unit_test_results[line.id]
+            local result = unit_test_results[1]
             if result == nil then
               error(string.format("Status of %s was not present in xml file", line.name))
             end

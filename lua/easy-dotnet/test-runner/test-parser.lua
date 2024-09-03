@@ -20,6 +20,7 @@ let transformTestCase (testCase: JObject) : JProperty =
     let testId = testCase.["@testId"].ToString()
     let newTestCase = new JObject()
     newTestCase.["outcome"] <- testCase.["@outcome"]
+    newTestCase.["id"] <- testCase.["@testId"]
 
     let errorInfo = testCase.SelectToken("$.Output.ErrorInfo")
     if errorInfo <> null && errorInfo.["StackTrace"] <> null then
@@ -56,7 +57,9 @@ let main (argv: string[]) =
                 let jsonObj = xmlToJson(xmlContent)
                 match extractAndTransformResults(jsonObj) with
                 | Some results ->
-                    printf "%s" (results.ToString())
+                    for result in results.Properties() do
+                        let resultJson = JsonConvert.SerializeObject(result.Value, Formatting.None)
+                        printfn "%s" resultJson
                     0
                 | None ->
                     printfn "Error: 'Results' object not found in the JSON output."
@@ -104,8 +107,8 @@ local ensure_and_get_fsx_path = function()
 end
 
 
---key of the object is the testname
 --- @class TestCase
+--- @field id string
 --- @field stackTrace string | nil
 --- @field outcome string
 
@@ -113,19 +116,26 @@ end
 M.xml_to_json = function(xml_path, cb)
   local fsx_file = ensure_and_get_fsx_path()
   local command = string.format("dotnet fsi %s '%s'", fsx_file, xml_path)
-
+  ---@type TestCase[]
+  local tests = {}
   vim.fn.jobstart(command, {
     stdout_buffered = true,
     on_stderr = function(_, data)
     end,
     ---@param data string[]
     on_stdout = function(_, data)
-      local output = table.concat(data)
-
-      ---@type TestCase[]
-      local test_summary = vim.fn.json_decode(output)
-
-      cb(test_summary)
+      --Emitting line by line to avoid memory issues with json parsing in vim
+      for _, stdout_line in ipairs(data) do
+        if stdout_line:match("{") then
+          local success, test = pcall(function() return vim.fn.json_decode(stdout_line) end)
+          if success ~= false then
+            table.insert(tests, test)
+          else
+            print("Malformed json: " .. success)
+          end
+        end
+      end
+      cb(tests)
     end,
     on_exit = function(_, code)
       if code ~= 0 then
@@ -138,3 +148,4 @@ end
 
 
 return M
+

@@ -179,54 +179,64 @@ local function discover_tests_for_project_and_update_lines(project, win, options
   local command = string.format("dotnet fsi %s '%s' '%s'", ensure_and_get_fsx_path(), options.vstest_path,
     absolute_dll_path)
 
+  local tests = {}
   vim.fn.jobstart(command, {
-    stdout_buffered = true,
+    on_stderr = function(_, data)
+      if #data > 0 and #trim(data[1]) > 0 then
+        print(vim.inspect(data))
+        error("Failed")
+      end
+    end,
     ---@param data string[]
     on_stdout = function(_, data)
-      local firstline = trim(data[1])
-      if not data or #data == 0 or #firstline == 0 then
-        vim.notify("Failed to get tests for: " .. project.name, vim.log.levels.ERROR)
-        return
+      for _, stdout_line in ipairs(data) do
+        if stdout_line:match("{") then
+          local success, test = pcall(function() return vim.fn.json_decode(stdout_line) end)
+          if success == true then
+            table.insert(tests, test)
+          else
+            print("Malformed json: " .. test)
+          end
+        end
       end
-      local tests = vim.fn.json_decode(data)
-
-      ---@type Test[]
-      local converted = {}
-      for _, value in ipairs(tests) do
-        ---@type Test
-        local test = {
-          id = value.Id,
-          name = value.Name,
-          full_name = value.Name,
-          namespace = value.Name,
-          file_path = value.FilePath,
-          line_number = value.Linenumber,
-          preIcon = "",
-          indent = 0,
-          collapsable = true,
-          type = "test",
-          icon = "",
-          hidden = false,
-          expand = {},
-          highlight = nil,
-          cs_project_path = project.cs_project_path,
-          solution_file_path = project.solution_file_path
-        }
-        table.insert(converted, test)
-      end
-      local expanded = expand_test_names_with_flags(converted)
-
-      table.insert(win.lines, project)
-      for _, value in ipairs(expanded) do
-        table.insert(win.lines, value)
-      end
-      win.refreshLines()
     end,
     ---@param code number
     on_exit = function(_, code)
       if code ~= 0 then
         --TODO: check if project was not built
         vim.notify(string.format("Discovering tests for %s failed", project.name))
+      else
+        ---@type Test[]
+        local converted = {}
+        for _, value in ipairs(tests) do
+          ---@type Test
+          local test = {
+            id = value.Id,
+            name = value.Name,
+            full_name = value.Name,
+            namespace = value.Name,
+            file_path = value.FilePath,
+            line_number = value.Linenumber,
+            preIcon = "",
+            indent = 0,
+            collapsable = true,
+            type = "test",
+            icon = "",
+            hidden = false,
+            expand = {},
+            highlight = nil,
+            cs_project_path = project.cs_project_path,
+            solution_file_path = project.solution_file_path
+          }
+          table.insert(converted, test)
+        end
+        local expanded = expand_test_names_with_flags(converted)
+
+        table.insert(win.lines, project)
+        for _, value in ipairs(expanded) do
+          table.insert(win.lines, value)
+        end
+        win.refreshLines()
       end
     end
   })
