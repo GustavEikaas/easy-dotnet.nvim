@@ -15,15 +15,19 @@ local function readFile(filePath)
   return content
 end
 
-local function readPackageInfo(path)
+local function readPackageInfo(path, project_name)
   local contents = readFile(path)
   if contents == nil then
     error("failed to read file")
     return
   end
   local parsedJson = vim.fn.json_decode(table.concat(contents))
-  local deps = parsedJson.Projects[1].TargetFrameworks[1].Dependencies
-  return deps
+  for _, value in ipairs(parsedJson.Projects) do
+    if value.Name == project_name then
+      return value.TargetFrameworks[1].Dependencies
+    end
+  end
+  return {}
 end
 
 local function find_package_reference_in_buffer(package_name)
@@ -47,16 +51,23 @@ M.outdated = function()
   local path = vim.fn.expand("%")
   if path:match(".csproj$") then
     --TODO: constants.get_data_dir
+    local project_name = path:match("([^/]+)%.csproj$")
     local outPath = vim.fn.stdpath("data") .. "/easy-dotnet/package.json"
     local cmd = string.format("dotnet-outdated %s --output %s", path, outPath)
     vim.fn.jobstart(cmd, {
       on_exit = function(_, b)
         if b == 0 then
-          local deps = readPackageInfo(outPath)
+          local deps = readPackageInfo(outPath, project_name)
           if deps == nil then
             error("Parsing outdated packages failed")
             return
           end
+
+          if #deps == 0 then
+            vim.notify("All packages are up to date", vim.log.levels.INFO)
+            return
+          end
+
           local bnr = vim.fn.bufnr('%')
           local ns_id = require("easy-dotnet.constants").ns_id
           for _, value in ipairs(deps) do
