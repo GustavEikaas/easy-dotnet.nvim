@@ -125,7 +125,7 @@ M.try_get_secret_id = function(project_file_path)
 end
 
 M.is_console_project = function(project_file_path)
-  return type(extract_from_project(project_file_path, '<%s*OutputType%s*>%s*(exe|winexe|library)%s*</%s*OutputType%s*>')) ==
+  return type(extract_from_project(project_file_path, "<OutputType>%s*Exe%s*</OutputType>")) ==
       "string"
 end
 
