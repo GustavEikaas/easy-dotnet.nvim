@@ -99,9 +99,14 @@ M.setup = function(opts)
   M.run_default = function()
     actions.run(merged_opts.terminal, true)
   end
-  M.build_default_quickfix = function()
-    actions.build_quickfix(true)
+
+  M.build_default_quickfix = function(dotnet_args)
+    actions.build_quickfix(true, dotnet_args)
   end
+  M.build_quickfix = function(dotnet_args)
+    actions.build_quickfix(false, dotnet_args)
+  end
+
   M.build_default = function()
     actions.build(merged_opts.terminal, true)
   end
@@ -113,7 +118,6 @@ M.setup = function(opts)
   M.build_solution = function()
     actions.build_solution(merged_opts.terminal)
   end
-  M.build_quickfix = actions.build_quickfix
 end
 
 M.get_debug_dll = debug.get_debug_dll
