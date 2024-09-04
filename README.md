@@ -194,6 +194,7 @@ Integrated test runner inspired by Rider IDE
 - `<leader>p` -> Peek stacktrace on failed test
 - `<leader>fe` -> Show only failed tests
 - `<leader>gf` -> Go to file (only works inside stacktrace float)
+- `g` -> Go to file
 
 ## Outdated
 

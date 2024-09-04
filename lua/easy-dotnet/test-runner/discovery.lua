@@ -1,7 +1,7 @@
 local M = {}
 
 local script_template = [[
-//v3
+//v1
 #r "nuget: Microsoft.TestPlatform.TranslationLayer, 17.11.0"
 #r "nuget: Microsoft.VisualStudio.TestPlatform, 14.0.0"
 #r "nuget: MSTest.TestAdapter, 3.3.1"
