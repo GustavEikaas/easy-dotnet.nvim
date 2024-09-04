@@ -66,7 +66,7 @@ local init_secrets = function(project_file_path, get_secret_path)
 end
 
 local function csproj_fallback(get_secret_path)
-  local csproj_path = csproj_parse.find_csproj_file()
+  local csproj_path = csproj_parse.find_project_file()
   if (csproj_path == nil) then
     vim.notify(error_messages.no_project_definition_found)
     return

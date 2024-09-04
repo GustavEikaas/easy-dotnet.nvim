@@ -36,7 +36,7 @@ end
 
 
 local function csproj_fallback(term)
-  local csproj_path = csproj_parse.find_csproj_file()
+  local csproj_path = csproj_parse.find_project_file()
   if (csproj_path == nil) then
     vim.notify(error_messages.no_project_definition_found)
     return
@@ -104,7 +104,7 @@ M.build_project_quickfix = function(use_default, dotnet_args)
 
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
-    local csproj = csproj_parse.find_csproj_file()
+    local csproj = csproj_parse.find_project_file()
     if csproj == nil then
       vim.notify(messages.no_project_definition_found)
     end
@@ -145,7 +145,7 @@ end
 
 
 M.build_solution = function(term)
-  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_csproj_file()
+  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if solutionFilePath == nil then
     vim.notify(error_messages.no_project_definition_found)
     return

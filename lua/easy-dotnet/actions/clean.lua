@@ -6,7 +6,7 @@ local error_messages = require("easy-dotnet.error-messages")
 
 
 M.clean_solution = function()
-  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_csproj_file()
+  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if solutionFilePath == nil then
     vim.notify(error_messages.no_project_definition_found)
     return

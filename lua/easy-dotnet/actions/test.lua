@@ -7,7 +7,7 @@ local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
 
 local function csproj_fallback(on_select)
-  local csproj_path = csproj_parse.find_csproj_file()
+  local csproj_path = csproj_parse.find_project_file()
   if (csproj_path == nil) then
     vim.notify("No .sln file or .csproj file found")
   end
@@ -62,7 +62,7 @@ M.run_test_picker = function(on_select, use_default)
 end
 
 M.test_solution = function(term)
-  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_csproj_file()
+  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if solutionFilePath == nil then
     vim.notify(error_messages.no_project_definition_found)
     return

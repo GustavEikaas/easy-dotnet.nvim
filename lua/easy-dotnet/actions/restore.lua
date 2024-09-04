@@ -6,7 +6,7 @@ local error_messages = require("easy-dotnet.error-messages")
 
 ---@param term function
 M.restore = function(term)
-  local project = sln_parse.find_solution_file() or csproj_parse.find_csproj_file()
+  local project = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if project == nil then
     vim.notify(error_messages.no_project_definition_found)
     return

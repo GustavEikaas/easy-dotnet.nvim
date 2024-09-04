@@ -1,4 +1,4 @@
----@class Project
+---@class DotnetProject
 ---@field name string
 ---@field path string
 
@@ -50,7 +50,7 @@ end
 ---Checks for the default project in the solution file.
 ---@param solution_file_path string Path to the solution file.
 ---@param type '"build"' | '"test"' | '"run"'
----@return Project|nil
+---@return DotnetProject|nil
 M.check_default_project = function(solution_file_path, type)
   local file = get_or_create_cache_file(solution_file_path)
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
@@ -70,7 +70,7 @@ M.check_default_project = function(solution_file_path, type)
 end
 
 ---Sets the default project in the solution file.
----@param project Project The project to set as default.
+---@param project DotnetProject The project to set as default.
 ---@param solution_file_path string Path to the solution file.
 ---@param type '"build"' | '"test"' | '"run"'
 M.set_default_project = function(project, solution_file_path, type)
