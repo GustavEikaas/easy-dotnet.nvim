@@ -138,21 +138,21 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 
 ```lua
 local dotnet = require("easy-dotnet")
-dotnet.test_project()                       -- Run dotnet test in the project
-dotnet.test_default()                       -- Run dotnet test in the last selected project
-dotnet.test_solution()                      -- Run dotnet test in the solution/csproj
-dotnet.run_project()                        -- Run dotnet run in the project
-dotnet.run_default()                        -- Run dotnet run in the last selected project
-dotnet.restore()                            -- Run dotnet restore for the solution/csproj file
-dotnet.secrets()                            -- Open .NET user-secrets in a new buffer for editing
-dotnet.build()                              -- Run dotnet build in the project
-dotnet.build_default()                      -- Will build the last selected project
-dotnet.build_solution()                     -- Run dotnet build in the solution
-dotnet.build_quickfix()                     -- Build dotnet project and open build errors in quickfix list
-dotnet.build_default_quickfix()             -- Will build the last selected project and open build errors in quickfix list
-dotnet.clean()                              -- Run dotnet clean in the project
-dotnet.get_debug_dll()                      -- Return the dll from the bin/debug folder
-dotnet.is_dotnet_project()                  -- Returns true if a csproject or sln file is present in cwd or some folders down
+dotnet.test_project()                               -- Run dotnet test in the project
+dotnet.test_default()                               -- Run dotnet test in the last selected project
+dotnet.test_solution()                              -- Run dotnet test in the solution/csproj
+dotnet.run_project()                                -- Run dotnet run in the project
+dotnet.run_default()                                -- Run dotnet run in the last selected project
+dotnet.restore()                                    -- Run dotnet restore for the solution/csproj file
+dotnet.secrets()                                    -- Open .NET user-secrets in a new buffer for editing
+dotnet.build()                                      -- Run dotnet build in the project
+dotnet.build_default()                              -- Will build the last selected project
+dotnet.build_solution()                             -- Run dotnet build in the solution
+dotnet.build_quickfix(dotnet_args?: string)         -- Build dotnet project and open build errors in quickfix list
+dotnet.build_default_quickfix(dotnet_args?: string) -- Will build the last selected project and open build errors in quickfix list
+dotnet.clean()                                      -- Run dotnet clean in the project
+dotnet.get_debug_dll()                              -- Return the dll from the bin/debug folder
+dotnet.is_dotnet_project()                          -- Returns true if a csproject or sln file is present in cwd or some folders down
 ```
 
 ### Vim commands

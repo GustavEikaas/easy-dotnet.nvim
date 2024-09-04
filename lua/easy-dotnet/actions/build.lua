@@ -97,16 +97,18 @@ end
 
 
 ---@param use_default boolean
-M.build_project_quickfix = function(use_default)
+---@param dotnet_args string | nil
+M.build_project_quickfix = function(use_default, dotnet_args)
+  local data_dir = require("easy-dotnet.constants").get_data_directory()
+  local logPath = vim.fs.joinpath(data_dir, "build.log")
+
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
     local csproj = csproj_parse.find_csproj_file()
     if csproj == nil then
       vim.notify(messages.no_project_definition_found)
     end
-    --TODO: constants.get_data_dir
-    local logPath = vim.fn.stdpath "data" .. "/easy-dotnet/build.log"
-    local command = "dotnet build " .. csproj .. " /flp:v=q /flp:logfile=" .. logPath
+    local command = string.format("dotnet build %s /flp:v=q /flp:logfile='%s' %s", csproj, logPath, dotnet_args or "")
     vim.fn.jobstart(command, {
       on_exit = function(_, b, _)
         if b == 0 then
@@ -126,9 +128,8 @@ M.build_project_quickfix = function(use_default)
       return
     end
     vim.notify("Building...")
-    --TODO: constans.get_data_directory
-    local logPath = vim.fn.stdpath "data" .. "/easy-dotnet/build.log"
-    local command = "dotnet build " .. project.path .. " /flp:v=q /flp:logfile=" .. logPath
+    local command = string.format("dotnet build %s /flp:v=q /flp:logfile='%s' %s", project.path, logPath,
+      dotnet_args or "")
     vim.fn.jobstart(command, {
       on_exit = function(_, b, _)
         if b == 0 then
