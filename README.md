@@ -86,6 +86,8 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
     local dotnet = require("easy-dotnet")
     -- Options are not required
     dotnet.setup({
+      --Optional function to return the path for the dotnet sdk (e.g C:/ProgramFiles/dotnet/sdk/8.0.0)
+      get_sdk_path = get_sdk_path,
       test_runner = {
         noBuild = true,
         noRestore = true,
@@ -192,6 +194,7 @@ Integrated test runner inspired by Rider IDE
 - `<leader>p` -> Peek stacktrace on failed test
 - `<leader>fe` -> Show only failed tests
 - `<leader>gf` -> Go to file (only works inside stacktrace float)
+- `g` -> Go to file
 
 ## Outdated
 
