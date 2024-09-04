@@ -249,7 +249,7 @@ M.runner = function(options, sdk_path)
   local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
   local error_messages = require("easy-dotnet.error-messages")
 
-  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_csproj_file()
+  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if solutionFilePath == nil then
     vim.notify(error_messages.no_project_definition_found)
     return

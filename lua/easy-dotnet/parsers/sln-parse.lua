@@ -3,16 +3,13 @@ local M = {}
 
 -- Generates a relative path from cwd to the project.csproj file
 local function generate_relative_path_for_project(path, slnpath)
-  local relative_path = slnpath:gsub("([^\\/]+)%.sln$", "") .. path
-  if not extensions.isWindows() then
-    relative_path = relative_path:gsub("\\", "/")
-  end
-  return relative_path
+  local dir = vim.fs.dirname(slnpath)
+  return vim.fs.joinpath(dir, path)
 end
 
 -- TODO: Investigate using dotnet sln list command
 ---@param solutionFilePath string
----@return CSProject[]
+---@return DotnetProject[]
 M.get_projects_from_sln = function(solutionFilePath)
   local file = io.open(solutionFilePath, "r")
 
@@ -23,7 +20,7 @@ M.get_projects_from_sln = function(solutionFilePath)
 
   local projectLines = extensions.filter(file:lines(), function(line)
     local id, name, path = line:match(regexp)
-    if id and name and path and path:match("%.csproj$") then
+    if id and name and path and (path:match("%.csproj$") or path:match("%.fsproj$")) then
       return true
     end
     return false
@@ -31,7 +28,7 @@ M.get_projects_from_sln = function(solutionFilePath)
 
   local projects = extensions.map(projectLines, function(line)
     local csproj_parser     = require("easy-dotnet.parsers.csproj-parse")
-    local id, name, path    = line:match(regexp)
+    local _, _, path        = line:match(regexp)
     local project_file_path = generate_relative_path_for_project(path, solutionFilePath)
     local project           = csproj_parser.get_project_from_csproj(project_file_path)
     return project

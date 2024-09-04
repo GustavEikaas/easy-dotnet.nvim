@@ -147,10 +147,24 @@ local projects = {
     end
   },
   {
+    display = "ASP.NET Core Web API F#",
+    type = "project",
+    run = function(name)
+      create_and_link_project(name, "webapi --language F#")
+    end
+  },
+  {
     display = "ASP.NET Core Empty",
     type = "project",
     run = function(name)
       create_and_link_project(name, "web")
+    end
+  },
+  {
+    display = "ASP.NET Core Empty F#",
+    type = "project",
+    run = function(name)
+      create_and_link_project(name, "web --language F#")
     end
   },
   {
@@ -168,10 +182,24 @@ local projects = {
     end
   },
   {
+    display = "Console app F#",
+    type = "project",
+    run = function(name)
+      create_and_link_project(name, "console --language F#")
+    end
+  },
+  {
     display = "Class library",
     type = "project",
     run = function(name)
       create_and_link_project(name, "classlib")
+    end
+  },
+  {
+    display = "Class library F#",
+    type = "project",
+    run = function(name)
+      create_and_link_project(name, "classlib --language F#")
     end
   },
   {

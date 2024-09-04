@@ -8,7 +8,7 @@ local error_messages = require("easy-dotnet.error-messages")
 
 ---@param term function
 local function csproj_fallback(term)
-  local csproj_path = csproj_parse.find_csproj_file()
+  local csproj_path = csproj_parse.find_project_file()
   if (csproj_path == nil) then
     vim.notify(error_messages.no_project_definition_found)
     return
