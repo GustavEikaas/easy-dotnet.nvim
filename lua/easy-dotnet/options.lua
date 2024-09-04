@@ -2,6 +2,14 @@
 ---@field noBuild boolean
 ---@field noRestore boolean
 
+local function get_sdk_path()
+  local sdk_version = vim.system({ "dotnet", "--version" }):wait().stdout:gsub("\r", ""):gsub("\n", "")
+  local isWindows = require("easy-dotnet.extensions").isWindows()
+  local base = isWindows and "C:/Program Files/dotnet/sdk" or "/usr/lib/dotnet/sdk"
+  local sdk_path = vim.fs.joinpath(base, sdk_version)
+  return sdk_path
+end
+
 local function get_secret_path(secret_guid)
   local path = ""
   local home_dir = vim.fn.expand('~')
@@ -17,6 +25,8 @@ local function get_secret_path(secret_guid)
 end
 
 return {
+  ---@type function | string
+  get_sdk_path = get_sdk_path,
   ---@param path string
   ---@param action "test"|"restore"|"build"|"run"
   terminal = function(path, action)

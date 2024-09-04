@@ -1,7 +1,7 @@
 local M = {}
 
 local file_template = [[
-//v1
+//v2
 #r "nuget: Newtonsoft.Json"
 open System
 open System.IO
@@ -17,14 +17,16 @@ let xmlToJson (xml: string) : JObject =
 
 let transformTestCase (testCase: JObject) : JProperty =
     let testName = testCase.["@testName"].ToString()
+    let testId = testCase.["@testId"].ToString()
     let newTestCase = new JObject()
     newTestCase.["outcome"] <- testCase.["@outcome"]
+    newTestCase.["id"] <- testCase.["@testId"]
 
     let errorInfo = testCase.SelectToken("$.Output.ErrorInfo")
     if errorInfo <> null && errorInfo.["StackTrace"] <> null then
         newTestCase.["stackTrace"] <- errorInfo.["StackTrace"]
 
-    new JProperty(testName, newTestCase)
+    new JProperty(testId, newTestCase)
 
 let extractAndTransformResults (jsonObj: JObject) : JObject option =
     let resultsToken = jsonObj.SelectToken("$.TestRun.Results.UnitTestResult")
@@ -44,18 +46,22 @@ let extractAndTransformResults (jsonObj: JObject) : JObject option =
         Some transformedResults
 
 let main (argv: string[]) =
-    if argv.Length <> 1 then
-        printfn "Usage: fsi script.fsx <xml-file-path>"
+    if argv.Length <> 2 then
+        printfn "Usage: fsi script.fsx <xml-file-path> <out-file-path>"
         1
     else
         try
             let filePath = argv.[0]
+            let outputFilePath = argv.[1]
             if File.Exists(filePath) then
                 let xmlContent = File.ReadAllText(filePath)
                 let jsonObj = xmlToJson(xmlContent)
                 match extractAndTransformResults(jsonObj) with
                 | Some results ->
-                    printf "%s" (results.ToString())
+                    use writer = new StreamWriter(outputFilePath, append = true)
+                    for result in results.Properties() do
+                        let resultJson = JsonConvert.SerializeObject(result.Value, Formatting.None)
+                        writer.WriteLine(resultJson)
                     0
                 | None ->
                     printfn "Error: 'Results' object not found in the JSON output."
@@ -71,12 +77,32 @@ let main (argv: string[]) =
 main fsi.CommandLineArgs.[1..]
 ]]
 
+local script_name = "test_parser.fsx"
+
+---@param file file*
+---@param filepath string
+local function check_and_upgrade_script(file, filepath)
+  local v = file:read("l"):match("//v(%d+)")
+  file:close()
+  local new_v = file_template:match("//v(%d+)")
+  if v ~= new_v then
+    local overwrite_file = io.open(filepath, "w+")
+    if overwrite_file == nil then
+      error("Failed to create the file: " .. filepath)
+    end
+    vim.notify("Updating " .. script_name, vim.log.levels.INFO)
+    overwrite_file:write(file_template)
+    overwrite_file:close()
+  end
+end
+
+
 local ensure_and_get_fsx_path = function()
   local dir = require("easy-dotnet.constants").get_data_directory()
-  local filepath = vim.fs.joinpath(dir, "test_parser.fsx")
+  local filepath = vim.fs.joinpath(dir, script_name)
   local file = io.open(filepath, "r")
   if file then
-    file:close()
+    check_and_upgrade_script(file, filepath)
   else
     file = io.open(filepath, "w")
     if file == nil then
@@ -92,32 +118,52 @@ local ensure_and_get_fsx_path = function()
 end
 
 
---key of the object is the testname
 --- @class TestCase
+--- @field id string
 --- @field stackTrace string | nil
 --- @field outcome string
 
 ---@param xml_path string
 M.xml_to_json = function(xml_path, cb)
   local fsx_file = ensure_and_get_fsx_path()
-  local command = string.format("dotnet fsi %s '%s'", fsx_file, xml_path)
-
-
+  local outfile = os.tmpname()
+  local command = string.format("dotnet fsi %s '%s' %s", fsx_file, xml_path, outfile)
+  ---@type TestCase[]
+  local tests = {}
   vim.fn.jobstart(command, {
     stdout_buffered = true,
-    ---@param data string[]
-    on_stdout = function(_, data)
-      local output = table.concat(data)
-
-      ---@type TestCase[]
-      local test_summary = vim.fn.json_decode(output)
-
-      cb(test_summary)
-    end,
     on_exit = function(_, code)
       if code ~= 0 then
         vim.notify("Command failed with exit code: " .. code, vim.log.levels.ERROR)
         return {}
+      else
+        local file = io.open(outfile)
+        if file == nil then
+          error("Discovery script emitted no file for " .. xml_path)
+        end
+
+        for line in file:lines() do
+          local success, json_test = pcall(function()
+            return vim.fn.json_decode(line)
+          end)
+
+          if success then
+            if #line ~= 2 then
+              table.insert(tests, json_test)
+            end
+          else
+            print("Malformed JSON: " .. line)
+          end
+        end
+
+        local success = pcall(function()
+          os.remove(outfile)
+        end)
+
+        if not success then
+          print("Failed to delete tmp file " .. outfile)
+        end
+        cb(tests)
       end
     end
   })
