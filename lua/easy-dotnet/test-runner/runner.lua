@@ -154,11 +154,13 @@ local default_options = require("easy-dotnet.options").test_runner
 
 ---@param project Test
 ---@param options TestRunnerOptions
-local function discover_tests_for_project_and_update_lines(project, win, options, dll_path)
+---@param sdk_path string
+local function discover_tests_for_project_and_update_lines(project, win, options, dll_path, sdk_path)
+  local vstest_dll = vim.fs.joinpath(sdk_path, "vstest.console.dll")
   local absolute_dll_path = vim.fs.joinpath(vim.fn.getcwd(), dll_path)
   local outfile = os.tmpname()
   local script_path = require("easy-dotnet.test-runner.discovery").get_script_path()
-  local command = string.format("dotnet fsi %s '%s' '%s' '%s'", script_path, options.vstest_path,
+  local command = string.format("dotnet fsi %s '%s' '%s' '%s'", script_path, vstest_dll,
     absolute_dll_path, outfile)
 
   local tests = {}
@@ -240,7 +242,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
   })
 end
 
-M.runner = function(options)
+M.runner = function(options, sdk_path)
   ---@type TestRunnerOptions
   local mergedOpts = merge_tables(default_options, options or {})
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
@@ -309,7 +311,7 @@ M.runner = function(options)
         expand = {},
         highlight = "Character"
       }
-      discover_tests_for_project_and_update_lines(project, win, mergedOpts, value.dll_path)
+      discover_tests_for_project_and_update_lines(project, win, mergedOpts, value.dll_path, sdk_path)
     end
   end
 
