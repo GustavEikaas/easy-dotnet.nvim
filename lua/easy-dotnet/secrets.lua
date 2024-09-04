@@ -34,7 +34,9 @@ local secrets_preview = function(self, entry, get_secret_path)
     return
   end
   local content = readFile(get_secret_path(entry.value.secrets))
-  vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, content)
+  if content ~= nil then
+    vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, content)
+  end
 end
 
 --- Initializes secrets for a given project
@@ -54,7 +56,7 @@ local init_secrets = function(project_file_path, get_secret_path)
   local value = handler:read("*a")
   local guid = extract_secret_guid(value)
   local path = get_secret_path(guid)
-  local parentDir = path:gsub("secrets%.json$", "")
+  local parentDir = vim.fs.dirname(path)
   os.execute("mkdir " .. parentDir)
   os.execute("echo { } >> " .. path)
 
