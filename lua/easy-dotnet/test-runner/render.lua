@@ -77,30 +77,6 @@ local function printLines()
   apply_highlights()
 end
 
-
-
-
-
-local function setMappings()
-  if M.keymap == nil then
-    return
-  end
-  for key, value in pairs(M.keymap) do
-    vim.keymap.set('n', key, function()
-      local line_num = vim.api.nvim_win_get_cursor(0)[1]
-      local index = translateIndex(line_num)
-      value(index, M.lines[index], M)
-    end, { buffer = M.buf, noremap = true, silent = true })
-  end
-end
-
-
-M.setKeymaps = function(mappings)
-  M.keymap = mappings
-  setMappings()
-  return M
-end
-
 local function buffer_exists(name)
   local bufs = vim.api.nvim_list_bufs()
   for _, buf_id in ipairs(bufs) do
@@ -114,12 +90,38 @@ local function buffer_exists(name)
   end
   return nil
 end
+
+local function setBuffer()
+  local existing_buf = buffer_exists(M.buf_name)
+  M.buf = existing_buf or vim.api.nvim_create_buf(true, true) -- false for not listing, true for scratchend
+end
+
+local function setMappings()
+  if M.keymap == nil then
+    return
+  end
+  if M.buf == nil then
+    setBuffer()
+  end
+  for key, value in pairs(M.keymap) do
+    vim.keymap.set('n', key, function()
+      local line_num = vim.api.nvim_win_get_cursor(0)[1]
+      local index = translateIndex(line_num)
+      value(index, M.lines[index], M)
+    end, { buffer = M.buf, noremap = true, silent = true })
+  end
+end
+
+M.setKeymaps = function(mappings)
+  M.keymap = mappings
+  setMappings()
+  return M
+end
 ---
 --- Renders the buffer
 M.render = function()
   -- if buf exists, restore
-  local existing_buf = buffer_exists(M.buf_name)
-  M.buf = existing_buf or vim.api.nvim_create_buf(true, true) -- false for not listing, true for scratchend
+  setBuffer()
   vim.cmd("split")
   vim.api.nvim_win_set_buf(0, M.buf)
   vim.api.nvim_set_current_buf(M.buf)
