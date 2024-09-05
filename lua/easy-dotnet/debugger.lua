@@ -64,7 +64,6 @@ M.get_dll_for_solution_project = function(sln_file)
     error("No project selected")
   end
 
-  -- local path = project.path:gsub("([^\\/]+)%.csproj$", "")
   local path = vim.fs.dirname(project.path)
   return {
     dll = project.dll_path,
