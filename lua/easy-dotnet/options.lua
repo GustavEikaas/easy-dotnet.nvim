@@ -53,6 +53,8 @@ return {
   },
   ---@type TestRunnerOptions
   test_runner = {
+    ---@type "split" | "float" | "buf"
+    viewmode = "split",
     noBuild = true,
     noRestore = true,
   },
