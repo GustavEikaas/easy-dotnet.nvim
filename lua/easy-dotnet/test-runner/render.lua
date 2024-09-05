@@ -3,6 +3,7 @@ local M = {
     { value = "Discovering tests...", preIcon = "🔃" }
   },
   buf = nil,
+  win = nil,
   height = 10,
   modifiable = false,
   buf_name = "",
@@ -77,31 +78,12 @@ local function printLines()
   apply_highlights()
 end
 
-local function buffer_exists(name)
-  local bufs = vim.api.nvim_list_bufs()
-  for _, buf_id in ipairs(bufs) do
-    if vim.api.nvim_buf_is_valid(buf_id) then
-      local buf_name = vim.api.nvim_buf_get_name(buf_id)
-      local buf_filename = vim.fn.fnamemodify(buf_name, ":t")
-      if buf_filename == name then
-        return buf_id
-      end
-    end
-  end
-  return nil
-end
-
-local function setBuffer()
-  local existing_buf = buffer_exists(M.buf_name)
-  M.buf = existing_buf or vim.api.nvim_create_buf(true, true) -- false for not listing, true for scratchend
-end
-
 local function setMappings()
   if M.keymap == nil then
     return
   end
   if M.buf == nil then
-    setBuffer()
+    return
   end
   for key, value in pairs(M.keymap) do
     vim.keymap.set('n', key, function()
@@ -117,14 +99,87 @@ M.setKeymaps = function(mappings)
   setMappings()
   return M
 end
----
+
+
+local function get_default_win_opts()
+  local width = math.floor(vim.o.columns * 0.8)
+  local height = math.floor(vim.o.lines * 0.8)
+  M.height = height
+
+  return {
+    relative = "editor",
+    width = width,
+    height = height,
+    col = math.floor((vim.o.columns - width) / 2),
+    row = math.floor((vim.o.lines - height) / 2),
+    style = "minimal",
+    border = "rounded"
+  }
+end
+
+
+-- Toggle function to handle different window modes
+---@param mode "float" | "split" | "buf"
+local function toggle(mode)
+  if mode == "float" then
+    -- Handle floating window mode
+    if M.win and vim.api.nvim_win_is_valid(M.win) then
+      -- Close floating window (hides it, buffer is not deleted)
+      vim.api.nvim_win_close(M.win, false) -- false means don't force delete buffer
+      M.win = nil
+      return false
+    else
+      -- Create a floating window
+      if not M.buf then
+        M.buf = vim.api.nvim_create_buf(false, true) -- Create new buffer if not exists
+      end
+      local win_opts = get_default_win_opts()
+      M.win = vim.api.nvim_open_win(M.buf, true, win_opts)
+      vim.api.nvim_buf_set_option(M.buf, 'bufhidden', 'hide') -- Set to hide buffer on close
+      return true
+    end
+  elseif mode == "split" then
+    -- Handle split window mode
+    if M.win and vim.api.nvim_win_is_valid(M.win) then
+      -- Close split (hides the buffer)
+      vim.api.nvim_win_close(M.win, false) -- false means don't delete the buffer
+      M.win = nil
+      return false
+    else
+      -- Create a split window
+      if not M.buf then
+        M.buf = vim.api.nvim_create_buf(false, true) -- Create new buffer if not exists
+      end
+      vim.cmd("split")                               -- Create split below
+      M.win = vim.api.nvim_get_current_win()         -- Get the split window
+      vim.api.nvim_win_set_buf(M.win, M.buf)         -- Set buffer in the split
+      return true
+    end
+  elseif mode == "buf" then
+    -- Handle buffer mode (rendered in window 0)
+    if M.buf and vim.api.nvim_buf_is_valid(M.buf) then
+      -- Hide buffer by switching to another buffer in current window (window 0)
+      vim.cmd("b#") -- Switch to previous buffer
+      return false
+    else
+      -- Create or switch to buffer in the current window
+      if not M.buf then
+        M.buf = vim.api.nvim_create_buf(false, true)
+      end
+      vim.api.nvim_set_current_buf(M.buf)
+      return true
+    end
+  end
+  return false
+end
+
 --- Renders the buffer
-M.render = function()
-  -- if buf exists, restore
-  setBuffer()
-  vim.cmd("split")
-  vim.api.nvim_win_set_buf(0, M.buf)
-  vim.api.nvim_set_current_buf(M.buf)
+---@param mode "float" | "split" | "buf"
+M.render = function(mode)
+  local isVisible = toggle(mode)
+  if not isVisible then
+    return
+  end
 
   printLines()
   setBufferOptions()

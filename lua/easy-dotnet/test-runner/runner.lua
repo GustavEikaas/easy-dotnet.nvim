@@ -222,7 +222,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
             collapsable = true,
             type = "test",
             icon = "",
-            hidden = false,
+            hidden = true,
             expand = {},
             highlight = nil,
             cs_project_path = project.cs_project_path,
@@ -259,7 +259,7 @@ M.runner = function(options, sdk_path)
   local is_reused = win.buf ~= nil
   win.buf_name = "Test manager"
   win.filetype = "easy-dotnet"
-  win.setKeymaps(require("easy-dotnet.test-runner.keymaps")).render()
+  win.setKeymaps(require("easy-dotnet.test-runner.keymaps")).render(mergedOpts.viewmode)
 
   if is_reused then
     return

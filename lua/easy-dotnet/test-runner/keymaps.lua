@@ -47,6 +47,16 @@ local function parse_log_file(relative_log_file_path, win, matches)
   require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
     ---@param unit_test_results TestCase[]
     function(unit_test_results)
+      if #unit_test_results == 0 then
+        for _, value in ipairs(matches) do
+          if value.ref.icon == "<Running>" then
+            value.ref.icon = "<No status reported>"
+          end
+        end
+        win.refreshLines()
+        return
+      end
+
       for _, match in ipairs(matches) do
         local test_line = match.ref
         if test_line.type == "test" or test_line.type == "subcase" then
