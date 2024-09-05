@@ -181,9 +181,9 @@ M.render = function(mode)
     return
   end
 
-  -- printLines()
-  -- setBufferOptions()
-  -- setMappings()
+  printLines()
+  setBufferOptions()
+  setMappings()
   return M
 end
 

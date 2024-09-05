@@ -105,7 +105,9 @@ M.xml_to_json = function(xml_path, cb)
       else
         local file = io.open(outfile)
         if file == nil then
-          error("Discovery script emitted no file for " .. xml_path)
+          print("Discovery script emitted no file for " .. xml_path)
+          cb({})
+          return
         end
 
         for line in file:lines() do
