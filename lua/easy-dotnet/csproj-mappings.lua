@@ -17,7 +17,7 @@ end
 
 -- Gives a picker for adding a project reference to a csproject
 local function add_project_reference(curr_project_path)
-  local this_project = csproj.get_project_from_csproj(curr_project_path)
+  local this_project = csproj.get_project_from_project_file(curr_project_path)
   local references = csproj.get_project_references_from_projects(curr_project_path)
 
   local solutionFilePath = sln_parse.find_solution_file()

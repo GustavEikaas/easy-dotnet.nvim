@@ -7,8 +7,8 @@ local sln_parse = parsers.sln_parser
 
 M.get_debug_dll = function()
   local sln_file = sln_parse.find_solution_file()
-  local result = sln_file ~= nil and M.get_dll_for_solution_project(sln_file) or M.get_dll_for_csproject_project()
-  local relative_dll_path = vim.fs.joinpath(vim.fn.getcwd(), result.project .. result.dll)
+  local result = sln_file ~= nil and M.get_dll_for_solution_project(sln_file) or M.get_dll_for_project()
+  local relative_dll_path = vim.fs.joinpath(vim.fn.getcwd(), result.dll)
   local relative_project_path = vim.fs.joinpath(vim.fn.getcwd(), result.project)
   return {
     dll_path = result.dll,
@@ -43,66 +43,47 @@ M.get_environment_variables = function(project_name, relative_project_path)
   return launchProfile.environmentVariables
 end
 
-local function find_dll_from_bin(folder, filename, project_folder)
-  local cwd = vim.fn.getcwd()
-  vim.cmd("cd " .. project_folder)
-
-  if filename == ".dll" then
-    error("Cant find .dll")
-  end
-  local dlls = require("plenary.scandir").scan_dir({ folder }, {
-    search_pattern = function(i)
-      return i:match(filename)
-    end,
-    depth = 6
-  })
-
-  vim.cmd("cd " .. cwd)
-  if #dlls == 0 then
-    error("Failed to find " .. filename .. " did you forget to build")
-  end
-  return dlls[1]
-end
-
 M.get_dll_for_solution_project = function(sln_file)
   local projects = sln_parse.get_projects_from_sln(sln_file)
+  ---@type DotnetProject[]
   local runnable_projects = extensions.filter(projects, function(i)
     return i.runnable == true
   end)
-  local dll_name
+
+  ---@type DotnetProject
+  local project
   if #runnable_projects == 0 then
     error("No runnable projects found")
   elseif #runnable_projects > 1 then
-    dll_name = picker.pick_sync(nil, runnable_projects, "Select project to debug")
+    project = picker.pick_sync(nil, runnable_projects, "Select project to debug")
   end
 
-  dll_name = dll_name or runnable_projects[1]
+  project = project or runnable_projects[1]
 
-  if dll_name == nil then
+  if project == nil then
     error("No project selected")
   end
-  local path = dll_name.path:gsub("([^\\/]+)%.csproj$", "")
-  local filename = dll_name.name .. ".dll"
-  local dll = find_dll_from_bin("bin", filename, path)
+
+  -- local path = project.path:gsub("([^\\/]+)%.csproj$", "")
+  local path = vim.fs.dirname(project.path)
   return {
-    dll = dll,
+    dll = project.dll_path,
     project = path,
-    projectName = dll_name.name
+    projectName = project.name
   }
 end
 
-M.get_dll_for_csproject_project = function()
-  local project_file_path = csproj_parse.find_csproj_file()
+M.get_dll_for_project = function()
+  local project_file_path = csproj_parse.find_project_file()
   if project_file_path == nil then
     error("No project or solution file found")
   end
-  local project = csproj_parse.get_project_from_csproj(project_file_path)
-  local path = project.path:gsub("([^\\/]+)%.csproj$", "")
-  local dll = find_dll_from_bin("bin", project.name .. ".dll", path)
+  local project = csproj_parse.get_project_from_project_file(project_file_path)
+  local path = vim.fs.dirname(project.path)
   return {
-    dll = dll,
-    project = path,
-    projectName = project.name
+    projectName = project.name,
+    dll = project.dll_path,
+    project = path
   }
 end
 
