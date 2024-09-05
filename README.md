@@ -239,13 +239,28 @@ local M = {}
 --- Rebuilds the project before starting the debug session
 ---@param co thread
 local function rebuild_project(co, path)
-  vim.notify("Building project")
+  local num = 0;
+  local spinner_frames = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" }
+
+  local notification = vim.notify(spinner_frames[1] .. " Building", "info", {
+    timeout = false,
+  })
+
   vim.fn.jobstart(string.format("dotnet build %s", path), {
+    on_stdout = function(a)
+      num = num + 1
+      local new_spinner = (num) % #spinner_frames
+      notification = vim.notify(spinner_frames[new_spinner + 1] .. " Building", "info",
+        { replace = notification })
+    end,
     on_exit = function(_, return_code)
       if return_code == 0 then
-        vim.notify("Built successfully")
+        vim.notify("Built successfully", "info", { replace = notification, timeout = 1000 })
       else
-        vim.notify("Build failed with exit code " .. return_code)
+        -- HACK: clearing previous building progress message
+        vim.notify("", "info", { replace = notification, timeout = 1 })
+        vim.notify("Build failed with exit code " .. return_code, "error", { timeout = 1000 })
+        error("Build failed")
       end
       coroutine.resume(co)
     end,
@@ -256,8 +271,8 @@ end
 M.register_net_dap = function()
   local dap = require("dap")
   local dotnet = require("easy-dotnet")
-
   local debug_dll = nil
+
   local function ensure_dll()
     if debug_dll ~= nil then
       return debug_dll
@@ -267,30 +282,31 @@ M.register_net_dap = function()
     return dll
   end
 
-  dap.configurations.cs = {
-    {
-      type = "coreclr",
-      name = "launch - netcoredbg",
-      request = "launch",
-      env = function()
-        local dll = ensure_dll()
-        -- Reads the launchsettingsjson file looking for a profile with the name of your project
-        local vars = dotnet.get_environment_variables(dll.project_name, dll.relative_project_path)
-        return vars or nil
-      end,
-      program = function()
-        local dll = ensure_dll()
-        local co = coroutine.running()
-        rebuild_project(co, dll.project_path)
-        return dll.relative_dll_path
-      end,
-      cwd = function()
-        local dll = ensure_dll()
-        return dll.relative_project_path
-      end,
+  for _, value in ipairs({ "cs", "fsharp" }) do
+    dap.configurations[value] = {
+      {
+        type = "coreclr",
+        name = "launch - netcoredbg",
+        request = "launch",
+        env = function()
+          local dll = ensure_dll()
+          local vars = dotnet.get_environment_variables(dll.project_name, dll.relative_project_path)
+          return vars or nil
+        end,
+        program = function()
+          local dll = ensure_dll()
+          local co = coroutine.running()
+          rebuild_project(co, dll.project_path)
+          return dll.relative_dll_path
+        end,
+        cwd = function()
+          local dll = ensure_dll()
+          return dll.relative_project_path
+        end,
 
+      }
     }
-  }
+  end
 
   dap.listeners.before['event_terminated']['easy-dotnet'] = function()
     debug_dll = nil
