@@ -30,7 +30,7 @@ M.get_projects_from_sln = function(solutionFilePath)
     local csproj_parser     = require("easy-dotnet.parsers.csproj-parse")
     local _, _, path        = line:match(regexp)
     local project_file_path = generate_relative_path_for_project(path, solutionFilePath)
-    local project           = csproj_parser.get_project_from_csproj(project_file_path)
+    local project           = csproj_parser.get_project_from_project_file(project_file_path)
     return project
   end)
   file:close()

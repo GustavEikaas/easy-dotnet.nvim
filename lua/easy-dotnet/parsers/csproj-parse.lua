@@ -72,20 +72,20 @@ local function extractProjectName(path)
   return filename:gsub("%.csproj$", ""):gsub("%.fsproj$", "")
 end
 
--- Get the project definition from a csproj file
----@param csproj_file_path string
+-- Get the project definition from a csproj/fsproj file
+---@param project_file_path string
 ---@return DotnetProject
-M.get_project_from_csproj = function(csproj_file_path)
-  local display = extractProjectName(csproj_file_path)
+M.get_project_from_project_file = function(project_file_path)
+  local display = extractProjectName(project_file_path)
   local name = display
-  local language = csproj_file_path:match("%.csproj$") and "csharp" or csproj_file_path:match("%.fsproj$") and "fsharp" or
+  local language = project_file_path:match("%.csproj$") and "csharp" or project_file_path:match("%.fsproj$") and "fsharp" or
       "unknown"
-  local isWebProject = M.is_web_project(csproj_file_path)
-  local isConsoleProject = M.is_console_project(csproj_file_path)
-  local isTestProject = M.is_test_project(csproj_file_path)
-  local maybeSecretGuid = M.try_get_secret_id(csproj_file_path)
-  local version = M.extract_version(csproj_file_path)
-  local bin_path = vim.fs.joinpath(vim.fs.dirname(csproj_file_path), "bin", "Debug", "net" .. version)
+  local isWebProject = M.is_web_project(project_file_path)
+  local isConsoleProject = M.is_console_project(project_file_path)
+  local isTestProject = M.is_test_project(project_file_path)
+  local maybeSecretGuid = M.try_get_secret_id(project_file_path)
+  local version = M.extract_version(project_file_path)
+  local bin_path = vim.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug", "net" .. version)
   local dll_path = vim.fs.joinpath(bin_path, name .. ".dll")
 
   if version then
@@ -113,7 +113,7 @@ M.get_project_from_csproj = function(csproj_file_path)
 
   return {
     display = display,
-    path = csproj_file_path,
+    path = project_file_path,
     language = language,
     name = name,
     version = version,
