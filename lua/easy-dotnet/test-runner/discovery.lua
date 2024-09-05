@@ -99,42 +99,9 @@ module TestDiscovery =
 
 local script_name = "test_discovery.fsx"
 
----@param file file*
----@param filepath string
-local function check_and_upgrade_script(file, filepath)
-  local v = file:read("l"):match("//v(%d+)")
-  file:close()
-  local new_v = script_template:match("//v(%d+)")
-  if v ~= new_v then
-    local overwrite_file = io.open(filepath, "w+")
-    if overwrite_file == nil then
-      error("Failed to create the file: " .. filepath)
-    end
-    vim.notify("Updating " .. script_name, vim.log.levels.INFO)
-    overwrite_file:write(script_template)
-    overwrite_file:close()
-  end
-end
-
 ---@return string
 local ensure_and_get_fsx_path = function()
-  local file_template = script_template
-  local dir = require("easy-dotnet.constants").get_data_directory()
-  local filepath = vim.fs.joinpath(dir, script_name)
-  local file = io.open(filepath, "r")
-  if file then
-    check_and_upgrade_script(file, filepath)
-  else
-    file = io.open(filepath, "w")
-    if file == nil then
-      error("Failed to create the file: " .. filepath)
-    end
-    file:write(file_template)
-
-    file:close()
-  end
-
-  return filepath
+  return require("easy-dotnet.scripts.utils").ensure_and_get_fsx_path(script_template, script_name)
 end
 
 M.get_script_path = ensure_and_get_fsx_path
