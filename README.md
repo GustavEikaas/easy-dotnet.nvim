@@ -95,7 +95,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
         noBuild = true,
         noRestore = true,
       },
-      ---@param action "test"|"restore"|"build"|"run"
+      ---@param action "test" | "restore" | "build" | "run"
       terminal = function(path, action)
         local commands = {
           run = function()
