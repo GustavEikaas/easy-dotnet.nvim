@@ -88,7 +88,10 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
     dotnet.setup({
       --Optional function to return the path for the dotnet sdk (e.g C:/ProgramFiles/dotnet/sdk/8.0.0)
       get_sdk_path = get_sdk_path,
+      ---@type TestRunnerOptions
       test_runner = {
+        ---@type "split" | "float" | "buf"
+        viewmode = "split",
         noBuild = true,
         noRestore = true,
       },
