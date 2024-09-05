@@ -222,7 +222,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
             collapsable = true,
             type = "test",
             icon = "",
-            hidden = false,
+            hidden = true,
             expand = {},
             highlight = nil,
             cs_project_path = project.cs_project_path,
