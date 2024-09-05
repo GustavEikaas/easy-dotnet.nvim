@@ -259,7 +259,7 @@ M.runner = function(options, sdk_path)
   local is_reused = win.buf ~= nil
   win.buf_name = "Test manager"
   win.filetype = "easy-dotnet"
-  win.setKeymaps(require("easy-dotnet.test-runner.keymaps")).render()
+  win.setKeymaps(require("easy-dotnet.test-runner.keymaps")).render("split")
 
   if is_reused then
     return
