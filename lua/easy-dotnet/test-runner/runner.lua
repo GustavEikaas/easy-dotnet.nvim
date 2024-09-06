@@ -242,9 +242,10 @@ local function discover_tests_for_project_and_update_lines(project, win, options
   })
 end
 
-M.runner = function(options, sdk_path)
-  ---@type TestRunnerOptions
-  local mergedOpts = merge_tables(default_options, options or {})
+---@param options TestRunnerOptions
+---@param sdk_path string
+local function open_runner(options, sdk_path)
+  local win = require("easy-dotnet.test-runner.render")
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
   local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
   local error_messages = require("easy-dotnet.error-messages")
@@ -255,11 +256,31 @@ M.runner = function(options, sdk_path)
     return
   end
 
-  local win = require("easy-dotnet.test-runner.render")
+
   local is_reused = win.buf ~= nil
+  if not is_reused then
+    local async = require("easy-dotnet.async-utils")
+    if options.noRestore == false then
+      vim.notify("Restoring")
+      local _, restore_err, restore_code = async.await(async.job_run_async)({ "dotnet", "restore", solutionFilePath })
+
+      if restore_code ~= 0 then
+        error("Restore failed " .. vim.inspect(restore_err))
+      end
+    end
+    if options.noBuild == false then
+      vim.notify("Building")
+      local _, build_err, build_code = async.await(async.job_run_async)({ "dotnet", "build", solutionFilePath,
+        "--no-restore" })
+      if build_code ~= 0 then
+        error("Build failed " .. vim.inspect(build_err))
+      end
+    end
+  end
+
   win.buf_name = "Test manager"
   win.filetype = "easy-dotnet"
-  win.setKeymaps(require("easy-dotnet.test-runner.keymaps")).render(mergedOpts.viewmode)
+  win.setKeymaps(require("easy-dotnet.test-runner.keymaps")).render(options.viewmode)
 
   if is_reused then
     return
@@ -311,7 +332,7 @@ M.runner = function(options, sdk_path)
         expand = {},
         highlight = "Character"
       }
-      discover_tests_for_project_and_update_lines(project, win, mergedOpts, value.dll_path, sdk_path)
+      discover_tests_for_project_and_update_lines(project, win, options, value.dll_path, sdk_path)
     end
   end
 
@@ -321,5 +342,16 @@ M.runner = function(options, sdk_path)
 
   win.refreshLines()
 end
+M.runner = function(options, sdk_path)
+  ---@type TestRunnerOptions
+  local mergedOpts = merge_tables(default_options, options or {})
+
+  coroutine.wrap(
+    function()
+      open_runner(mergedOpts, sdk_path)
+    end
+  )()
+end
+
 
 return M
