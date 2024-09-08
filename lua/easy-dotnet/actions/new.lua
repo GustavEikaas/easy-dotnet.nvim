@@ -31,8 +31,11 @@ end
 local function create_and_link_project(name, type)
   local args = get_dotnet_new_args(name)
   if args == nil then
-    --no sln
-    return
+    --No sln
+    args = {
+      project_name = name,
+      output = "."
+    }
   end
   vim.fn.jobstart(string.format("dotnet new %s -n %s -o %s", type, args.project_name, args.output), {
     stdout_buffered = true,
@@ -41,7 +44,9 @@ local function create_and_link_project(name, type)
         vim.notify("Failed to create project", vim.log.levels.ERROR)
       else
         vim.notify("Project created")
-        sln_add_project(args.sln_path, args.output)
+        if args.sln_path ~= nil then
+          sln_add_project(args.sln_path, args.output)
+        end
       end
     end
   })
