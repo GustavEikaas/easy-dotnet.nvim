@@ -4,7 +4,8 @@ local M = {}
 -- Generates a relative path from cwd to the project.csproj file
 local function generate_relative_path_for_project(path, slnpath)
   local dir = vim.fs.dirname(slnpath)
-  return vim.fs.joinpath(dir, path)
+  local res = vim.fs.joinpath(dir, path):gsub("\\", "/")
+  return res
 end
 
 -- TODO: Investigate using dotnet sln list command
