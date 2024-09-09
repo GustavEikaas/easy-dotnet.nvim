@@ -44,7 +44,10 @@ return {
         return "dotnet build " .. path
       end
     }
-    local command = commands[action]() .. "\r"
+    local command = commands[action]()
+    if require("easy-dotnet.extensions").isWindows() == true then
+      command = command .. "\r"
+    end
     vim.cmd("vsplit")
     vim.cmd("term " .. command)
   end,
