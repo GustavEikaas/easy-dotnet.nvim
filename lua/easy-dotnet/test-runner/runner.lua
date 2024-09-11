@@ -156,6 +156,7 @@ local default_options = require("easy-dotnet.options").test_runner
 ---@param options TestRunnerOptions
 ---@param sdk_path string
 local function discover_tests_for_project_and_update_lines(project, win, options, dll_path, sdk_path)
+  local on_job_finished = win.appendJob(project, "Discovery")
   local vstest_dll = vim.fs.joinpath(sdk_path, "vstest.console.dll")
   local absolute_dll_path = vim.fs.joinpath(vim.fn.getcwd(), dll_path)
   local outfile = os.tmpname()
@@ -173,6 +174,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
     end,
     ---@param code number
     on_exit = function(_, code)
+      on_job_finished()
       if code ~= 0 then
         --TODO: check if project was not built
         vim.notify(string.format("Discovering tests for %s failed", project.name))
