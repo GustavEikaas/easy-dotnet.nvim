@@ -51,6 +51,7 @@ local function parse_log_file(relative_log_file_path, win, matches, on_completed
         for _, value in ipairs(matches) do
           if value.ref.icon == "<Running>" then
             value.ref.icon = "<No status reported>"
+            on_completed()
           end
         end
         win.refreshLines()
@@ -230,6 +231,8 @@ local function run_test(line, win)
     "dotnet test --filter='%s' --nologo --no-build --no-restore %s --logger='trx;logFileName=%s'",
     line.namespace:gsub("%b()", ""), line.cs_project_path, log_file_name)
 
+  local on_job_finished = win.appendJob(line.name, "Run")
+
   line.icon = "<Running>"
   vim.fn.jobstart(
     command, {
@@ -242,6 +245,7 @@ local function run_test(line, win)
               error(string.format("Status of %s was not present in xml file", line.name))
             end
             parse_status(result, line)
+            on_job_finished()
             win.refreshLines()
           end)
       end

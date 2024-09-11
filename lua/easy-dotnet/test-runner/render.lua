@@ -20,28 +20,20 @@ local M = {
 ---@param type "Run" | "Discovery"
 ---@param subtask_count number | nil
 function M.appendJob(id, type, subtask_count)
-  table.insert(M.jobs, { type = type, id = id, subtask_count = subtask_count or 1 })
+  local job = { type = type, id = id, subtask_count = (subtask_count and subtask_count > 0) and subtask_count or 1 }
+  table.insert(M.jobs, job)
   M.refreshLines()
 
-  return function()
-    local job = extensions.find(M.jobs, function(s)
-      return s.id == id
-    end)
-
-    if job == nil then
-      return
-    end
-
+  local on_job_finished_callback = function()
     job.completed = true
-
     local is_all_finished = extensions.every(M.jobs, function(s) return s.completed end)
-
     if is_all_finished == true then
       M.jobs = {}
     end
-
     M.refreshLines()
   end
+
+  return on_job_finished_callback
 end
 
 function M.redraw_virtual_text()
