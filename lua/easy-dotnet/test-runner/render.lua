@@ -1,4 +1,5 @@
 local ns_id = require("easy-dotnet.constants").ns_id
+local extensions = require("easy-dotnet.extensions")
 local M = {
   lines = {
     { value = "Discovering tests...", preIcon = "🔃" }
@@ -23,19 +24,22 @@ function M.appendJob(id, type, subtask_count)
   M.refreshLines()
 
   return function()
-    local is_all_finished = true
-    for _, value in ipairs(M.jobs) do
-      if value.id == id then
-        value.completed = true
-      end
+    local job = extensions.find(M.jobs, function(s)
+      return s.id == id
+    end)
 
-      if value.completed ~= true then
-        is_all_finished = false
-      end
+    if job == nil then
+      return
     end
+
+    job.completed = true
+
+    local is_all_finished = extensions.every(M.jobs, function(s) return s.completed end)
+
     if is_all_finished == true then
       M.jobs = {}
     end
+
     M.refreshLines()
   end
 end
