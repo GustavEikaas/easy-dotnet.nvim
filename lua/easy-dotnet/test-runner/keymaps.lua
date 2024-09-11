@@ -43,7 +43,7 @@ local function parse_status(result, test_line)
 end
 
 
-local function parse_log_file(relative_log_file_path, win, matches)
+local function parse_log_file(relative_log_file_path, win, matches, on_completed)
   require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
     ---@param unit_test_results TestCase[]
     function(unit_test_results)
@@ -69,6 +69,7 @@ local function parse_log_file(relative_log_file_path, win, matches)
       end
 
       aggregateStatus(matches)
+      on_completed()
       win.refreshLines()
     end)
 end
@@ -81,12 +82,18 @@ local function run_csproject(win, cs_project_path)
   local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
 
   local matches = {}
+  local testcount = 0
   for _, line in ipairs(win.lines) do
     if line.cs_project_path == cs_project_path then
       table.insert(matches, { ref = line, line = line.namespace, id = line.id })
       line.icon = "<Running>"
+      if line.type == "test" or line.type == "subcase" then
+        testcount = testcount + 1
+      end
     end
   end
+
+  local on_job_finished = win.appendJob(cs_project_path, "Run", testcount)
 
   win.refreshLines()
 
@@ -94,7 +101,7 @@ local function run_csproject(win, cs_project_path)
     string.format("dotnet test --nologo --no-build --no-restore %s --logger='trx;logFileName=%s'", cs_project_path,
       log_file_name), {
       on_exit = function(_, code)
-        parse_log_file(relative_log_file_path, win, matches)
+        parse_log_file(relative_log_file_path, win, matches, on_job_finished)
       end
     })
 end
@@ -109,20 +116,25 @@ local function run_test_group(line, win)
 
   local matches = {}
   local suite_name = line.namespace
+  local testcount = 0
   for _, test_line in ipairs(win.lines) do
     if line.name == test_line.name:gsub("%b()", "") and line.cs_project_path == test_line.cs_project_path and line.solution_file_path == test_line.solution_file_path then
       table.insert(matches, { ref = test_line, line = test_line.namespace, id = test_line.id })
       test_line.icon = "<Running>"
+      if test_line.type == "test" or test_line.type == "subcase" then
+        testcount = testcount + 1
+      end
     end
   end
   win.refreshLines()
 
+  local on_job_finished = win.appendJob(line.name, "Run", testcount)
   vim.fn.jobstart(
     string.format("dotnet test --filter='%s' --nologo --no-build --no-restore %s --logger='trx;logFileName=%s'",
       suite_name, line.cs_project_path, log_file_name),
     {
       on_exit = function()
-        parse_log_file(relative_log_file_path, win, matches)
+        parse_log_file(relative_log_file_path, win, matches, on_job_finished)
       end
     })
 end
@@ -137,21 +149,26 @@ local function run_test_suite(line, win)
   local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
 
   local matches = {}
+  local testcount = 0
   local suite_name = line.namespace
   for _, test_line in ipairs(win.lines) do
     if test_line.namespace:match(suite_name) and line.cs_project_path == test_line.cs_project_path and line.solution_file_path == test_line.solution_file_path then
       table.insert(matches, { ref = test_line, line = test_line.namespace, id = test_line.id })
+      if test_line.type == "test" or test_line.type == "subcase" then
+        testcount = testcount + 1
+      end
       test_line.icon = "<Running>"
     end
   end
   win.refreshLines()
 
+  local on_job_finished = win.appendJob(line.namespace, "Run", testcount)
   vim.fn.jobstart(
     string.format("dotnet test --filter='%s' --nologo --no-build --no-restore %s --logger='trx;logFileName=%s'",
       suite_name, line.cs_project_path, log_file_name),
     {
       on_exit = function()
-        parse_log_file(relative_log_file_path, win, matches)
+        parse_log_file(relative_log_file_path, win, matches, on_job_finished)
       end
     })
 end
