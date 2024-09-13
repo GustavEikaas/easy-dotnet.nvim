@@ -72,21 +72,33 @@ local function extractProjectName(path)
   return filename:gsub("%.csproj$", ""):gsub("%.fsproj$", "")
 end
 
-local function get_version_from_build_props(starting_directory)
+local function get_version_from_build_props(starting_directory, max_depth)
   local current_directory = starting_directory
+  local depth = 0 -- Initialize depth counter
 
   while current_directory do
+    if depth > max_depth then
+      return nil -- Exceeding max depth, exit the loop
+    end
+
     local build_props_path = current_directory .. "/Directory.Build.props"
     local sdk_version = M.extract_version(build_props_path)
     if sdk_version then
       return sdk_version
     end
 
-    current_directory = current_directory:match("(.*/)")
+    -- Match parent directory but stop if we're at the root
+    local parent_directory = current_directory:match("(.*/)[^/]+/") -- Go one level up
+    if parent_directory == current_directory then
+      break                                                         -- We're at the root, stop the loop
+    end
+    current_directory = parent_directory
+    depth = depth + 1 -- Increment depth counter
   end
 
-  return nil
+  return nil -- File not found within max_depth
 end
+
 
 local function extract_import_props(csproj_path)
   local imports = {}
@@ -141,7 +153,10 @@ M.get_project_from_project_file = function(project_file_path)
   local isTestProject = M.is_test_project(project_file_path)
   local maybeSecretGuid = M.try_get_secret_id(project_file_path)
   local version = M.extract_version(project_file_path) or get_version_from_props(project_file_path) or
-      get_version_from_build_props(vim.fs.dirname(project_file_path))
+      get_version_from_build_props(vim.fs.dirname(project_file_path), 10)
+  if not version or version == false then
+    error("Failed to determine TargetFramework for " .. project_file_path)
+  end
 
   local bin_path = vim.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug", "net" .. version)
   local dll_path = vim.fs.joinpath(bin_path, name .. ".dll")
