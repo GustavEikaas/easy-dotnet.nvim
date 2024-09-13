@@ -9,8 +9,7 @@ local M = {}
 ---@field version string
 ---@field runnable boolean
 ---@field secrets string
----@field bin_path string
----@field dll_path string
+---@field get_dll_path function
 ---@field isTestProject boolean
 ---@field isConsoleProject boolean
 ---@field isWebProject boolean
@@ -72,73 +71,6 @@ local function extractProjectName(path)
   return filename:gsub("%.csproj$", ""):gsub("%.fsproj$", "")
 end
 
-local function get_version_from_build_props(starting_directory, max_depth)
-  local current_directory = starting_directory
-  local depth = 0 -- Initialize depth counter
-
-  while current_directory do
-    if depth > max_depth then
-      return nil -- Exceeding max depth, exit the loop
-    end
-
-    local build_props_path = current_directory .. "/Directory.Build.props"
-    local sdk_version = M.extract_version(build_props_path)
-    if sdk_version then
-      return sdk_version
-    end
-
-    -- Match parent directory but stop if we're at the root
-    local parent_directory = current_directory:match("(.*/)[^/]+/") -- Go one level up
-    if parent_directory == current_directory then
-      break                                                         -- We're at the root, stop the loop
-    end
-    current_directory = parent_directory
-    depth = depth + 1 -- Increment depth counter
-  end
-
-  return nil -- File not found within max_depth
-end
-
-
-local function extract_import_props(csproj_path)
-  local imports = {}
-  local pattern = '<Import%s+Project%s*=%s*"[%.%\\%/]+[%w_%-%.%/]+%.props"%s*/>'
-  local file = io.open(csproj_path, "r")
-  if not file then
-    print("Failed to open file: " .. csproj_path)
-    return nil
-  end
-
-  for line in file:lines() do
-    local match = line:match(pattern)
-    if match then
-      local project_path = line:match('Project%s*=%s*"([%.%\\%/]+[%w_%-%.%/]+%.props)"')
-      if project_path then
-        local normalized_path = project_path:gsub("\\", "/")
-        table.insert(imports, normalized_path)
-      end
-    end
-  end
-
-  file:close()
-
-  return imports
-end
-
-
-local function get_version_from_props(csproj_path)
-  local imports = extract_import_props(csproj_path)
-  if not imports then
-    return nil
-  end
-  for _, value in ipairs(imports) do
-    local version = M.extract_version(vim.fs.joinpath(vim.fs.dirname(csproj_path), value))
-    if version then
-      return version
-    end
-  end
-  return nil
-end
 
 -- Get the project definition from a csproj/fsproj file
 ---@param project_file_path string
@@ -152,14 +84,7 @@ M.get_project_from_project_file = function(project_file_path)
   local isConsoleProject = M.is_console_project(project_file_path)
   local isTestProject = M.is_test_project(project_file_path)
   local maybeSecretGuid = M.try_get_secret_id(project_file_path)
-  local version = M.extract_version(project_file_path) or get_version_from_props(project_file_path) or
-      get_version_from_build_props(vim.fs.dirname(project_file_path), 10)
-  if not version or version == false then
-    error("Failed to determine TargetFramework for " .. project_file_path)
-  end
-
-  local bin_path = vim.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug", "net" .. version)
-  local dll_path = vim.fs.joinpath(bin_path, name .. ".dll")
+  local version = M.extract_version(project_file_path)
 
   if version and version ~= false then
     display = display .. "@" .. version
@@ -192,8 +117,16 @@ M.get_project_from_project_file = function(project_file_path)
     version = version,
     runnable = isWebProject or isConsoleProject,
     secrets = maybeSecretGuid,
-    bin_path = bin_path,
-    dll_path = dll_path,
+    get_dll_path = function()
+      local value = vim.fn.json_decode(
+            vim.fn.system(string.format(
+              "dotnet msbuild %s -getProperty:OutputPath -getProperty:TargetExt -getProperty:AssemblyName",
+              project_file_path)))
+          .Properties
+      local target = string.format("%s%s", value.AssemblyName, value.TargetExt)
+      local path = vim.fs.joinpath(vim.fs.dirname(project_file_path), value.OutputPath:gsub("\\", "/"), target)
+      return path
+    end,
     isTestProject = isTestProject,
     isConsoleProject = isConsoleProject,
     isWebProject = isWebProject
