@@ -72,7 +72,7 @@ local function extractProjectName(path)
   return filename:gsub("%.csproj$", ""):gsub("%.fsproj$", "")
 end
 
-local function find_dotnet_sdk_version_in_build_file(starting_directory)
+local function get_version_from_build_props(starting_directory)
   local current_directory = starting_directory
 
   while current_directory do
@@ -141,12 +141,12 @@ M.get_project_from_project_file = function(project_file_path)
   local isTestProject = M.is_test_project(project_file_path)
   local maybeSecretGuid = M.try_get_secret_id(project_file_path)
   local version = M.extract_version(project_file_path) or get_version_from_props(project_file_path) or
-      find_dotnet_sdk_version_in_build_file(vim.fs.dirname(project_file_path))
+      get_version_from_build_props(vim.fs.dirname(project_file_path))
 
   local bin_path = vim.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug", "net" .. version)
   local dll_path = vim.fs.joinpath(bin_path, name .. ".dll")
 
-  if version then
+  if version and version ~= false then
     display = display .. "@" .. version
   end
 
