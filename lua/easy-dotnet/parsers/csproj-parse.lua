@@ -6,7 +6,7 @@ local M = {}
 ---@field display string
 ---@field path string
 ---@field name string
----@field version string
+---@field version string|nil
 ---@field runnable boolean
 ---@field secrets string
 ---@field get_dll_path function
