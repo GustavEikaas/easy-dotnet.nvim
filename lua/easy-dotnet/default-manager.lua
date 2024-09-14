@@ -1,7 +1,3 @@
----@class DotnetProject
----@field name string
----@field path string
-
 ---@class SolutionContent
 ---@field default_build_project string
 ---@field default_test_project string

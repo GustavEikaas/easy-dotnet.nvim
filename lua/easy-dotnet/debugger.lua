@@ -66,7 +66,7 @@ M.get_dll_for_solution_project = function(sln_file)
 
   local path = vim.fs.dirname(project.path)
   return {
-    dll = project.dll_path,
+    dll = project.get_dll_path(),
     project = path,
     projectName = project.name
   }
@@ -81,7 +81,7 @@ M.get_dll_for_project = function()
   local path = vim.fs.dirname(project.path)
   return {
     projectName = project.name,
-    dll = project.dll_path,
+    dll = project.get_dll_path(),
     project = path
   }
 end
