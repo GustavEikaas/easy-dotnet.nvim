@@ -91,7 +91,6 @@ M.get_project_from_project_file = function(project_file_path)
   local isConsoleProject = M.is_console_project(project_file_path)
   local isTestProject = M.is_test_project(project_file_path)
   local maybeSecretGuid = M.try_get_secret_id(project_file_path)
-
   local version = M.extract_version(project_file_path)
 
   if version then
