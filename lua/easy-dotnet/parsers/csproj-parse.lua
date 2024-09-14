@@ -118,6 +118,11 @@ M.get_project_from_project_file = function(project_file_path)
     runnable = isWebProject or isConsoleProject,
     secrets = maybeSecretGuid,
     get_dll_path = function()
+      if version and version ~= false then
+        local bin_path = vim.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug", "net" .. version)
+        local dll_path = vim.fs.joinpath(bin_path, name .. ".dll")
+        return dll_path
+      end
       local value = vim.fn.json_decode(
             vim.fn.system(string.format(
               "dotnet msbuild %s -getProperty:OutputPath -getProperty:TargetExt -getProperty:AssemblyName",
