@@ -316,6 +316,7 @@ M.runner = function(options, sdk_path)
         highlight = "Character"
       }
       local on_job_finished = win.appendJob(value.name, "Discovery")
+      --Performance reasons
       if not value.version then
         vim.schedule(function()
           discover_tests_for_project_and_update_lines(project, win, mergedOpts, value, sdk_path, on_job_finished)

@@ -84,10 +84,20 @@ M.get_project_from_project_file = function(project_file_path)
   local isConsoleProject = M.is_console_project(project_file_path)
   local isTestProject = M.is_test_project(project_file_path)
   local maybeSecretGuid = M.try_get_secret_id(project_file_path)
-  local version = M.extract_version(project_file_path)
 
-  if version and version ~= false then
+  ------------------------
+  --MSBuild backing fields
+  ---@type string | nil
+  local dll_path = nil
+  ---@type string | nil
+  local version = nil
+  ------------------------
+
+  version = M.extract_version(project_file_path)
+
+  if version then
     display = display .. "@" .. version
+    dll_path = vim.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug", "net" .. version, name .. ".dll")
   end
 
   if language == "csharp" then
@@ -118,18 +128,20 @@ M.get_project_from_project_file = function(project_file_path)
     runnable = isWebProject or isConsoleProject,
     secrets = maybeSecretGuid,
     get_dll_path = function()
-      if version and version ~= false then
-        local bin_path = vim.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug", "net" .. version)
-        local dll_path = vim.fs.joinpath(bin_path, name .. ".dll")
+      if dll_path then
         return dll_path
       end
       local value = vim.fn.json_decode(
             vim.fn.system(string.format(
-              "dotnet msbuild %s -getProperty:OutputPath -getProperty:TargetExt -getProperty:AssemblyName",
+              "dotnet msbuild %s -getProperty:OutputPath -getProperty:TargetExt -getProperty:AssemblyName -getProperty:TargetFramework",
               project_file_path)))
           .Properties
       local target = string.format("%s%s", value.AssemblyName, value.TargetExt)
       local path = vim.fs.joinpath(vim.fs.dirname(project_file_path), value.OutputPath:gsub("\\", "/"), target)
+      local msbuild_target_framework = value.TargetFramework:gsub("%net", "")
+      --cache value in backing fields
+      version = msbuild_target_framework
+      dll_path = path
       return path
     end,
     isTestProject = isTestProject,
@@ -139,11 +151,19 @@ M.get_project_from_project_file = function(project_file_path)
 end
 
 M.extract_version = function(project_file_path)
-  return extract_from_project(project_file_path, "<TargetFramework>net(.-)</TargetFramework>")
+  local version = extract_from_project(project_file_path, "<TargetFramework>net(.-)</TargetFramework>")
+  if version == false then
+    return nil
+  end
+  return version
 end
 
 M.try_get_secret_id = function(project_file_path)
-  return extract_from_project(project_file_path, "<UserSecretsId>([a-fA-F0-9%-]+)</UserSecretsId>")
+  local secret = extract_from_project(project_file_path, "<UserSecretsId>([a-fA-F0-9%-]+)</UserSecretsId>")
+  if secret == false then
+    return nil
+  end
+  return secret
 end
 
 M.is_console_project = function(project_file_path)
