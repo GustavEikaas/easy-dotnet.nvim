@@ -72,10 +72,18 @@ local function extractProjectName(path)
 end
 
 
+---@type table<string, DotnetProject>
+local cache = {}
+
+
 -- Get the project definition from a csproj/fsproj file
 ---@param project_file_path string
 ---@return DotnetProject
 M.get_project_from_project_file = function(project_file_path)
+  local maybeCacheObject = cache[project_file_path]
+  if maybeCacheObject then
+    return maybeCacheObject
+  end
   local display = extractProjectName(project_file_path)
   local name = display
   local language = project_file_path:match("%.csproj$") and "csharp" or project_file_path:match("%.fsproj$") and "fsharp" or
@@ -85,19 +93,10 @@ M.get_project_from_project_file = function(project_file_path)
   local isTestProject = M.is_test_project(project_file_path)
   local maybeSecretGuid = M.try_get_secret_id(project_file_path)
 
-  ------------------------
-  --MSBuild backing fields
-  ---@type string | nil
-  local dll_path = nil
-  ---@type string | nil
-  local version = nil
-  ------------------------
-
-  version = M.extract_version(project_file_path)
+  local version = M.extract_version(project_file_path)
 
   if version then
     display = display .. "@" .. version
-    dll_path = vim.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug", "net" .. version, name .. ".dll")
   end
 
   if language == "csharp" then
@@ -119,7 +118,8 @@ M.get_project_from_project_file = function(project_file_path)
     display = display .. " 󰆍"
   end
 
-  return {
+
+  local project = {
     display = display,
     path = project_file_path,
     language = language,
@@ -128,8 +128,9 @@ M.get_project_from_project_file = function(project_file_path)
     runnable = isWebProject or isConsoleProject,
     secrets = maybeSecretGuid,
     get_dll_path = function()
-      if dll_path then
-        return dll_path
+      local c = cache[project_file_path]
+      if c and c.dll_path then
+        return c.dll_path
       end
       local value = vim.fn.json_decode(
             vim.fn.system(string.format(
@@ -139,15 +140,23 @@ M.get_project_from_project_file = function(project_file_path)
       local target = string.format("%s%s", value.AssemblyName, value.TargetExt)
       local path = vim.fs.joinpath(vim.fs.dirname(project_file_path), value.OutputPath:gsub("\\", "/"), target)
       local msbuild_target_framework = value.TargetFramework:gsub("%net", "")
-      --cache value in backing fields
-      version = msbuild_target_framework
-      dll_path = path
+
+      c["version"] = msbuild_target_framework
+      c["dll_path"] = path
       return path
     end,
     isTestProject = isTestProject,
     isConsoleProject = isConsoleProject,
     isWebProject = isWebProject
   }
+
+  cache[project_file_path] = project
+  if version then
+    cache[project_file_path].dll_path = vim.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug",
+      "net" .. version, name .. ".dll")
+  end
+
+  return project
 end
 
 M.extract_version = function(project_file_path)
