@@ -73,14 +73,13 @@ end
 
 
 ---@type table<string, DotnetProject>
-local cache = {}
-
+local project_cache = {}
 
 -- Get the project definition from a csproj/fsproj file
 ---@param project_file_path string
 ---@return DotnetProject
 M.get_project_from_project_file = function(project_file_path)
-  local maybeCacheObject = cache[project_file_path]
+  local maybeCacheObject = project_cache[project_file_path]
   if maybeCacheObject then
     return maybeCacheObject
   end
@@ -128,7 +127,7 @@ M.get_project_from_project_file = function(project_file_path)
     runnable = isWebProject or isConsoleProject,
     secrets = maybeSecretGuid,
     get_dll_path = function()
-      local c = cache[project_file_path]
+      local c = project_cache[project_file_path]
       if c and c.dll_path then
         return c.dll_path
       end
@@ -150,9 +149,9 @@ M.get_project_from_project_file = function(project_file_path)
     isWebProject = isWebProject
   }
 
-  cache[project_file_path] = project
+  project_cache[project_file_path] = project
   if version then
-    cache[project_file_path].dll_path = vim.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug",
+    project_cache[project_file_path].dll_path = vim.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug",
       "net" .. version, name .. ".dll")
   end
 
