@@ -84,7 +84,7 @@ local function get_dotnet_args(options)
   if options.noRestore == true then
     table.insert(args, "--no-restore")
   end
-  return table.concat(args, " ")
+  return table.concat(args, " ") .. " " .. table.concat(options.additional_args or {}, " ")
 end
 
 local function run_csproject(win, cs_project_path)
