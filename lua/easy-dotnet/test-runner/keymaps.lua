@@ -143,7 +143,7 @@ local function run_test_group(line, win)
 
   local on_job_finished = win.appendJob(line.name, "Run", testcount)
   vim.fn.jobstart(
-    string.format("dotnet test --filter='%s' %s --no-restore %s --logger='trx;logFileName=%s'",
+    string.format("dotnet test --filter='%s' --nologo %s %s --logger='trx;logFileName=%s'",
       suite_name, get_dotnet_args(win.options), line.cs_project_path, log_file_name),
     {
       on_exit = function()
