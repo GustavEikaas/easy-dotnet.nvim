@@ -13,7 +13,8 @@ local M = {
   buf_name = "",
   filetype = "",
   filter = nil,
-  keymap = {}
+  keymap = {},
+  options = {}
 }
 
 ---@param id string
@@ -140,6 +141,14 @@ end
 M.setKeymaps = function(mappings)
   M.keymap = mappings
   setMappings()
+  return M
+end
+
+---@param options TestRunnerOptions
+M.setOptions = function(options)
+  if options then
+    M.options = options
+  end
   return M
 end
 

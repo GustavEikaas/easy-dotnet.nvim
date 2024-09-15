@@ -1,6 +1,8 @@
 ---@class TestRunnerOptions
 ---@field noBuild boolean
 ---@field noRestore boolean
+---@field viewmode "float" | "buf" | "split"
+---@field additional_args table<string> | nil
 
 local function get_sdk_path()
   local sdk_version = vim.system({ "dotnet", "--version" }):wait().stdout:gsub("\r", ""):gsub("\n", "")
@@ -56,10 +58,10 @@ return {
   },
   ---@type TestRunnerOptions
   test_runner = {
-    ---@type "split" | "float" | "buf"
     viewmode = "split",
     noBuild = true,
     noRestore = true,
+    additional_args = {}
   },
   csproj_mappings = true,
   auto_bootstrap_namespace = true

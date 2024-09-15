@@ -75,6 +75,18 @@ local function parse_log_file(relative_log_file_path, win, matches, on_completed
     end)
 end
 
+---@param options TestRunnerOptions
+local function get_dotnet_args(options)
+  local args = {}
+  if options.noBuild == true then
+    table.insert(args, "--no-build")
+  end
+  if options.noRestore == true then
+    table.insert(args, "--no-restore")
+  end
+  return table.concat(args, " ") .. " " .. table.concat(options.additional_args or {}, " ")
+end
+
 local function run_csproject(win, cs_project_path)
   local log_file_name = string.format("%s.xml", cs_project_path:match("([^/\\]+)$"))
   local normalized_path = cs_project_path:gsub('\\', '/')
@@ -97,9 +109,9 @@ local function run_csproject(win, cs_project_path)
   local on_job_finished = win.appendJob(cs_project_path, "Run", testcount)
 
   win.refreshLines()
-
   vim.fn.jobstart(
-    string.format("dotnet test --nologo --no-build --no-restore %s --logger='trx;logFileName=%s'", cs_project_path,
+    string.format("dotnet test --nologo %s %s --logger='trx;logFileName=%s'", get_dotnet_args(win.options),
+      cs_project_path,
       log_file_name), {
       on_exit = function(_, code)
         parse_log_file(relative_log_file_path, win, matches, on_job_finished)
@@ -131,8 +143,8 @@ local function run_test_group(line, win)
 
   local on_job_finished = win.appendJob(line.name, "Run", testcount)
   vim.fn.jobstart(
-    string.format("dotnet test --filter='%s' --nologo --no-build --no-restore %s --logger='trx;logFileName=%s'",
-      suite_name, line.cs_project_path, log_file_name),
+    string.format("dotnet test --filter='%s' --nologo %s %s --logger='trx;logFileName=%s'",
+      suite_name, get_dotnet_args(win.options), line.cs_project_path, log_file_name),
     {
       on_exit = function()
         parse_log_file(relative_log_file_path, win, matches, on_job_finished)
@@ -165,8 +177,8 @@ local function run_test_suite(line, win)
 
   local on_job_finished = win.appendJob(line.namespace, "Run", testcount)
   vim.fn.jobstart(
-    string.format("dotnet test --filter='%s' --nologo --no-build --no-restore %s --logger='trx;logFileName=%s'",
-      suite_name, line.cs_project_path, log_file_name),
+    string.format("dotnet test --filter='%s' --nologo %s %s --logger='trx;logFileName=%s'",
+      suite_name, get_dotnet_args(win.options), line.cs_project_path, log_file_name),
     {
       on_exit = function()
         parse_log_file(relative_log_file_path, win, matches, on_job_finished)
@@ -220,7 +232,6 @@ local function get_path_from_stack_trace(stack_trace)
   end
 end
 
-
 local function run_test(line, win)
   local log_file_name = string.format("%s.xml", line.name)
   local normalized_path = line.cs_project_path:gsub('\\', '/')
@@ -228,8 +239,8 @@ local function run_test(line, win)
   local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
 
   local command = string.format(
-    "dotnet test --filter='%s' --nologo --no-build --no-restore %s --logger='trx;logFileName=%s'",
-    line.namespace:gsub("%b()", ""), line.cs_project_path, log_file_name)
+    "dotnet test --filter='%s' --nologo %s %s --logger='trx;logFileName=%s'",
+    line.namespace:gsub("%b()", ""), get_dotnet_args(win.options), line.cs_project_path, log_file_name)
 
   local on_job_finished = win.appendJob(line.name, "Run")
 
