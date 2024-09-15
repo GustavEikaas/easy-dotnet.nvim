@@ -155,9 +155,12 @@ local default_options = require("easy-dotnet.options").test_runner
 ---@param project Test
 ---@param options TestRunnerOptions
 ---@param sdk_path string
-local function discover_tests_for_project_and_update_lines(project, win, options, dll_path, sdk_path)
+---@param dotnet_project DotnetProject
+---@param on_job_finished function
+local function discover_tests_for_project_and_update_lines(project, win, options, dotnet_project, sdk_path,
+                                                           on_job_finished)
   local vstest_dll = vim.fs.joinpath(sdk_path, "vstest.console.dll")
-  local absolute_dll_path = vim.fs.joinpath(vim.fn.getcwd(), dll_path)
+  local absolute_dll_path = vim.fs.joinpath(vim.fn.getcwd(), dotnet_project.get_dll_path())
   local outfile = os.tmpname()
   local script_path = require("easy-dotnet.test-runner.discovery").get_script_path()
   local command = string.format("dotnet fsi %s '%s' '%s' '%s'", script_path, vstest_dll,
@@ -173,6 +176,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
     end,
     ---@param code number
     on_exit = function(_, code)
+      on_job_finished()
       if code ~= 0 then
         --TODO: check if project was not built
         vim.notify(string.format("Discovering tests for %s failed", project.name))
@@ -280,7 +284,7 @@ local function open_runner(options, sdk_path)
 
   win.buf_name = "Test manager"
   win.filetype = "easy-dotnet"
-  win.setKeymaps(require("easy-dotnet.test-runner.keymaps")).render(options.viewmode)
+  win.setOptions(options).setKeymaps(require("easy-dotnet.test-runner.keymaps")).render(options.viewmode)
 
   if is_reused then
     return
@@ -332,7 +336,15 @@ local function open_runner(options, sdk_path)
         expand = {},
         highlight = "Character"
       }
-      discover_tests_for_project_and_update_lines(project, win, options, value.dll_path, sdk_path)
+      local on_job_finished = win.appendJob(value.name, "Discovery")
+      --Performance reasons
+      if not value.version then
+        vim.schedule(function()
+          discover_tests_for_project_and_update_lines(project, win, options, value, sdk_path, on_job_finished)
+        end)
+      else
+        discover_tests_for_project_and_update_lines(project, win, options, value, sdk_path, on_job_finished)
+      end
     end
   end
 

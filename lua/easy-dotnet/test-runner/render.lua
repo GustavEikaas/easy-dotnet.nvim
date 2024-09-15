@@ -1,7 +1,11 @@
+local ns_id = require("easy-dotnet.constants").ns_id
+local extensions = require("easy-dotnet.extensions")
 local M = {
   lines = {
     { value = "Discovering tests...", preIcon = "🔃" }
   },
+  jobs = {},
+  appendJob = nil,
   buf = nil,
   win = nil,
   height = 10,
@@ -9,8 +13,48 @@ local M = {
   buf_name = "",
   filetype = "",
   filter = nil,
-  keymap = {}
+  keymap = {},
+  options = {}
 }
+
+---@param id string
+---@param type "Run" | "Discovery"
+---@param subtask_count number | nil
+function M.appendJob(id, type, subtask_count)
+  local job = { type = type, id = id, subtask_count = (subtask_count and subtask_count > 0) and subtask_count or 1 }
+  table.insert(M.jobs, job)
+  M.refreshLines()
+
+  local on_job_finished_callback = function()
+    job.completed = true
+    local is_all_finished = extensions.every(M.jobs, function(s) return s.completed end)
+    if is_all_finished == true then
+      M.jobs = {}
+    end
+    M.refreshLines()
+  end
+
+  return on_job_finished_callback
+end
+
+function M.redraw_virtual_text()
+  if #M.jobs > 0 then
+    local total_subtask_count = 0
+    local completed_count = 0
+    for _, value in ipairs(M.jobs) do
+      total_subtask_count = total_subtask_count + value.subtask_count
+      if value.completed == true then
+        completed_count = completed_count + value.subtask_count
+      end
+    end
+
+    vim.api.nvim_buf_set_extmark(M.buf, ns_id, 0, 0, {
+      virt_text = { { string.format("%s %s/%s", M.jobs[1].type == "Run" and "Running" or "Discovering", completed_count, total_subtask_count), "Character" } },
+      virt_text_pos = "right_align",
+      priority = 200,
+    })
+  end
+end
 
 local function setBufferOptions()
   vim.api.nvim_win_set_height(0, M.height)
@@ -40,8 +84,6 @@ end
 
 
 local function apply_highlights()
-  local ns_id = require("easy-dotnet.constants").ns_id
-
   --Some lines are hidden so tracking the actual line numbers using shadow_index
   local shadow_index = 0
   for _, value in ipairs(M.lines) do
@@ -61,6 +103,7 @@ local function apply_highlights()
 end
 
 local function printLines()
+  vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
   local stringLines = {}
   for _, line in ipairs(M.lines) do
@@ -74,6 +117,7 @@ local function printLines()
 
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, stringLines)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
+  M.redraw_virtual_text()
 
   apply_highlights()
 end
@@ -97,6 +141,14 @@ end
 M.setKeymaps = function(mappings)
   M.keymap = mappings
   setMappings()
+  return M
+end
+
+---@param options TestRunnerOptions
+M.setOptions = function(options)
+  if options then
+    M.options = options
+  end
   return M
 end
 
