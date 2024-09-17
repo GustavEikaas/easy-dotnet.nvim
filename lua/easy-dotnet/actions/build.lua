@@ -1,4 +1,6 @@
-local M = {}
+local M = {
+  pending = false
+}
 local picker = require("easy-dotnet.picker")
 local parsers = require("easy-dotnet.parsers")
 local messages = require("easy-dotnet.error-messages")
@@ -99,6 +101,10 @@ end
 ---@param use_default boolean
 ---@param dotnet_args string | nil
 M.build_project_quickfix = function(use_default, dotnet_args)
+  if M.pending == true then
+    vim.notify("Build already pending...", vim.log.levels.ERROR)
+    return
+  end
   local data_dir = require("easy-dotnet.constants").get_data_directory()
   local logPath = vim.fs.joinpath(data_dir, "build.log")
 
@@ -109,8 +115,10 @@ M.build_project_quickfix = function(use_default, dotnet_args)
       vim.notify(messages.no_project_definition_found)
     end
     local command = string.format("dotnet build %s /flp:v=q /flp:logfile='%s' %s", csproj, logPath, dotnet_args or "")
+    M.pending = true
     vim.fn.jobstart(command, {
       on_exit = function(_, b, _)
+        M.pending = false
         if b == 0 then
           vim.notify("Built successfully")
         else
@@ -128,10 +136,12 @@ M.build_project_quickfix = function(use_default, dotnet_args)
       return
     end
     vim.notify("Building...")
+    M.pending = true
     local command = string.format("dotnet build %s /flp:v=q /flp:logfile='%s' %s", project.path, logPath,
       dotnet_args or "")
     vim.fn.jobstart(command, {
       on_exit = function(_, b, _)
+        M.pending = false
         if b == 0 then
           vim.notify("Built successfully")
         else
