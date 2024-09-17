@@ -51,12 +51,16 @@ end
 
 ---Stops the spinner and displays the finish message.
 ---@param finishText string The message to display when the spinner stops.
-function M:stop_spinner(finishText)
+---@param level integer | nil One of the values from |vim.log.levels|.
+function M:stop_spinner(finishText, level)
+  if not level then
+    level = vim.log.levels.INFO
+  end
   if self.spinner_timer then
     self.spinner_timer:stop()
     self.spinner_timer:close()
     self.spinner_timer = nil
-    vim.notify(finishText, vim.log.levels.INFO, {
+    vim.notify(finishText, level, {
       title = 'Progress',
       replace = self.notify_id,
     })

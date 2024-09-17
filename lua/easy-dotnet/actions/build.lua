@@ -146,7 +146,7 @@ M.build_project_quickfix = function(use_default, dotnet_args)
         if b == 0 then
           spinner:stop_spinner("Built successfully")
         else
-          spinner:stop_spinner("Build failed")
+          spinner:stop_spinner("Build failed", vim.log.levels.ERROR)
           populate_quickfix_from_file(logPath)
         end
       end,
