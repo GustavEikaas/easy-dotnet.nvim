@@ -80,10 +80,13 @@ local function auto_bootstrap_namespace(bufnr)
   local namespace = generate_csharp_namespace(curr_file, csproject_file_path)
   local file_name = vim.fn.fnamemodify(curr_file, ":t:r")
 
+  local is_interface = file_name:sub(1, 1) == "I" and file_name:sub(2, 2):match("%u")
+  local type_keyword = is_interface and "interface" or "class"
+
   local bootstrap_lines = {
     string.format("namespace %s", namespace),
     "{",
-    string.format("  public class %s", file_name),
+    string.format("  public %s %s", type_keyword, file_name),
     "  {",
     "",
     "  }",
