@@ -43,7 +43,6 @@ local function run_job_sync(cmd)
 end
 
 local function start_test_process(path)
-  -- local test_file_dir = vim.fs.dirname(vim.fn.expand("%"))
   local command = string.format("dotnet test %s --environment=VSTEST_HOST_DEBUG=1", path)
   local res = run_job_sync(command)
   if not res.process_id then
