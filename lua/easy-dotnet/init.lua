@@ -121,7 +121,7 @@ M.setup = function(opts)
 end
 
 M.get_debug_dll = debug.get_debug_dll
-M.get_tbn = debug.get_tbn
+M.start_debugging_test_project = debug.start_debugging_test_project
 M.get_environment_variables = debug.get_environment_variables
 
 M.is_dotnet_project = function()
