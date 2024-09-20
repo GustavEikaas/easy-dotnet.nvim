@@ -19,6 +19,56 @@ M.get_debug_dll = function()
   }
 end
 
+local function run_job_sync(cmd)
+  local result = {}
+  local co = coroutine.running()
+
+  vim.fn.jobstart(cmd, {
+    stdout_buffered = false,
+    on_stdout = function(_, data, _)
+      for _, line in ipairs(data) do
+        local match = string.match(line, "Process Id: (%d+)")
+        if match then
+          result.process_id = tonumber(match)
+          coroutine.resume(co)
+          return
+        end
+      end
+    end,
+  })
+
+  coroutine.yield()
+
+  return result
+end
+
+local function start_test_process(path)
+  local command = string.format("dotnet test %s --environment=VSTEST_HOST_DEBUG=1", path)
+  local res = run_job_sync(command)
+  if not res.process_id then
+    error("Failed to start process")
+  end
+  return res.process_id
+end
+
+
+M.start_debugging_test_project = function()
+  local sln_file = sln_parse.find_solution_file()
+  assert(sln_file, "Failed to find a solution filej")
+  local projects = sln_parse.get_projects_from_sln(sln_file)
+  local test_projects = extensions.filter(projects, function(i)
+    return i.isTestProject
+  end)
+  local test_project = picker.pick_sync(nil, test_projects, "Pick test project")
+  assert(test_project, "No project selected")
+
+  local process_id = start_test_process(vim.fs.dirname(test_project.path))
+  return {
+    process_id = process_id,
+    cwd = test_project.path
+  }
+end
+
 M.get_environment_variables = function(project_name, relative_project_path)
   local launchSettings = vim.fs.joinpath(relative_project_path, "Properties", "launchSettings.json")
 

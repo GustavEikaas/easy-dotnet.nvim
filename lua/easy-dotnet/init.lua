@@ -123,6 +123,10 @@ end
 M.get_debug_dll = debug.get_debug_dll
 M.get_environment_variables = debug.get_environment_variables
 
+M.experimental = {
+  start_debugging_test_project = debug.start_debugging_test_project
+}
+
 M.is_dotnet_project = function()
   local project_files = require("easy-dotnet.parsers.sln-parse").find_solution_file() or
       require("easy-dotnet.parsers.csproj-parse").find_project_file()
