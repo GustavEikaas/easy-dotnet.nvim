@@ -92,6 +92,17 @@ M.setup = function(opts)
       local co = coroutine.create(ef_handler)
 
       coroutine.resume(co)
+    end,
+    package = function(args)
+      local package_handler = function()
+        local sub = args[2]
+        if sub == "add" then
+          require("easy-dotnet.nuget.add").add_package()
+        end
+      end
+      local co = coroutine.create(package_handler)
+
+      coroutine.resume(co)
     end
   }
 
@@ -182,6 +193,10 @@ M.experimental = {
 M.entity_framework = {
   database = require("easy-dotnet.ef-core.database"),
   migration = require("easy-dotnet.ef-core.migration")
+}
+
+M.nuget = {
+  add_package = require("easy-dotnet.nuget.add").add_package
 }
 
 M.is_dotnet_project = function()
