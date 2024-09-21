@@ -35,10 +35,13 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 10. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
-11. [Nvim-dap configuration](#nvim-dap-configuration)
+11. [EntityFramework](#ef)
+    - [Database](#database)
+    - [Migrations](#migrations)
+12. [Nvim-dap configuration](#nvim-dap-configuration)
     - [Basic example](#basic-example)
     - [Advanced example](#advanced-example)
-12. [Advanced configurations](#advanced-configurations)
+13. [Advanced configurations](#advanced-configurations)
     - [Overseer](#overseer)
 
 ## Features
@@ -236,6 +239,21 @@ https://github.com/user-attachments/assets/aa067c17-3611-4490-afc8-41d98a526729
 If a configuration file is selected it will
 1. Create the configuration file and place it next to your solution file. (solution files and gitignore files are placed in cwd)
 
+## EntityFramework
+Common EntityFramework commands have been added mainly to reduce the overhead of writing `--project .. --startup-project ..`. 
+
+### Requirements
+This functionality relies on dotnet-ef tool, install using `dotnet tool install --global dotnet-ef`
+
+### Database
+- `Dotnet ef database update`
+- `Dotnet ef database update pick` --allows to pick which migration to apply
+- `Dotnet ef database drop`
+
+### Migrations
+- `Dotnet ef migrations add <name>`
+- `Dotnet ef migrations remove`
+- `Dotnet ef migrations list`
 
 ## Nvim-dap configuration
 
