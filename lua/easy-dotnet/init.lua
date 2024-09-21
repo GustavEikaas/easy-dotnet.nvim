@@ -67,6 +67,31 @@ M.setup = function(opts)
     end,
     new = function()
       require("easy-dotnet.actions.new").new()
+    end,
+    ef = function(args)
+      local ef_handler = function()
+        local sub = args[2]
+        if sub == "database" then
+          if args[3] == "update" then
+            M.entity_framework.database.database_update(args[4])
+          elseif args[3] == "drop" then
+            M.entity_framework.database.database_drop()
+          end
+        elseif sub == "migrations" then
+          if args[3] == "add" then
+            M.entity_framework.migration.add_migration(args[4])
+          elseif args[3] == "remove" then
+            M.entity_framework.migration.remove_migration()
+          elseif args[3] == "list" then
+            M.entity_framework.migration.list_migrations()
+          end
+        else
+          vim.notify("Unknown command")
+        end
+      end
+      local co = coroutine.create(ef_handler)
+
+      coroutine.resume(co)
     end
   }
 
@@ -82,7 +107,6 @@ M.setup = function(opts)
   vim.api.nvim_create_user_command('Dotnet',
     function(commandOpts)
       local args = split_by_whitespace(commandOpts.fargs[1])
-      print(vim.inspect(args))
       local subcommand = args[1]
       local func = commands[subcommand]
       if func then
@@ -122,8 +146,9 @@ M.setup = function(opts)
     actions.test_watcher()
   end
   M.run_project = commands.run
+
   M.run_default = function()
-    actions.run(merged_opts.terminal, true)
+    actions.run(merged_opts.terminal, true, "")
   end
 
   M.build_default_quickfix = function(dotnet_args)
@@ -152,6 +177,11 @@ M.get_environment_variables = debug.get_environment_variables
 
 M.experimental = {
   start_debugging_test_project = debug.start_debugging_test_project
+}
+
+M.entity_framework = {
+  database = require("easy-dotnet.ef-core.database"),
+  migration = require("easy-dotnet.ef-core.migration")
 }
 
 M.is_dotnet_project = function()
