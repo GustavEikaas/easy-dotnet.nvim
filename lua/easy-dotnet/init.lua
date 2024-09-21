@@ -107,7 +107,6 @@ M.setup = function(opts)
   vim.api.nvim_create_user_command('Dotnet',
     function(commandOpts)
       local args = split_by_whitespace(commandOpts.fargs[1])
-      print(vim.inspect(args))
       local subcommand = args[1]
       local func = commands[subcommand]
       if func then
@@ -147,8 +146,9 @@ M.setup = function(opts)
     actions.test_watcher()
   end
   M.run_project = commands.run
+
   M.run_default = function()
-    actions.run(merged_opts.terminal, true)
+    actions.run(merged_opts.terminal, true, "")
   end
 
   M.build_default_quickfix = function(dotnet_args)

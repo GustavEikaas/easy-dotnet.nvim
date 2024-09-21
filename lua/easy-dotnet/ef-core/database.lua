@@ -1,12 +1,12 @@
 local M = {}
 
-M.database_update = function(migration_name)
+M.database_update = function(mode)
   local selected_migration = { value = "" }
   local selections = require("easy-dotnet.ef-core.utils").pick_projects()
   local project = selections.project
   local startup_project = selections.startup_project
 
-  if migration_name == "pick" then
+  if mode == "pick" then
     local cmd = string.format("dotnet ef migrations list --prefix-output --project %s --startup-project %s", project
       .path, startup_project.path)
     local stdout = vim.fn.system(cmd)

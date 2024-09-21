@@ -2,7 +2,10 @@ local M = {}
 
 ---@param migration_name string
 M.add_migration = function(migration_name)
-  assert(migration_name, "Migration name required")
+  if not migration_name then
+    vim.notify("Migration name required", vim.log.levels.ERROR)
+    return
+  end
   local selections = require("easy-dotnet.ef-core.utils").pick_projects()
   local project = selections.project
   local startup_project = selections.startup_project
