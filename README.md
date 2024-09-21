@@ -35,7 +35,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 10. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
-11. [EntityFramework](#ef)
+11. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
 12. [Nvim-dap configuration](#nvim-dap-configuration)
