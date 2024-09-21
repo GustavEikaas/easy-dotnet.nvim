@@ -44,17 +44,17 @@ M.setup = function(opts)
     secrets = function()
       secrets.edit_secrets_picker(merged_opts.secrets.path)
     end,
-    run = function()
-      actions.run(merged_opts.terminal, false)
+    run = function(args)
+      actions.run(merged_opts.terminal, false, args_handler(args[2]) or "")
     end,
     test = function(args)
-      actions.test(merged_opts.terminal, false, args_handler(args[2]))
+      actions.test(merged_opts.terminal, false, args_handler(args[2]) or "")
     end,
     restore = function()
       actions.restore(merged_opts.terminal)
     end,
     build = function(args)
-      actions.build(merged_opts.terminal, false, args_handler(args[2]))
+      actions.build(merged_opts.terminal, false, args_handler(args[2]) or "")
     end,
     testrunner = function()
       require("easy-dotnet.test-runner.runner").runner(merged_opts.test_runner, merged_opts.get_sdk_path())

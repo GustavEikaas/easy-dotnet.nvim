@@ -19,7 +19,8 @@ end
 
 ---@param term function
 ---@param use_default boolean
-M.run_project_picker = function(term, use_default)
+---@param args string
+M.run_project_picker = function(term, use_default, args)
   local default_manager = require("easy-dotnet.default-manager")
   local solution_file_path = sln_parse.find_solution_file()
   if solution_file_path == nil then
@@ -29,7 +30,7 @@ M.run_project_picker = function(term, use_default)
 
   local default = default_manager.check_default_project(solution_file_path, "run")
   if default ~= nil and use_default == true then
-    term(default.path, "run")
+    term(default.path, "run", args)
     return
   end
 
@@ -42,7 +43,7 @@ M.run_project_picker = function(term, use_default)
     return
   end
   picker.picker(nil, projects, function(i)
-    term(i.path, "run")
+    term(i.path, "run", args)
     default_manager.set_default_project(i, solution_file_path, "run")
   end, "Run project")
 end

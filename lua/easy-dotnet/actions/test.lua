@@ -1,10 +1,10 @@
 local M = {}
 local extensions = require("easy-dotnet.extensions")
 local picker = require("easy-dotnet.picker")
+local error_messages = require("easy-dotnet.error-messages")
 local parsers = require("easy-dotnet.parsers")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
-local error_messages = require("easy-dotnet.error-messages")
 
 local function csproj_fallback(on_select)
   local csproj_path = csproj_parse.find_project_file()
@@ -49,7 +49,7 @@ end
 
 
 ---@param use_default boolean
----@param args string
+---@param args string|nil
 M.run_test_picker = function(on_select, use_default, args)
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
@@ -143,7 +143,5 @@ M.test_watcher = function()
     })
   end
 end
-
-
 
 return M

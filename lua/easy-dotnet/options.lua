@@ -31,7 +31,7 @@ return {
   get_sdk_path = get_sdk_path,
   ---@param path string
   ---@param action "test"|"restore"|"build"|"run"
-  ---@param args string | nil
+  ---@param args string
   terminal = function(path, action, args)
     local commands = {
       run = function()
