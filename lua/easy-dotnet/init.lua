@@ -67,6 +67,29 @@ M.setup = function(opts)
     end,
     new = function()
       require("easy-dotnet.actions.new").new()
+    end,
+    ef = function(args)
+      print(args)
+      local sub = args[2]
+      if sub == "database" then
+        local co = coroutine.create(M.entity_framework.database.database_update)
+        coroutine.resume(co)
+      elseif sub == "migration" then
+        if args[3] == "add" then
+          local co = coroutine.create(function()
+            M.entity_framework.migration.add_migration(args[4])
+          end)
+          coroutine.resume(co)
+        elseif args[3] == "remove" then
+          local co = coroutine.create(M.entity_framework.migration.remove_migration)
+          coroutine.resume(co)
+        elseif args[3] == "list" then
+          local co = coroutine.create(M.entity_framework.migration.list_migrations)
+          coroutine.resume(co)
+        end
+      else
+        vim.notify("Unknown command")
+      end
     end
   }
 
@@ -152,6 +175,12 @@ M.get_environment_variables = debug.get_environment_variables
 
 M.experimental = {
   start_debugging_test_project = debug.start_debugging_test_project
+}
+
+M.entity_framework = {
+  database = require("easy-dotnet.ef-core.database"),
+  dbcontext = require("easy-dotnet.ef-core.dbcontext"),
+  migration = require("easy-dotnet.ef-core.migration"),
 }
 
 M.is_dotnet_project = function()
