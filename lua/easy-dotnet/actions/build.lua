@@ -50,7 +50,7 @@ end
 
 ---@param term function
 ---@param use_default boolean
-M.build_project_picker = function(term, use_default)
+M.build_project_picker = function(term, use_default, args)
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
     csproj_fallback(term)
@@ -58,7 +58,7 @@ M.build_project_picker = function(term, use_default)
   end
 
   select_project(solutionFilePath, function(project)
-    term(project.path, "build")
+    term(project.path, "build", args)
   end, use_default)
 end
 

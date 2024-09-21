@@ -49,7 +49,8 @@ end
 
 
 ---@param use_default boolean
-M.run_test_picker = function(on_select, use_default)
+---@param args string
+M.run_test_picker = function(on_select, use_default, args)
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
     csproj_fallback(on_select)
@@ -57,7 +58,7 @@ M.run_test_picker = function(on_select, use_default)
   end
 
   select_project(solutionFilePath, function(project)
-    on_select(project.path, "test")
+    on_select(project.path, "test", args)
   end, use_default)
 end
 
