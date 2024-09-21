@@ -69,27 +69,29 @@ M.setup = function(opts)
       require("easy-dotnet.actions.new").new()
     end,
     ef = function(args)
-      print(args)
-      local sub = args[2]
-      if sub == "database" then
-        local co = coroutine.create(M.entity_framework.database.database_update)
-        coroutine.resume(co)
-      elseif sub == "migration" then
-        if args[3] == "add" then
-          local co = coroutine.create(function()
+      local ef_handler = function()
+        local sub = args[2]
+        if sub == "database" then
+          if args[3] == "update" then
+            M.entity_framework.database.database_update(args[4])
+          elseif args[3] == "drop" then
+            M.entity_framework.database.database_drop()
+          end
+        elseif sub == "migrations" then
+          if args[3] == "add" then
             M.entity_framework.migration.add_migration(args[4])
-          end)
-          coroutine.resume(co)
-        elseif args[3] == "remove" then
-          local co = coroutine.create(M.entity_framework.migration.remove_migration)
-          coroutine.resume(co)
-        elseif args[3] == "list" then
-          local co = coroutine.create(M.entity_framework.migration.list_migrations)
-          coroutine.resume(co)
+          elseif args[3] == "remove" then
+            M.entity_framework.migration.remove_migration()
+          elseif args[3] == "list" then
+            M.entity_framework.migration.list_migrations()
+          end
+        else
+          vim.notify("Unknown command")
         end
-      else
-        vim.notify("Unknown command")
       end
+      local co = coroutine.create(ef_handler)
+
+      coroutine.resume(co)
     end
   }
 
@@ -179,8 +181,7 @@ M.experimental = {
 
 M.entity_framework = {
   database = require("easy-dotnet.ef-core.database"),
-  dbcontext = require("easy-dotnet.ef-core.dbcontext"),
-  migration = require("easy-dotnet.ef-core.migration"),
+  migration = require("easy-dotnet.ef-core.migration")
 }
 
 M.is_dotnet_project = function()
