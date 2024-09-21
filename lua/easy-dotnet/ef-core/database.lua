@@ -6,7 +6,6 @@ M.database_update = function(migration_name)
   local project = selections.project
   local startup_project = selections.startup_project
 
-
   if migration_name == "pick" then
     local cmd = string.format("dotnet ef migrations list --prefix-output --project %s --startup-project %s", project
       .path, startup_project.path)
@@ -33,21 +32,22 @@ M.database_update = function(migration_name)
   end
 
 
-  print(vim.inspect(selected_migration))
+  local spinner = require("easy-dotnet.ui-modules.spinner").new()
   local cmd = string.format("dotnet ef database update %s --project %s --startup-project %s",
     selected_migration.value,
     project.path,
     startup_project.path)
-  vim.notify(cmd)
+
+  spinner:start_spinner("Applying migrations")
   vim.fn.jobstart(cmd, {
     on_stdout = function(_, data)
 
     end,
     on_exit = function(_, code)
       if code == 0 then
-        vim.notify("Success")
+        spinner:stop_spinner("Database updated")
       else
-        vim.notify("Failed", vim.log.levels.ERROR)
+        spinner:stop_spinner("Database update failed", vim.log.levels.ERROR)
       end
     end
   })
@@ -58,18 +58,16 @@ M.database_drop = function()
   local project = selections.project
   local startup_project = selections.startup_project
 
+  local spinner = require("easy-dotnet.ui-modules.spinner").new()
   local cmd = string.format("dotnet ef database drop --project %s --startup-project %s -f", project.path,
     startup_project.path)
-  vim.notify(cmd)
+  spinner:start_spinner("Dropping database")
   vim.fn.jobstart(cmd, {
-    on_stdout = function(_, data)
-
-    end,
     on_exit = function(_, code)
       if code == 0 then
-        vim.notify("Success")
+        spinner:stop_spinner("Database dropped")
       else
-        vim.notify("Failed", vim.log.levels.ERROR)
+        spinner:stop_spinner("Failed to drop database", vim.log.levels.ERROR)
       end
     end
   })
