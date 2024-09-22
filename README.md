@@ -32,6 +32,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
    - [Requirements](#requirements)
 9. [Csproj mappings](#csproj-mappings)
    - [Add reference](#add-reference)
+   - [Package autocomplete](#package-autocomplete)
 10. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
@@ -55,8 +56,13 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 - Outdated command: Makes checking outdated packages a breeze using virtual text
 - Csproj mappings: Keymappings for .csproj files are automatically available
 - Create dotnet templates like with `dotnet new`
+- Package autocomplete inside .csproj files [Check it out](#package-autocomplete)
 
 ## Setup
+
+
+>[!IMPORTANT]
+>Remember to also setup the cmp source for autocomplete
 
 ### Without options
 ```lua
@@ -231,6 +237,29 @@ Key mappings are available automatically within `.csproj` files
 `<leader>ar` -> Opens a telescope picker for selecting which project reference to add
 
 ![image](https://github.com/user-attachments/assets/dec096be-8a87-4dd8-aaec-8c22849d1640)
+
+### Package autocomplete
+When editing package references inside a .csproject file it is possible to enable autocomplete.
+This will trigger autocomplete for `<PackageReference Include="<cmp-trigger>" Version="<cmp-trigger>" />`
+This functionality relies on `jq` so ensure that is installed on your system.
+
+Using nvim-cmp
+```lua
+    cmp.register_source("easy-dotnet", require("easy-dotnet").package_completion_source)
+    ...
+    sources = cmp.config.sources({
+        { name = 'nvim_lsp'    },
+        { name = 'easy-dotnet' },
+        ...
+    }),
+    ...
+```
+![image](https://github.com/user-attachments/assets/81809aa8-704b-4481-9445-3985ddef6c98)
+
+>[!NOTE]
+>Latest is added as a snippet to make it easier to select the latest version
+
+![image](https://github.com/user-attachments/assets/2b59735f-941e-44d2-93cf-76b13ac3e76f)
 
 ## New
 Create dotnet templates as with `dotnet new <templatename>`
