@@ -257,6 +257,7 @@ Using nvim-cmp
 
 >[!NOTE]
 >Latest is added as a snippet to make it easier to select the latest version
+
 ![image](https://github.com/user-attachments/assets/2b59735f-941e-44d2-93cf-76b13ac3e76f)
 
 
