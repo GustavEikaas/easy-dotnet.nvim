@@ -85,12 +85,12 @@ M.package_completion_cmp = {
       local search_term = inside_include:gsub('%Include="', "")
       vim.fn.jobstart(
         string.format(
-          "dotnet package search %s --take 2 --format json | jq '.searchResult | .[] | .packages | .[] | .id'",
+          "dotnet package search %s --take 5 --format json | jq '.searchResult | .[] | .packages | .[] | .id'",
           search_term), {
           stdout_buffered = true,
           on_stdout = function(_, data)
             local items = vim.tbl_map(function(i)
-              return { label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', "") }
+              return { label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', ""), kind = 18 }
             end, data)
             callback({ items = items, isIncomplete = true })
           end,
@@ -112,7 +112,8 @@ M.package_completion_cmp = {
                 label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', ""),
                 deprecated = true,
                 sortText = "",
-                preselect = index == last_index
+                preselect = index == last_index,
+                kind = 12
               }
               if index == last_index then
                 latest = cmp_item.label
@@ -123,7 +124,9 @@ M.package_completion_cmp = {
             if latest then
               table.insert(items, {
                 label = "latest",
-                insertText = latest
+                insertText = latest,
+                kind = 15,
+                preselect = true
               })
             end
             callback({ items = items, isIncomplete = false })

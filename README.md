@@ -240,7 +240,7 @@ Key mappings are available automatically within `.csproj` files
 
 ### Package autocomplete
 When editing package references inside a .csproject file it is possible to enable autocomplete.
-This will trigger autocomplete for `<PackageReference Include="<cmp-trigger>" />`
+This will trigger autocomplete for `<PackageReference Include="<cmp-trigger>" Version="<cmp-trigger>" />`
 
 Using nvim-cmp
 ```lua
