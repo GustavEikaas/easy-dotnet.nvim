@@ -70,14 +70,17 @@ local function attach_mappings()
   })
 end
 
+
 M.package_completion_cmp = {
   complete = function(_, _, callback)
     local _, col = unpack(vim.api.nvim_win_get_cursor(0))
     local current_line = vim.api.nvim_get_current_line()
     local before_cursor = current_line:sub(1, col)
-    local pattern_before = 'Include="[^"]*$'
+    local package_completion_pattern = 'Include="[^"]*$'
+    local version_completion_pattern = 'Version="[^"]*$'
 
-    local inside_include = before_cursor:match(pattern_before)
+    local inside_include = before_cursor:match(package_completion_pattern)
+    local inside_version = before_cursor:match(version_completion_pattern)
     if inside_include then
       local search_term = inside_include:gsub('%Include="', "")
       vim.fn.jobstart(
@@ -90,6 +93,20 @@ M.package_completion_cmp = {
               return { label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', "") }
             end, data)
             callback({ items = items, isIncomplete = true })
+          end,
+        })
+    elseif inside_version then
+      local package_name = current_line:match('Include="([^"]+)"')
+      vim.fn.jobstart(
+        string.format(
+          "dotnet package search %s --exact-match --format json | jq '.searchResult[].packages[].version'", package_name),
+        {
+          stdout_buffered = true,
+          on_stdout = function(_, data)
+            local items = vim.tbl_map(function(i)
+              return { label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', "") }
+            end, data)
+            callback({ items = items, isIncomplete = false })
           end,
         })
     end
