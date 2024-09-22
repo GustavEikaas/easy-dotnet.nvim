@@ -44,7 +44,7 @@ local function csproj_fallback(term)
     return
   end
   picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i)
-    term(i.path, "build")
+    term(i.path, "build", "")
   end, "Build project(s)")
 end
 
@@ -136,7 +136,7 @@ M.build_project_quickfix = function(use_default, dotnet_args)
       return
     end
     local spinner = require("easy-dotnet.ui-modules.spinner").new()
-    spinner:start_spinner("Building", "dots")
+    spinner:start_spinner("Building")
     M.pending = true
     local command = string.format("dotnet build %s /flp:v=q /flp:logfile='%s' %s", project.path, logPath,
       dotnet_args or "")
@@ -161,7 +161,7 @@ M.build_solution = function(term)
     vim.notify(error_messages.no_project_definition_found)
     return
   end
-  term(solutionFilePath, "build")
+  term(solutionFilePath, "build", "")
 end
 
 return M

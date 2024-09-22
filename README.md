@@ -272,27 +272,14 @@ local M = {}
 --- Rebuilds the project before starting the debug session
 ---@param co thread
 local function rebuild_project(co, path)
-  local num = 0;
-  local spinner_frames = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" }
-
-  local notification = vim.notify(spinner_frames[1] .. " Building", "info", {
-    timeout = false,
-  })
-
+  local spinner = require("easy-dotnet.ui-modules.spinner").new()
+  spinner:start_spinner("Building")
   vim.fn.jobstart(string.format("dotnet build %s", path), {
-    on_stdout = function(a)
-      num = num + 1
-      local new_spinner = (num) % #spinner_frames
-      notification = vim.notify(spinner_frames[new_spinner + 1] .. " Building", "info",
-        { replace = notification })
-    end,
     on_exit = function(_, return_code)
       if return_code == 0 then
-        vim.notify("Built successfully", "info", { replace = notification, timeout = 1000 })
+        spinner:stop_spinner("Built successfully")
       else
-        -- HACK: clearing previous building progress message
-        vim.notify("", "info", { replace = notification, timeout = 1 })
-        vim.notify("Build failed with exit code " .. return_code, "error", { timeout = 1000 })
+        spinner:stop_spinner("Build failed with exit code " .. return_code, vim.log.levels.ERROR)
         error("Build failed")
       end
       coroutine.resume(co)

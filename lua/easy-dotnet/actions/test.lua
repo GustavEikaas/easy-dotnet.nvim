@@ -68,7 +68,7 @@ M.test_solution = function(term)
     vim.notify(error_messages.no_project_definition_found)
     return
   end
-  term(solutionFilePath, "test")
+  term(solutionFilePath, "test", "")
 end
 
 
