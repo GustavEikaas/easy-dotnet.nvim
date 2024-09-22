@@ -103,9 +103,29 @@ M.package_completion_cmp = {
         {
           stdout_buffered = true,
           on_stdout = function(_, data)
+            local index = 0
+            local latest = nil
+            local last_index = #data - 1
             local items = vim.tbl_map(function(i)
-              return { label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', "") }
+              index = index + 1
+              local cmp_item = {
+                label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', ""),
+                deprecated = true,
+                sortText = "",
+                preselect = index == last_index
+              }
+              if index == last_index then
+                latest = cmp_item.label
+              end
+              return cmp_item
             end, data)
+
+            if latest then
+              table.insert(items, {
+                label = "latest",
+                insertText = latest
+              })
+            end
             callback({ items = items, isIncomplete = false })
           end,
         })
