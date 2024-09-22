@@ -170,10 +170,10 @@ dotnet.is_dotnet_project()                          -- Returns true if a csproje
 
 ### Vim commands
 ```
-Dotnet run (release|debug)
-Dotnet test (release|debug)
+Dotnet run 
+Dotnet test 
 Dotnet restore
-Dotnet build (release|debug)
+Dotnet build 
 Dotnet clean
 Dotnet secrets
 Dotnet testrunner
