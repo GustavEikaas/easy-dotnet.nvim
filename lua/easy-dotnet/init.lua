@@ -16,6 +16,13 @@ local function merge_tables(table1, table2)
   return merged
 end
 
+local function slice(array, start_index, end_index)
+  local result = {}
+  table.move(array, start_index, end_index, 1, result)
+  return result
+end
+
+
 ---@param arguments table<string>|nil
 local function args_handler(arguments)
   if not arguments or #arguments == 0 then
@@ -23,28 +30,21 @@ local function args_handler(arguments)
   end
   local loweredArgument = arguments[1]:lower()
   if loweredArgument == "release" then
-    return "-c release"
+    return string.format("-c release %s", args_handler(slice(arguments, 2, #arguments) or ""))
   elseif loweredArgument == "debug" then
-    return "-c debug"
+    return string.format("-c debug %s", args_handler(slice(arguments, 2, #arguments) or ""))
   elseif loweredArgument == "-c" then
-    if #arguments <= 2 then
-      return ""
-    end
-    return string.format("-c %s", arguments[2])
+    local flag = string.format("-c %s", #arguments >= 2 and arguments[2] or "")
+    return string.format("%s %s", flag, args_handler(slice(arguments, 3, #arguments) or ""))
   elseif loweredArgument == "--no-build" then
-    return "--no-build"
+    return string.format("--no-build %s", args_handler(slice(arguments, 2, #arguments) or ""))
   elseif loweredArgument == "--no-restore" then
-    return "--no-restore"
+    return string.format("--no-restore %s", args_handler(slice(arguments, 2, #arguments) or ""))
   else
     vim.notify("Unknown argument to dotnet build " .. loweredArgument, vim.log.levels.WARN)
   end
 end
 
-local function slice(array, start_index, end_index)
-  local result = {}
-  table.move(array, start_index, end_index, 1, result)
-  return result
-end
 
 M.setup = function(opts)
   local merged_opts = merge_tables(options, opts or {})
