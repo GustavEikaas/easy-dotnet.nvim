@@ -253,8 +253,13 @@ Using nvim-cmp
     }),
     ...
 ```
-![image](https://github.com/user-attachments/assets/ab11c92e-3d97-4dc6-bbc2-ab7bba7ce899)
-![image](https://github.com/user-attachments/assets/261434ca-d42c-421f-8ee5-8dc22b441597)
+![image](https://github.com/user-attachments/assets/81809aa8-704b-4481-9445-3985ddef6c98)
+
+>[!NOTE]
+>Latest is added as a snippet to make it easier to select the latest version
+![image](https://github.com/user-attachments/assets/2b59735f-941e-44d2-93cf-76b13ac3e76f)
+
+
 
 
 ## New
