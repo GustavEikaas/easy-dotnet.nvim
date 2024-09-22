@@ -241,6 +241,7 @@ Key mappings are available automatically within `.csproj` files
 ### Package autocomplete
 When editing package references inside a .csproject file it is possible to enable autocomplete.
 This will trigger autocomplete for `<PackageReference Include="<cmp-trigger>" Version="<cmp-trigger>" />`
+This functionality relies on `jq` so ensure that is installed on your system.
 
 Using nvim-cmp
 ```lua
@@ -259,9 +260,6 @@ Using nvim-cmp
 >Latest is added as a snippet to make it easier to select the latest version
 
 ![image](https://github.com/user-attachments/assets/2b59735f-941e-44d2-93cf-76b13ac3e76f)
-
-
-
 
 ## New
 Create dotnet templates as with `dotnet new <templatename>`
