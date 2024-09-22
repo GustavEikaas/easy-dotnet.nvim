@@ -74,9 +74,7 @@ M.package_completion_cmp = {
   complete = function(_, _, callback)
     local _, col = unpack(vim.api.nvim_win_get_cursor(0))
     local current_line = vim.api.nvim_get_current_line()
-
     local before_cursor = current_line:sub(1, col)
-
     local pattern_before = 'Include="[^"]*$'
 
     local inside_include = before_cursor:match(pattern_before)
@@ -88,7 +86,6 @@ M.package_completion_cmp = {
           search_term), {
           stdout_buffered = true,
           on_stdout = function(_, data)
-            print(vim.inspect(data))
             local items = vim.tbl_map(function(i)
               return { label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', "") }
             end, data)
