@@ -16,19 +16,34 @@ local function merge_tables(table1, table2)
   return merged
 end
 
----@param argument string|nil
-local function args_handler(argument)
-  if not argument then
-    return nil
+---@param arguments table<string>|nil
+local function args_handler(arguments)
+  if not arguments or #arguments == 0 then
+    return ""
   end
-  local loweredArgument = argument:lower()
+  local loweredArgument = arguments[1]:lower()
   if loweredArgument == "release" then
     return "-c release"
   elseif loweredArgument == "debug" then
     return "-c debug"
+  elseif loweredArgument == "-c" then
+    if #arguments <= 2 then
+      return ""
+    end
+    return string.format("-c %s", arguments[2])
+  elseif loweredArgument == "--no-build" then
+    return "--no-build"
+  elseif loweredArgument == "--no-restore" then
+    return "--no-restore"
   else
-    vim.notify("Unknown argument to dotnet build " .. argument, vim.log.levels.WARN)
+    vim.notify("Unknown argument to dotnet build " .. loweredArgument, vim.log.levels.WARN)
   end
+end
+
+local function slice(array, start_index, end_index)
+  local result = {}
+  table.move(array, start_index, end_index, 1, result)
+  return result
 end
 
 M.setup = function(opts)
@@ -45,16 +60,19 @@ M.setup = function(opts)
       secrets.edit_secrets_picker(merged_opts.secrets.path)
     end,
     run = function(args)
-      actions.run(merged_opts.terminal, false, args_handler(args[2]) or "")
+      local extra_args = slice(args, 2, #args)
+      actions.run(merged_opts.terminal, false, args_handler(extra_args))
     end,
     test = function(args)
-      actions.test(merged_opts.terminal, false, args_handler(args[2]) or "")
+      local extra_args = slice(args, 2, #args)
+      actions.test(merged_opts.terminal, false, args_handler(extra_args))
     end,
     restore = function()
       actions.restore(merged_opts.terminal)
     end,
     build = function(args)
-      actions.build(merged_opts.terminal, false, args_handler(args[2]) or "")
+      local extra_args = slice(args, 2, #args)
+      actions.build(merged_opts.terminal, false, args_handler(extra_args))
     end,
     testrunner = function()
       require("easy-dotnet.test-runner.runner").runner(merged_opts.test_runner, merged_opts.get_sdk_path())
