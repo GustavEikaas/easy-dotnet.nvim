@@ -181,6 +181,11 @@ Dotnet outdated
 Dotnet new
 ```
 
+Certain commands like Dotnet test|run|build also supports passing some selected additional arguments like.
+
+```
+Dotnet run|test|build --no-build --no-restore -c prerelease
+```
 
 ## Testrunner
 
