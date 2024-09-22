@@ -40,9 +40,6 @@ M.database_update = function(mode)
 
   spinner:start_spinner("Applying migrations")
   vim.fn.jobstart(cmd, {
-    on_stdout = function(_, data)
-
-    end,
     on_exit = function(_, code)
       if code == 0 then
         spinner:stop_spinner("Database updated")
