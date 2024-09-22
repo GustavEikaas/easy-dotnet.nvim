@@ -253,6 +253,8 @@ Using nvim-cmp
     }),
     ...
 ```
+![image](https://github.com/user-attachments/assets/ab11c92e-3d97-4dc6-bbc2-ab7bba7ce899)
+![image](https://github.com/user-attachments/assets/261434ca-d42c-421f-8ee5-8dc22b441597)
 
 
 ## New
