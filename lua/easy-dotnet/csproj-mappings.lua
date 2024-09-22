@@ -70,5 +70,42 @@ local function attach_mappings()
   })
 end
 
+M.package_completion_cmp = {
+  complete = function(_, _, callback)
+    local _, col = unpack(vim.api.nvim_win_get_cursor(0))
+    local current_line = vim.api.nvim_get_current_line()
+
+    local before_cursor = current_line:sub(1, col)
+
+    local pattern_before = 'Include="[^"]*$'
+
+    local inside_include = before_cursor:match(pattern_before)
+    if inside_include then
+      local search_term = inside_include:gsub('%Include="', "")
+      vim.fn.jobstart(
+        string.format(
+          "dotnet package search %s --take 2 --format json | jq '.searchResult | .[] | .packages | .[] | .id'",
+          search_term), {
+          stdout_buffered = true,
+          on_stdout = function(_, data)
+            print(vim.inspect(data))
+            local items = vim.tbl_map(function(i)
+              return { label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', "") }
+            end, data)
+            callback({ items = items, isIncomplete = true })
+          end,
+        })
+    end
+  end,
+
+  get_metadata = function(_)
+    return {
+      priority = 1000,
+      filetypes = { 'xml', 'csproj' },
+    }
+  end
+}
+
 M.attach_mappings = attach_mappings
+
 return M
