@@ -1,10 +1,5 @@
 local window = require "easy-dotnet.test-runner.window"
-
-local resultIcons = {
-  passed = "✔",
-  skipped = "⏸",
-  failed = "❌"
-}
+local icons = require "easy-dotnet.options".test_runner.icons
 
 local function aggregateStatus(matches)
   for _, namespace in ipairs(matches) do
@@ -12,17 +7,17 @@ local function aggregateStatus(matches)
       local worstStatus = nil
       for _, res in ipairs(matches) do
         if res.line:match(namespace.line) then
-          if (res.ref.icon == resultIcons.failed) then
-            worstStatus = resultIcons.failed
+          if (res.ref.icon == icons.failed) then
+            worstStatus = icons.failed
             namespace.ref.expand = res.ref.expand
-          elseif res.ref.icon == resultIcons.skipped then
-            if worstStatus ~= resultIcons.failed then
-              worstStatus = resultIcons.skipped
+          elseif res.ref.icon == icons.skipped then
+            if worstStatus ~= icons.failed then
+              worstStatus = icons.skipped
             end
           end
         end
       end
-      namespace.ref.icon = worstStatus == nil and resultIcons.passed or worstStatus
+      namespace.ref.icon = worstStatus == nil and icons.passed or worstStatus
     end
   end
 end
@@ -31,12 +26,12 @@ end
 local function parse_status(result, test_line)
   --TODO: handle more cases like cancelled etc...
   if result.outcome == "Passed" then
-    test_line.icon = resultIcons.passed
+    test_line.icon = icons.passed
   elseif result.outcome == "Failed" then
-    test_line.icon = resultIcons.failed
+    test_line.icon = icons.failed
     test_line.expand = vim.split(result.stackTrace, "\n")
   elseif result.outcome == "NotExecuted" then
-    test_line.icon = resultIcons.skipped
+    test_line.icon = icons.skipped
   else
     test_line.icon = "??"
   end
@@ -189,7 +184,7 @@ end
 local function isAnyErr(lines)
   local err = false
   for _, value in ipairs(lines) do
-    if value.icon == resultIcons.failed then
+    if value.icon == icons.failed then
       err = true
       return err
     end
@@ -201,7 +196,7 @@ end
 local function filter_failed_tests(win)
   if win.filter == nil and isAnyErr(win.lines) then
     for _, value in ipairs(win.lines) do
-      if value.icon ~= resultIcons.failed then
+      if value.icon ~= icons.failed then
         value.hidden = true
       end
     end

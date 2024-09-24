@@ -2,6 +2,7 @@
 ---@field noBuild boolean
 ---@field noRestore boolean
 ---@field viewmode "float" | "buf" | "split"
+---@field icons table<string>
 ---@field additional_args table<string> | nil
 
 local function get_sdk_path()
@@ -62,7 +63,19 @@ return {
     viewmode = "split",
     noBuild = true,
     noRestore = true,
-    additional_args = {}
+    icons = {
+      passed = "✔",
+      skipped = "⏸",
+      failed = "❌",
+      success = "✅",
+      reload = "🔃",
+      test = "🧪",
+      sln = "",
+      project = "",
+      dir = "📂",
+      package = "📦",
+    },
+    additional_args = {},
   },
   csproj_mappings = true,
   auto_bootstrap_namespace = true

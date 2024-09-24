@@ -1,3 +1,4 @@
+local icons = require("easy-dotnet.options").test_runner.icons
 local M = {}
 
 ---@param s string
@@ -75,7 +76,7 @@ local function expand_test_names_with_flags(tests)
           value = part,
           is_full_path = is_full_path and not has_arguments,
           indent = (current_count * 2) - 1 + offset_indent,
-          preIcon = is_full_path == false and "📂" or has_arguments and "📦" or "🧪",
+          preIcon = is_full_path == false and icons.dir or has_arguments and icons.package or icons.test,
           type = is_full_path == false and "namespace" or has_arguments and "test_group" or "test",
           line_number = is_full_path and test.line_number or nil,
           file_path = is_full_path and test.file_path or nil
@@ -95,7 +96,7 @@ local function expand_test_names_with_flags(tests)
         full_name = test.full_name,
         is_full_path = true,
         indent = (segment_count * 2) + offset_indent,
-        preIcon = "🧪",
+        preIcon = icons.test,
         type = "subcase",
         collapsable = false,
         icon = nil,
@@ -300,7 +301,7 @@ local function open_runner(options, sdk_path)
     solution_file_path = solutionFilePath,
     cs_project_path = "",
     type = "sln",
-    preIcon = "",
+    preIcon = icons.sln,
     name = solutionFilePath:match("([^/\\]+)$"),
     full_name = solutionFilePath:match("([^/\\]+)$"),
     indent = 0,
@@ -329,7 +330,7 @@ local function open_runner(options, sdk_path)
         name = value.name,
         full_name = value.name,
         indent = 2,
-        preIcon = "",
+        preIcon = icons.project,
         hidden = false,
         collapsable = true,
         icon = "",

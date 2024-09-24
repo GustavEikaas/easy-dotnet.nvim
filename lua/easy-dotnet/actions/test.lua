@@ -3,6 +3,7 @@ local extensions = require("easy-dotnet.extensions")
 local picker = require("easy-dotnet.picker")
 local error_messages = require("easy-dotnet.error-messages")
 local parsers = require("easy-dotnet.parsers")
+local icons = require("easy-dotnet.options").test_runner.icons
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 
@@ -105,9 +106,9 @@ M.test_watcher = function()
       if value.state == "pending" then
 
       elseif value.state == "failed" then
-        icon = "❌"
+        icon = icons.failed
       elseif value.state == "success" then
-        icon = "✅"
+        icon = icons.success
       end
       message = message .. "\n" .. icon .. " " .. value.name
     end
