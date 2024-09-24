@@ -1,10 +1,7 @@
 local ns_id = require("easy-dotnet.constants").ns_id
 local extensions = require("easy-dotnet.extensions")
-local icons = require("easy-dotnet.options").test_runner.icons
 local M = {
-  lines = {
-    { value = "Discovering tests...", preIcon = icons.reload }
-  },
+  lines = {},
   jobs = {},
   appendJob = nil,
   buf = nil,
@@ -90,11 +87,11 @@ local function apply_highlights()
   for _, value in ipairs(M.lines) do
     if value.hidden == false or value.hidden == nil then
       shadow_index = shadow_index + 1
-      if value.icon == icons.failed then
+      if value.icon == M.options.icons.failed then
         vim.api.nvim_buf_add_highlight(M.buf, ns_id, "ErrorMsg", shadow_index - 1, 0, -1)
       elseif value.icon == "<Running>" then
         vim.api.nvim_buf_add_highlight(M.buf, ns_id, "SpellCap", shadow_index - 1, 0, -1)
-      elseif value.icon == icons.passed then
+      elseif value.icon == M.options.icons.passed then
         vim.api.nvim_buf_add_highlight(M.buf, ns_id, "Character", shadow_index - 1, 0, -1)
       elseif value.highlight ~= nil and type(value.highlight) == "string" then
         vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, shadow_index - 1, 0, -1)
@@ -111,7 +108,7 @@ local function printLines()
     if line.hidden == false or line.hidden == nil then
       local formatted = string.format("%s%s%s%s", string.rep(" ", line.indent or 0),
         line.preIcon and (line.preIcon .. " ") or "", line.name,
-        line.icon and line.icon ~= icons.passed and (" " .. line.icon) or "")
+        line.icon and line.icon ~= M.options.icons.passed and (" " .. line.icon) or "")
       table.insert(stringLines, formatted)
     end
   end
@@ -149,6 +146,9 @@ end
 M.setOptions = function(options)
   if options then
     M.options = options
+    M.lines = {
+      { value = "Discovering tests...", preIcon = options.icons.reload }
+    }
   end
   return M
 end

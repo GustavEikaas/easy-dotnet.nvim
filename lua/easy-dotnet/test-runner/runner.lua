@@ -1,4 +1,3 @@
-local icons = require("easy-dotnet.options").test_runner.icons
 local M = {}
 
 ---@param s string
@@ -26,7 +25,7 @@ local function sort_tests(tests)
 end
 
 ---@param tests Test[]
-local function expand_test_names_with_flags(tests)
+local function expand_test_names_with_flags(tests, options)
   local offset_indent = 2
   ---@type Test[]
   local expanded = {}
@@ -76,7 +75,7 @@ local function expand_test_names_with_flags(tests)
           value = part,
           is_full_path = is_full_path and not has_arguments,
           indent = (current_count * 2) - 1 + offset_indent,
-          preIcon = is_full_path == false and icons.dir or has_arguments and icons.package or icons.test,
+          preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or options.icons.test,
           type = is_full_path == false and "namespace" or has_arguments and "test_group" or "test",
           line_number = is_full_path and test.line_number or nil,
           file_path = is_full_path and test.file_path or nil
@@ -96,7 +95,7 @@ local function expand_test_names_with_flags(tests)
         full_name = test.full_name,
         is_full_path = true,
         indent = (segment_count * 2) + offset_indent,
-        preIcon = icons.test,
+        preIcon = options.icons.test,
         type = "subcase",
         collapsable = false,
         icon = nil,
@@ -235,7 +234,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
           }
           table.insert(converted, test)
         end
-        local expanded = expand_test_names_with_flags(converted)
+        local expanded = expand_test_names_with_flags(converted, options)
 
         table.insert(win.lines, project)
         for _, value in ipairs(expanded) do
@@ -301,7 +300,7 @@ local function open_runner(options, sdk_path)
     solution_file_path = solutionFilePath,
     cs_project_path = "",
     type = "sln",
-    preIcon = icons.sln,
+    preIcon = options.icons.sln,
     name = solutionFilePath:match("([^/\\]+)$"),
     full_name = solutionFilePath:match("([^/\\]+)$"),
     indent = 0,
@@ -330,7 +329,7 @@ local function open_runner(options, sdk_path)
         name = value.name,
         full_name = value.name,
         indent = 2,
-        preIcon = icons.project,
+        preIcon = options.icons.project,
         hidden = false,
         collapsable = true,
         icon = "",
@@ -358,6 +357,7 @@ end
 M.runner = function(options, sdk_path)
   ---@type TestRunnerOptions
   local mergedOpts = merge_tables(default_options, options or {})
+  vim.print(mergedOpts)
 
   coroutine.wrap(
     function()

@@ -161,7 +161,7 @@ M.setup = function(opts)
     actions.test_solution(merged_opts.terminal)
   end
   M.watch_tests = function()
-    actions.test_watcher()
+    actions.test_watcher(merged_opts.test_runner.icons)
   end
   M.run_project = commands.run
 
