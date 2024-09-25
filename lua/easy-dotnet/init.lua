@@ -48,6 +48,8 @@ M.setup = function(opts)
     italic = false,
     underline = false,
   })
+  vim.api.nvim_set_hl(0, "EasyDotnetSolution", { link = "Question" })
+  vim.api.nvim_set_hl(0, "EasyDotnetProject", { link = "Character" })
   local commands = {
     secrets = function()
       secrets.edit_secrets_picker(merged_opts.secrets.path)

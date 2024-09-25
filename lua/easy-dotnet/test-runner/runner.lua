@@ -303,7 +303,7 @@ local function open_runner(options, sdk_path)
     collapsable = true,
     icon = "",
     expand = {},
-    highlight = "Question"
+    highlight = "EasyDotnetSolution"
 
   }
   table.insert(lines, sln)
@@ -328,7 +328,7 @@ local function open_runner(options, sdk_path)
         collapsable = true,
         icon = "",
         expand = {},
-        highlight = "Character"
+        highlight = "EasyDotnetProject"
       }
       local on_job_finished = win.appendJob(value.name, "Discovery")
       --Performance reasons
