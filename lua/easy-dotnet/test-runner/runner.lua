@@ -76,7 +76,7 @@ local function expand_test_names_with_flags(tests, options)
           is_full_path = is_full_path and not has_arguments,
           indent = (current_count * 2) - 1 + offset_indent,
           preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or
-          options.icons.test,
+              options.icons.test,
           type = is_full_path == false and "namespace" or has_arguments and "test_group" or "test",
           line_number = is_full_path and test.line_number or nil,
           file_path = is_full_path and test.file_path or nil
@@ -350,7 +350,7 @@ local function open_runner(options, sdk_path)
 end
 M.runner = function(options, sdk_path)
   ---@type TestRunnerOptions
-  local mergedOpts = merge_tables(default_options, options or {})
+  local mergedOpts = merge_tables(options or {}, default_options)
 
   coroutine.wrap(
     function()
