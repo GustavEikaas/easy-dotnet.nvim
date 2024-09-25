@@ -108,6 +108,18 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
         viewmode = "split",
         noBuild = true,
         noRestore = true,
+          icons = {
+            passed = "",
+            skipped = "",
+            failed = "",
+            success = "",
+            reload = "",
+            test = "",
+            sln = "󰘐",
+            project = "󰘐",
+            dir = "",
+            package = "",
+          },
         --- Optional table of extra args e.g "--blame crash"
         additional_args = {}
       },
