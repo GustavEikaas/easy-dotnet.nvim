@@ -75,7 +75,8 @@ local function expand_test_names_with_flags(tests, options)
           value = part,
           is_full_path = is_full_path and not has_arguments,
           indent = (current_count * 2) - 1 + offset_indent,
-          preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or options.icons.test,
+          preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or
+          options.icons.test,
           type = is_full_path == false and "namespace" or has_arguments and "test_group" or "test",
           line_number = is_full_path and test.line_number or nil,
           file_path = is_full_path and test.file_path or nil
@@ -116,14 +117,7 @@ local function expand_test_names_with_flags(tests, options)
 end
 
 local function merge_tables(table1, table2)
-  local merged = {}
-  for k, v in pairs(table1) do
-    merged[k] = v
-  end
-  for k, v in pairs(table2) do
-    merged[k] = v
-  end
-  return merged
+  return vim.tbl_deep_extend("keep", table1, table2)
 end
 
 local default_options = require("easy-dotnet.options").test_runner
@@ -357,7 +351,6 @@ end
 M.runner = function(options, sdk_path)
   ---@type TestRunnerOptions
   local mergedOpts = merge_tables(default_options, options or {})
-  vim.print(mergedOpts)
 
   coroutine.wrap(
     function()

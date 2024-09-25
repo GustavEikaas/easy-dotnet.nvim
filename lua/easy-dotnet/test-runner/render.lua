@@ -146,9 +146,6 @@ end
 M.setOptions = function(options)
   if options then
     M.options = options
-    M.lines = {
-      { value = "Discovering tests...", preIcon = options.icons.reload }
-    }
   end
   return M
 end
