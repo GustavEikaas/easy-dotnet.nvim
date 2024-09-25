@@ -5,15 +5,8 @@ local actions = require("easy-dotnet.actions")
 local secrets = require("easy-dotnet.secrets")
 local debug = require("easy-dotnet.debugger")
 
-local function merge_tables(table1, table2)
-  local merged = {}
-  for k, v in pairs(table1) do
-    merged[k] = v
-  end
-  for k, v in pairs(table2) do
-    merged[k] = v
-  end
-  return merged
+local function merge_tables(default_options, user_options)
+  return vim.tbl_deep_extend("keep", user_options, default_options)
 end
 
 local function slice(array, start_index, end_index)
@@ -161,7 +154,7 @@ M.setup = function(opts)
     actions.test_solution(merged_opts.terminal)
   end
   M.watch_tests = function()
-    actions.test_watcher()
+    actions.test_watcher(merged_opts.test_runner.icons)
   end
   M.run_project = commands.run
 
