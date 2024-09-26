@@ -66,7 +66,6 @@ local function expand_test_names_with_flags(tests, options)
           full_name = test.full_name,
           solution_file_path = test.solution_file_path,
           cs_project_path = test.cs_project_path,
-          -- highlight = test.highlight,
           highlight = not is_full_path and "EasyDotnetTestRunnerDir" or has_arguments and "EasyDotnetTestRunnerPackage" or
               test.highlight,
           hidden = test.hidden,
