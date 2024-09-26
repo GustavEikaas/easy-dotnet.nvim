@@ -66,7 +66,9 @@ local function expand_test_names_with_flags(tests, options)
           full_name = test.full_name,
           solution_file_path = test.solution_file_path,
           cs_project_path = test.cs_project_path,
-          highlight = test.highlight,
+          -- highlight = test.highlight,
+          highlight = not is_full_path and "EasyDotnetTestRunnerDir" or has_arguments and "EasyDotnetTestRunnerPackage" or
+              test.highlight,
           hidden = test.hidden,
           expand = test.expand,
           icon = test.icon,
@@ -222,7 +224,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
             icon = "",
             hidden = true,
             expand = {},
-            highlight = nil,
+            highlight = "EasyDotnetTestRunnerTest",
             cs_project_path = project.cs_project_path,
             solution_file_path = project.solution_file_path
           }
@@ -303,7 +305,7 @@ local function open_runner(options, sdk_path)
     collapsable = true,
     icon = "",
     expand = {},
-    highlight = "EasyDotnetSolution"
+    highlight = "EasyDotnetTestRunnerSolution"
 
   }
   table.insert(lines, sln)
@@ -328,7 +330,7 @@ local function open_runner(options, sdk_path)
         collapsable = true,
         icon = "",
         expand = {},
-        highlight = "EasyDotnetProject"
+        highlight = "EasyDotnetTestRunnerProject"
       }
       local on_job_finished = win.appendJob(value.name, "Discovery")
       --Performance reasons

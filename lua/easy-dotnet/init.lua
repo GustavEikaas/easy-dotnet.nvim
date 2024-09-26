@@ -48,8 +48,14 @@ M.setup = function(opts)
     italic = false,
     underline = false,
   })
-  vim.api.nvim_set_hl(0, "EasyDotnetSolution", { link = "Question" })
-  vim.api.nvim_set_hl(0, "EasyDotnetProject", { link = "Character" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerSolution", { link = "Question" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerProject", { link = "Character" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerTest", { link = "DiagnosticHint" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerDir", { link = "Directory" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerPackage", { link = "Include" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerPassed", { link = "DiagnosticOk" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerFailed", { link = "DiagnosticError" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerRunning", { link = "DiagnosticWarn" })
   local commands = {
     secrets = function()
       secrets.edit_secrets_picker(merged_opts.secrets.path)
