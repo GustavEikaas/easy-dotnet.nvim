@@ -414,8 +414,8 @@ local keymaps = {
       return
     end
   end,
-  ["q"] = function(_, _, win)
-    vim.api.nvim_win_close(win.win, false)
+  ["q"] = function()
+    vim.cmd("Dotnet testrunner")
   end
 }
 
