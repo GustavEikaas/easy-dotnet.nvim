@@ -785,6 +785,24 @@ return {
 
 ```
 
+## Highlight groups
 
+<details>
+<summary>Click to see all highlight groups</summary>
 
+<!--hl start-->
 
+| Highlight group                  | Default            |
+| -------------------------------- | ------------------ |
+| **EasyDotnetTestRunnerSolution** | *Question*         |
+| **EasyDotnetTestRunnerProject**  | *Character*        |
+| **EasyDotnetTestRunnerTest**     | *Normal*           |
+| **EasyDotnetTestRunnerDir**      | *Directory*        |
+| **EasyDotnetTestRunnerPackage**  | *Include*          |
+| **EasyDotnetTestRunnerPassed**   | *DiagnosticOk*     |
+| **EasyDotnetTestRunnerFailed**   | *DiagnosticError*  |
+| **EasyDotnetTestRunnerRunning**  | *DiagnosticWarn*   |
+
+<!-- hl-end -->
+
+</details>
