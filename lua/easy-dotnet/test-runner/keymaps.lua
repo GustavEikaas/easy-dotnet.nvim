@@ -413,6 +413,9 @@ local keymaps = {
       vim.notify("Unknown line type " .. line.type)
       return
     end
+  end,
+  ["q"] = function(_, _, win)
+    vim.api.nvim_win_close(win.win, false)
   end
 }
 
