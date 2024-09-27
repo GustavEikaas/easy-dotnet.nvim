@@ -38,9 +38,7 @@ local function args_handler(arguments)
   end
 end
 
-
-M.setup = function(opts)
-  local merged_opts = merge_tables(options, opts or {})
+local function define_highlights()
   vim.api.nvim_set_hl(0, "EasyDotnetPackage", {
     fg = '#000000',
     bg = '#ffffff',
@@ -51,11 +49,18 @@ M.setup = function(opts)
   vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerSolution", { link = "Question" })
   vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerProject", { link = "Character" })
   vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerTest", { link = "Normal" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerSubcase", { link = "Conceal" })
   vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerDir", { link = "Directory" })
   vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerPackage", { link = "Include" })
   vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerPassed", { link = "DiagnosticOk" })
   vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerFailed", { link = "DiagnosticError" })
   vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerRunning", { link = "DiagnosticWarn" })
+end
+
+
+M.setup = function(opts)
+  local merged_opts = merge_tables(options, opts or {})
+  define_highlights()
   local commands = {
     secrets = function()
       secrets.edit_secrets_picker(merged_opts.secrets.path)

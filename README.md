@@ -798,6 +798,7 @@ return {
 | **EasyDotnetTestRunnerSolution** | *Question*         |
 | **EasyDotnetTestRunnerProject**  | *Character*        |
 | **EasyDotnetTestRunnerTest**     | *Normal*           |
+| **EasyDotnetTestRunnerSubcase**  | *Conceal*           |
 | **EasyDotnetTestRunnerDir**      | *Directory*        |
 | **EasyDotnetTestRunnerPackage**  | *Include*          |
 | **EasyDotnetTestRunnerPassed**   | *DiagnosticOk*     |

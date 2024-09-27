@@ -102,7 +102,7 @@ local function expand_test_names_with_flags(tests, options)
         collapsable = false,
         icon = nil,
         expand = test.expand,
-        highlight = test.highlight,
+        highlight = "EasyDotnetTestRunnerSubcase",
         cs_project_path = test.cs_project_path,
         solution_file_path = test.solution_file_path,
         hidden = test.hidden,
