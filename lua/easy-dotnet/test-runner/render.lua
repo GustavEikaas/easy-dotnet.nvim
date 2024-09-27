@@ -88,11 +88,11 @@ local function apply_highlights()
     if value.hidden == false or value.hidden == nil then
       shadow_index = shadow_index + 1
       if value.icon == M.options.icons.failed then
-        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "ErrorMsg", shadow_index - 1, 0, -1)
+        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "EasyDotnetTestRunnerFailed", shadow_index - 1, 0, -1)
       elseif value.icon == "<Running>" then
-        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "SpellCap", shadow_index - 1, 0, -1)
+        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "EasyDotnetTestRunnerRunning", shadow_index - 1, 0, -1)
       elseif value.icon == M.options.icons.passed then
-        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "Character", shadow_index - 1, 0, -1)
+        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "EasyDotnetTestRunnerPassed", shadow_index - 1, 0, -1)
       elseif value.highlight ~= nil and type(value.highlight) == "string" then
         vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, shadow_index - 1, 0, -1)
       end

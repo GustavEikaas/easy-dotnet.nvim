@@ -279,7 +279,7 @@ local function open_stack_trace(line)
       vim.api.nvim_win_close(file_float.win, true)
       vim.cmd(string.format("edit %s", path.path))
       vim.api.nvim_win_set_cursor(0, { path.line, 0 })
-      vim.api.nvim_buf_add_highlight(0, ns_id, "ErrorMsg", path.line - 1, 0, -1)
+      vim.api.nvim_buf_add_highlight(0, ns_id, "EasyDotnetTestRunnerFailed", path.line - 1, 0, -1)
     end
 
     vim.keymap.set("n", "<leader>gf", function()
