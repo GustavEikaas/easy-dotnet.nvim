@@ -413,6 +413,9 @@ local keymaps = {
       vim.notify("Unknown line type " .. line.type)
       return
     end
+  end,
+  ["q"] = function()
+    vim.cmd("Dotnet testrunner")
   end
 }
 
