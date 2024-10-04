@@ -7,7 +7,7 @@ local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
 
 ---@param use_default boolean
-local function pick_project(use_default)
+local function pick_project(use_default, cb)
   local default_manager = require("easy-dotnet.default-manager")
   local solution_file_path = sln_parse.find_solution_file()
   if solution_file_path == nil then
@@ -32,9 +32,10 @@ local function pick_project(use_default)
     vim.notify(error_messages.no_runnable_projects_found)
     return
   end
-  local project = picker.pick_sync(nil, projects, "Run project")
-  default_manager.set_default_project(project, solution_file_path, "run")
-  return project
+  picker.picker(nil, projects, function(project)
+    default_manager.set_default_project(project, solution_file_path, "run")
+    cb(project)
+  end, "Run project")
 end
 
 ---@param term function
@@ -104,15 +105,16 @@ end
 
 ---@param use_default_project boolean
 M.run_project_with_profile = function(term, use_default_project)
-  local project = pick_project(use_default_project)
-  if not project then
-    error("Failed to select project")
-  end
-  local profile = pick_profile(project, use_default_project)
-  if not profile then
-    error("Failed to select profile")
-  end
-  term(project.path, "run", string.format("--launch-profile %s", profile))
+  pick_project(use_default_project, function(project)
+    if not project then
+      error("Failed to select project")
+    end
+    local profile = pick_profile(project, use_default_project)
+    if not profile then
+      error("Failed to select profile")
+    end
+    term(project.path, "run", string.format("--launch-profile %s", profile))
+  end)
 end
 
 return M
