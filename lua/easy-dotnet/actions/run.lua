@@ -95,8 +95,10 @@ local function pick_profile(project, use_default)
     error(string.format("Failed to read %s", path))
   end
   local options = {}
-  for key, _ in pairs(json.profiles) do
-    table.insert(options, { display = key })
+  for key, value in pairs(json.profiles) do
+    if value.commandName and value.commandName == "Project" then
+      table.insert(options, { display = key })
+    end
   end
 
   local profile = picker.pick_sync(nil, options, "Pick profile")
@@ -116,7 +118,7 @@ M.run_project_with_profile = function(term, use_default_project)
   if not profile then
     error("Failed to select profile")
   end
-  term(project.path, "run", string.format("--launch-profile %s", profile))
+  term(project.path, "run", string.format("--launch-profile '%s'", profile))
 end
 
 return M
