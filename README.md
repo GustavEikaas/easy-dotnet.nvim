@@ -173,7 +173,7 @@ dotnet.test_project()                               -- Run dotnet test in the pr
 dotnet.test_default()                               -- Run dotnet test in the last selected project
 dotnet.test_solution()                              -- Run dotnet test in the solution/csproj
 dotnet.run_project()                                -- Run dotnet run in the project
-dotnet.run_with_profile(true)                       -- Run dotnet run with a specific launch profile 
+dotnet.run_with_profile(true)                       -- Run dotnet run with a specific launch profile, true/false will run with last selected profile and project
 dotnet.run_default()                                -- Run dotnet run in the last selected project
 dotnet.restore()                                    -- Run dotnet restore for the solution/csproj file
 dotnet.secrets()                                    -- Open .NET user-secrets in a new buffer for editing
