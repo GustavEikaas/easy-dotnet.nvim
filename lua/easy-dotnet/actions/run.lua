@@ -7,6 +7,7 @@ local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
 
 ---@param use_default boolean
+---@return DotnetProject, string | nil
 local function pick_project(use_default)
   local default_manager = require("easy-dotnet.default-manager")
   local solution_file_path = sln_parse.find_solution_file()
@@ -16,12 +17,12 @@ local function pick_project(use_default)
       vim.notify(error_messages.no_runnable_projects_found)
     end
     local project = csproj_parse.get_project_from_project_file(csproject_path)
-    return project
+    return project, nil
   end
 
   local default = default_manager.check_default_project(solution_file_path, "run")
   if default ~= nil and use_default == true then
-    return default
+    return default, solution_file_path
   end
 
   local projects = extensions.filter(sln_parse.get_projects_from_sln(solution_file_path), function(i)
@@ -38,7 +39,7 @@ local function pick_project(use_default)
     return
   end
   default_manager.set_default_project(project, solution_file_path, "run")
-  return project
+  return project, solution_file_path
 end
 
 ---@param term function
@@ -86,10 +87,8 @@ end
 
 
 ---@param project DotnetProject
----@param use_default boolean
-local function pick_profile(project, use_default)
+local function pick_profile(project)
   local path = vim.fs.joinpath(vim.fs.dirname(project.path), "Properties/launchSettings.json")
-  print(path)
   local success, json = pcall(vim.fn.json_decode, table.concat(vim.fn.readfile(path), "\n"))
   if not success then
     error(string.format("Failed to read %s", path))
@@ -108,16 +107,36 @@ local function pick_profile(project, use_default)
   return profile.display
 end
 
----@param use_default_project boolean
-M.run_project_with_profile = function(term, use_default_project)
-  local project = pick_project(use_default_project)
-  if not project then
-    error("Failed to select project")
+
+---@param use_default boolean
+---@param project DotnetProject
+---@param solution_file_path string | nil
+---@return string
+local function get_or_pick_profile(use_default, project, solution_file_path)
+  if use_default and solution_file_path then
+    local default_profile = require("easy-dotnet.default-manager").get_default_launch_profile(solution_file_path, project)
+    if default_profile and default_profile.profile then
+      return default_profile.profile
+    end
   end
-  local profile = pick_profile(project, use_default_project)
+  local profile = pick_profile(project)
   if not profile then
     error("Failed to select profile")
   end
+  if use_default and solution_file_path then
+    require("easy-dotnet.default-manager").set_default_launch_profile(project, solution_file_path, profile)
+  end
+
+  return profile
+end
+
+---@param use_default boolean
+M.run_project_with_profile = function(term, use_default)
+  local project, solution_file_path = pick_project(use_default)
+  if not project then
+    error("Failed to select project")
+  end
+  local profile = get_or_pick_profile(use_default, project, solution_file_path)
   term(project.path, "run", string.format("--launch-profile '%s'", profile))
 end
 

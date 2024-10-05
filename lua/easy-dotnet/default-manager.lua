@@ -1,34 +1,39 @@
+---@class DefaultProfile
+---@field project string
+---@field profile string
+
 ---@class SolutionContent
 ---@field default_build_project string
 ---@field default_test_project string
 ---@field default_run_project string
+---@field default_profile DefaultProfile
 
 local M = {}
 
+---@alias TaskType '"build"' | '"test"' | '"run"' | '"launch-profile"'
+
 ---Gets the property name for the given type.
----@param type '"build"' | '"test"' | '"run"'
+---@param type TaskType
 ---@return string
 local function get_property(type)
-  if not (type == "build" or type == "test" or type == "run") then
+  if not (type == "build" or type == "test" or type == "run" or type == "launch-profile") then
     error("Expected build, test or run received " .. type)
+  end
+  if type == "launch-profile" then
+    return "default_profile"
   end
   return string.format("default_%s_project", type)
 end
 
 local function get_or_create_cache_dir()
-  --TODO: constants.get_data_dir
-  local dir = vim.fs.joinpath(vim.fn.stdpath("data"), "easy-dotnet")
+  local dir = require("easy-dotnet.constants").get_data_directory()
   local file_utils = require("easy-dotnet.file-utils")
   file_utils.ensure_directory_exists(dir)
   return dir
 end
 
-local function extract_sln_name(solution_file_path)
-  return solution_file_path:match("([^/\\]+)$")
-end
-
 local function get_or_create_cache_file(solution_file_path)
-  local sln_name = extract_sln_name(solution_file_path)
+  local sln_name = vim.fs.basename(solution_file_path)
   local file_utils = require("easy-dotnet.file-utils")
   local dir = get_or_create_cache_dir()
   local file = vim.fs.joinpath(dir, sln_name .. ".json")
@@ -40,12 +45,11 @@ local function get_or_create_cache_file(solution_file_path)
     ---@type SolutionContent|nil
     decoded = decoded
   }
-
 end
 
 ---Checks for the default project in the solution file.
 ---@param solution_file_path string Path to the solution file.
----@param type '"build"' | '"test"' | '"run"'
+---@param type TaskType
 ---@return DotnetProject|nil
 M.check_default_project = function(solution_file_path, type)
   local file = get_or_create_cache_file(solution_file_path)
@@ -54,7 +58,6 @@ M.check_default_project = function(solution_file_path, type)
   local project = file.decoded[get_property(type)]
   if project ~= nil then
     local projects = sln_parse.get_projects_from_sln(solution_file_path)
-    --TODO: improve 
     table.insert(projects, { path = solution_file_path, display = "Solution", name = "Solution" })
 
     for _, value in ipairs(projects) do
@@ -68,17 +71,53 @@ end
 ---Sets the default project in the solution file.
 ---@param project DotnetProject The project to set as default.
 ---@param solution_file_path string Path to the solution file.
----@param type '"build"' | '"test"' | '"run"'
+---@param type TaskType
 M.set_default_project = function(project, solution_file_path, type)
   local file = get_or_create_cache_file(solution_file_path)
 
   if file.decoded == nil then
-    file.decoded = {} 
+    file.decoded = {}
   end
 
   file.decoded[get_property(type)] = project.name
-    local file_utils = require("easy-dotnet.file-utils")
+  local file_utils = require("easy-dotnet.file-utils")
   file_utils.overwrite_file(file.file, vim.fn.json_encode(file.decoded))
+end
+
+
+---@param project DotnetProject
+---@param solution_file_path string
+---@param profile string
+M.set_default_launch_profile = function(project, solution_file_path, profile)
+  local file = get_or_create_cache_file(solution_file_path)
+
+  if file.decoded == nil then
+    file.decoded = {}
+  end
+
+  ---@type DefaultProfile
+  local default_profile = {
+    project = project.name,
+    profile = profile
+  }
+
+  file.decoded[get_property("launch-profile")] = default_profile
+  local file_utils = require("easy-dotnet.file-utils")
+  file_utils.overwrite_file(file.file, vim.fn.json_encode(file.decoded))
+end
+
+---@param solution_file_path string
+---@param project DotnetProject
+---@return DefaultProfile | nil
+M.get_default_launch_profile = function(solution_file_path, project)
+  local file = get_or_create_cache_file(solution_file_path)
+  local default_profile = file.decoded.default_profile
+
+  if default_profile and project.name == default_profile.project then
+    return default_profile
+  end
+
+  return nil
 end
 
 return M
