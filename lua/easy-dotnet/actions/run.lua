@@ -89,6 +89,7 @@ end
 ---@param project DotnetProject
 local function pick_profile(project)
   local path = vim.fs.joinpath(vim.fs.dirname(project.path), "Properties/launchSettings.json")
+  --In case of OUT OF MEM, this would be another way: cat launchSettings.json | jq '.profiles | to_entries[] | select(.value.commandName == \"Project\") | .key'
   local success, json = pcall(vim.fn.json_decode, table.concat(vim.fn.readfile(path), "\n"))
   if not success then
     error(string.format("Failed to read %s", path))
