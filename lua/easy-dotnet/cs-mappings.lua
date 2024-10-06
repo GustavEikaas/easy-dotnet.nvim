@@ -1,6 +1,8 @@
 local M = {}
 
-local function find_csproj_for_cs_file(cs_file_path)
+local function find_csproj_for_cs_file(cs_file_path, maxdepth)
+  local curr_depth = 0
+
   local function get_directory(path)
     return vim.fn.fnamemodify(path, ":h")
   end
@@ -13,9 +15,10 @@ local function find_csproj_for_cs_file(cs_file_path)
     return nil
   end
 
-  local cs_file_dir = get_directory(cs_file_path)
+  local cs_file_dir = vim.fs.dirname(cs_file_path)
 
-  while cs_file_dir ~= "/" and cs_file_dir ~= "" do
+  while cs_file_dir ~= "/" and cs_file_dir ~= "~" and cs_file_dir ~= "" and curr_depth < maxdepth do
+    curr_depth = curr_depth + 1
     local csproj_file = find_csproj_in_directory(cs_file_dir)
     if csproj_file then
       return csproj_file
@@ -26,28 +29,28 @@ local function find_csproj_for_cs_file(cs_file_path)
   return nil
 end
 
-local function generate_csharp_namespace(cs_file_path, csproj_path)
-  local function get_directory(path)
+local function generate_csharp_namespace(cs_file_path, csproj_path, maxdepth)
+  local curr_depth = 0
+
+  local function get_parent_directory(path)
     return vim.fn.fnamemodify(path, ":h")
   end
 
-  local function get_basename(path)
-    return vim.fn.fnamemodify(path, ":t:r")
-  end
 
   local function join_path_parts(parts)
     return table.concat(parts, ".")
   end
 
-  local cs_file_dir = get_directory(cs_file_path)
-  local csproj_dir = get_directory(csproj_path)
+  local cs_file_dir = vim.fs.dirname(cs_file_path)
+  local csproj_dir = vim.fs.dirname(csproj_path)
 
-  local csproj_basename = get_basename(csproj_path)
+  local csproj_basename = vim.fs.basename(csproj_path)
 
   local relative_path_parts = {}
-  while cs_file_dir ~= csproj_dir and cs_file_dir ~= "/" and cs_file_dir ~= "" do
+  while cs_file_dir ~= csproj_dir and cs_file_dir ~= "/" and cs_file_dir ~= "~" and cs_file_dir ~= "" and curr_depth < maxdepth do
     table.insert(relative_path_parts, 1, vim.fn.fnamemodify(cs_file_dir, ":t"))
-    cs_file_dir = get_directory(cs_file_dir)
+    cs_file_dir = get_parent_directory(cs_file_dir)
+    curr_depth = curr_depth + 1
   end
 
   if cs_file_dir ~= csproj_dir then
@@ -77,7 +80,11 @@ local function auto_bootstrap_namespace(bufnr)
   end
 
   local csproject_file_path = find_csproj_for_cs_file(curr_file)
-  local namespace = generate_csharp_namespace(curr_file, csproject_file_path)
+  if not csproject_file_path then
+    vim.notify("Failed to bootstrap namespace, csproject file not found", vim.log.levels.WARN)
+    return
+  end
+  local namespace = generate_csharp_namespace(curr_file, csproject_file_path, 10)
   local file_name = vim.fn.fnamemodify(curr_file, ":t:r")
 
   local is_interface = file_name:sub(1, 1) == "I" and file_name:sub(2, 2):match("%u")
