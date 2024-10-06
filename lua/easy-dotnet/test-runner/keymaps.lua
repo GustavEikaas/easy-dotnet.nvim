@@ -347,6 +347,7 @@ local function expand_section(line, index, win)
   win.refreshLines()
 end
 
+
 local keymaps = {
   ["<leader>fe"] = function(_, _, win)
     filter_failed_tests(win)
@@ -362,20 +363,19 @@ local keymaps = {
     print(vim.inspect(line))
     vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
     dap.toggle_breakpoint()
-    dap.configurations["cs"] = {
-      {
-        type = "coreclr",
-        name = line.name,
-        request = "attach",
-        processId = function()
-          local project_path = line.cs_project_path
-          local res = require("easy-dotnet").experimental.start_debugging_test_project(project_path)
-          return res.process_id
-        end
-      }
+
+    local dap_configuration = {
+      type = "coreclr",
+      name = line.name,
+      request = "attach",
+      processId = function()
+        local project_path = line.cs_project_path
+        local res = require("easy-dotnet").experimental.start_debugging_test_project(project_path)
+        return res.process_id
+      end
     }
 
-    dap.continue()
+    dap.run(dap_configuration)
   end,
   ---@param line Test
   ["g"] = function(_, line, win)
