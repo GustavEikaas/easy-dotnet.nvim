@@ -234,6 +234,11 @@ Integrated test runner inspired by Rider IDE
 - `g` -> Go to file
 - `q` -> Close window
 
+### Debugging tests
+Using the keybinding `<leader>d` will set a breakpoint in the test and launch nvim-dap
+
+https://github.com/user-attachments/assets/b56891c9-1b65-4522-8057-43eff3d1102d
+
 ## Outdated
 
 Run the command `Dotnet outdated` in a .csproj file, virtual text with packages latest version will appear
