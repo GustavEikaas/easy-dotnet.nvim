@@ -351,6 +351,32 @@ local keymaps = {
   ["<leader>fe"] = function(_, _, win)
     filter_failed_tests(win)
   end,
+  ["<leader>d"] = function(_, line, win)
+    if line.type ~= "test" and line.type ~= "test_group" then
+      vim.notify("Debugging is only supported for tests and test_groups")
+      return
+    end
+    local dap = require("dap")
+    vim.cmd("Dotnet testrunner")
+    vim.cmd("edit " .. line.file_path)
+    print(vim.inspect(line))
+    vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
+    dap.toggle_breakpoint()
+    dap.configurations["cs"] = {
+      {
+        type = "coreclr",
+        name = line.name,
+        request = "attach",
+        processId = function()
+          local project_path = line.cs_project_path
+          local res = require("easy-dotnet").experimental.start_debugging_test_project(project_path)
+          return res.process_id
+        end
+      }
+    }
+
+    dap.continue()
+  end,
   ---@param line Test
   ["g"] = function(_, line, win)
     if line.type == "test" or line.type == "subcase" or line.type == "test_group" then
