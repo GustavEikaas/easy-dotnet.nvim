@@ -373,7 +373,7 @@ local keymaps = {
       request = "attach",
       processId = function()
         local project_path = line.cs_project_path
-        local res = require("easy-dotnet").experimental.start_debugging_test_project(project_path)
+        local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
         return res.process_id
       end
     }
