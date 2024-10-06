@@ -34,6 +34,9 @@ local function run_job_sync(cmd)
           return
         end
       end
+    end,
+    on_exit = function(_, code)
+      --TODO: could catch and update testrestult here
     end
   })
 

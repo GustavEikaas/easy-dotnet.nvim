@@ -357,10 +357,13 @@ local keymaps = {
       vim.notify("Debugging is only supported for tests and test_groups")
       return
     end
-    local dap = require("dap")
+    local success, dap = pcall(function() return require("dap") end)
+    if not success then
+      vim.notify("nvim-dap not installed", vim.log.levels.ERROR)
+      return
+    end
     vim.cmd("Dotnet testrunner")
     vim.cmd("edit " .. line.file_path)
-    print(vim.inspect(line))
     vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
     dap.toggle_breakpoint()
 
