@@ -17,7 +17,7 @@ local function find_csproj_for_cs_file(cs_file_path, maxdepth)
 
   local cs_file_dir = vim.fs.dirname(cs_file_path)
 
-  while cs_file_dir ~= "/" and cs_file_dir ~= "~" and cs_file_dir ~= "" and curr_depth < maxdepth do
+  while cs_file_dir ~= "/" and cs_file_dir ~= "~" and cs_file_dir ~= "" do
     curr_depth = curr_depth + 1
     local csproj_file = find_csproj_in_directory(cs_file_dir)
     if csproj_file then
@@ -36,15 +36,14 @@ local function generate_csharp_namespace(cs_file_path, csproj_path, maxdepth)
     return vim.fn.fnamemodify(path, ":h")
   end
 
-
-  local function join_path_parts(parts)
-    return table.concat(parts, ".")
+  local function get_basename_without_ext(path)
+    return vim.fn.fnamemodify(path, ":t:r")
   end
 
   local cs_file_dir = vim.fs.dirname(cs_file_path)
   local csproj_dir = vim.fs.dirname(csproj_path)
 
-  local csproj_basename = vim.fs.basename(csproj_path)
+  local csproj_basename = get_basename_without_ext(csproj_path)
 
   local relative_path_parts = {}
   while cs_file_dir ~= csproj_dir and cs_file_dir ~= "/" and cs_file_dir ~= "~" and cs_file_dir ~= "" and curr_depth < maxdepth do
@@ -58,7 +57,7 @@ local function generate_csharp_namespace(cs_file_path, csproj_path, maxdepth)
   end
 
   table.insert(relative_path_parts, 1, csproj_basename)
-  return join_path_parts(relative_path_parts)
+  return table.concat(relative_path_parts, ".")
 end
 
 local function is_buffer_empty(buf)
