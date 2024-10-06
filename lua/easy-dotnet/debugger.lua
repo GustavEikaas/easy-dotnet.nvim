@@ -26,6 +26,7 @@ local function run_job_sync(cmd)
   vim.fn.jobstart(cmd, {
     stdout_buffered = false,
     on_stdout = function(_, data, _)
+      -- print(vim.inspect(data))
       for _, line in ipairs(data) do
         local match = string.match(line, "Process Id: (%d+)")
         if match then
@@ -35,6 +36,12 @@ local function run_job_sync(cmd)
         end
       end
     end,
+    on_stderr = function(_, data)
+      -- print(vim.inspect(data))
+    end,
+    on_exit = function(_, code)
+      --TODO: could catch and update testrestult here
+    end
   })
 
   coroutine.yield()
@@ -42,6 +49,7 @@ local function run_job_sync(cmd)
   return result
 end
 
+---@param path string
 local function start_test_process(path)
   local command = string.format("dotnet test %s --environment=VSTEST_HOST_DEBUG=1", path)
   local res = run_job_sync(command)
@@ -52,20 +60,20 @@ local function start_test_process(path)
 end
 
 
-M.start_debugging_test_project = function()
+M.start_debugging_test_project = function(project_path)
   local sln_file = sln_parse.find_solution_file()
-  assert(sln_file, "Failed to find a solution filej")
+  assert(sln_file, "Failed to find a solution file")
   local projects = sln_parse.get_projects_from_sln(sln_file)
   local test_projects = extensions.filter(projects, function(i)
     return i.isTestProject
   end)
-  local test_project = picker.pick_sync(nil, test_projects, "Pick test project")
+  local test_project = project_path and project_path or picker.pick_sync(nil, test_projects, "Pick test project").path
   assert(test_project, "No project selected")
 
-  local process_id = start_test_process(vim.fs.dirname(test_project.path))
+  local process_id = start_test_process(test_project)
   return {
     process_id = process_id,
-    cwd = test_project.path
+    cwd = vim.fs.dirname(test_project)
   }
 end
 

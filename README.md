@@ -227,12 +227,18 @@ Integrated test runner inspired by Rider IDE
 - `E` -> Expand all
 - `o` -> Expand/collapse under cursor
 - `<leader>r` -> Run test under cursor
+- `<leader>d` -> `[Experimental]` Debug test under cursor using nvim-dap
 - `<leader>R` -> Run all tests
 - `<leader>p` -> Peek stacktrace on failed test
 - `<leader>fe` -> Show only failed tests
 - `<leader>gf` -> Go to file (only works inside stacktrace float)
 - `g` -> Go to file
 - `q` -> Close window
+
+### Debugging tests
+Using the keybinding `<leader>d` will set a breakpoint in the test and launch nvim-dap
+
+https://github.com/user-attachments/assets/b56891c9-1b65-4522-8057-43eff3d1102d
 
 ## Outdated
 
