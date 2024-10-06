@@ -4,9 +4,10 @@ M.__index = M
 
 ---Spinner symbol presets
 M.spinner_presets = {
-  default = { '-', '\\', '|', '/' },
+  default = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" },
+  lines = { '-', '\\', '|', '/' },
   dots = { '.', '..', '...', '....' },
-  arrows = { '→', '↘', '↓', '↙', '←', '↖', '↑', '↗' }
+  arrows = { '→', '↘', '↓', '↙', '←', '↖', '↑', '↗' },
 }
 
 ---Creates a new spinner instance.

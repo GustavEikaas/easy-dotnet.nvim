@@ -12,7 +12,7 @@ M.restore = function(term)
     return
   end
 
-  term(project, "restore")
+  term(project, "restore", "")
 end
 
 

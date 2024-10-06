@@ -32,6 +32,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
    - [Requirements](#requirements)
 9. [Csproj mappings](#csproj-mappings)
    - [Add reference](#add-reference)
+   - [Package autocomplete](#package-autocomplete)
 10. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
@@ -55,8 +56,13 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 - Outdated command: Makes checking outdated packages a breeze using virtual text
 - Csproj mappings: Keymappings for .csproj files are automatically available
 - Create dotnet templates like with `dotnet new`
+- Package autocomplete inside .csproj files [Check it out](#package-autocomplete)
 
 ## Setup
+
+
+>[!IMPORTANT]
+>Remember to also setup the cmp source for autocomplete
 
 ### Without options
 ```lua
@@ -102,6 +108,18 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
         viewmode = "split",
         noBuild = true,
         noRestore = true,
+          icons = {
+            passed = "",
+            skipped = "",
+            failed = "",
+            success = "",
+            reload = "",
+            test = "",
+            sln = "󰘐",
+            project = "󰘐",
+            dir = "",
+            package = "",
+          },
         --- Optional table of extra args e.g "--blame crash"
         additional_args = {}
       },
@@ -170,10 +188,10 @@ dotnet.is_dotnet_project()                          -- Returns true if a csproje
 
 ### Vim commands
 ```
-Dotnet run (release|debug)
-Dotnet test (release|debug)
+Dotnet run 
+Dotnet test 
 Dotnet restore
-Dotnet build (release|debug)
+Dotnet build 
 Dotnet clean
 Dotnet secrets
 Dotnet testrunner
@@ -181,12 +199,17 @@ Dotnet outdated
 Dotnet new
 ```
 
+Certain commands like Dotnet test|run|build also supports passing some selected additional arguments like.
+
+```
+Dotnet run|test|build --no-build --no-restore -c prerelease
+```
 
 ## Testrunner
 
 Integrated test runner inspired by Rider IDE
-![image](https://github.com/user-attachments/assets/d05d0f3a-d03a-4184-9dd4-e5502eedc061)
-![image](https://github.com/user-attachments/assets/4855bd73-265d-4b53-91e8-0728612a2016)
+![image](https://github.com/user-attachments/assets/0f9396ac-6827-4edf-b063-a178ea09a2b2)
+![image](https://github.com/user-attachments/assets/5fd297c6-7df5-4cf5-9ba7-5a196e8f24ee)
 
 - [x] Basic test runner window
   - [x] Grouped by namespace
@@ -203,11 +226,18 @@ Integrated test runner inspired by Rider IDE
 - `E` -> Expand all
 - `o` -> Expand/collapse under cursor
 - `<leader>r` -> Run test under cursor
+- `<leader>d` -> `[Experimental]` Debug test under cursor using nvim-dap
 - `<leader>R` -> Run all tests
 - `<leader>p` -> Peek stacktrace on failed test
 - `<leader>fe` -> Show only failed tests
 - `<leader>gf` -> Go to file (only works inside stacktrace float)
 - `g` -> Go to file
+- `q` -> Close window
+
+### Debugging tests
+Using the keybinding `<leader>d` will set a breakpoint in the test and launch nvim-dap
+
+https://github.com/user-attachments/assets/b56891c9-1b65-4522-8057-43eff3d1102d
 
 ## Outdated
 
@@ -226,6 +256,29 @@ Key mappings are available automatically within `.csproj` files
 `<leader>ar` -> Opens a telescope picker for selecting which project reference to add
 
 ![image](https://github.com/user-attachments/assets/dec096be-8a87-4dd8-aaec-8c22849d1640)
+
+### Package autocomplete
+When editing package references inside a .csproject file it is possible to enable autocomplete.
+This will trigger autocomplete for `<PackageReference Include="<cmp-trigger>" Version="<cmp-trigger>" />`
+This functionality relies on `jq` so ensure that is installed on your system.
+
+Using nvim-cmp
+```lua
+    cmp.register_source("easy-dotnet", require("easy-dotnet").package_completion_source)
+    ...
+    sources = cmp.config.sources({
+        { name = 'nvim_lsp'    },
+        { name = 'easy-dotnet' },
+        ...
+    }),
+    ...
+```
+![image](https://github.com/user-attachments/assets/81809aa8-704b-4481-9445-3985ddef6c98)
+
+>[!NOTE]
+>Latest is added as a snippet to make it easier to select the latest version
+
+![image](https://github.com/user-attachments/assets/2b59735f-941e-44d2-93cf-76b13ac3e76f)
 
 ## New
 Create dotnet templates as with `dotnet new <templatename>`
@@ -267,27 +320,14 @@ local M = {}
 --- Rebuilds the project before starting the debug session
 ---@param co thread
 local function rebuild_project(co, path)
-  local num = 0;
-  local spinner_frames = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" }
-
-  local notification = vim.notify(spinner_frames[1] .. " Building", "info", {
-    timeout = false,
-  })
-
+  local spinner = require("easy-dotnet.ui-modules.spinner").new()
+  spinner:start_spinner("Building")
   vim.fn.jobstart(string.format("dotnet build %s", path), {
-    on_stdout = function(a)
-      num = num + 1
-      local new_spinner = (num) % #spinner_frames
-      notification = vim.notify(spinner_frames[new_spinner + 1] .. " Building", "info",
-        { replace = notification })
-    end,
     on_exit = function(_, return_code)
       if return_code == 0 then
-        vim.notify("Built successfully", "info", { replace = notification, timeout = 1000 })
+        spinner:stop_spinner("Built successfully")
       else
-        -- HACK: clearing previous building progress message
-        vim.notify("", "info", { replace = notification, timeout = 1 })
-        vim.notify("Build failed with exit code " .. return_code, "error", { timeout = 1000 })
+        spinner:stop_spinner("Build failed with exit code " .. return_code, vim.log.levels.ERROR)
         error("Build failed")
       end
       coroutine.resume(co)
@@ -752,6 +792,25 @@ return {
 
 ```
 
+## Highlight groups
 
+<details>
+<summary>Click to see all highlight groups</summary>
 
+<!--hl start-->
 
+| Highlight group                  | Default            |
+| -------------------------------- | ------------------ |
+| **EasyDotnetTestRunnerSolution** | *Question*         |
+| **EasyDotnetTestRunnerProject**  | *Character*        |
+| **EasyDotnetTestRunnerTest**     | *Normal*           |
+| **EasyDotnetTestRunnerSubcase**  | *Conceal*           |
+| **EasyDotnetTestRunnerDir**      | *Directory*        |
+| **EasyDotnetTestRunnerPackage**  | *Include*          |
+| **EasyDotnetTestRunnerPassed**   | *DiagnosticOk*     |
+| **EasyDotnetTestRunnerFailed**   | *DiagnosticError*  |
+| **EasyDotnetTestRunnerRunning**  | *DiagnosticWarn*   |
+
+<!-- hl-end -->
+
+</details>

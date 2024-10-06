@@ -1,42 +1,36 @@
 local window = require "easy-dotnet.test-runner.window"
 
-local resultIcons = {
-  passed = "✔",
-  skipped = "⏸",
-  failed = "❌"
-}
-
-local function aggregateStatus(matches)
+local function aggregateStatus(matches, options)
   for _, namespace in ipairs(matches) do
     if (namespace.ref.collapsable == true) then
       local worstStatus = nil
       for _, res in ipairs(matches) do
         if res.line:match(namespace.line) then
-          if (res.ref.icon == resultIcons.failed) then
-            worstStatus = resultIcons.failed
+          if (res.ref.icon == options.icons.failed) then
+            worstStatus = options.icons.failed
             namespace.ref.expand = res.ref.expand
-          elseif res.ref.icon == resultIcons.skipped then
-            if worstStatus ~= resultIcons.failed then
-              worstStatus = resultIcons.skipped
+          elseif res.ref.icon == options.icons.skipped then
+            if worstStatus ~= options.icons.failed then
+              worstStatus = options.icons.skipped
             end
           end
         end
       end
-      namespace.ref.icon = worstStatus == nil and resultIcons.passed or worstStatus
+      namespace.ref.icon = worstStatus == nil and options.icons.passed or worstStatus
     end
   end
 end
 
 
-local function parse_status(result, test_line)
+local function parse_status(result, test_line, options)
   --TODO: handle more cases like cancelled etc...
   if result.outcome == "Passed" then
-    test_line.icon = resultIcons.passed
+    test_line.icon = options.icons.passed
   elseif result.outcome == "Failed" then
-    test_line.icon = resultIcons.failed
+    test_line.icon = options.icons.failed
     test_line.expand = vim.split(result.stackTrace, "\n")
   elseif result.outcome == "NotExecuted" then
-    test_line.icon = resultIcons.skipped
+    test_line.icon = options.icons.skipped
   else
     test_line.icon = "??"
   end
@@ -63,13 +57,13 @@ local function parse_log_file(relative_log_file_path, win, matches, on_completed
         if test_line.type == "test" or test_line.type == "subcase" then
           for _, value in ipairs(unit_test_results) do
             if match.id == value.id then
-              parse_status(value, test_line)
+              parse_status(value, test_line, win.options)
             end
           end
         end
       end
 
-      aggregateStatus(matches)
+      aggregateStatus(matches, win.options)
       on_completed()
       win.refreshLines()
     end)
@@ -186,10 +180,10 @@ local function run_test_suite(line, win)
     })
 end
 
-local function isAnyErr(lines)
+local function isAnyErr(lines, options)
   local err = false
   for _, value in ipairs(lines) do
-    if value.icon == resultIcons.failed then
+    if value.icon == options.icons.failed then
       err = true
       return err
     end
@@ -199,9 +193,9 @@ local function isAnyErr(lines)
 end
 
 local function filter_failed_tests(win)
-  if win.filter == nil and isAnyErr(win.lines) then
+  if win.filter == nil and isAnyErr(win.lines, win.options) then
     for _, value in ipairs(win.lines) do
-      if value.icon ~= resultIcons.failed then
+      if value.icon ~= win.options.icons.failed then
         value.hidden = true
       end
     end
@@ -255,7 +249,7 @@ local function run_test(line, win)
             if result == nil then
               error(string.format("Status of %s was not present in xml file", line.name))
             end
-            parse_status(result, line)
+            parse_status(result, line, win.options)
             on_job_finished()
             win.refreshLines()
           end)
@@ -285,7 +279,7 @@ local function open_stack_trace(line)
       vim.api.nvim_win_close(file_float.win, true)
       vim.cmd(string.format("edit %s", path.path))
       vim.api.nvim_win_set_cursor(0, { path.line, 0 })
-      vim.api.nvim_buf_add_highlight(0, ns_id, "ErrorMsg", path.line - 1, 0, -1)
+      vim.api.nvim_buf_add_highlight(0, ns_id, "EasyDotnetTestRunnerFailed", path.line - 1, 0, -1)
     end
 
     vim.keymap.set("n", "<leader>gf", function()
@@ -353,9 +347,38 @@ local function expand_section(line, index, win)
   win.refreshLines()
 end
 
+
 local keymaps = {
   ["<leader>fe"] = function(_, _, win)
     filter_failed_tests(win)
+  end,
+  ["<leader>d"] = function(_, line, win)
+    if line.type ~= "test" and line.type ~= "test_group" then
+      vim.notify("Debugging is only supported for tests and test_groups")
+      return
+    end
+    local success, dap = pcall(function() return require("dap") end)
+    if not success then
+      vim.notify("nvim-dap not installed", vim.log.levels.ERROR)
+      return
+    end
+    vim.cmd("Dotnet testrunner")
+    vim.cmd("edit " .. line.file_path)
+    vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
+    dap.toggle_breakpoint()
+
+    local dap_configuration = {
+      type = "coreclr",
+      name = line.name,
+      request = "attach",
+      processId = function()
+        local project_path = line.cs_project_path
+        local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
+        return res.process_id
+      end
+    }
+
+    dap.run(dap_configuration)
   end,
   ---@param line Test
   ["g"] = function(_, line, win)
@@ -419,6 +442,9 @@ local keymaps = {
       vim.notify("Unknown line type " .. line.type)
       return
     end
+  end,
+  ["q"] = function()
+    vim.cmd("Dotnet testrunner")
   end
 }
 

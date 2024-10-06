@@ -5,34 +5,40 @@ local actions = require("easy-dotnet.actions")
 local secrets = require("easy-dotnet.secrets")
 local debug = require("easy-dotnet.debugger")
 
-local function merge_tables(table1, table2)
-  local merged = {}
-  for k, v in pairs(table1) do
-    merged[k] = v
-  end
-  for k, v in pairs(table2) do
-    merged[k] = v
-  end
-  return merged
+local function merge_tables(default_options, user_options)
+  return vim.tbl_deep_extend("keep", user_options, default_options)
 end
 
----@param argument string|nil
-local function args_handler(argument)
-  if not argument then
-    return nil
+local function slice(array, start_index, end_index)
+  local result = {}
+  table.move(array, start_index, end_index, 1, result)
+  return result
+end
+
+
+---@param arguments table<string>|nil
+local function args_handler(arguments)
+  if not arguments or #arguments == 0 then
+    return ""
   end
-  local loweredArgument = argument:lower()
+  local loweredArgument = arguments[1]:lower()
   if loweredArgument == "release" then
-    return "-c release"
+    return string.format("-c release %s", args_handler(slice(arguments, 2, #arguments) or ""))
   elseif loweredArgument == "debug" then
-    return "-c debug"
+    return string.format("-c debug %s", args_handler(slice(arguments, 2, #arguments) or ""))
+  elseif loweredArgument == "-c" then
+    local flag = string.format("-c %s", #arguments >= 2 and arguments[2] or "")
+    return string.format("%s %s", flag, args_handler(slice(arguments, 3, #arguments) or ""))
+  elseif loweredArgument == "--no-build" then
+    return string.format("--no-build %s", args_handler(slice(arguments, 2, #arguments) or ""))
+  elseif loweredArgument == "--no-restore" then
+    return string.format("--no-restore %s", args_handler(slice(arguments, 2, #arguments) or ""))
   else
-    vim.notify("Unknown argument to dotnet build " .. argument, vim.log.levels.WARN)
+    vim.notify("Unknown argument to dotnet build " .. loweredArgument, vim.log.levels.WARN)
   end
 end
 
-M.setup = function(opts)
-  local merged_opts = merge_tables(options, opts or {})
+local function define_highlights()
   vim.api.nvim_set_hl(0, "EasyDotnetPackage", {
     fg = '#000000',
     bg = '#ffffff',
@@ -40,21 +46,39 @@ M.setup = function(opts)
     italic = false,
     underline = false,
   })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerSolution", { link = "Question" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerProject", { link = "Character" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerTest", { link = "Normal" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerSubcase", { link = "Conceal" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerDir", { link = "Directory" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerPackage", { link = "Include" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerPassed", { link = "DiagnosticOk" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerFailed", { link = "DiagnosticError" })
+  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerRunning", { link = "DiagnosticWarn" })
+end
+
+
+M.setup = function(opts)
+  local merged_opts = merge_tables(options, opts or {})
+  define_highlights()
   local commands = {
     secrets = function()
       secrets.edit_secrets_picker(merged_opts.secrets.path)
     end,
     run = function(args)
-      actions.run(merged_opts.terminal, false, args_handler(args[2]) or "")
+      local extra_args = slice(args, 2, #args)
+      actions.run(merged_opts.terminal, false, args_handler(extra_args))
     end,
     test = function(args)
-      actions.test(merged_opts.terminal, false, args_handler(args[2]) or "")
+      local extra_args = slice(args, 2, #args)
+      actions.test(merged_opts.terminal, false, args_handler(extra_args))
     end,
     restore = function()
       actions.restore(merged_opts.terminal)
     end,
     build = function(args)
-      actions.build(merged_opts.terminal, false, args_handler(args[2]) or "")
+      local extra_args = slice(args, 2, #args)
+      actions.build(merged_opts.terminal, false, args_handler(extra_args))
     end,
     testrunner = function()
       require("easy-dotnet.test-runner.runner").runner(merged_opts.test_runner, merged_opts.get_sdk_path())
@@ -154,7 +178,7 @@ M.setup = function(opts)
     actions.test_solution(merged_opts.terminal)
   end
   M.watch_tests = function()
-    actions.test_watcher()
+    actions.test_watcher(merged_opts.test_runner.icons)
   end
   M.run_project = commands.run
 
@@ -204,5 +228,7 @@ M.is_dotnet_project = function()
       require("easy-dotnet.parsers.csproj-parse").find_project_file()
   return project_files ~= nil
 end
+
+M.package_completion_source = require("easy-dotnet.csproj-mappings").package_completion_cmp
 
 return M

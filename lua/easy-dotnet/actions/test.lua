@@ -68,11 +68,11 @@ M.test_solution = function(term)
     vim.notify(error_messages.no_project_definition_found)
     return
   end
-  term(solutionFilePath, "test")
+  term(solutionFilePath, "test", "")
 end
 
 
-M.test_watcher = function()
+M.test_watcher = function(icons)
   local dn = require("easy-dotnet.parsers").sln_parser
   local slnPath = dn.find_solution_file()
   local projects = dn.get_projects_from_sln(slnPath)
@@ -82,7 +82,7 @@ M.test_watcher = function()
       table.insert(testProjects, value)
     end
   end
-  local header_test_message = "🧪 Testing..." .. "\n\n"
+  local header_test_message = icons.test .. " Testing..." .. "\n\n"
 
   local testMessage = header_test_message
   for _, value in pairs(testProjects) do
@@ -105,9 +105,9 @@ M.test_watcher = function()
       if value.state == "pending" then
 
       elseif value.state == "failed" then
-        icon = "❌"
+        icon = icons.failed
       elseif value.state == "success" then
-        icon = "✅"
+        icon = icons.success
       end
       message = message .. "\n" .. icon .. " " .. value.name
     end

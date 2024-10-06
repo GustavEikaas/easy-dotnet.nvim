@@ -19,7 +19,7 @@ end
 
 ---@param term function
 ---@param use_default boolean
----@param args string
+---@param args string | nil
 M.run_project_picker = function(term, use_default, args)
   local default_manager = require("easy-dotnet.default-manager")
   local solution_file_path = sln_parse.find_solution_file()
