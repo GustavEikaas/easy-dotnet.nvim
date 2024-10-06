@@ -347,9 +347,38 @@ local function expand_section(line, index, win)
   win.refreshLines()
 end
 
+
 local keymaps = {
   ["<leader>fe"] = function(_, _, win)
     filter_failed_tests(win)
+  end,
+  ["<leader>d"] = function(_, line, win)
+    if line.type ~= "test" and line.type ~= "test_group" then
+      vim.notify("Debugging is only supported for tests and test_groups")
+      return
+    end
+    local success, dap = pcall(function() return require("dap") end)
+    if not success then
+      vim.notify("nvim-dap not installed", vim.log.levels.ERROR)
+      return
+    end
+    vim.cmd("Dotnet testrunner")
+    vim.cmd("edit " .. line.file_path)
+    vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
+    dap.toggle_breakpoint()
+
+    local dap_configuration = {
+      type = "coreclr",
+      name = line.name,
+      request = "attach",
+      processId = function()
+        local project_path = line.cs_project_path
+        local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
+        return res.process_id
+      end
+    }
+
+    dap.run(dap_configuration)
   end,
   ---@param line Test
   ["g"] = function(_, line, win)
