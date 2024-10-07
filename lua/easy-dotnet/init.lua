@@ -170,6 +170,14 @@ M.setup = function(opts)
     actions.test_watcher(merged_opts.test_runner.icons)
   end
   M.run_project = commands.run
+  M.run_with_profile = function(use_default)
+    local function co_wrapper()
+      actions.run_with_profile(merged_opts.terminal, use_default == nil and false or use_default)
+    end
+
+    local co = coroutine.create(co_wrapper)
+    coroutine.resume(co)
+  end
 
   M.run_default = function()
     actions.run(merged_opts.terminal, true, "")
