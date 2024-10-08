@@ -159,6 +159,10 @@ M.setup = function(opts)
     require("easy-dotnet.cs-mappings").auto_bootstrap_namespace()
   end
 
+  if true then
+    require("easy-dotnet.cs-mappings").add_test_signs()
+  end
+
   M.test_project = commands.test
   M.test_default = function()
     actions.test(merged_opts.terminal, true)

@@ -115,4 +115,74 @@ M.auto_bootstrap_namespace = function()
   })
 end
 
+local function compare_paths(path1, path2)
+  local normalized_path1 = path1:gsub("\\", "/")
+  local normalized_path2 = path2:gsub("\\", "/")
+
+  normalized_path1 = normalized_path1:lower()
+  normalized_path2 = normalized_path2:lower()
+
+  return normalized_path1 == normalized_path2
+end
+
+M.add_test_signs = function()
+  vim.fn.sign_define("EasyDotnetTestSign", { text = "", texthl = "Question" })
+  vim.api.nvim_create_autocmd({ "BufEnter" }, {
+    pattern = "*.cs",
+    callback = function()
+      local is_test_file = false
+      local bufnr = vim.api.nvim_get_current_buf()
+      local curr_file = vim.api.nvim_buf_get_name(bufnr)
+      for _, value in ipairs(require("easy-dotnet.test-runner.runner").test_register) do
+        if compare_paths(value.file_path, curr_file) then
+          is_test_file = true
+          local line = value.line_number
+          vim.fn.sign_place(0, "EasyDotnetTestSignGroup", "EasyDotnetTestSign", vim.api.nvim_get_current_buf(),
+            { lnum = line - 1, priority = 20 })
+        end
+      end
+
+      if is_test_file == true then
+        vim.keymap.set("n", "<leader>d", function()
+          local success, dap = pcall(function() return require("dap") end)
+          if not success then
+            vim.notify("nvim-dap not installed", vim.log.levels.ERROR)
+            return
+          end
+
+          local bufnr = vim.api.nvim_get_current_buf()
+          local curr_file = vim.api.nvim_buf_get_name(bufnr)
+          local current_line = vim.api.nvim_win_get_cursor(0)[1]
+          for _, value in ipairs(require("easy-dotnet.test-runner.runner").test_register) do
+            if compare_paths(value.file_path, curr_file) and value.line_number - 1 == current_line then
+              --TODO: Investigate why netcoredbg wont work without reopening the buffer????
+              vim.cmd("bdelete")
+              vim.cmd("edit " .. value.file_path)
+              vim.api.nvim_win_set_cursor(0, { value.line_number and (value.line_number - 1) or 0, 0 })
+              dap.toggle_breakpoint()
+
+              local dap_configuration = {
+                type = "coreclr",
+                name = value.name,
+                request = "attach",
+                processId = function()
+                  local project_path = value.cs_project_path
+                  local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
+                  return res.process_id
+                end
+              }
+              dap.run(dap_configuration)
+              --return to avoid running multiple times in case of InlineData|ClassData
+              return
+            end
+          end
+          vim.notify("No tests found on this line")
+        end, { silent = true, buffer = bufnr })
+      end
+    end
+  })
+end
+
 return M
+eturn
+M

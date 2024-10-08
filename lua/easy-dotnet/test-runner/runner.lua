@@ -1,4 +1,6 @@
-local M = {}
+local M = {
+  test_register = {}
+}
 
 ---@param s string
 ---@return string
@@ -228,6 +230,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
             solution_file_path = project.solution_file_path
           }
           table.insert(converted, test)
+          table.insert(M.test_register, test)
         end
         local expanded = expand_test_names_with_flags(converted, options)
 
