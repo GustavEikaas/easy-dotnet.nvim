@@ -136,7 +136,10 @@ M.get_project_from_project_file = function(project_file_path)
               project_file_path)))
           .Properties
       local target = string.format("%s%s", value.AssemblyName, value.TargetExt)
-      local path = vim.fs.joinpath(vim.fs.dirname(project_file_path), value.OutputPath:gsub("\\", "/"), target)
+      --https://github.com/GustavEikaas/easy-dotnet.nvim/issues/143
+      local path = extensions.isWindows() and
+          vim.fs.joinpath(vim.fs.dirname(project_file_path), value.OutputPath:gsub("\\", "/"), target) or
+          vim.fs.joinpath(value.OutputPath, target)
       local msbuild_target_framework = value.TargetFramework:gsub("%net", "")
 
       c["version"] = msbuild_target_framework
