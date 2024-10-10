@@ -182,17 +182,20 @@ M.is_test_project = function(project_file_path)
   if type(extract_from_project(project_file_path, '<%s*IsTestProject%s*>%s*true%s*</%s*IsTestProject%s*>')) == "string" then
     return true
   end
-  if type(extract_from_project(project_file_path, '<PackageReference Include="Microsoft%.NET%.Test%.Sdk" Version=".-" />')) == "string" then
-    return true
-  end
-  if type(extract_from_project(project_file_path, '<PackageReference Include="MSTest%.TestFramework" Version=".-" />')) == "string" then
-    return true
-  end
-  if type(extract_from_project(project_file_path, '<PackageReference Include="NUnit" Version=".-" />')) == "string" then
-    return true
-  end
-  if type(extract_from_project(project_file_path, '<PackageReference Include="xunit" Version=".-" />')) == "string" then
-    return true
+
+  -- Check for test-related package references
+  local test_packages = {
+    'Microsoft%.NET%.Test%.Sdk',
+    'MSTest%.TestFramework',
+    'NUnit',
+    'xunit'
+  }
+
+  for _, package in ipairs(test_packages) do
+    local pattern = string.format('<PackageReference Include="%s"%%s*', package)
+    if type(extract_from_project(project_file_path, pattern)) == "string" then
+      return true
+    end
   end
 
   return false
