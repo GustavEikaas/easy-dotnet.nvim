@@ -94,7 +94,7 @@ local function run_csproject(win, cs_project_path)
     if line.cs_project_path == cs_project_path then
       table.insert(matches, { ref = line, line = line.namespace, id = line.id })
       line.icon = "<Running>"
-      if line.type == "test" or line.type == "subcase" then
+      if line.type == "test" or line.type == "test_group" then
         testcount = testcount + 1
       end
     end
@@ -128,7 +128,7 @@ local function run_test_group(line, win)
     if line.name == test_line.name:gsub("%b()", "") and line.cs_project_path == test_line.cs_project_path and line.solution_file_path == test_line.solution_file_path then
       table.insert(matches, { ref = test_line, line = test_line.namespace, id = test_line.id })
       test_line.icon = "<Running>"
-      if test_line.type == "test" or test_line.type == "subcase" then
+      if test_line.type == "test" or test_line.type == "test_group" then
         testcount = testcount + 1
       end
     end
@@ -161,7 +161,7 @@ local function run_test_suite(line, win)
   for _, test_line in ipairs(win.lines) do
     if test_line.namespace:match(suite_name) and line.cs_project_path == test_line.cs_project_path and line.solution_file_path == test_line.solution_file_path then
       table.insert(matches, { ref = test_line, line = test_line.namespace, id = test_line.id })
-      if test_line.type == "test" or test_line.type == "subcase" then
+      if test_line.type == "test" or test_line.type == "test_group" then
         testcount = testcount + 1
       end
       test_line.icon = "<Running>"
