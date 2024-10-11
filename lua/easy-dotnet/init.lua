@@ -38,7 +38,7 @@ local function args_handler(arguments)
   end
 end
 
-local function define_highlights_and_signs()
+local function define_highlights_and_signs(merged_opts)
   local constants = require("easy-dotnet.constants")
   vim.api.nvim_set_hl(0, "EasyDotnetPackage", {
     fg = '#000000',
@@ -58,11 +58,11 @@ local function define_highlights_and_signs()
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerFailed, { link = "DiagnosticError" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
 
-
+  local icons = merged_opts.test_runner.icons
   vim.fn.sign_define(constants.signs.EasyDotnetTestSign, { text = "", texthl = "Character" })
-  vim.fn.sign_define(constants.signs.EasyDotnetTestPassed, { text = "", texthl = "EasyDotnetTestRunnerPassed" })
-  vim.fn.sign_define(constants.signs.EasyDotnetTestFailed, { text = "", texthl = "EasyDotnetTestRunnerFailed" })
-  vim.fn.sign_define(constants.signs.EasyDotnetTestSkipped, { text = "" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestPassed, { text = icons.passed, texthl = "EasyDotnetTestRunnerPassed" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestFailed, { text = icons.failed, texthl = "EasyDotnetTestRunnerFailed" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestSkipped, { text = icons.skipped })
   vim.fn.sign_define(constants.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
 end
 
@@ -70,7 +70,7 @@ end
 
 M.setup = function(opts)
   local merged_opts = merge_tables(options, opts or {})
-  define_highlights_and_signs()
+  define_highlights_and_signs(merged_opts)
   local commands = {
     secrets = function()
       secrets.edit_secrets_picker(merged_opts.secrets.path)
