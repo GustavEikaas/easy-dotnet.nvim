@@ -39,7 +39,7 @@ local function args_handler(arguments)
 end
 
 local function define_highlights_and_signs()
-  local M = require("easy-dotnet.constants")
+  local constants = require("easy-dotnet.constants")
   vim.api.nvim_set_hl(0, "EasyDotnetPackage", {
     fg = '#000000',
     bg = '#ffffff',
@@ -48,22 +48,22 @@ local function define_highlights_and_signs()
     underline = false,
   })
 
-  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerSolution, { link = "Question" })
-  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerProject, { link = "Character" })
-  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerTest, { link = "Normal" })
-  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerSubcase, { link = "Conceal" })
-  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerDir, { link = "Directory" })
-  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerPackage, { link = "Include" })
-  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerPassed, { link = "DiagnosticOk" })
-  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerFailed, { link = "DiagnosticError" })
-  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerSolution, { link = "Question" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerProject, { link = "Character" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerTest, { link = "Normal" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerSubcase, { link = "Conceal" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerDir, { link = "Directory" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerPackage, { link = "Include" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerPassed, { link = "DiagnosticOk" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerFailed, { link = "DiagnosticError" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
 
 
-  vim.fn.sign_define(M.signs.EasyDotnetTestSign, { text = "", texthl = "Character" })
-  vim.fn.sign_define(M.signs.EasyDotnetTestPassed, { text = "", texthl = "EasyDotnetTestRunnerPassed" })
-  vim.fn.sign_define(M.signs.EasyDotnetTestFailed, { text = "", texthl = "EasyDotnetTestRunnerFailed" })
-  vim.fn.sign_define(M.signs.EasyDotnetTestSkipped, { text = "" })
-  vim.fn.sign_define(M.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestSign, { text = "", texthl = "Character" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestPassed, { text = "", texthl = "EasyDotnetTestRunnerPassed" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestFailed, { text = "", texthl = "EasyDotnetTestRunnerFailed" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestSkipped, { text = "" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
 end
 
 
@@ -169,7 +169,7 @@ M.setup = function(opts)
     require("easy-dotnet.cs-mappings").auto_bootstrap_namespace()
   end
 
-  if true then
+  if merged_opts.test_runner.enable_buffer_test_execution then
     require("easy-dotnet.cs-mappings").add_test_signs()
   end
 

@@ -232,19 +232,18 @@ M.add_test_signs = function()
                   end
                 end
 
-
                 if worst_outcome == "Passed" then
                   vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr,
                     { lnum = current_line - 1, priority = 20 })
-                  spinner:stop_spinner("All Tests Passed")
+                  spinner:stop_spinner("Passed")
                 elseif worst_outcome == "Failed" then
                   vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr,
                     { lnum = current_line - 1, priority = 20 })
-                  spinner:stop_spinner("Tests Failed", vim.log.levels.ERROR)
+                  spinner:stop_spinner("Failed", vim.log.levels.ERROR)
                 elseif worst_outcome == "NotExecuted" then
                   vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr,
                     { lnum = current_line - 1, priority = 20 })
-                  spinner:stop_spinner("Tests Skipped", vim.log.levels.WARN)
+                  spinner:stop_spinner("Skipped", vim.log.levels.WARN)
                 else
                   spinner:stop_spinner("Test Result Errors", vim.log.levels.WARN)
                   vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestError, bufnr,

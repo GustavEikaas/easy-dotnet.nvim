@@ -106,6 +106,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
       test_runner = {
         ---@type "split" | "float" | "buf"
         viewmode = "split",
+        enable_buffer_test_execution = false, --Experimental, run tests directly from buffer
         noBuild = true,
         noRestore = true,
           icons = {

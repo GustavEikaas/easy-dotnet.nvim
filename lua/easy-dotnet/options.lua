@@ -61,22 +61,25 @@ return {
   ---@type TestRunnerOptions
   test_runner = {
     viewmode = "split",
+    enable_buffer_test_execution = false,
     noBuild = true,
     noRestore = true,
-      icons = {
-        passed = "",
-        skipped = "",
-        failed = "",
-        success = "",
-        reload = "",
-        test = "",
-        sln = "󰘐",
-        project = "󰘐",
-        dir = "",
-        package = "",
-      },
+    icons = {
+      passed = "",
+      skipped = "",
+      failed = "",
+      success = "",
+      reload = "",
+      test = "",
+      sln = "󰘐",
+      project = "󰘐",
+      dir = "",
+      package = "",
+    },
     additional_args = {},
   },
   csproj_mappings = true,
-  auto_bootstrap_namespace = true
+  auto_bootstrap_namespace = true,
+
+
 }
