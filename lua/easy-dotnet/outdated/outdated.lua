@@ -52,7 +52,8 @@ M.outdated = function()
   if path:match(".csproj$") then
     --TODO: constants.get_data_dir
     local project_name = path:match("([^/]+)%.csproj$")
-    local outPath = vim.fn.stdpath("data") .. "/easy-dotnet/package.json"
+    local data_dir = require("easy-dotnet.constants").get_data_directory()
+    local outPath = vim.fs.joinpath(data_dir, "package.json")
     local cmd = string.format("dotnet-outdated %s --output %s", path, outPath)
     vim.fn.jobstart(cmd, {
       on_exit = function(_, b)
@@ -72,14 +73,15 @@ M.outdated = function()
           local ns_id = require("easy-dotnet.constants").ns_id
           for _, value in ipairs(deps) do
             local line = find_package_reference_in_buffer(value.Name)
-            if line == nil then
-              error("Failed to find package " .. value.Name)
+            if line ~= nil then
+              vim.api.nvim_buf_set_extmark(bnr, ns_id, line - 1, 0, {
+                virt_text = { { string.format("%s -> %s", value.ResolvedVersion, value.LatestVersion), "EasyDotnetPackage" } },
+                virt_text_pos = "eol",
+                priority = 200,
+              })
+            else
+              vim.notify("Failed to find package " .. value.Name, vim.log.levels.DEBUG)
             end
-            vim.api.nvim_buf_set_extmark(bnr, ns_id, line - 1, 0, {
-              virt_text = { { string.format("%s -> %s", value.ResolvedVersion, value.LatestVersion), "EasyDotnetPackage" } },
-              virt_text_pos = "eol",
-              priority = 200,
-            })
           end
         else
           vim.notify("Dotnet outdated tool not installed")
