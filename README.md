@@ -814,3 +814,29 @@ return {
 <!-- hl-end -->
 
 </details>
+
+
+## Signs
+
+<details>
+<summary>Click to see all signs</summary>
+
+<!--sign start-->
+
+  ```lua
+  --override example
+  vim.fn.sign_define("EasyDotnetTestSign", { text = "", texthl = "Character" })
+  ```
+
+| Sign                           | Highlight                    |
+| ------------------------------ | ---------------------------- |
+| **EasyDotnetTestSign**         | Character                    |
+| **EasyDotnetTestPassed**       | EasyDotnetTestRunnerPassed   |
+| **EasyDotnetTestFailed**       | EasyDotnetTestRunnerFailed   |
+| **EasyDotnetTestSkipped**      | (none)                       |
+| **EasyDotnetTestError**        | EasyDotnetTestRunnerFailed   |
+
+<!-- sign-end -->
+
+</details>
+

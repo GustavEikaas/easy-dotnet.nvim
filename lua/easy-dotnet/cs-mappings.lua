@@ -146,7 +146,7 @@ local function run_test(name, namespace, cs_project_path, cb)
             if result == nil then
               error(string.format("Status of %s was not present in xml file", name))
             end
-            cb(result)
+            cb(unit_test_results)
           end)
       end
     })
@@ -155,12 +155,6 @@ end
 
 
 M.add_test_signs = function()
-  vim.fn.sign_define("EasyDotnetTestSign", { text = "", texthl = "Question" })
-  vim.fn.sign_define("EasyDotnetTestPassed", { text = "", texthl = "Question" })
-  vim.fn.sign_define("EasyDotnetTestFailed", { text = "", texthl = "Question" })
-  vim.fn.sign_define("EasyDotnetTestSkipped", { text = "", texthl = "Question" })
-  vim.fn.sign_define("EasyDotnetTestError", { text = "??", texthl = "Question" })
-
   vim.api.nvim_create_autocmd({ "BufEnter" }, {
     pattern = "*.cs",
     callback = function()
@@ -222,22 +216,36 @@ M.add_test_signs = function()
               local spinner = require("easy-dotnet.ui-modules.spinner").new()
               spinner:start_spinner("Running test")
 
-              run_test(value.name, value.namespace, value.cs_project_path, function(result)
-                if result.outcome == "Passed" then
-                  spinner:stop_spinner("Passed")
-                  vim.fn.sign_place(0, "EasyDotnetTestSignGroup", "EasyDotnetTestPassed", vim.api.nvim_get_current_buf(),
+              run_test(value.name, value.namespace, value.cs_project_path, function(results)
+                local worst_outcome = "Passed"
+
+                for _, result in pairs(results) do
+                  if result.outcome == "Failed" then
+                    worst_outcome = "Failed"
+                  elseif result.outcome == "NotExecuted" and worst_outcome ~= "Failed" then
+                    worst_outcome = "NotExecuted"
+                  elseif result.outcome == "Passed" and worst_outcome ~= "Failed" and worst_outcome ~= "NotExecuted" then
+                    worst_outcome = "Passed"
+                  end
+                end
+
+                local signs = require("easy-dotnet.constants").signs
+
+                if worst_outcome == "Passed" then
+                  vim.fn.sign_place(0, "EasyDotnetTestSignGroup", signs.EasyDotnetTestPassed, bufnr,
                     { lnum = current_line - 1, priority = 20 })
-                elseif result.outcome == "Failed" then
-                  spinner:stop_spinner("Failed", vim.log.levels.ERROR)
-                  vim.fn.sign_place(0, "EasyDotnetTestSignGroup", "EasyDotnetTestFailed", vim.api.nvim_get_current_buf(),
+                  spinner:stop_spinner("All Tests Passed")
+                elseif worst_outcome == "Failed" then
+                  vim.fn.sign_place(0, "EasyDotnetTestSignGroup", signs.EasyDotnetTestFailed, bufnr,
                     { lnum = current_line - 1, priority = 20 })
-                elseif result.outcome == "NotExecuted" then
-                  spinner:stop_spinner("Skipped", vim.log.levels.WARN)
-                  vim.fn.sign_place(0, "EasyDotnetTestSignGroup", "EasyDotnetTestSkipped", vim.api.nvim_get_current_buf(),
+                  spinner:stop_spinner("Tests Failed", vim.log.levels.ERROR)
+                elseif worst_outcome == "NotExecuted" then
+                  vim.fn.sign_place(0, "EasyDotnetTestSignGroup", signs.EasyDotnetTestSkipped, bufnr,
                     { lnum = current_line - 1, priority = 20 })
+                  spinner:stop_spinner("Tests Skipped", vim.log.levels.WARN)
                 else
-                  spinner:stop_spinner("Failed to validate test result", vim.log.levels.WARN)
-                  vim.fn.sign_place(0, "EasyDotnetTestSignGroup", "EasyDotnetTestError", vim.api.nvim_get_current_buf(),
+                  spinner:stop_spinner("Test Result Errors", vim.log.levels.WARN)
+                  vim.fn.sign_place(0, "EasyDotnetTestSignGroup", signs.EasyDotnetTestError, bufnr,
                     { lnum = current_line - 1, priority = 20 })
                 end
               end)

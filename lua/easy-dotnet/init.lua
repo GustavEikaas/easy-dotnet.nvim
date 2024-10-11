@@ -38,7 +38,8 @@ local function args_handler(arguments)
   end
 end
 
-local function define_highlights()
+local function define_highlights_and_signs()
+  local M = require("easy-dotnet.constants")
   vim.api.nvim_set_hl(0, "EasyDotnetPackage", {
     fg = '#000000',
     bg = '#ffffff',
@@ -46,21 +47,30 @@ local function define_highlights()
     italic = false,
     underline = false,
   })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerSolution", { link = "Question" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerProject", { link = "Character" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerTest", { link = "Normal" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerSubcase", { link = "Conceal" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerDir", { link = "Directory" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerPackage", { link = "Include" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerPassed", { link = "DiagnosticOk" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerFailed", { link = "DiagnosticError" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerRunning", { link = "DiagnosticWarn" })
+
+  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerSolution, { link = "Question" })
+  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerProject, { link = "Character" })
+  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerTest, { link = "Normal" })
+  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerSubcase, { link = "Conceal" })
+  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerDir, { link = "Directory" })
+  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerPackage, { link = "Include" })
+  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerPassed, { link = "DiagnosticOk" })
+  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerFailed, { link = "DiagnosticError" })
+  vim.api.nvim_set_hl(0, M.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
+
+
+  vim.fn.sign_define(M.signs.EasyDotnetTestSign, { text = "", texthl = "Character" })
+  vim.fn.sign_define(M.signs.EasyDotnetTestPassed, { text = "", texthl = "EasyDotnetTestRunnerPassed" })
+  vim.fn.sign_define(M.signs.EasyDotnetTestFailed, { text = "", texthl = "EasyDotnetTestRunnerFailed" })
+  vim.fn.sign_define(M.signs.EasyDotnetTestSkipped, { text = "" })
+  vim.fn.sign_define(M.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
 end
+
 
 
 M.setup = function(opts)
   local merged_opts = merge_tables(options, opts or {})
-  define_highlights()
+  define_highlights_and_signs()
   local commands = {
     secrets = function()
       secrets.edit_secrets_picker(merged_opts.secrets.path)

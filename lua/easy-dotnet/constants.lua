@@ -9,5 +9,24 @@ M.get_data_directory = function()
   return dir
 end
 
+M.highlights = {
+  EasyDotnetTestRunnerSolution = "EasyDotnetTestRunnerSolution",
+  EasyDotnetTestRunnerProject = "EasyDotnetTestRunnerProject",
+  EasyDotnetTestRunnerTest = "EasyDotnetTestRunnerTest",
+  EasyDotnetTestRunnerSubcase = "EasyDotnetTestRunnerSubcase",
+  EasyDotnetTestRunnerDir = "EasyDotnetTestRunnerDir",
+  EasyDotnetTestRunnerPackage = "EasyDotnetTestRunnerPackage",
+  EasyDotnetTestRunnerPassed = "EasyDotnetTestRunnerPassed",
+  EasyDotnetTestRunnerFailed = "EasyDotnetTestRunnerFailed",
+  EasyDotnetTestRunnerRunning = "EasyDotnetTestRunnerRunning"
+}
+
+M.signs = {
+  EasyDotnetTestSign = "EasyDotnetTestSign",
+  EasyDotnetTestPassed = "EasyDotnetTestPassed",
+  EasyDotnetTestFailed = "EasyDotnetTestFailed",
+  EasyDotnetTestSkipped = "EasyDotnetTestSkipped",
+  EasyDotnetTestError = "EasyDotnetTestError"
+}
 
 return M
