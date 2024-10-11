@@ -92,8 +92,8 @@ end
 ---@param xml_path string
 M.xml_to_json = function(xml_path, cb)
   local fsx_file = ensure_and_get_fsx_path()
-  local outfile = os.tmpname()
-  local command = string.format("dotnet fsi %s '%s' %s", fsx_file, xml_path, outfile)
+  local outfile = vim.fs.normalize(os.tmpname())
+  local command = string.format("dotnet fsi %s %s %s", fsx_file, xml_path, outfile)
   ---@type TestCase[]
   local tests = {}
   vim.fn.jobstart(command, {
