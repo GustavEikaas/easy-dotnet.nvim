@@ -161,7 +161,6 @@ local function discover_tests_for_project_and_update_lines(project, win, options
   local command = string.format("dotnet fsi %s '%s' '%s' '%s'", script_path, vstest_dll,
     absolute_dll_path, outfile)
 
-  print(outfile)
   local tests = {}
   vim.fn.jobstart(command, {
     on_stderr = function(_, data)
