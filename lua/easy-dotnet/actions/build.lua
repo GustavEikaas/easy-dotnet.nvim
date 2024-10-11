@@ -114,8 +114,7 @@ M.build_project_quickfix = function(use_default, dotnet_args)
     if csproj == nil then
       vim.notify(messages.no_project_definition_found)
     end
-    local command = string.format("dotnet build %s /flp:v=q /flp:logfile='%s' %s", csproj, logPath, dotnet_args or "")
-    print(command)
+    local command = string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", csproj, logPath, dotnet_args or "")
     M.pending = true
     vim.fn.jobstart(command, {
       on_exit = function(_, b, _)
@@ -139,9 +138,8 @@ M.build_project_quickfix = function(use_default, dotnet_args)
     local spinner = require("easy-dotnet.ui-modules.spinner").new()
     spinner:start_spinner("Building")
     M.pending = true
-    local command = string.format("dotnet build %s /flp:v=q /flp:logfile='%s' %s", project.path, logPath,
+    local command = string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", project.path, logPath,
       dotnet_args or "")
-    print(command)
     vim.fn.jobstart(command, {
       on_exit = function(_, b, _)
         M.pending = false
