@@ -94,7 +94,7 @@ local function pick_profile(project)
     return table.concat(vim.fn.readfile(path), "\n")
   end)
   if not success then
-    vim.notify("No launchSettings file found", vim.log.levels.WARN)
+    vim.notify("No launchSettings file found", vim.log.levels.DEBUG)
     return nil
   end
 
