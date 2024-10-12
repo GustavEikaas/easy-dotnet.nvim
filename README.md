@@ -242,7 +242,7 @@ https://github.com/user-attachments/assets/b56891c9-1b65-4522-8057-43eff3d1102d
 
 ## Outdated
 
-Run the command `Dotnet outdated` in a .csproj file, virtual text with packages latest version will appear
+Run the command `Dotnet outdated` in a `*.csproj`, `Directory.Packages.props` or `Packages.props` file, virtual text with packages latest version will appear
 
 ![image](https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113)
 
