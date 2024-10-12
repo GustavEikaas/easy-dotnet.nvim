@@ -252,7 +252,6 @@ Supports the following filetypes
 - Packages.props
 
 
-
 ![image](https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113)
 
 ### Requirements
