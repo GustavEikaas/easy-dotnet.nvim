@@ -71,7 +71,7 @@ local function find_package_reference_in_buffer(package_name)
 end
 
 M.outdated = function()
-  local path = vim.fn.expand("%")
+  local path = vim.fs.normalize(vim.fn.expand("%"))
   local filename = vim.fs.basename(path):lower()
   if path:match(".csproj$") then
     local project_name = vim.fs.basename(path:match("([^/]+)%.csproj$"))
