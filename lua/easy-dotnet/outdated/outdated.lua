@@ -18,7 +18,8 @@ end
 local function readPackageInfo(path, project_name)
   local contents = readFile(path)
   if contents == nil then
-    error("failed to read file")
+    print(path)
+    error("Failed to read file " .. vim.fs.basename(path))
     return
   end
   local parsedJson = vim.fn.json_decode(table.concat(contents))
@@ -35,7 +36,8 @@ local function readSolutionPackagesInfo(path)
   local seen = {}
   local contents = readFile(path)
   if contents == nil then
-    error("failed to read file")
+    print(path)
+    error("Failed to read file " .. vim.fs.basename(path))
     return
   end
   local parsedJson = vim.fn.json_decode(table.concat(contents))
