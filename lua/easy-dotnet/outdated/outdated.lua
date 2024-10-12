@@ -30,6 +30,27 @@ local function readPackageInfo(path, project_name)
   return {}
 end
 
+local function readSolutionPackagesInfo(path)
+  local deps = {}
+  local seen = {}
+  local contents = readFile(path)
+  if contents == nil then
+    error("failed to read file")
+    return
+  end
+  local parsedJson = vim.fn.json_decode(table.concat(contents))
+  for _, value in ipairs(parsedJson.Projects) do
+    for _, dep in ipairs(value.TargetFrameworks[1].Dependencies) do
+      if not seen[dep.Name] then
+        table.insert(deps, dep)
+        seen[dep.Name] = true
+      end
+    end
+  end
+  return deps
+end
+
+
 local function find_package_reference_in_buffer(package_name)
   local buf = vim.api.nvim_get_current_buf()
 
@@ -49,8 +70,9 @@ end
 
 M.outdated = function()
   local path = vim.fn.expand("%")
+  local s = vim.fs.basename(path)
+  vim.notify(s)
   if path:match(".csproj$") then
-    --TODO: constants.get_data_dir
     local project_name = path:match("([^/]+)%.csproj$")
     local data_dir = require("easy-dotnet.constants").get_data_directory()
     local outPath = vim.fs.joinpath(data_dir, "package.json")
@@ -59,6 +81,45 @@ M.outdated = function()
       on_exit = function(_, b)
         if b == 0 then
           local deps = readPackageInfo(outPath, project_name)
+          if deps == nil then
+            error("Parsing outdated packages failed")
+            return
+          end
+
+          if #deps == 0 then
+            vim.notify("All packages are up to date", vim.log.levels.INFO)
+            return
+          end
+
+          local bnr = vim.fn.bufnr('%')
+          local ns_id = require("easy-dotnet.constants").ns_id
+          for _, value in ipairs(deps) do
+            local line = find_package_reference_in_buffer(value.Name)
+            if line ~= nil then
+              vim.api.nvim_buf_set_extmark(bnr, ns_id, line - 1, 0, {
+                virt_text = { { string.format("%s -> %s", value.ResolvedVersion, value.LatestVersion), "EasyDotnetPackage" } },
+                virt_text_pos = "eol",
+                priority = 200,
+              })
+            else
+              vim.notify("Failed to find package " .. value.Name, vim.log.levels.DEBUG)
+            end
+          end
+        else
+          vim.notify("Dotnet outdated tool not installed")
+        end
+      end,
+    })
+  elseif s:lower() == "directory.packages.props" then
+    local sln_parse = require("easy-dotnet.parsers.sln-parse")
+    local solutionFilePath = sln_parse.find_solution_file()
+    local data_dir = require("easy-dotnet.constants").get_data_directory()
+    local outPath = vim.fs.joinpath(data_dir, "package.json")
+    local cmd = string.format("dotnet-outdated %s --output %s", solutionFilePath, outPath)
+    vim.fn.jobstart(cmd, {
+      on_exit = function(_, b)
+        if b == 0 then
+          local deps = readSolutionPackagesInfo(outPath)
           if deps == nil then
             error("Parsing outdated packages failed")
             return
