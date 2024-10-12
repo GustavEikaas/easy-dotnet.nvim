@@ -73,8 +73,9 @@ end
 M.outdated = function()
   local path = vim.fn.expand("%")
   local filename = vim.fs.basename(path):lower()
-  if path:match(".csproj$") then
-    local project_name = vim.fs.basename(path:match("([^/]+)%.csproj$"))
+
+  if path:match("[^/\\]+%.%a+proj") then
+    local project_name = vim.fs.basename(path:gsub("%.csproj$", ""):gsub("%.fsproj$", ""))
     local data_dir = require("easy-dotnet.constants").get_data_directory()
     local outPath = vim.fs.joinpath(data_dir, "package.json")
     local cmd = string.format("dotnet-outdated %s --output %s", path, outPath)
@@ -151,7 +152,8 @@ M.outdated = function()
       end,
     })
   else
-    vim.notify("Current buffer is not *.csproj, directory.packages.props or packages.props", vim.log.levels.ERROR)
+    vim.notify("Current buffer is not *.csproj, *.fsproj, directory.packages.props or packages.props",
+      vim.log.levels.ERROR)
   end
 end
 return M
