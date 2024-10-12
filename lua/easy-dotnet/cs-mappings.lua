@@ -106,7 +106,7 @@ local function auto_bootstrap_namespace(bufnr)
 end
 
 M.auto_bootstrap_namespace = function()
-  vim.api.nvim_create_autocmd({ "BufEnter" }, {
+  vim.api.nvim_create_autocmd({ "BufReadPost" }, {
     pattern = "*.cs",
     callback = function()
       local bufnr = vim.api.nvim_get_current_buf()
@@ -116,13 +116,7 @@ M.auto_bootstrap_namespace = function()
 end
 
 local function compare_paths(path1, path2)
-  local normalized_path1 = path1:gsub("\\", "/")
-  local normalized_path2 = path2:gsub("\\", "/")
-
-  normalized_path1 = normalized_path1:lower()
-  normalized_path2 = normalized_path2:lower()
-
-  return normalized_path1 == normalized_path2
+  return vim.fs.normalize(path1):lower() == vim.fs.normalize(path2):lower()
 end
 
 
@@ -155,7 +149,7 @@ end
 
 
 M.add_test_signs = function()
-  vim.api.nvim_create_autocmd({ "BufEnter" }, {
+  vim.api.nvim_create_autocmd({ "BufReadPost" }, {
     pattern = "*.cs",
     callback = function()
       local constants = require("easy-dotnet.constants")
