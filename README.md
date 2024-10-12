@@ -6,6 +6,11 @@
 ## Simplifying .NET development in Neovim
 Are you a .NET developer looking to harness the power of Neovim for your daily coding tasks? Look no further! easy-dotnet.nvim is here to streamline your workflow and make .NET development in Neovim a breeze.
 
+> 💡 **Tip:** 
+> This plugin and all its features should work for both **C#** and **F#**.
+
+
+
 >[!IMPORTANT]
 >I need feedback! The last months I have had a blast developing this plugin, i have gotten a lot of feedback from you guys, and I want more! Please dont hesitate to file an issue with an improvement/bug/question etc..
 >And most importantly thank you guys for using my plugin :D
