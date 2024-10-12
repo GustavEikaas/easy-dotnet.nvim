@@ -90,10 +90,19 @@ end
 local function pick_profile(project)
   local path = vim.fs.joinpath(vim.fs.dirname(project.path), "Properties/launchSettings.json")
   --In case of OUT OF MEM, this would be another way: cat launchSettings.json | jq '.profiles | to_entries[] | select(.value.commandName == \"Project\") | .key'
-  local success, json = pcall(vim.fn.json_decode, table.concat(vim.fn.readfile(path), "\n"))
+  local success, content = pcall(function()
+    return table.concat(vim.fn.readfile(path), "\n")
+  end)
   if not success then
-    error(string.format("Failed to read %s", path))
+    vim.notify("No launchSettings file found", vim.log.levels.WARN)
+    return nil
   end
+
+  local success, json = pcall(vim.fn.json_decode, content)
+  if not success then
+    error("Failed to decode json in launchSettings.json")
+  end
+
   local options = {}
   for key, value in pairs(json.profiles) do
     if value.commandName and value.commandName == "Project" then
@@ -112,7 +121,7 @@ end
 ---@param use_default boolean
 ---@param project DotnetProject
 ---@param solution_file_path string | nil
----@return string
+---@return string | nil
 local function get_or_pick_profile(use_default, project, solution_file_path)
   if use_default and solution_file_path then
     local default_profile = require("easy-dotnet.default-manager").get_default_launch_profile(solution_file_path, project)
@@ -122,7 +131,7 @@ local function get_or_pick_profile(use_default, project, solution_file_path)
   end
   local profile = pick_profile(project)
   if not profile then
-    error("Failed to select profile")
+    return nil
   end
   if use_default and solution_file_path then
     require("easy-dotnet.default-manager").set_default_launch_profile(project, solution_file_path, profile)
@@ -138,7 +147,7 @@ M.run_project_with_profile = function(term, use_default)
     error("Failed to select project")
   end
   local profile = get_or_pick_profile(use_default, project, solution_file_path)
-  term(project.path, "run", string.format("--launch-profile '%s'", profile))
+  term(project.path, "run", profile and string.format("--launch-profile '%s'", profile) or "")
 end
 
 return M
