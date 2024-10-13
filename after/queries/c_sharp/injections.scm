@@ -181,4 +181,51 @@
 
 ;;;;;;;;;;;;;;;;;;XML;;;;;;;;;;;;;;;;;;
 
-; TODO: implement injections for xml
+; //language=xml
+; var xml = """
+;     <person>
+;       <name>John Doe</name>
+;       <age>30</age>
+;     </person>
+;     """;
+(
+(comment) @comment
+.
+(local_declaration_statement
+  (variable_declaration
+    (variable_declarator
+      (raw_string_literal
+        (raw_string_content) @injection.content))))
+
+(#eq? @comment "//language=xml")
+(#set! injection.language "xml")
+)
+
+; var xml = string.Empty;
+; //language=xml
+; xml = """
+;     <?xml version="1.0" encoding="UTF-8"?>
+;     <book>
+;       <title>The Great Gatsby</title>
+;       <author>F. Scott Fitzgerald</author>
+;       <year>1925</year>
+;     </book>
+;     """;
+(
+(comment) @comment
+.
+(expression_statement
+  (assignment_expression
+    (raw_string_literal
+      (raw_string_content) @injection.content)))
+
+(#eq? @comment "//language=xml")
+(#set! injection.language "xml")
+)
+
+; TODO: validate that this injection is any good for general fallback
+; (
+;   (raw_string_content) @injection.content
+;   (#match? @injection.content "^\\s*<[^>]+>")
+;   (#set! injection.language "xml")
+; )
