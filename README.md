@@ -152,6 +152,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
         path = get_secret_path
       },
       csproj_mappings = true,
+      fsproj_mappings = true,
       auto_bootstrap_namespace = true
     })
 
