@@ -121,7 +121,63 @@
 
 ;;;;;;;;;;;;;;;;;;JSON;;;;;;;;;;;;;;;;;;
 
-; TODO: implement injections for json
+; //language=json
+; var json = """
+;     {
+;       "product": {
+;         "id": "p123",
+;         "name": "Laptop",
+;         "price": 999.99,
+;         "inStock": true
+;       }
+;     }
+;     """;
+(
+(comment) @comment
+.
+(local_declaration_statement
+  (variable_declaration
+    (variable_declarator
+      (raw_string_literal
+        (raw_string_content) @injection.content))))
+
+(#eq? @comment "//language=json")
+(#set! injection.language "json")
+)
+
+; var json = string.Empty;
+; //language=json
+; json = """
+;     {
+;       "product": {
+;         "id": "p123",
+;         "name": "Laptop",
+;         "price": 999.99,
+;         "inStock": true
+;       }
+;     }
+;     """;
+(
+(comment) @comment
+.
+(expression_statement
+  (assignment_expression
+    (raw_string_literal
+      (raw_string_content) @injection.content)))
+
+(#eq? @comment "//language=json")
+(#set! injection.language "json")
+)
+
+; TODO: validate that this injection is any good for general fallback
+; (
+;   [
+;     (string_literal_content)
+;     (raw_string_content)
+;   ] @injection.content
+;   (#match? @injection.content "^\\s*\\{.*\\}\\s*$")
+;   (#set! injection.language "json")
+; )
 
 ;;;;;;;;;;;;;;;;;;XML;;;;;;;;;;;;;;;;;;
 
