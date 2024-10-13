@@ -8,7 +8,7 @@
 ; NOTE: 
 ; queries for language injections for interpolated sql strings are not implemented intentionally. 
 
-;;;;;;;;;;;;;;;;;;SQL;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;SQL;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; //language=sql
 ; var sql = "select * from users";
@@ -119,7 +119,7 @@
 ;   (#set! injection.language "sql")
 ; )
 
-;;;;;;;;;;;;;;;;;;JSON;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;JSON;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; //language=json
 ; var json = """
@@ -179,7 +179,7 @@
 ;   (#set! injection.language "json")
 ; )
 
-;;;;;;;;;;;;;;;;;;XML;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;JSON;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; //language=xml
 ; var xml = """
