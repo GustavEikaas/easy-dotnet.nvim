@@ -104,7 +104,7 @@ local function run_csproject(win, cs_project_path)
 
   win.refreshLines()
   vim.fn.jobstart(
-    string.format( 'dotnet test --nologo %s %s --logger="trx;logFileName=%s"', get_dotnet_args(win.options),
+    string.format('dotnet test --nologo %s %s --logger="trx;logFileName=%s"', get_dotnet_args(win.options),
       cs_project_path,
       log_file_name), {
       on_exit = function(_, code)
@@ -137,7 +137,7 @@ local function run_test_group(line, win)
 
   local on_job_finished = win.appendJob(line.name, "Run", testcount)
   vim.fn.jobstart(
-    string.format( 'dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"',
+    string.format('dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"',
       suite_name, get_dotnet_args(win.options), line.cs_project_path, log_file_name),
     {
       on_exit = function()
@@ -171,7 +171,7 @@ local function run_test_suite(line, win)
 
   local on_job_finished = win.appendJob(line.namespace, "Run", testcount)
   vim.fn.jobstart(
-    string.format( 'dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"',
+    string.format('dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"',
       suite_name, get_dotnet_args(win.options), line.cs_project_path, log_file_name),
     {
       on_exit = function()
@@ -362,7 +362,7 @@ local keymaps = {
       vim.notify("nvim-dap not installed", vim.log.levels.ERROR)
       return
     end
-    vim.cmd("Dotnet testrunner")
+    win.hide()
     vim.cmd("edit " .. line.file_path)
     vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
     dap.toggle_breakpoint()
@@ -384,6 +384,7 @@ local keymaps = {
   ["g"] = function(_, line, win)
     if line.type == "test" or line.type == "subcase" or line.type == "test_group" then
       if line.file_path ~= nil then
+        win.hide()
         vim.cmd("edit " .. line.file_path)
         vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
       end
@@ -443,8 +444,8 @@ local keymaps = {
       return
     end
   end,
-  ["q"] = function()
-    vim.cmd("Dotnet testrunner")
+  ["q"] = function(_, _, win)
+    win.hide()
   end
 }
 
