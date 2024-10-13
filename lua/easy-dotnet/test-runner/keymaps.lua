@@ -290,14 +290,12 @@ local function open_stack_trace(line)
       go_to_file()
     end, { silent = true, noremap = true, buffer = stack_trace.buf })
 
-
     vim.api.nvim_win_set_cursor(file_float.win, { path.line, 0 })
   end
 end
 
 local previousStates = {}
 local function expand_section(line, index, win)
-  local newLines = {}
   local action = win.lines[index + 1].hidden == true and "expand" or "collapse"
 
   for _, value in ipairs(win.lines) do
@@ -305,14 +303,21 @@ local function expand_section(line, index, win)
     elseif line.unique_id == value.p_unique_id then
       if action == "expand" then
         value.hidden = false
+        previousStates[value.unique_id] = value.hidden
       else
         value.hidden = true
+        -- previousStates[value.unique_id] = value.hidden
       end
-    elseif value.unique_id:match(line.unique_id) then
+    elseif value.unique_id:sub(1, #line.unique_id) == line.unique_id then
       if action == "expand" then
-        value.hidden = previousStates[value.unique_id] or false
+        local prev_state = previousStates[value.unique_id]
+        if type(prev_state) == "boolean" then
+          value.hidden = prev_state
+        else
+          value.hidden = true
+        end
       else
-        previousStates[value.unique_id] = value.hidden
+        -- previousStates[value.unique_id] = value.hidden
         value.hidden = true
       end
     end
@@ -370,6 +375,7 @@ local keymaps = {
     for _, value in ipairs(win.lines) do
       value.hidden = false
     end
+    previousStates = {}
     win.refreshLines()
   end,
   ["W"] = function(_, _, win)
@@ -378,6 +384,7 @@ local keymaps = {
         value.hidden = true
       end
     end
+    previousStates = {}
     win.refreshLines()
   end,
   ---@param index number
