@@ -362,7 +362,7 @@ local keymaps = {
       vim.notify("nvim-dap not installed", vim.log.levels.ERROR)
       return
     end
-    vim.cmd("Dotnet testrunner")
+    win.hide()
     vim.cmd("edit " .. line.file_path)
     vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
     dap.toggle_breakpoint()
@@ -384,6 +384,7 @@ local keymaps = {
   ["g"] = function(_, line, win)
     if line.type == "test" or line.type == "subcase" or line.type == "test_group" then
       if line.file_path ~= nil then
+        win.hide()
         vim.cmd("edit " .. line.file_path)
         vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
       end
@@ -443,8 +444,8 @@ local keymaps = {
       return
     end
   end,
-  ["q"] = function()
-    vim.cmd("Dotnet testrunner")
+  ["q"] = function(_, _, win)
+    win.hide()
   end
 }
 
