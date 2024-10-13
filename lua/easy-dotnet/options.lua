@@ -8,7 +8,7 @@
 local function get_sdk_path()
   local sdk_version = vim.system({ "dotnet", "--version" }):wait().stdout:gsub("\r", ""):gsub("\n", "")
   local isWindows = require("easy-dotnet.extensions").isWindows()
-  local base = isWindows and "C:/Program Files/dotnet/sdk" or "/usr/lib/dotnet/sdk"
+  local base = isWindows and 'C:/"Program Files"/dotnet/sdk' or "/usr/lib/dotnet/sdk"
   local sdk_path = vim.fs.joinpath(base, sdk_version)
   return sdk_path
 end
@@ -78,5 +78,6 @@ return {
     additional_args = {},
   },
   csproj_mappings = true,
+  fsproj_mappings = true,
   auto_bootstrap_namespace = true
 }
