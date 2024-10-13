@@ -104,7 +104,7 @@ local function run_csproject(win, cs_project_path)
 
   win.refreshLines()
   vim.fn.jobstart(
-    string.format("dotnet test --nologo %s %s --logger='trx;logFileName=%s'", get_dotnet_args(win.options),
+    string.format( 'dotnet test --nologo %s %s --logger="trx;logFileName=%s"', get_dotnet_args(win.options),
       cs_project_path,
       log_file_name), {
       on_exit = function(_, code)
@@ -137,7 +137,7 @@ local function run_test_group(line, win)
 
   local on_job_finished = win.appendJob(line.name, "Run", testcount)
   vim.fn.jobstart(
-    string.format("dotnet test --filter='%s' --nologo %s %s --logger='trx;logFileName=%s'",
+    string.format( 'dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"',
       suite_name, get_dotnet_args(win.options), line.cs_project_path, log_file_name),
     {
       on_exit = function()
@@ -171,7 +171,7 @@ local function run_test_suite(line, win)
 
   local on_job_finished = win.appendJob(line.namespace, "Run", testcount)
   vim.fn.jobstart(
-    string.format("dotnet test --filter='%s' --nologo %s %s --logger='trx;logFileName=%s'",
+    string.format( 'dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"',
       suite_name, get_dotnet_args(win.options), line.cs_project_path, log_file_name),
     {
       on_exit = function()
@@ -233,7 +233,7 @@ local function run_test(line, win)
   local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
 
   local command = string.format(
-    "dotnet test --filter='%s' --nologo %s %s --logger='trx;logFileName=%s'",
+    'dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"',
     line.namespace:gsub("%b()", ""), get_dotnet_args(win.options), line.cs_project_path, log_file_name)
 
   local on_job_finished = win.appendJob(line.name, "Run")
