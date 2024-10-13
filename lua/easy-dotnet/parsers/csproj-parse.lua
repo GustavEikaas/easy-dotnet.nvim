@@ -36,7 +36,10 @@ local function extract_from_project(project_file_path, pattern)
     return false
   end)
 
-  return (type(contains_pattern) == "string" and contains_pattern:match(pattern)) or false
+  local result = (type(contains_pattern) == "string" and contains_pattern:match(pattern)) or false
+
+  file:close()
+  return result
 end
 
 M.get_project_references_from_projects = function(project_path)
