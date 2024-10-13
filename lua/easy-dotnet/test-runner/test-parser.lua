@@ -15,9 +15,7 @@ let xmlToJson (xml: string) : JObject =
     let jsonString = JsonConvert.SerializeXmlNode(xmlDoc, Newtonsoft.Json.Formatting.Indented)
     JObject.Parse(jsonString)
 
-let transformTestCase (testCase: JObject) : JProperty =
-    let testName = testCase.["@testName"].ToString()
-    let testId = testCase.["@testId"].ToString()
+let transformTestCase (testCase: JObject) : JObject =
     let newTestCase = new JObject()
     newTestCase.["outcome"] <- testCase.["@outcome"]
     newTestCase.["id"] <- testCase.["@testId"]
@@ -26,24 +24,21 @@ let transformTestCase (testCase: JObject) : JProperty =
     if errorInfo <> null && errorInfo.["StackTrace"] <> null then
         newTestCase.["stackTrace"] <- errorInfo.["StackTrace"]
 
-    new JProperty(testId, newTestCase)
+    newTestCase
 
-let extractAndTransformResults (jsonObj: JObject) : JObject option =
+let extractAndTransformResults (jsonObj: JObject) : JObject list =
     let resultsToken = jsonObj.SelectToken("$.TestRun.Results.UnitTestResult")
     match resultsToken with
-    | null -> None
+    | null -> []
     | _ ->
         let results =
             match resultsToken.Type with
             | JTokenType.Array -> resultsToken :?> JArray
-            | _ -> new JArray(resultsToken)
+            | _ -> JArray(resultsToken)
 
-        let transformedResults = new JObject(
-            results
-            |> Seq.map (fun testCase -> transformTestCase (testCase :?> JObject))
-        )
-
-        Some transformedResults
+        results
+        |> Seq.map (fun testCase -> transformTestCase (testCase :?> JObject))
+        |> Seq.toList
 
 let main (argv: string[]) =
     if argv.Length <> 2 then
@@ -56,14 +51,14 @@ let main (argv: string[]) =
             if File.Exists(filePath) then
                 let xmlContent = File.ReadAllText(filePath)
                 let jsonObj = xmlToJson(xmlContent)
-                match extractAndTransformResults(jsonObj) with
-                | Some results ->
+                let results = extractAndTransformResults(jsonObj)
+                if results.Length > 0 then
                     use writer = new StreamWriter(outputFilePath, append = true)
-                    for result in results.Properties() do
-                        let resultJson = JsonConvert.SerializeObject(result.Value, Formatting.None)
+                    for result in results do
+                        let resultJson = JsonConvert.SerializeObject(result, Formatting.None)
                         writer.WriteLine(resultJson)
                     0
-                | None ->
+                else
                     printfn "Error: 'Results' object not found in the JSON output."
                     1
             else
