@@ -70,6 +70,45 @@
 (#offset! @injection.content 0 2 0 -1)
 )
 
+
+; //language=sql
+; var sql = """
+;     select *
+;     from users as u
+;     inner join orders as o
+;     """;
+(
+(comment) @comment
+.
+(local_declaration_statement
+  (variable_declaration
+    (variable_declarator
+      (raw_string_literal
+        (raw_string_content) @injection.content))))
+
+(#eq? @comment "//language=sql")
+(#set! injection.language "sql")
+)
+
+; var sql = string.Empty;
+; //language=sql
+; sql = """
+;     select *
+;     from users as u
+;     inner join orders as o
+;     """;
+(
+(comment) @comment
+.
+(expression_statement
+  (assignment_expression
+    (raw_string_literal
+      (raw_string_content) @injection.content)))
+
+(#eq? @comment "//language=sql")
+(#set! injection.language "sql")
+)
+
 ; TODO: validate that this injection is any good for general fallback
 ; (
 ;   [
