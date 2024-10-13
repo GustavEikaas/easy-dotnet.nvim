@@ -24,6 +24,12 @@ local function sort_tests(tests)
   end)
 end
 
+local function slice(array, start_index, end_index)
+  local result = {}
+  table.move(array, start_index, end_index, 1, result)
+  return result
+end
+
 ---@param tests Test[]
 local function expand_test_names_with_flags(tests, options)
   local offset_indent = 2
@@ -54,13 +60,16 @@ local function expand_test_names_with_flags(tests, options)
     for part in base_name:gmatch("[^.]+") do
       table.insert(parts, part)
       current_count = current_count + 1
-      local concatenated = table.concat(parts, ".")
+      local namespace = table.concat(parts, ".")
+      local prev_namespace = table.concat(slice(parts, 1, #parts - 1), ".")
 
-      if not seen[concatenated] then
+      if not seen[namespace] then
         -- Set is_full_path to true only if we are at the last segment
         local is_full_path = (current_count == segment_count)
         ---@type Test
         local entry = {
+          p_unique_id = test.solution_file_path .. test.cs_project_path .. prev_namespace,
+          unique_id = test.solution_file_path .. test.cs_project_path .. namespace,
           id = test.id,
           name = part,
           full_name = test.full_name,
@@ -72,7 +81,7 @@ local function expand_test_names_with_flags(tests, options)
           expand = test.expand,
           icon = test.icon,
           collapsable = test.collapsable,
-          namespace = concatenated,
+          namespace = namespace,
           value = part,
           is_full_path = is_full_path and not has_arguments,
           indent = (current_count * 2) - 1 + offset_indent,
@@ -83,16 +92,19 @@ local function expand_test_names_with_flags(tests, options)
           file_path = is_full_path and test.file_path or nil
         }
         table.insert(expanded, entry)
-        seen[concatenated] = true
+        seen[namespace] = true
       end
     end
 
     -- -- Add the full test name with arguments (if any) or just the base name
     if has_arguments and not seen[full_test_name] then
+      local p_unique_id = test.solution_file_path .. test.cs_project_path .. base_name
       ---@type Test
       local entry = {
+        p_unique_id = p_unique_id,
         id = test.id,
         namespace = full_test_name,
+        unique_id = test.solution_file_path .. test.cs_project_path .. full_test_name,
         name = full_test_name:match("([^.]+%b())$"),
         full_name = test.full_name,
         is_full_path = true,
@@ -129,6 +141,8 @@ local default_options = require("easy-dotnet.options").test_runner
 --- @field column_end number | nil
 
 --- @class Test
+--- @field p_unique_id string
+--- @field unique_id string
 --- @field id string
 --- @field type "csproject" | "sln" | "namespace" | "test" | "subcase" | "test_group"
 --- @field solution_file_path string
@@ -210,6 +224,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
           local name = value.Name:find("%.") and value.Name or value.Namespace
           ---@type Test
           local test = {
+            p_unique_id = "",
             id = value.Id,
             name = name,
             full_name = name,
@@ -291,6 +306,8 @@ local function open_runner(options, sdk_path)
   --Find sln
   ---@type Test
   local sln = {
+    p_unique_id = nil,
+    unique_id = solutionFilePath,
     id = "",
     solution_file_path = solutionFilePath,
     cs_project_path = "",
@@ -315,6 +332,8 @@ local function open_runner(options, sdk_path)
     if value.isTestProject == true then
       ---@type Test
       local project = {
+        p_unique_id = solutionFilePath,
+        unique_id = solutionFilePath .. value.path,
         id = "",
         collapsble = true,
         cs_project_path = value.path,

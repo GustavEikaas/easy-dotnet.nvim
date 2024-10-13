@@ -295,55 +295,29 @@ local function open_stack_trace(line)
   end
 end
 
+local previousStates = {}
 local function expand_section(line, index, win)
   local newLines = {}
   local action = win.lines[index + 1].hidden == true and "expand" or "collapse"
 
-  if line.type == "sln" then
-    for _, lineDef in ipairs(win.lines) do
-      if line.solution_file_path == lineDef.solution_file_path then
-        if lineDef ~= line then
-          lineDef.hidden = action == "collapse" and true or false
-        end
+  for _, value in ipairs(win.lines) do
+    if line == value then
+    elseif line.unique_id == value.p_unique_id then
+      if action == "expand" then
+        value.hidden = false
+      else
+        value.hidden = true
       end
-      table.insert(newLines, lineDef)
-    end
-  elseif line.type == "csproject" then
-    for _, lineDef in ipairs(win.lines) do
-      if line.cs_project_path == lineDef.cs_project_path and line.solution_file_path == lineDef.solution_file_path then
-        if lineDef ~= line then
-          lineDef.hidden = action == "collapse" and true or false
-        end
+    elseif value.unique_id:match(line.unique_id) then
+      if action == "expand" then
+        value.hidden = previousStates[value.unique_id] or false
+      else
+        previousStates[value.unique_id] = value.hidden
+        value.hidden = true
       end
-      table.insert(newLines, lineDef)
     end
-  elseif line.type == "namespace" then
-    for _, lineDef in ipairs(win.lines) do
-      if lineDef.namespace:match(line.namespace) and line.cs_project_path == lineDef.cs_project_path and line.solution_file_path == lineDef.solution_file_path then
-        if lineDef ~= line then
-          lineDef.hidden = action == "collapse" and true or false
-        end
-      end
-      table.insert(newLines, lineDef)
-    end
-  elseif line.type == "test_group" then
-    for _, test_line in ipairs(win.lines) do
-      if test_line.type == "subcase" and line.namespace == test_line.namespace:gsub("%b()", "") then
-        if line ~= test_line then
-          test_line.hidden = action == "collapse" and true or false
-        end
-      end
-      table.insert(newLines, test_line)
-    end
-  elseif line.type == "test" or line.type == "subcase" then
-    --TODO: go to file
-    return
-  else
-    error(string.format("Unknown linetype %s", line.type))
   end
 
-
-  win.lines = newLines
   win.refreshLines()
 end
 
