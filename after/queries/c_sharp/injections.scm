@@ -169,6 +169,59 @@
 (#set! injection.language "json")
 )
 
+; var name = "Emma";
+; //language=json
+; var raw2 = $$"""
+;     {
+;       "person": {
+;         "name": {{name}},
+;         "age": 28,
+;         "hobbies": ["reading", "swimming"]
+;       }
+;     }
+;     """;
+; TODO: investigate if it is correct that all strings in a file are parsed as one document. And if it is not, then fix the use of injection.combined
+(
+(comment) @comment
+.
+(local_declaration_statement
+  (variable_declaration
+    (variable_declarator
+      (interpolated_string_expression
+        (string_content) @injection.content))))
+
+(#eq? @comment "//language=json")
+(#set! injection.language "json")
+(#set! injection.combined)
+)
+
+; var price = 999.99;
+; var raw3 = string.Empty;
+; //language=json
+; raw3 = $$"""
+;     {
+;       "product": {
+;         "id": "p123",
+;         "name": "Laptop",
+;         "price": {{price}},
+;         "inStock": true
+;       }
+;     }
+;     """;
+; TODO: investigate if it is correct that all strings in a file are parsed as one document. And if it is not, then fix the use of injection.combined
+(
+(comment) @comment
+.
+(expression_statement
+  (assignment_expression
+    (interpolated_string_expression
+      (string_content) @injection.content)))
+
+(#eq? @comment "//language=json")
+(#set! injection.language "json")
+(#set! injection.combined)
+)
+
 ; TODO: validate that this injection is any good for general fallback
 ; (
 ;   [
@@ -221,6 +274,58 @@
 
 (#eq? @comment "//language=xml")
 (#set! injection.language "xml")
+)
+
+; var title = "The Great Gatsby";
+; var author = "F. Scott Fitzgerald";
+; //language=xml
+; var xml2 = $"""
+;     <?xml version="1.0" encoding="UTF-8"?>
+;     <book>
+;       <title>{title}</title>
+;       <author>{author}</author>
+;       <year>1925</year>
+;     </book>
+;     """;
+; TODO: investigate if it is correct that all strings in a file are parsed as one document. And if it is not, then fix the use of injection.combined
+(
+(comment) @comment
+.
+(local_declaration_statement
+  (variable_declaration
+    (variable_declarator
+      (interpolated_string_expression
+        (string_content) @injection.content))))
+
+(#eq? @comment "//language=xml")
+(#set! injection.language "xml")
+(#set! injection.combined)
+)
+
+; var userId = 1;
+; var email = "alice@example.com";
+; var xml3 = string.Empty;
+; //language=xml
+; xml3 = $$"""
+;     <users>
+;       <user id="{userId}">
+;         <name>Alice</name>
+;         <email>{email}</email>
+;       </user>
+;     </users>
+;     """;
+; TODO: investigate if it is correct that all strings in a file are parsed as one document. And if it is not, then fix the use of injection.combined
+(
+(comment) @comment
+.
+(expression_statement
+  (assignment_expression
+    (interpolated_string_expression
+      (string_content) @injection.content)))
+
+(#eq? @comment "//language=xml")
+(#set! injection.language "xml")
+(#set! injection.combined)
 )
 
 ; TODO: validate that this injection is any good for general fallback
