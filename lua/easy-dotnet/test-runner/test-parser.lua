@@ -1,7 +1,7 @@
 local M = {}
 
 local file_template = [[
-//v2
+//v3
 #r "nuget: Newtonsoft.Json"
 open System
 open System.IO
