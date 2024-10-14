@@ -1,8 +1,8 @@
 ; extends
 
 ; the structure of the queries in this document is as follows:
-; 0. some comments if needed
-; 1. sample code that matches the query
+; 0. sample code that matches the query
+; 1. some comments if needed
 ; 2. tree-sitter query
 
 ; NOTE: 
