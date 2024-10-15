@@ -15,30 +15,43 @@ let xmlToJson (xml: string) : JObject =
     let jsonString = JsonConvert.SerializeXmlNode(xmlDoc, Newtonsoft.Json.Formatting.Indented)
     JObject.Parse(jsonString)
 
-let transformTestCase (testCase: JObject) : JObject =
+let transformTestCase (testCase: JObject) : JProperty =
+    let testId = testCase.["@testId"].ToString()
     let newTestCase = new JObject()
     newTestCase.["outcome"] <- testCase.["@outcome"]
-    newTestCase.["id"] <- testCase.["@testId"]
+    newTestCase.["id"] <- testId
 
     let errorInfo = testCase.SelectToken("$.Output.ErrorInfo")
     if errorInfo <> null && errorInfo.["StackTrace"] <> null then
         newTestCase.["stackTrace"] <- errorInfo.["StackTrace"]
 
-    newTestCase
+    new JProperty(testId, newTestCase)
 
-let extractAndTransformResults (jsonObj: JObject) : JObject list =
+let extractAndTransformResults (jsonObj: JObject) : JObject option =
     let resultsToken = jsonObj.SelectToken("$.TestRun.Results.UnitTestResult")
     match resultsToken with
-    | null -> []
+    | null -> None
     | _ ->
         let results =
             match resultsToken.Type with
             | JTokenType.Array -> resultsToken :?> JArray
-            | _ -> JArray(resultsToken)
+            | _ -> new JArray(resultsToken)
 
-        results
-        |> Seq.map (fun testCase -> transformTestCase (testCase :?> JObject))
-        |> Seq.toList
+        let transformedResults = new JObject()
+
+        for testCase in results do
+            let property = transformTestCase (testCase :?> JObject)
+            let testId = property.Name
+            
+            if transformedResults.ContainsKey(testId) then
+                let outcome = property.Value.["outcome"].ToString()
+                // if there are multiple results with the same testId, we want to know if any of them did not pass
+                if not (String.Equals(outcome, "passed", StringComparison.OrdinalIgnoreCase)) then
+                    transformedResults.[testId] <- property.Value
+            else
+                transformedResults.Add(property)
+
+        Some transformedResults
 
 let main (argv: string[]) =
     if argv.Length <> 2 then
@@ -51,14 +64,14 @@ let main (argv: string[]) =
             if File.Exists(filePath) then
                 let xmlContent = File.ReadAllText(filePath)
                 let jsonObj = xmlToJson(xmlContent)
-                let results = extractAndTransformResults(jsonObj)
-                if results.Length > 0 then
+                match extractAndTransformResults(jsonObj) with
+                | Some results ->
                     use writer = new StreamWriter(outputFilePath, append = true)
-                    for result in results do
-                        let resultJson = JsonConvert.SerializeObject(result, Formatting.None)
+                    for result in results.Properties() do
+                        let resultJson = JsonConvert.SerializeObject(result.Value, Formatting.None)
                         writer.WriteLine(resultJson)
                     0
-                else
+                | None ->
                     printfn "Error: 'Results' object not found in the JSON output."
                     1
             else
