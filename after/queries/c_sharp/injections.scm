@@ -180,7 +180,6 @@
 ;       }
 ;     }
 ;     """;
-; TODO: investigate if it is correct that all strings in a file are parsed as one document. And if it is not, then fix the use of injection.combined
 (
 (comment) @comment
 .
@@ -208,7 +207,6 @@
 ;       }
 ;     }
 ;     """;
-; TODO: investigate if it is correct that all strings in a file are parsed as one document. And if it is not, then fix the use of injection.combined
 (
 (comment) @comment
 .
@@ -287,7 +285,6 @@
 ;       <year>1925</year>
 ;     </book>
 ;     """;
-; TODO: investigate if it is correct that all strings in a file are parsed as one document. And if it is not, then fix the use of injection.combined
 (
 (comment) @comment
 .
@@ -314,7 +311,6 @@
 ;       </user>
 ;     </users>
 ;     """;
-; TODO: investigate if it is correct that all strings in a file are parsed as one document. And if it is not, then fix the use of injection.combined
 (
 (comment) @comment
 .
