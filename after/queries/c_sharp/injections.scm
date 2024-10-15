@@ -233,6 +233,68 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;XML;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; //language=xml
+; var xml = "<book><title>The Great Gatsby</title><author>F. Scott Fitzgerald</author><year>1925</year></book>";
+(
+(comment) @comment
+.
+(local_declaration_statement
+  (variable_declaration
+    (variable_declarator
+      (string_literal
+        (string_literal_content) @injection.content))))
+
+(#eq? @comment "//language=xml")
+(#set! injection.language "xml")
+(#set! injection.combined)
+)
+
+; var xml = "";
+; //language=xml
+; xml = "<authors><author>John Doe</author></authors>";
+(
+(comment) @comment
+.
+(expression_statement
+  (assignment_expression
+    (string_literal
+      (string_literal_content) @injection.content)))
+
+(#eq? @comment "//language=xml")
+(#set! injection.language "xml")
+(#set! injection.combined)
+)
+
+; //language=xml
+; var xml = @"<books><book id=""1""><title>The Great Gatsby</title><author>F. Scott Fitzgerald</author><year>1925</year></book></books>";
+(
+(comment) @comment
+.
+(local_declaration_statement
+  (variable_declaration
+    (variable_declarator
+      (verbatim_string_literal) @injection.content)))
+
+(#eq? @comment "//language=xml")
+(#set! injection.language "xml")
+(#offset! @injection.content 0 2 0 -1)
+)
+
+; var xml = string.Empty;
+; //language=xml
+; xml = @"<autos><auto id=""1""><make>Ford</make><model>Focus</model><year>2010</year></auto></autos>";
+(
+(comment) @comment
+.
+(expression_statement
+  (assignment_expression
+    (verbatim_string_literal) @injection.content))
+
+(#eq? @comment "//language=xml")
+(#set! injection.language "xml")
+(#offset! @injection.content 0 2 0 -1)
+)
+
+; //language=xml
 ; var xml = """
 ;     <person>
 ;       <name>John Doe</name>
