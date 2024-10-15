@@ -1,4 +1,4 @@
-; extends
+;; extends
 
 ; the structure of the queries in this document is as follows:
 ; 0. sample code that matches the query
