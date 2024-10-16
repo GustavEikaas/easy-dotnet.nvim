@@ -31,31 +31,39 @@ local function run_test(name, namespace, cs_project_path, cb)
     })
 end
 
-local function parse_status(result, test_line, options)
-  if result.outcome == "Passed" then
-    test_line.icon = options.icons.passed
-  elseif result.outcome == "Failed" then
-    test_line.icon = options.icons.failed
-    test_line.expand = vim.split(result.stackTrace, "\n")
-  elseif result.outcome == "NotExecuted" then
-    test_line.icon = options.icons.skipped
-  else
-    test_line.icon = "??"
-  end
-end
 
 
 function M.add_gutter_test_signs()
+  local options = require("easy-dotnet.test-runner.render").options
   local constants = require("easy-dotnet.constants")
   local signs = constants.signs
   local sign_ns = constants.sign_namespace
   local is_test_file = false
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
-  for _, value in ipairs(require("easy-dotnet.test-runner.runner").test_register) do
+
+  local lines = require("easy-dotnet.test-runner.render").lines
+
+  local tests = vim.tbl_filter(function(i)
+    return i.type == "test" or i.type == "test_group"
+  end, lines)
+
+  for _, value in ipairs(tests) do
     if compare_paths(value.file_path, curr_file) then
       is_test_file = true
       local line = value.line_number
+      if value.icon then
+        if value.icon == options.icons.failed then
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, vim.api.nvim_get_current_buf(),
+            { lnum = line - 2, priority = 20 })
+        elseif value.icon == options.icons.skipped then
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, vim.api.nvim_get_current_buf(),
+            { lnum = line - 2, priority = 20 })
+        elseif value.icon == options.icons.passed then
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, vim.api.nvim_get_current_buf(),
+            { lnum = line - 2, priority = 20 })
+        end
+      end
       vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSign, vim.api.nvim_get_current_buf(),
         { lnum = line - 1, priority = 20 })
     end
@@ -102,7 +110,13 @@ function M.add_gutter_test_signs()
       local bufnr = vim.api.nvim_get_current_buf()
       local curr_file = vim.api.nvim_buf_get_name(bufnr)
       local current_line = vim.api.nvim_win_get_cursor(0)[1]
-      for _, value in ipairs(require("easy-dotnet.test-runner.runner").test_register) do
+      local lines = require("easy-dotnet.test-runner.render").lines
+
+      local tests = vim.tbl_filter(function(i)
+        return i.type == "test" or i.type == "test_group"
+      end, lines)
+
+      for _, value in ipairs(tests) do
         if compare_paths(value.file_path, curr_file) and value.line_number - 1 == current_line then
           local spinner = require("easy-dotnet.ui-modules.spinner").new()
           spinner:start_spinner("Running test")
@@ -120,33 +134,29 @@ function M.add_gutter_test_signs()
               end
             end
 
-            local tests = require("easy-dotnet.test-runner.render").lines
-            for _, test in ipairs(tests) do
-              if test.id == results[1].id then
-                local options = require("easy-dotnet.test-runner.render").options
-                parse_status(results[1], test, options)
-              end
-              require("easy-dotnet.test-runner.render").refreshLines()
-            end
-
 
             if worst_outcome == "Passed" then
+              value.icon = options.icons.passed
               vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr,
                 { lnum = current_line - 1, priority = 20 })
               spinner:stop_spinner("Passed")
             elseif worst_outcome == "Failed" then
+              value.icon = options.icons.failed
               vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr,
                 { lnum = current_line - 1, priority = 20 })
               spinner:stop_spinner("Failed", vim.log.levels.ERROR)
             elseif worst_outcome == "NotExecuted" then
+              value.icon = options.icons.skipped
               vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr,
                 { lnum = current_line - 1, priority = 20 })
               spinner:stop_spinner("Skipped", vim.log.levels.WARN)
             else
+              value.icon = "??"
               spinner:stop_spinner("Test Result Errors", vim.log.levels.WARN)
               vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestError, bufnr,
                 { lnum = current_line - 1, priority = 20 })
             end
+            require("easy-dotnet.test-runner.render").refreshLines()
           end)
           return
         end

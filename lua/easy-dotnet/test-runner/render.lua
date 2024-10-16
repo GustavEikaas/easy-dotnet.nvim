@@ -175,7 +175,6 @@ function M.hide(mode)
   if not mode then
     mode = M.options.viewmode
   end
-  print(vim.inspect(M.options))
   if mode == "float" or mode == "split" then
     if M.win and vim.api.nvim_win_is_valid(M.win) then
       vim.api.nvim_win_close(M.win, false)
