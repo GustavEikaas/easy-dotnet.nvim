@@ -170,54 +170,76 @@ end
 
 -- Toggle function to handle different window modes
 ---@param mode "float" | "split" | "buf"
-local function toggle(mode)
-  if mode == "float" then
-    -- Handle floating window mode
+-- Function to hide the window or buffer based on the mode
+function M.hide(mode)
+  if not mode then
+    mode = M.options.viewmode
+  end
+  print(vim.inspect(M.options))
+  if mode == "float" or mode == "split" then
     if M.win and vim.api.nvim_win_is_valid(M.win) then
-      -- Close floating window (hides it, buffer is not deleted)
-      vim.api.nvim_win_close(M.win, false) -- false means don't force delete buffer
+      vim.api.nvim_win_close(M.win, false)
       M.win = nil
-      return false
-    else
-      -- Create a floating window
-      if not M.buf then
-        M.buf = vim.api.nvim_create_buf(false, true) -- Create new buffer if not exists
-      end
-      local win_opts = get_default_win_opts()
-      M.win = vim.api.nvim_open_win(M.buf, true, win_opts)
-      vim.api.nvim_buf_set_option(M.buf, 'bufhidden', 'hide') -- Set to hide buffer on close
-      return true
-    end
-  elseif mode == "split" then
-    -- Handle split window mode
-    if M.win and vim.api.nvim_win_is_valid(M.win) then
-      -- Close split (hides the buffer)
-      vim.api.nvim_win_close(M.win, false) -- false means don't delete the buffer
-      M.win = nil
-      return false
-    else
-      -- Create a split window
-      if not M.buf then
-        M.buf = vim.api.nvim_create_buf(false, true) -- Create new buffer if not exists
-      end
-      vim.cmd("split")                               -- Create split below
-      M.win = vim.api.nvim_get_current_win()         -- Get the split window
-      vim.api.nvim_win_set_buf(M.win, M.buf)         -- Set buffer in the split
       return true
     end
   elseif mode == "buf" then
-    -- Handle buffer mode (rendered in window 0)
     if M.buf and vim.api.nvim_buf_is_valid(M.buf) then
-      -- Hide buffer by switching to another buffer in current window (window 0)
-      vim.cmd("b#") -- Switch to previous buffer
-      return false
-    else
-      -- Create or switch to buffer in the current window
-      if not M.buf then
-        M.buf = vim.api.nvim_create_buf(false, true)
-      end
-      vim.api.nvim_set_current_buf(M.buf)
+      vim.cmd("b#")
       return true
+    end
+  end
+  return false
+end
+
+---@param mode "float" | "split" | "buf"
+function M.open(mode)
+  if not mode then
+    mode = M.options.viewmode
+  end
+
+  if mode == "float" then
+    if not M.buf then
+      M.buf = vim.api.nvim_create_buf(false, true)
+    end
+    local win_opts = get_default_win_opts()
+    M.win = vim.api.nvim_open_win(M.buf, true, win_opts)
+    vim.api.nvim_buf_set_option(M.buf, "bufhidden", "hide")
+    return true
+  elseif mode == "split" then
+    if not M.buf then
+      M.buf = vim.api.nvim_create_buf(false, true)
+    end
+    vim.cmd("split")
+    M.win = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(M.win, M.buf)
+    return true
+  elseif mode == "buf" then
+    if not M.buf then
+      M.buf = vim.api.nvim_create_buf(false, true)
+    end
+    vim.api.nvim_set_current_buf(M.buf)
+    return true
+  end
+  return false
+end
+
+---@param mode "float" | "split" | "buf"
+function M.toggle(mode)
+  if not mode then
+    mode = M.options.viewmode
+  end
+
+  if mode == "float" or mode == "split" then
+    if M.win and vim.api.nvim_win_is_valid(M.win) then
+      return not M.hide(mode)
+    else
+      return M.open(mode)
+    end
+  elseif mode == "buf" then
+    if M.buf and vim.api.nvim_buf_is_valid(M.buf) and vim.api.nvim_get_current_buf() == M.buf then
+      return not M.hide(mode)
+    else
+      return M.open(mode)
     end
   end
   return false
@@ -226,7 +248,7 @@ end
 --- Renders the buffer
 ---@param mode "float" | "split" | "buf"
 M.render = function(mode)
-  local isVisible = toggle(mode)
+  local isVisible = M.toggle(mode)
   if not isVisible then
     return
   end

@@ -6,6 +6,11 @@
 ## Simplifying .NET development in Neovim
 Are you a .NET developer looking to harness the power of Neovim for your daily coding tasks? Look no further! easy-dotnet.nvim is here to streamline your workflow and make .NET development in Neovim a breeze.
 
+> 💡 **Tip:** 
+> This plugin and all its features should work for both **C#** and **F#**.
+
+
+
 >[!IMPORTANT]
 >I need feedback! The last months I have had a blast developing this plugin, i have gotten a lot of feedback from you guys, and I want more! Please dont hesitate to file an issue with an improvement/bug/question etc..
 >And most importantly thank you guys for using my plugin :D
@@ -30,7 +35,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
    - [Keymaps](#keymaps)
 8. [Outdated](#outdated)
    - [Requirements](#requirements)
-9. [Csproj mappings](#csproj-mappings)
+9. [Project mappings](#project-mappings)
    - [Add reference](#add-reference)
    - [Package autocomplete](#package-autocomplete)
 10. [New](#new)
@@ -148,6 +153,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
         path = get_secret_path
       },
       csproj_mappings = true,
+      fsproj_mappings = true,
       auto_bootstrap_namespace = true
     })
 
@@ -243,16 +249,24 @@ https://github.com/user-attachments/assets/b56891c9-1b65-4522-8057-43eff3d1102d
 
 ## Outdated
 
-Run the command `Dotnet outdated` in a .csproj file, virtual text with packages latest version will appear
+Run the command `Dotnet outdated` in one of the supported filetypes, virtual text with packages latest version will appear
+
+Supports the following filetypes
+
+- *.csproj
+- *.fsproj
+- Directory.Packages.props
+- Packages.props
+
 
 ![image](https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113)
 
 ### Requirements
 This functionality relies on dotnet-outdated-tool, install using `dotnet tool install -g dotnet-outdated-tool`
 
-## Csproj mappings
+## Project mappings
 
-Key mappings are available automatically within `.csproj` files
+Key mappings are available automatically within `.csproj` and `.fsproj` files
 
 ### Add reference
 `<leader>ar` -> Opens a telescope picker for selecting which project reference to add

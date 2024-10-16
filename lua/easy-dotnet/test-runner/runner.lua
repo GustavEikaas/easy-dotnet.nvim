@@ -157,10 +157,10 @@ local default_options = require("easy-dotnet.options").test_runner
 local function discover_tests_for_project_and_update_lines(project, win, options, dotnet_project, sdk_path,
                                                            on_job_finished)
   local vstest_dll = vim.fs.joinpath(sdk_path, "vstest.console.dll")
-  local absolute_dll_path = vim.fs.joinpath(vim.fn.getcwd(), dotnet_project.get_dll_path())
-  local outfile = os.tmpname()
+  local absolute_dll_path = vim.fs.normalize(vim.fs.joinpath(vim.fn.getcwd(), dotnet_project.get_dll_path()))
+  local outfile = vim.fs.normalize(os.tmpname())
   local script_path = require("easy-dotnet.test-runner.discovery").get_script_path()
-  local command = string.format("dotnet fsi %s '%s' '%s' '%s'", script_path, vstest_dll,
+  local command = string.format("dotnet fsi %s %s %s %s", script_path, vstest_dll,
     absolute_dll_path, outfile)
 
   local tests = {}

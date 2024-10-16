@@ -165,6 +165,10 @@ M.setup = function(opts)
     require("easy-dotnet.csproj-mappings").attach_mappings()
   end
 
+  if merged_opts.fsproj_mappings == true then
+    require("easy-dotnet.fsproj-mappings").attach_mappings()
+  end
+
   if merged_opts.auto_bootstrap_namespace == true then
     require("easy-dotnet.cs-mappings").auto_bootstrap_namespace()
   end
