@@ -352,6 +352,9 @@ local keymaps = {
   ["<leader>fe"] = function(_, _, win)
     filter_failed_tests(win)
   end,
+  ["<C-r>"] = function(_, _, win)
+    require("easy-dotnet.test-runner.runner").refresh(win.options, win.options.sdk_path, { build = false })
+  end,
   ["<leader>d"] = function(_, line, win)
     if line.type ~= "test" and line.type ~= "test_group" then
       vim.notify("Debugging is only supported for tests and test_groups")

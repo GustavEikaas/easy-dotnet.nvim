@@ -345,6 +345,7 @@ local function open_runner(options, sdk_path)
 
   win.buf_name = "Test manager"
   win.filetype = "easy-dotnet"
+  options.sdk_path = sdk_path
   win.setOptions(options).setKeymaps(require("easy-dotnet.test-runner.keymaps")).render(options.viewmode)
 
   if is_reused then
