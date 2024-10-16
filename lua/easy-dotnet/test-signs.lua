@@ -120,19 +120,20 @@ function M.add_gutter_test_signs()
               end
             end
 
+            local tests = require("easy-dotnet.test-runner.render").lines
+            for _, test in ipairs(tests) do
+              if test.id == results[1].id then
+                local options = require("easy-dotnet.test-runner.render").options
+                parse_status(results[1], test, options)
+              end
+              require("easy-dotnet.test-runner.render").refreshLines()
+            end
+
+
             if worst_outcome == "Passed" then
               vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr,
                 { lnum = current_line - 1, priority = 20 })
               spinner:stop_spinner("Passed")
-              local tests = require("easy-dotnet.test-runner.render").lines
-              for _, test in ipairs(tests) do
-                if test.id == results[1].id then
-                  local options = require("easy-dotnet.test-runner.render").options
-                  parse_status(results[1], test, options)
-                end
-                require("easy-dotnet.test-runner.render").refreshLines()
-              end
-              -- require("easy-dotnet.test-runner.window").
             elseif worst_outcome == "Failed" then
               vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr,
                 { lnum = current_line - 1, priority = 20 })
