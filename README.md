@@ -249,11 +249,11 @@ https://github.com/user-attachments/assets/b56891c9-1b65-4522-8057-43eff3d1102d
 
 ### Running tests directly from buffer
 
-Gutter signs will appear indicating running tests
+Gutter signs will appear indicating runnable tests
 - `<leader>r` to run test
 
 >[!IMPORTANT]
->Testrunner must have been opened before entering the before for gutter signs to appear
+>Testrunner discovery must have completed before entering the buffer for the signs to appear
 
 ![image](https://github.com/user-attachments/assets/1a22fe4d-81c2-4f5a-86b1-c87f7b6fb701)
 
