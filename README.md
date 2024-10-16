@@ -33,6 +33,8 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
    - [Vim commands](#vim-commands)
 7. [Testrunner](#testrunner)
    - [Keymaps](#keymaps)
+   - [Debugging tests](#debugging-tests)
+   - [Running tests from buffer](#running-tests-directly-from-buffer)
 8. [Outdated](#outdated)
    - [Requirements](#requirements)
 9. [Project mappings](#project-mappings)
