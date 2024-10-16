@@ -184,7 +184,6 @@ M.setup = function(opts)
   end
 
   M.testrunner_refresh = function(args)
-
     local function co_wrapper()
       require("easy-dotnet.test-runner.runner").refresh(merged_opts.test_runner, merged_opts.get_sdk_path(), args)
     end

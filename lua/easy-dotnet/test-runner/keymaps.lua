@@ -353,7 +353,12 @@ local keymaps = {
     filter_failed_tests(win)
   end,
   ["<C-r>"] = function(_, _, win)
-    require("easy-dotnet.test-runner.runner").refresh(win.options, win.options.sdk_path, { build = false })
+    local function co_wrapper()
+      require("easy-dotnet.test-runner.runner").refresh(win.options, win.options.sdk_path, { build = true })
+    end
+
+    local co = coroutine.create(co_wrapper)
+    coroutine.resume(co)
   end,
   ["<leader>d"] = function(_, line, win)
     if line.type ~= "test" and line.type ~= "test_group" then
