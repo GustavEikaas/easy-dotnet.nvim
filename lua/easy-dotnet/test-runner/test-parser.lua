@@ -1,7 +1,7 @@
 local M = {}
 
 local file_template = [[
-//v2
+//v3
 #r "nuget: Newtonsoft.Json"
 open System
 open System.IO
@@ -16,11 +16,10 @@ let xmlToJson (xml: string) : JObject =
     JObject.Parse(jsonString)
 
 let transformTestCase (testCase: JObject) : JProperty =
-    let testName = testCase.["@testName"].ToString()
     let testId = testCase.["@testId"].ToString()
     let newTestCase = new JObject()
     newTestCase.["outcome"] <- testCase.["@outcome"]
-    newTestCase.["id"] <- testCase.["@testId"]
+    newTestCase.["id"] <- testId
 
     let errorInfo = testCase.SelectToken("$.Output.ErrorInfo")
     if errorInfo <> null && errorInfo.["StackTrace"] <> null then
@@ -38,10 +37,19 @@ let extractAndTransformResults (jsonObj: JObject) : JObject option =
             | JTokenType.Array -> resultsToken :?> JArray
             | _ -> new JArray(resultsToken)
 
-        let transformedResults = new JObject(
-            results
-            |> Seq.map (fun testCase -> transformTestCase (testCase :?> JObject))
-        )
+        let transformedResults = new JObject()
+
+        for testCase in results do
+            let property = transformTestCase (testCase :?> JObject)
+            let testId = property.Name
+            
+            if transformedResults.ContainsKey(testId) then
+                let outcome = property.Value.["outcome"].ToString()
+                // if there are multiple results with the same testId, we want to know if any of them did not pass
+                if not (String.Equals(outcome, "passed", StringComparison.OrdinalIgnoreCase)) then
+                    transformedResults.[testId] <- property.Value
+            else
+                transformedResults.Add(property)
 
         Some transformedResults
 
