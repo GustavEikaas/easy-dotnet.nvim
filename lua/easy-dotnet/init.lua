@@ -183,6 +183,10 @@ M.setup = function(opts)
     coroutine.resume(co)
   end
 
+  M.testrunner_refresh = function()
+    require("easy-dotnet.test-runner.runner").refresh(merged_opts.test_runner, merged_opts.get_sdk_path())
+  end
+
   M.run_default = function()
     actions.run(merged_opts.terminal, true, "")
   end
