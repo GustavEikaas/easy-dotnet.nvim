@@ -354,7 +354,7 @@ local function open_runner(options, sdk_path)
   refresh_runner(options, win, solutionFilePath, sdk_path)
 end
 
-M.refresh = function(options, sdk_path)
+M.refresh = function(options, sdk_path, args)
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
   local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
   local error_messages = require("easy-dotnet.error-messages")
@@ -363,6 +363,22 @@ M.refresh = function(options, sdk_path)
   if solutionFilePath == nil then
     vim.notify(error_messages.no_project_definition_found)
     return
+  end
+
+  if args.build then
+    local co = coroutine.running()
+    local command = string.format("dotnet build %s", solutionFilePath)
+    vim.fn.jobstart(command, {
+      on_exit = function(_, b, _)
+        coroutine.resume(co)
+        if b == 0 then
+          vim.notify("Built successfully")
+        else
+          vim.notify("Build failed", vim.log.levels.ERROR)
+        end
+      end,
+    })
+    coroutine.yield()
   end
 
   local win = require("easy-dotnet.test-runner.render")
