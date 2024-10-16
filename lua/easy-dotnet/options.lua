@@ -79,14 +79,6 @@ return {
     additional_args = {},
   },
   csproj_mappings = true,
-<<<<<<< HEAD
-  auto_bootstrap_namespace = true,
-
-
-||||||| d92f011
-  auto_bootstrap_namespace = true
-=======
   fsproj_mappings = true,
-  auto_bootstrap_namespace = true
->>>>>>> 50c13af55852c83fb22ffa374532488dd59f4b16
+  auto_bootstrap_namespace = true,
 }
