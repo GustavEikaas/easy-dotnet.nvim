@@ -247,6 +247,16 @@ Using the keybinding `<leader>d` will set a breakpoint in the test and launch nv
 
 https://github.com/user-attachments/assets/b56891c9-1b65-4522-8057-43eff3d1102d
 
+### Running tests directly from buffer
+
+Gutter signs will appear indicating running tests
+- `<leader>r` to run test
+
+>[!IMPORTANT]
+>Testrunner must have been opened before entering the before for gutter signs to appear
+
+![image](https://github.com/user-attachments/assets/1a22fe4d-81c2-4f5a-86b1-c87f7b6fb701)
+
 ## Outdated
 
 Run the command `Dotnet outdated` in one of the supported filetypes, virtual text with packages latest version will appear
