@@ -175,7 +175,9 @@ M.setup = function(opts)
 
   if merged_opts.test_runner.enable_buffer_test_execution then
     require("easy-dotnet.cs-mappings").add_test_signs()
+    require("easy-dotnet.fs-mappings").add_test_signs()
   end
+
 
   M.test_project = commands.test
   M.test_default = function()
