@@ -31,6 +31,20 @@ local function run_test(name, namespace, cs_project_path, cb)
     })
 end
 
+local function parse_status(result, test_line, options)
+  if result.outcome == "Passed" then
+    test_line.icon = options.icons.passed
+  elseif result.outcome == "Failed" then
+    test_line.icon = options.icons.failed
+    test_line.expand = vim.split(result.stackTrace, "\n")
+  elseif result.outcome == "NotExecuted" then
+    test_line.icon = options.icons.skipped
+  else
+    test_line.icon = "??"
+  end
+end
+
+
 function M.add_gutter_test_signs()
   local constants = require("easy-dotnet.constants")
   local signs = constants.signs
@@ -110,6 +124,15 @@ function M.add_gutter_test_signs()
               vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr,
                 { lnum = current_line - 1, priority = 20 })
               spinner:stop_spinner("Passed")
+              local tests = require("easy-dotnet.test-runner.render").lines
+              for _, test in ipairs(tests) do
+                if test.id == results[1].id then
+                  local options = require("easy-dotnet.test-runner.render").options
+                  parse_status(results[1], test, options)
+                end
+                require("easy-dotnet.test-runner.render").refreshLines()
+              end
+              -- require("easy-dotnet.test-runner.window").
             elseif worst_outcome == "Failed" then
               vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr,
                 { lnum = current_line - 1, priority = 20 })

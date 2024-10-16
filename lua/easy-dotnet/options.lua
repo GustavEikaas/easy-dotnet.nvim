@@ -61,7 +61,7 @@ return {
   ---@type TestRunnerOptions
   test_runner = {
     viewmode = "split",
-    enable_buffer_test_execution = false,
+    enable_buffer_test_execution = true,
     noBuild = true,
     noRestore = true,
     icons = {

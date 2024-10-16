@@ -22,6 +22,7 @@ local function aggregateStatus(matches, options)
 end
 
 
+
 local function parse_status(result, test_line, options)
   --TODO: handle more cases like cancelled etc...
   if result.outcome == "Passed" then
