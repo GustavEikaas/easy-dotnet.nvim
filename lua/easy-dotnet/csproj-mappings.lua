@@ -15,6 +15,7 @@ local function notInList(list, value)
   return true
 end
 
+
 -- Gives a picker for adding a project reference to a csproject
 local function add_project_reference(curr_project_path)
   local this_project = csproj.get_project_from_project_file(curr_project_path)
