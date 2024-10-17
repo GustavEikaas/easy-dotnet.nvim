@@ -52,20 +52,21 @@ function M.add_gutter_test_signs()
     if compare_paths(value.file_path, curr_file) then
       is_test_file = true
       local line = value.line_number
+      vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSign, vim.api.nvim_get_current_buf(),
+        { lnum = line - 1, priority = 20 })
+
       if value.icon then
         if value.icon == options.icons.failed then
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, vim.api.nvim_get_current_buf(),
-            { lnum = line - 2, priority = 20 })
+            { lnum = line - 1, priority = 20 })
         elseif value.icon == options.icons.skipped then
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, vim.api.nvim_get_current_buf(),
-            { lnum = line - 2, priority = 20 })
+            { lnum = line - 1, priority = 20 })
         elseif value.icon == options.icons.passed then
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, vim.api.nvim_get_current_buf(),
-            { lnum = line - 2, priority = 20 })
+            { lnum = line - 1, priority = 20 })
         end
       end
-      vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSign, vim.api.nvim_get_current_buf(),
-        { lnum = line - 1, priority = 20 })
     end
   end
 

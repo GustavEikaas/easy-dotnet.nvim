@@ -111,7 +111,7 @@ return {
       run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
       filter_failed_tests = { lhs = "<leader>fe", desc = "filter failed tests" },
       debug_test = { lhs = "<leader>d", desc = "debug test" },
-      go_to_file = { lhs = "<leader>g", desc = "got to file" },
+      go_to_file = { lhs = "g", desc = "got to file" },
       run_all = { lhs = "<leader>R", desc = "run all tests" },
       run = { lhs = "<leader>r", desc = "run test" },
       peek_stacktrace = { lhs = "<leader>p", desc = "peek stacktrace of failed test" },
