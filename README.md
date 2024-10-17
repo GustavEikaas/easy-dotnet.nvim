@@ -33,6 +33,8 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
    - [Vim commands](#vim-commands)
 7. [Testrunner](#testrunner)
    - [Keymaps](#keymaps)
+   - [Debugging tests](#debugging-tests)
+   - [Running tests from buffer](#running-tests-directly-from-buffer)
 8. [Outdated](#outdated)
    - [Requirements](#requirements)
 9. [Project mappings](#project-mappings)
@@ -110,7 +112,8 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
       ---@type TestRunnerOptions
       test_runner = {
         ---@type "split" | "float" | "buf"
-        viewmode = "split",
+        viewmode = "float",
+        enable_buffer_test_execution = true, --Experimental, run tests directly from buffer
         noBuild = true,
         noRestore = true,
           icons = {
@@ -245,6 +248,16 @@ Integrated test runner inspired by Rider IDE
 Using the keybinding `<leader>d` will set a breakpoint in the test and launch nvim-dap
 
 https://github.com/user-attachments/assets/b56891c9-1b65-4522-8057-43eff3d1102d
+
+### Running tests directly from buffer
+
+Gutter signs will appear indicating runnable tests
+- `<leader>r` to run test
+
+>[!IMPORTANT]
+>Testrunner discovery must have completed before entering the buffer for the signs to appear
+
+![image](https://github.com/user-attachments/assets/1a22fe4d-81c2-4f5a-86b1-c87f7b6fb701)
 
 ## Outdated
 
@@ -829,3 +842,29 @@ return {
 <!-- hl-end -->
 
 </details>
+
+
+## Signs
+
+<details>
+<summary>Click to see all signs</summary>
+
+<!--sign start-->
+
+  ```lua
+  --override example
+  vim.fn.sign_define("EasyDotnetTestSign", { text = "", texthl = "Character" })
+  ```
+
+| Sign                           | Highlight                    |
+| ------------------------------ | ---------------------------- |
+| **EasyDotnetTestSign**         | Character                    |
+| **EasyDotnetTestPassed**       | EasyDotnetTestRunnerPassed   |
+| **EasyDotnetTestFailed**       | EasyDotnetTestRunnerFailed   |
+| **EasyDotnetTestSkipped**      | (none)                       |
+| **EasyDotnetTestError**        | EasyDotnetTestRunnerFailed   |
+
+<!-- sign-end -->
+
+</details>
+

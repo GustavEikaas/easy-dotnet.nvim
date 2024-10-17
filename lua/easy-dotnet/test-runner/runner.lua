@@ -1,4 +1,4 @@
-local M = {}
+local M = { }
 
 ---@param s string
 ---@return string
