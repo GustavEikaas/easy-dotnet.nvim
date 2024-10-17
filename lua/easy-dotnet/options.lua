@@ -1,9 +1,30 @@
+---@class TestRunnerIcons
+---@field passed string
+---@field skipped string
+---@field failed string
+---@field success string
+---@field reload string
+---@field test string
+---@field sln string
+---@field project string
+---@field dir string
+---@field package string
+
+---@class TestRunnerMappings
+---@field run_test_from_buffer Keymap
+
+---@class Keymap
+---@field lhs string
+---@field desc string
+
 ---@class TestRunnerOptions
+---@field viewmode string
+---@field enable_buffer_test_execution boolean
 ---@field noBuild boolean
 ---@field noRestore boolean
----@field viewmode "float" | "buf" | "split"
----@field icons table<string>
----@field additional_args table<string> | nil
+---@field icons TestRunnerIcons
+---@field mappings TestRunnerMappings
+---@field additional_args table
 
 local function get_sdk_path()
   local sdk_version = vim.system({ "dotnet", "--version" }):wait().stdout:gsub("\r", ""):gsub("\n", "")
@@ -75,6 +96,9 @@ return {
       project = "󰘐",
       dir = "",
       package = "",
+    },
+    mappings = {
+      run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
     },
     additional_args = {},
   },

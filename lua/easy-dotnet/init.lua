@@ -59,14 +59,12 @@ local function define_highlights_and_signs(merged_opts)
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
 
   local icons = merged_opts.test_runner.icons
-  vim.fn.sign_define(constants.signs.EasyDotnetTestSign, { text = "󰙨", texthl = "Character" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestSign, { text = icons.test, texthl = "Character" })
   vim.fn.sign_define(constants.signs.EasyDotnetTestPassed, { text = icons.passed, texthl = "EasyDotnetTestRunnerPassed" })
   vim.fn.sign_define(constants.signs.EasyDotnetTestFailed, { text = icons.failed, texthl = "EasyDotnetTestRunnerFailed" })
   vim.fn.sign_define(constants.signs.EasyDotnetTestSkipped, { text = icons.skipped })
   vim.fn.sign_define(constants.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
 end
-
-
 
 M.setup = function(opts)
   local merged_opts = merge_tables(options, opts or {})
