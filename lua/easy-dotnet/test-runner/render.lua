@@ -127,7 +127,7 @@ local function setMappings()
   if M.buf == nil then
     return
   end
-  for key, value in pairs(M.keymap) do
+  for key, value in pairs(M.keymap()) do
     vim.keymap.set('n', key, function()
       local line_num = vim.api.nvim_win_get_cursor(0)[1]
       local index = translateIndex(line_num)
