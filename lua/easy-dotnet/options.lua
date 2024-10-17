@@ -22,6 +22,7 @@
 ---@field run_all Keymap
 ---@field run Keymap
 ---@field close Keymap
+---@field refresh_testrunner Keymap
 
 ---@class Keymap
 ---@field lhs string
@@ -118,7 +119,8 @@ return {
       expand = { lhs = "o", desc = "expand" },
       expand_all = { lhs = "E", desc = "expand all" },
       collapse_all = { lhs = "W", desc = "collapse all" },
-      close = { lhs = "q", desc = "close testrunner" }
+      close = { lhs = "q", desc = "close testrunner" },
+      refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" }
     },
     additional_args = {},
   },

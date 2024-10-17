@@ -351,10 +351,17 @@ end
 
 local keymaps = function()
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
-
   return {
     [keymap.filter_failed_tests.lhs] = function(_, _, win)
       filter_failed_tests(win)
+    end,
+    [keymap.refresh_testrunner.lhs]  = function(_, _, win)
+      local function co_wrapper()
+        require("easy-dotnet.test-runner.runner").refresh(win.options, win.options.sdk_path, { build = true })
+      end
+
+      local co = coroutine.create(co_wrapper)
+      coroutine.resume(co)
     end,
     [keymap.debug_test.lhs]          = function(_, line, win)
       if line.type ~= "test" and line.type ~= "test_group" then
