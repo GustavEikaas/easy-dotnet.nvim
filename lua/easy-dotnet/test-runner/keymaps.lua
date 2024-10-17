@@ -22,6 +22,7 @@ local function aggregateStatus(matches, options)
 end
 
 
+
 local function parse_status(result, test_line, options)
   --TODO: handle more cases like cancelled etc...
   if result.outcome == "Passed" then
@@ -348,105 +349,109 @@ local function expand_section(line, index, win)
 end
 
 
-local keymaps = {
-  ["<leader>fe"] = function(_, _, win)
-    filter_failed_tests(win)
-  end,
-  ["<leader>d"] = function(_, line, win)
-    if line.type ~= "test" and line.type ~= "test_group" then
-      vim.notify("Debugging is only supported for tests and test_groups")
-      return
-    end
-    local success, dap = pcall(function() return require("dap") end)
-    if not success then
-      vim.notify("nvim-dap not installed", vim.log.levels.ERROR)
-      return
-    end
-    win.hide()
-    vim.cmd("edit " .. line.file_path)
-    vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
-    dap.toggle_breakpoint()
+local keymaps = function()
+  local keymap = require("easy-dotnet.test-runner.render").options.mappings
 
-    local dap_configuration = {
-      type = "coreclr",
-      name = line.name,
-      request = "attach",
-      processId = function()
-        local project_path = line.cs_project_path
-        local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
-        return res.process_id
+  return {
+    [keymap.filter_failed_tests.lhs] = function(_, _, win)
+      filter_failed_tests(win)
+    end,
+    [keymap.debug_test.lhs]          = function(_, line, win)
+      if line.type ~= "test" and line.type ~= "test_group" then
+        vim.notify("Debugging is only supported for tests and test_groups")
+        return
       end
-    }
+      local success, dap = pcall(function() return require("dap") end)
+      if not success then
+        vim.notify("nvim-dap not installed", vim.log.levels.ERROR)
+        return
+      end
+      win.hide()
+      vim.cmd("edit " .. line.file_path)
+      vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
+      dap.toggle_breakpoint()
 
-    dap.run(dap_configuration)
-  end,
-  ---@param line Test
-  ["g"] = function(_, line, win)
-    if line.type == "test" or line.type == "subcase" or line.type == "test_group" then
-      if line.file_path ~= nil then
-        win.hide()
-        vim.cmd("edit " .. line.file_path)
-        vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
+      local dap_configuration = {
+        type = "coreclr",
+        name = line.name,
+        request = "attach",
+        processId = function()
+          local project_path = line.cs_project_path
+          local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
+          return res.process_id
+        end
+      }
+
+      dap.run(dap_configuration)
+    end,
+    ---@param line Test
+    [keymap.go_to_file.lhs]          = function(_, line, win)
+      if line.type == "test" or line.type == "subcase" or line.type == "test_group" then
+        if line.file_path ~= nil then
+          win.hide()
+          vim.cmd("edit " .. line.file_path)
+          vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
+        end
+      else
+        vim.notify("Cant go to " .. line.type)
       end
-    else
-      vim.notify("Cant go to " .. line.type)
-    end
-  end,
-  ["E"] = function(_, _, win)
-    for _, value in ipairs(win.lines) do
-      value.hidden = false
-    end
-    win.refreshLines()
-  end,
-  ["W"] = function(_, _, win)
-    for _, value in ipairs(win.lines) do
-      if not (value.type == "csproject" or value.type == "sln") then
-        value.hidden = true
-      end
-    end
-    win.refreshLines()
-  end,
-  ---@param index number
-  ---@param line Test
-  ["o"] = function(index, line, win)
-    expand_section(line, index, win)
-  end,
-  ["<leader>p"] = function(_, line)
-    open_stack_trace(line)
-  end,
-  ["<leader>R"] = function(_, _, win)
-    for _, value in ipairs(win.lines) do
-      if value.type == "csproject" then
-        run_csproject(win, value.cs_project_path)
-      end
-    end
-  end,
-  ---@param line Test
-  ["<leader>r"] = function(_, line, win)
-    if line.type == "sln" then
+    end,
+    [keymap.expand_all.lhs]          = function(_, _, win)
       for _, value in ipairs(win.lines) do
-        if value.type == "csproject" and value.solution_file_path == line.solution_file_path then
+        value.hidden = false
+      end
+      win.refreshLines()
+    end,
+    [keymap.collapse_all.lhs]        = function(_, _, win)
+      for _, value in ipairs(win.lines) do
+        if not (value.type == "csproject" or value.type == "sln") then
+          value.hidden = true
+        end
+      end
+      win.refreshLines()
+    end,
+    ---@param index number
+    ---@param line Test
+    [keymap.expand.lhs]              = function(index, line, win)
+      expand_section(line, index, win)
+    end,
+    [keymap.peek_stacktrace.lhs]     = function(_, line)
+      open_stack_trace(line)
+    end,
+    [keymap.run_all.lhs]             = function(_, _, win)
+      for _, value in ipairs(win.lines) do
+        if value.type == "csproject" then
           run_csproject(win, value.cs_project_path)
         end
       end
-    elseif line.type == "csproject" then
-      run_csproject(win, line.cs_project_path)
-    elseif line.type == "namespace" then
-      run_test_suite(line, win)
-    elseif line.type == "test_group" then
-      run_test_group(line, win)
-    elseif line.type == "subcase" then
-      vim.notify("Running specific subcases is not supported")
-    elseif line.type == "test" then
-      run_test(line, win)
-    else
-      vim.notify("Unknown line type " .. line.type)
-      return
+    end,
+    ---@param line Test
+    [keymap.run.lhs]                 = function(_, line, win)
+      if line.type == "sln" then
+        for _, value in ipairs(win.lines) do
+          if value.type == "csproject" and value.solution_file_path == line.solution_file_path then
+            run_csproject(win, value.cs_project_path)
+          end
+        end
+      elseif line.type == "csproject" then
+        run_csproject(win, line.cs_project_path)
+      elseif line.type == "namespace" then
+        run_test_suite(line, win)
+      elseif line.type == "test_group" then
+        run_test_group(line, win)
+      elseif line.type == "subcase" then
+        vim.notify("Running specific subcases is not supported")
+      elseif line.type == "test" then
+        run_test(line, win)
+      else
+        vim.notify("Unknown line type " .. line.type)
+        return
+      end
+    end,
+    [keymap.close.lhs]               = function(_, _, win)
+      win.hide()
     end
-  end,
-  ["q"] = function(_, _, win)
-    win.hide()
-  end
-}
+  }
+end
 
 return keymaps

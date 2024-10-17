@@ -127,7 +127,7 @@ local function setMappings()
   if M.buf == nil then
     return
   end
-  for key, value in pairs(M.keymap) do
+  for key, value in pairs(M.keymap()) do
     vim.keymap.set('n', key, function()
       local line_num = vim.api.nvim_win_get_cursor(0)[1]
       local index = translateIndex(line_num)
@@ -175,7 +175,6 @@ function M.hide(mode)
   if not mode then
     mode = M.options.viewmode
   end
-  print(vim.inspect(M.options))
   if mode == "float" or mode == "split" then
     if M.win and vim.api.nvim_win_is_valid(M.win) then
       vim.api.nvim_win_close(M.win, false)
