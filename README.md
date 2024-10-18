@@ -280,7 +280,7 @@ Gutter signs will appear indicating runnable tests
 - `<leader>d` to debug test
 
 >[!IMPORTANT]
->Testrunner discovery must have completed before entering the buffer for the signs to appear
+>Nvim dap must be installed and coreclr adapter must be configured
 
 ![image](https://github.com/user-attachments/assets/209aca03-397a-424f-973c-c53bae260031)
 
