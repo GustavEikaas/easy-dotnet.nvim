@@ -35,6 +35,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
    - [Keymaps](#keymaps)
    - [Debugging tests](#debugging-tests)
    - [Running tests from buffer](#running-tests-directly-from-buffer)
+   - [Debugging tests from buffer](#debugging-tests-directly-from-buffer)
 8. [Outdated](#outdated)
    - [Requirements](#requirements)
 9. [Project mappings](#project-mappings)
@@ -272,6 +273,17 @@ Gutter signs will appear indicating runnable tests
 >Testrunner discovery must have completed before entering the buffer for the signs to appear
 
 ![image](https://github.com/user-attachments/assets/1a22fe4d-81c2-4f5a-86b1-c87f7b6fb701)
+
+### Debugging tests directly from buffer
+
+Gutter signs will appear indicating runnable tests
+- `<leader>d` to debug test
+
+>[!IMPORTANT]
+>Nvim dap must be installed and coreclr adapter must be configured
+
+![image](https://github.com/user-attachments/assets/209aca03-397a-424f-973c-c53bae260031)
+
 
 ## Outdated
 

@@ -12,6 +12,7 @@
 
 ---@class TestRunnerMappings
 ---@field run_test_from_buffer Keymap
+---@field debug_test_from_buffer Keymap
 ---@field go_to_file Keymap
 ---@field debug_test Keymap
 ---@field filter_failed_tests Keymap
@@ -110,6 +111,7 @@ return {
     },
     mappings = {
       run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
+      debug_test_from_buffer = { lhs = "<leader>d", desc = "run test from buffer" },
       filter_failed_tests = { lhs = "<leader>fe", desc = "filter failed tests" },
       debug_test = { lhs = "<leader>d", desc = "debug test" },
       go_to_file = { lhs = "g", desc = "got to file" },
