@@ -361,15 +361,9 @@ Adding the following configuration to your nvim-tree will allow for creating fil
         end
 
         vim.keymap.set('n', 'A', function()
-          local function co_wrapper()
-            local node = api.tree.get_node_under_cursor()
-            local path = node.type == "directory" and node.absolute_path or vim.fs.dirname(node.absolute_path)
-
-            require("easy-dotnet").create_new_item(path)
-          end
-
-          local co = coroutine.create(co_wrapper)
-          coroutine.resume(co)
+          local node = api.tree.get_node_under_cursor()
+          local path = node.type == "directory" and node.absolute_path or vim.fs.dirname(node.absolute_path)
+          require("easy-dotnet").create_new_item(path)
         end, opts('Create file from dotnet template'))
       end
     })
