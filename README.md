@@ -352,17 +352,27 @@ If a configuration file is selected it will
 Adding the following configuration to your nvim-tree will allow for creating files using dotnet templates
 
 ```lua
-vim.keymap.set('n', 'A', function()
-  local function co_wrapper()
-    local node = api.tree.get_node_under_cursor()
-    local path = node.type == "directory" and node.absolute_path or vim.fs.dirname(node.absolute_path)
+    require("nvim-tree").setup({
+      on_attach = function(bufnr)
+        local api = require('nvim-tree.api')
 
-    require("easy-dotnet").create_new_item(path)
-  end
+        local function opts(desc)
+          return { desc = 'nvim-tree: ' .. desc, buffer = bufnr, noremap = true, silent = true, nowait = true }
+        end
 
-  local co = coroutine.create(co_wrapper)
-  coroutine.resume(co)
-end, opts('Create file from dotnet template'))
+        vim.keymap.set('n', 'A', function()
+          local function co_wrapper()
+            local node = api.tree.get_node_under_cursor()
+            local path = node.type == "directory" and node.absolute_path or vim.fs.dirname(node.absolute_path)
+
+            require("easy-dotnet").create_new_item(path)
+          end
+
+          local co = coroutine.create(co_wrapper)
+          coroutine.resume(co)
+        end, opts('Create file from dotnet template'))
+      end
+    })
 ```
 
 ## EntityFramework
