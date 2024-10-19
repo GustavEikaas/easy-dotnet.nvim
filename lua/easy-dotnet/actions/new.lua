@@ -323,9 +323,8 @@ M.create_new_item = function(path)
   local args = ""
 
   if template.type == "Code" then
-    local namespace = "Will.Calculate"
     local name = name_input_sync()
-    args = string.format("--namespace %s -n %s", namespace, name)
+    args = string.format("-n %s", name)
   elseif template.type == "MSBuild/props" then
   elseif template.type == "Config" then
     local name = name_input_sync()
@@ -337,6 +336,11 @@ M.create_new_item = function(path)
 
   local cmd = string.format("dotnet new %s -o %s %s", template.value, path, args)
   vim.fn.jobstart(cmd, {
+    on_stderr = function(_, data)
+      for _, value in ipairs(data) do
+        vim.notify(value, vim.log.levels.ERROR)
+      end
+    end,
     on_exit = function(_, code)
       if code == 0 then
         vim.notify("Success")
