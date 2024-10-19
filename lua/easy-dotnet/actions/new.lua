@@ -345,7 +345,6 @@ M.create_new_item = function(path)
     end,
     on_exit = function(_, code)
       if code == 0 then
-        vim.notify("Success")
       else
         vim.notify("Command failed")
       end
