@@ -1,7 +1,7 @@
 local M = {}
 
 local file_template = [[
-//v3
+//v4
 #r "nuget: Newtonsoft.Json"
 open System
 open System.IO
@@ -19,7 +19,7 @@ let transformTestCase (testCase: JObject) : JProperty =
     let testId = testCase.["@testId"].ToString()
     let newTestCase = new JObject()
     newTestCase.["outcome"] <- testCase.["@outcome"]
-    newTestCase.["id"] <- testId
+    newTestCase.["id"] <- testCase.["@testId"]
 
     let errorInfo = testCase.SelectToken("$.Output.ErrorInfo")
     if errorInfo <> null && errorInfo.["StackTrace"] <> null then
