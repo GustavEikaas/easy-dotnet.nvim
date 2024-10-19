@@ -307,13 +307,12 @@ M.create_new_item = function(path)
       { value = "razorcomponent", display = "Razor Component",                      type = "Code" },
       { value = "page",           display = "Razor Page",                           type = "Code" },
       { value = "view",           display = "Razor View",                           type = "Code" },
+      { value = "nunit-test",     display = "NUnit 3 Test Item",                    type = "Test/NUnit" },
       { value = "gitignore",      display = "Dotnet Gitignore File",                type = "Config" },
       { value = "tool-manifest",  display = "Dotnet Local Tool Manifest File",      type = "Config" },
       { value = "editorconfig",   display = "EditorConfig File",                    type = "Config" },
       { value = "globaljson",     display = "Global.json File",                     type = "Config" },
       { value = "nugetconfig",    display = "NuGet Config",                         type = "Config" },
-      { value = "nunit-test",     display = "NUnit 3 Test Item",                    type = "Test/NUnit" },
-      { value = "proto",          display = "Protocol Buffer File",                 type = "Web/gRPC" },
       { value = "webconfig",      display = "Web Config",                           type = "Config" },
       { value = "solution",       display = "Solution",                             type = "Config" }
     },
@@ -328,8 +327,10 @@ M.create_new_item = function(path)
     local name = name_input_sync()
     args = string.format("--namespace %s -n %s", namespace, name)
   elseif template.type == "MSBuild/props" then
-    --Do nothing
   elseif template.type == "Config" then
+    local name = name_input_sync()
+    args = string.format("-n %s", name)
+  elseif template.type == "Test/NUnit" then
     local name = name_input_sync()
     args = string.format("-n %s", name)
   end

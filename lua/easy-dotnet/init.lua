@@ -223,6 +223,7 @@ M.setup = function(opts)
   end
 
   M.restore = commands.restore
+  M.create_new_item = require("easy-dotnet.actions.new").create_new_item
   M.secrets = commands.secrets
   M.build = commands.build
   M.clean = commands.clean

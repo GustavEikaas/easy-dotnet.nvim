@@ -44,6 +44,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 10. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
+    - [Integrating with nvim-tree](#integrating-with-nvim-tree)
 11. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
@@ -345,6 +346,24 @@ https://github.com/user-attachments/assets/aa067c17-3611-4490-afc8-41d98a526729
 
 If a configuration file is selected it will
 1. Create the configuration file and place it next to your solution file. (solution files and gitignore files are placed in cwd)
+
+### Integrating with nvim-tree
+
+Adding the following configuration to your nvim-tree will allow for creating files using dotnet templates
+
+```lua
+vim.keymap.set('n', 'A', function()
+  local function co_wrapper()
+    local node = api.tree.get_node_under_cursor()
+    local path = node.type == "directory" and node.absolute_path or vim.fs.dirname(node.absolute_path)
+
+    require("easy-dotnet").create_new_item(path)
+  end
+
+  local co = coroutine.create(co_wrapper)
+  coroutine.resume(co)
+end, opts('Create file from dotnet template'))
+```
 
 ## EntityFramework
 Common EntityFramework commands have been added mainly to reduce the overhead of writing `--project .. --startup-project ..`. 
