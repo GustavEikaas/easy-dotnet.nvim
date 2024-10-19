@@ -1,5 +1,19 @@
 local M = {}
 
+local function wrap(callback)
+  return function(...)
+    -- Check if we are already in a coroutine
+    if coroutine.running() then
+      -- If already in a coroutine, call the callback directly
+      callback(...)
+    else
+      -- If not, create a new coroutine and resume it
+      local co = coroutine.create(callback)
+      coroutine.resume(co, ...)
+    end
+  end
+end
+
 local options = require("easy-dotnet.options")
 local actions = require("easy-dotnet.actions")
 local secrets = require("easy-dotnet.secrets")
@@ -223,6 +237,11 @@ M.setup = function(opts)
   end
 
   M.restore = commands.restore
+
+  M.create_new_item = wrap(function(...)
+    require("easy-dotnet.actions.new").create_new_item(...)
+  end)
+
   M.secrets = commands.secrets
   M.build = commands.build
   M.clean = commands.clean
