@@ -301,6 +301,8 @@ M.create_new_item = function(path)
       { value = "buildprops",     display = "MSBuild Directory.Build.props File",   type = "MSBuild/props" },
       { value = "buildtargets",   display = "MSBuild Directory.Build.targets File", type = "MSBuild/props" },
       { value = "apicontroller",  display = "Api Controller",                       type = "Code" },
+      { value = "interface",      display = "Interface",                            type = "Code" },
+      { value = "class",          display = "Class",                                type = "Code" },
       { value = "mvccontroller",  display = "MVC Controller",                       type = "Code" },
       { value = "viewimports",    display = "MVC ViewImports",                      type = "Code" },
       { value = "viewstart",      display = "MVC ViewStart",                        type = "Code" },
