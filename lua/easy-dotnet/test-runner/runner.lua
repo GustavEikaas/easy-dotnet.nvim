@@ -1,4 +1,4 @@
-local M = { }
+local M = {}
 
 ---@param s string
 ---@return string
@@ -242,6 +242,10 @@ local function discover_tests_for_project_and_update_lines(project, win, options
 end
 
 local function refresh_runner(options, win, solutionFilePath, sdk_path)
+  if #win.jobs > 0 then
+    vim.notify("Cant refresh while waiting for pending jobs", vim.log.levels.WARN)
+    return
+  end
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
   local async = require("easy-dotnet.async-utils")
 
@@ -357,6 +361,12 @@ local function open_runner(options, sdk_path)
 end
 
 M.refresh = function(options, sdk_path, args)
+  local win = require("easy-dotnet.test-runner.render")
+  if #win.jobs > 0 then
+    vim.notify("Cant refresh while waiting for pending jobs", vim.log.levels.WARN)
+    return
+  end
+
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
   local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
   local error_messages = require("easy-dotnet.error-messages")
@@ -368,6 +378,7 @@ M.refresh = function(options, sdk_path, args)
   end
 
   if args.build then
+    local complete = win.appendJob("build", "Build")
     local co = coroutine.running()
     local command = string.format("dotnet build %s", solutionFilePath)
     vim.fn.jobstart(command, {
@@ -381,9 +392,9 @@ M.refresh = function(options, sdk_path, args)
       end,
     })
     coroutine.yield()
+    complete()
   end
 
-  local win = require("easy-dotnet.test-runner.render")
   local is_active = win.buf ~= nil
   if not is_active then
     error("Testrunner not initialized")
@@ -404,3 +415,4 @@ end
 
 
 return M
+
