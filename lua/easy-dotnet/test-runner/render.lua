@@ -16,7 +16,7 @@ local M = {
 }
 
 ---@param id string
----@param type "Run" | "Discovery"
+---@param type "Run" | "Discovery" | "Build"
 ---@param subtask_count number | nil
 function M.appendJob(id, type, subtask_count)
   local job = { type = type, id = id, subtask_count = (subtask_count and subtask_count > 0) and subtask_count or 1 }
@@ -46,8 +46,10 @@ function M.redraw_virtual_text()
       end
     end
 
+    local job_type = M.jobs[1].type
+
     vim.api.nvim_buf_set_extmark(M.buf, ns_id, 0, 0, {
-      virt_text = { { string.format("%s %s/%s", M.jobs[1].type == "Run" and "Running" or "Discovering", completed_count, total_subtask_count), "Character" } },
+      virt_text = { { string.format("%s %s/%s", job_type == "Run" and "Running" or job_type == "Discovery" and "Discovering" or "Building", completed_count, total_subtask_count), "Character" } },
       virt_text_pos = "right_align",
       priority = 200,
     })
