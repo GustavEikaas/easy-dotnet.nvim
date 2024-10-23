@@ -1,9 +1,42 @@
+---@class TestRunnerIcons
+---@field passed string
+---@field skipped string
+---@field failed string
+---@field success string
+---@field reload string
+---@field test string
+---@field sln string
+---@field project string
+---@field dir string
+---@field package string
+
+---@class TestRunnerMappings
+---@field run_test_from_buffer Keymap
+---@field debug_test_from_buffer Keymap
+---@field go_to_file Keymap
+---@field debug_test Keymap
+---@field filter_failed_tests Keymap
+---@field expand_all Keymap
+---@field collapse_all Keymap
+---@field expand Keymap
+---@field peek_stacktrace Keymap
+---@field run_all Keymap
+---@field run Keymap
+---@field close Keymap
+---@field refresh_testrunner Keymap
+
+---@class Keymap
+---@field lhs string
+---@field desc string
+
 ---@class TestRunnerOptions
+---@field viewmode string
+---@field enable_buffer_test_execution boolean
 ---@field noBuild boolean
 ---@field noRestore boolean
----@field viewmode "float" | "buf" | "split"
----@field icons table<string>
----@field additional_args table<string> | nil
+---@field icons TestRunnerIcons
+---@field mappings TestRunnerMappings
+---@field additional_args table
 
 local function get_sdk_path()
   local sdk_version = vim.system({ "dotnet", "--version" }):wait().stdout:gsub("\r", ""):gsub("\n", "")
@@ -61,23 +94,39 @@ return {
   ---@type TestRunnerOptions
   test_runner = {
     viewmode = "split",
+    enable_buffer_test_execution = true,
     noBuild = true,
     noRestore = true,
-      icons = {
-        passed = "",
-        skipped = "",
-        failed = "",
-        success = "",
-        reload = "",
-        test = "",
-        sln = "󰘐",
-        project = "󰘐",
-        dir = "",
-        package = "",
-      },
+    icons = {
+      passed = "",
+      skipped = "",
+      failed = "",
+      success = "",
+      reload = "",
+      test = "",
+      sln = "󰘐",
+      project = "󰘐",
+      dir = "",
+      package = "",
+    },
+    mappings = {
+      run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
+      debug_test_from_buffer = { lhs = "<leader>d", desc = "run test from buffer" },
+      filter_failed_tests = { lhs = "<leader>fe", desc = "filter failed tests" },
+      debug_test = { lhs = "<leader>d", desc = "debug test" },
+      go_to_file = { lhs = "g", desc = "got to file" },
+      run_all = { lhs = "<leader>R", desc = "run all tests" },
+      run = { lhs = "<leader>r", desc = "run test" },
+      peek_stacktrace = { lhs = "<leader>p", desc = "peek stacktrace of failed test" },
+      expand = { lhs = "o", desc = "expand" },
+      expand_all = { lhs = "E", desc = "expand all" },
+      collapse_all = { lhs = "W", desc = "collapse all" },
+      close = { lhs = "q", desc = "close testrunner" },
+      refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" }
+    },
     additional_args = {},
   },
   csproj_mappings = true,
   fsproj_mappings = true,
-  auto_bootstrap_namespace = true
+  auto_bootstrap_namespace = true,
 }

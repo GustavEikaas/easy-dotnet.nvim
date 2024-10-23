@@ -16,7 +16,7 @@ local M = {
 }
 
 ---@param id string
----@param type "Run" | "Discovery"
+---@param type "Run" | "Discovery" | "Build"
 ---@param subtask_count number | nil
 function M.appendJob(id, type, subtask_count)
   local job = { type = type, id = id, subtask_count = (subtask_count and subtask_count > 0) and subtask_count or 1 }
@@ -46,8 +46,10 @@ function M.redraw_virtual_text()
       end
     end
 
+    local job_type = M.jobs[1].type
+
     vim.api.nvim_buf_set_extmark(M.buf, ns_id, 0, 0, {
-      virt_text = { { string.format("%s %s/%s", M.jobs[1].type == "Run" and "Running" or "Discovering", completed_count, total_subtask_count), "Character" } },
+      virt_text = { { string.format("%s %s/%s", job_type == "Run" and "Running" or job_type == "Discovery" and "Discovering" or "Building", completed_count, total_subtask_count), "Character" } },
       virt_text_pos = "right_align",
       priority = 200,
     })
@@ -127,7 +129,7 @@ local function setMappings()
   if M.buf == nil then
     return
   end
-  for key, value in pairs(M.keymap) do
+  for key, value in pairs(M.keymap()) do
     vim.keymap.set('n', key, function()
       local line_num = vim.api.nvim_win_get_cursor(0)[1]
       local index = translateIndex(line_num)
@@ -175,7 +177,6 @@ function M.hide(mode)
   if not mode then
     mode = M.options.viewmode
   end
-  print(vim.inspect(M.options))
   if mode == "float" or mode == "split" then
     if M.win and vim.api.nvim_win_is_valid(M.win) then
       vim.api.nvim_win_close(M.win, false)

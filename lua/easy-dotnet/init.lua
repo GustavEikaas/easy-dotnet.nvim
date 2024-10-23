@@ -1,5 +1,19 @@
 local M = {}
 
+local function wrap(callback)
+  return function(...)
+    -- Check if we are already in a coroutine
+    if coroutine.running() then
+      -- If already in a coroutine, call the callback directly
+      callback(...)
+    else
+      -- If not, create a new coroutine and resume it
+      local co = coroutine.create(callback)
+      coroutine.resume(co, ...)
+    end
+  end
+end
+
 local options = require("easy-dotnet.options")
 local actions = require("easy-dotnet.actions")
 local secrets = require("easy-dotnet.secrets")
@@ -38,7 +52,8 @@ local function args_handler(arguments)
   end
 end
 
-local function define_highlights()
+local function define_highlights_and_signs(merged_opts)
+  local constants = require("easy-dotnet.constants")
   vim.api.nvim_set_hl(0, "EasyDotnetPackage", {
     fg = '#000000',
     bg = '#ffffff',
@@ -46,21 +61,28 @@ local function define_highlights()
     italic = false,
     underline = false,
   })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerSolution", { link = "Question" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerProject", { link = "Character" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerTest", { link = "Normal" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerSubcase", { link = "Conceal" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerDir", { link = "Directory" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerPackage", { link = "Include" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerPassed", { link = "DiagnosticOk" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerFailed", { link = "DiagnosticError" })
-  vim.api.nvim_set_hl(0, "EasyDotnetTestRunnerRunning", { link = "DiagnosticWarn" })
-end
 
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerSolution, { link = "Question" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerProject, { link = "Character" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerTest, { link = "Normal" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerSubcase, { link = "Conceal" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerDir, { link = "Directory" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerPackage, { link = "Include" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerPassed, { link = "DiagnosticOk" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerFailed, { link = "DiagnosticError" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
+
+  local icons = merged_opts.test_runner.icons
+  vim.fn.sign_define(constants.signs.EasyDotnetTestSign, { text = icons.test, texthl = "Character" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestPassed, { text = icons.passed, texthl = "EasyDotnetTestRunnerPassed" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestFailed, { text = icons.failed, texthl = "EasyDotnetTestRunnerFailed" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestSkipped, { text = icons.skipped })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
+end
 
 M.setup = function(opts)
   local merged_opts = merge_tables(options, opts or {})
-  define_highlights()
+  define_highlights_and_signs(merged_opts)
   local commands = {
     secrets = function()
       secrets.edit_secrets_picker(merged_opts.secrets.path)
@@ -163,6 +185,12 @@ M.setup = function(opts)
     require("easy-dotnet.cs-mappings").auto_bootstrap_namespace()
   end
 
+  if merged_opts.test_runner.enable_buffer_test_execution then
+    require("easy-dotnet.cs-mappings").add_test_signs()
+    require("easy-dotnet.fs-mappings").add_test_signs()
+  end
+
+
   M.test_project = commands.test
   M.test_default = function()
     actions.test(merged_opts.terminal, true)
@@ -177,6 +205,15 @@ M.setup = function(opts)
   M.run_with_profile = function(use_default)
     local function co_wrapper()
       actions.run_with_profile(merged_opts.terminal, use_default == nil and false or use_default)
+    end
+
+    local co = coroutine.create(co_wrapper)
+    coroutine.resume(co)
+  end
+
+  M.testrunner_refresh = function(args)
+    local function co_wrapper()
+      require("easy-dotnet.test-runner.runner").refresh(merged_opts.test_runner, merged_opts.get_sdk_path(), args)
     end
 
     local co = coroutine.create(co_wrapper)
@@ -200,6 +237,11 @@ M.setup = function(opts)
   end
 
   M.restore = commands.restore
+
+  M.create_new_item = wrap(function(...)
+    require("easy-dotnet.actions.new").create_new_item(...)
+  end)
+
   M.secrets = commands.secrets
   M.build = commands.build
   M.clean = commands.clean

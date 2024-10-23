@@ -124,6 +124,13 @@ local projects = {
     end
   },
   {
+    display = "NUnit Test Project",
+    type = "project",
+    run = function(name)
+      create_and_link_project(name, "nunit")
+    end
+  },
+  {
     display = "Blazor",
     type = "project",
     run = function(name)
@@ -256,17 +263,93 @@ M.new = function()
   local picker = require("easy-dotnet.picker")
   picker.picker(nil, projects, function(i)
     if i.type == "project" then
+      vim.cmd('startinsert')
       vim.ui.input({ prompt = string.format("Enter name for %s", i.display) }, function(input)
         if input == nil then
           vim.notify("No name provided")
           return
         end
+        vim.cmd('stopinsert')
         i.run(input)
       end)
     else
       i.run()
     end
   end, "Select type")
+end
+
+local function name_input_sync()
+  local name = ""
+  local co = coroutine.running()
+  vim.cmd('startinsert')
+  vim.ui.input({ prompt = "Enter name" }, function(input)
+    if input == nil then
+      vim.notify("No name provided")
+      return
+    end
+    vim.cmd('stopinsert')
+    name = input
+    coroutine.resume(co)
+  end)
+  coroutine.yield()
+  return name
+end
+
+M.create_new_item = function(path)
+  local template = require("easy-dotnet.picker").pick_sync(nil,
+    {
+      { value = "buildprops",     display = "MSBuild Directory.Build.props File",   type = "MSBuild/props" },
+      { value = "buildtargets",   display = "MSBuild Directory.Build.targets File", type = "MSBuild/props" },
+      { value = "apicontroller",  display = "Api Controller",                       type = "Code" },
+      { value = "interface",      display = "Interface",                            type = "Code" },
+      { value = "class",          display = "Class",                                type = "Code" },
+      { value = "mvccontroller",  display = "MVC Controller",                       type = "Code" },
+      { value = "viewimports",    display = "MVC ViewImports",                      type = "Code" },
+      { value = "viewstart",      display = "MVC ViewStart",                        type = "Code" },
+      { value = "razorcomponent", display = "Razor Component",                      type = "Code" },
+      { value = "page",           display = "Razor Page",                           type = "Code" },
+      { value = "view",           display = "Razor View",                           type = "Code" },
+      { value = "nunit-test",     display = "NUnit 3 Test Item",                    type = "Test/NUnit" },
+      { value = "gitignore",      display = "Dotnet Gitignore File",                type = "Config" },
+      { value = "tool-manifest",  display = "Dotnet Local Tool Manifest File",      type = "Config" },
+      { value = "editorconfig",   display = "EditorConfig File",                    type = "Config" },
+      { value = "globaljson",     display = "Global.json File",                     type = "Config" },
+      { value = "nugetconfig",    display = "NuGet Config",                         type = "Config" },
+      { value = "webconfig",      display = "Web Config",                           type = "Config" },
+      { value = "solution",       display = "Solution",                             type = "Config" }
+    },
+    "Type")
+
+  assert(template)
+
+  local args = ""
+
+  if template.type == "Code" then
+    local name = name_input_sync()
+    args = string.format("-n %s", name)
+  elseif template.type == "MSBuild/props" then
+  elseif template.type == "Config" then
+    local name = name_input_sync()
+    args = string.format("-n %s", name)
+  elseif template.type == "Test/NUnit" then
+    local name = name_input_sync()
+    args = string.format("-n %s", name)
+  end
+
+  local cmd = string.format("dotnet new %s -o %s %s", template.value, path, args)
+  vim.fn.jobstart(cmd, {
+    on_stderr = function(_, data)
+      for _, value in ipairs(data) do
+        vim.notify(value, vim.log.levels.ERROR)
+      end
+    end,
+    on_exit = function(_, code)
+      if code == 0 then
+      else
+        vim.notify("Command failed")
+      end
+    end
+  })
 end
 
 return M
