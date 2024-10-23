@@ -62,6 +62,8 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 - Csproj mappings: Keymappings for .csproj files are automatically available
 - Create dotnet templates like with `dotnet new`
 - Package autocomplete inside .csproj files [Check it out](#package-autocomplete)
+- [Rider-like](https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments)
+syntax highlighting for injected languages (sql, json and xml) based on comments
 
 ## Setup
 
