@@ -48,10 +48,14 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 11. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
-12. [Nvim-dap configuration](#nvim-dap-configuration)
+12. [Language injections](#language-injections)
+    - [Showcase](#showcase)
+    - [Requirements](#requirements-2)
+    - [Support matrix](#support-matrix)
+13. [Nvim-dap configuration](#nvim-dap-configuration)
     - [Basic example](#basic-example)
     - [Advanced example](#advanced-example)
-13. [Advanced configurations](#advanced-configurations)
+14. [Advanced configurations](#advanced-configurations)
     - [Overseer](#overseer)
 
 ## Features
@@ -386,6 +390,49 @@ This functionality relies on dotnet-ef tool, install using `dotnet tool install 
 - `Dotnet ef migrations add <name>`
 - `Dotnet ef migrations remove`
 - `Dotnet ef migrations list`
+
+
+## Language injections
+
+[Rider-like](https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments) 
+syntax highlighting for injected languages (sql, json and xml) based on comments.
+
+Just add single-line comment like `//language=json` before string to start using this.
+
+### Showcase 
+
+Language injection with raw json string as an example.
+
+![image](https://github.com/user-attachments/assets/2057bf66-e207-479c-8bd9-35714cdb7e24)
+
+### Requirements
+
+This functionality is based on [Treesitter](https://github.com/nvim-treesitter/nvim-treesitter) 
+and parsers for `sql`, `json` and `xml`, so make sure you have these parsers installed: `:TSInstall sql json xml`.
+
+### Support matrix
+
+#### Strings
+
+| string          | sql | json | xml |
+|-----------------|-----|------|-----|
+| quoted          | ✅  | ❌   | ✅  |
+| verbatim        | ✅  | ❌   | ✅  |
+| raw             | ✅  | ✅   | ✅  |
+| regexp quoted   | ❌  | ❌   | ❌  |
+| regexp verbatim | ❌  | ❌   | ❌  |
+| regexp raw      | ❌  | ❌   | ❌  |
+
+#### Interpolated strings
+
+| interpolated string | json | xml |
+|---------------------|------|-----|
+| quoted              | ❌   | ❌  |
+| verbatim            | ❌   | ❌  |
+| raw                 | ✅   | ✅  |
+| regexp quoted       | ❌   | ❌  |
+| regexp verbatim     | ❌   | ❌  |
+| regexp raw          | ❌   | ❌  |
 
 ## Nvim-dap configuration
 
