@@ -297,7 +297,6 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
       ---@type Test
       local project = {
         id = "",
-        collapsble = true,
         cs_project_path = value.path,
         solution_file_path = solutionFilePath,
         namespace = "",
