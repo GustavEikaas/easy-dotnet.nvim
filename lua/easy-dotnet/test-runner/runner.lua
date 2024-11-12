@@ -7,23 +7,6 @@ local function trim(s)
   return s:match("^%s*(.-)%s*$")
 end
 
----@param tests Test[]
-local function sort_tests(tests)
-  table.sort(tests, function(a, b)
-    -- Extract the base names (without arguments) for comparison
-    local base_a = a.namespace:match("([^(]+)") or a
-    local base_b = b.namespace:match("([^(]+)") or b
-
-    -- Compare the base names lexicographically
-    if base_a == base_b then
-      -- If base names are the same, keep the original order (consider the entire string)
-      return a.namespace < b.namespace
-    else
-      return base_a < base_b
-    end
-  end)
-end
-
 local function generate_tree(tests, options, project)
   local offset_indent = 2
 
@@ -37,7 +20,10 @@ local function generate_tree(tests, options, project)
     return count
   end
 
-  local function ensure_path(root, path)
+  ---@param root TestNode Treenode
+  ---@param path string E.X neovimdebugproject.test.helpers
+  ---@param has_arguments boolean does the test class use classdata,inlinedata etc. Add_ShouldReturnSum(a: -1, b: 1, expected: 0) == true
+  local function ensure_path(root, path, has_arguments)
     local parts = {}
     for part in path:gmatch("[^.]+") do
       table.insert(parts, part)
@@ -46,14 +32,18 @@ local function generate_tree(tests, options, project)
     local current = root.children
     for i, part in ipairs(parts) do
       if not current[part] then
+        local is_full_path = i == #parts
         current[part] = {
           name = part,
           namespace = table.concat(parts, ".", 1, i),
           children = {},
+          expanded = true,
           indent = (i * 2) - 1 + offset_indent,
-          type = i == #parts and "test" or "namespace",
-          highlight = i == #parts and "EasyDotnetTestRunnerPackage" or "EasyDotnetTestRunnerDir",
-          preIcon = i == #parts and options.icons.test or options.icons.dir,
+          type = is_full_path and "test" or "namespace",
+          highlight = not is_full_path and "EasyDotnetTestRunnerDir" or has_arguments and "EasyDotnetTestRunnerPackage" or
+              "EasyDotnetTestRunnerTest",
+          preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or
+              options.icons.test,
         }
       end
       current = current[part].children
@@ -61,8 +51,9 @@ local function generate_tree(tests, options, project)
   end
 
   for _, test in ipairs(tests) do
+    local has_arguments = test.namespace:find("%(") ~= nil
     local base_name = test.namespace:match("([^%(]+)") or test.namespace
-    ensure_path(project, base_name)
+    ensure_path(project, base_name, has_arguments)
 
     -- If the test has arguments, add it as a subcase
     if test.namespace:find("%(") then
@@ -74,6 +65,7 @@ local function generate_tree(tests, options, project)
         name = test.namespace:match("([^.]+%b())$"),
         namespace = test.namespace,
         children = {},
+        expanded = true,
         indent = count_segments(base_name) * 2 + offset_indent,
         type = "subcase",
         highlight = "EasyDotnetTestRunnerSubcase",
@@ -91,6 +83,7 @@ end
 ---@field namespace string
 ---@field type string
 ---@field indent number
+---@field expanded boolean
 ---@field highlight string
 ---@field preIcon string
 ---@field children table<string, TestNode>
@@ -228,15 +221,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
         end
         local project_tree = expand_test_names_with_flags(converted, options, project)
 
-        if not win.tree.children then
-          win.tree.children = {}
-        end
-        table.insert(win.tree.children, project_tree)
-        -- win.tree = project_tree
-        -- table.insert(win.lines, project)
-        -- for _, value in ipairs(project_tree) do
-        --   table.insert(win.lines, value)
-        -- end
+        win.tree.children[project.name] = project_tree
         win.refreshTree()
       end
     end
@@ -288,9 +273,11 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     collapsable = true,
     icon = "",
     expand = {},
-    highlight = "EasyDotnetTestRunnerSolution"
-
+    highlight = "EasyDotnetTestRunnerSolution",
+    expanded = true,
+    children = {}
   }
+  win.tree = sln
   table.insert(lines, sln)
 
   local projects = sln_parse.get_projects_from_sln(solutionFilePath)
@@ -305,6 +292,7 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
         solution_file_path = solutionFilePath,
         namespace = "",
         type = "csproject",
+        expanded = true,
         name = value.name,
         full_name = value.name,
         indent = 2,

@@ -80,23 +80,35 @@ local function setBufferOptions()
   vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
 end
 
--- Translates line num to M.tree index accounting for hidden lines
-local function translateIndex(line_num)
-  local i = 0
-  local r = nil
+---Translates a line number to the corresponding node in the tree structure, considering the `expanded` flag of nodes.
+---Only expanded nodes contribute to the line number count, while collapsed nodes and their children are ignored.
+---
+---@param line_num number The line number in the buffer to be translated to a node in the tree structure.
+---@param tree table The root node of the tree structure to traverse.
+---@return TestNode | nil
+local function translateIndex(line_num, tree)
+  local current_line = 1
 
-  for index, line in ipairs(M.tree) do
-    if line.hidden == false or line.hidden == nil then
-      i = i + 1
+  local function traverseNode(node)
+    if current_line == line_num then
+      return node
     end
 
-    if line_num == i then
-      r = index
-      break
+    current_line = current_line + 1
+
+    if node.expanded then
+      for _, child in pairs(node.children) do
+        local result = traverseNode(child)
+        if result then
+          return result
+        end
+      end
     end
+
+    return nil
   end
 
-  return r
+  return traverseNode(tree) -- Start traversing from the root node
 end
 
 
@@ -119,21 +131,31 @@ local function apply_highlights()
   end
 end
 
-local function flattenTree(tree, result)
+local function flattenTree(tree, result, parentExpanded)
+  if parentExpanded == nil then
+    parentExpanded = true
+  end
   result = result or {}
 
-  for _, node in pairs(tree or {}) do
-    -- Format the current node and add it to the result
-    local formatted = string.format("%s%s%s%s",
-      string.rep(" ", node.indent or 0),
-      node.preIcon and (node.preIcon .. " ") or "",
-      node.name,
-      node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "")
-    table.insert(result, formatted)
+  if not tree then
+    return { "" }
+  end
 
-    -- Recursively process children
-    if node.children and next(node.children) then
-      flattenTree(node.children, result)
+  for _, node in pairs(tree or {}) do
+    -- Only add and process the node if its parent is expanded
+    if parentExpanded then
+      -- Format the current node and add it to the result
+      local formatted = string.format("%s%s%s%s",
+        string.rep(" ", node.indent or 0),
+        node.preIcon and (node.preIcon .. " ") or "",
+        node.name,
+        node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "")
+      table.insert(result, formatted)
+
+      -- Recursively process children only if the current node is expanded
+      if node.children and node.expanded then
+        flattenTree(node.children, result, node.expanded)
+      end
     end
   end
 
@@ -141,13 +163,9 @@ local function flattenTree(tree, result)
 end
 
 local function printNodes()
-  -- vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
-
+  vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
-  print(vim.inspect(M.tree))
-  print("" .. (M.tree.children and #M.tree.children or 0))
-  local stringLines = flattenTree(M.tree.children)
-  print("" .. #stringLines)
+  local stringLines = flattenTree({ root = M.tree })
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, stringLines)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
 
@@ -165,8 +183,11 @@ local function setMappings()
   for key, value in pairs(M.keymap()) do
     vim.keymap.set('n', key, function()
       local line_num = vim.api.nvim_win_get_cursor(0)[1]
-      local index = translateIndex(line_num)
-      value(index, M.tree[index], M)
+      local node = translateIndex(line_num, M.tree)
+      if not node then
+        error("Current line is not a node")
+      end
+      value(node, M)
     end, { buffer = M.buf, noremap = true, silent = true })
   end
 end
