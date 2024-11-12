@@ -24,97 +24,94 @@ local function sort_tests(tests)
   end)
 end
 
----@param tests Test[]
-local function expand_test_names_with_flags(tests, options)
+local function generate_tree(tests, options, project)
   local offset_indent = 2
-  ---@type Test[]
-  local expanded = {}
-  local seen = {}
 
-  sort_tests(tests)
+  project.children = project.children or {}
 
-  for _, test in ipairs(tests) do
-    local full_test_name = test.namespace
-    -- Extract the base name without arguments, or use the full name if there are no arguments
-    local base_name = full_test_name:match("([^%(]+)") or full_test_name
-    local has_arguments = full_test_name:find("%(") ~= nil
+  local function count_segments(path)
+    local count = 0
+    for _ in path:gmatch("[^.]+") do
+      count = count + 1
+    end
+    return count
+  end
+
+  local function ensure_path(root, path)
     local parts = {}
-    local segment_count = 0
-
-    -- Count the total number of segments in the base name
-    for _ in base_name:gmatch("[^.]+") do
-      segment_count = segment_count + 1
-    end
-
-    -- Reset the parts and segment_count for actual processing
-    parts = {}
-    local current_count = 0
-
-    -- Split the base name by dot and process
-    for part in base_name:gmatch("[^.]+") do
+    for part in path:gmatch("[^.]+") do
       table.insert(parts, part)
-      current_count = current_count + 1
-      local concatenated = table.concat(parts, ".")
-
-      if not seen[concatenated] then
-        -- Set is_full_path to true only if we are at the last segment
-        local is_full_path = (current_count == segment_count)
-        ---@type Test
-        local entry = {
-          id = test.id,
-          name = part,
-          full_name = test.full_name,
-          solution_file_path = test.solution_file_path,
-          cs_project_path = test.cs_project_path,
-          highlight = not is_full_path and "EasyDotnetTestRunnerDir" or has_arguments and "EasyDotnetTestRunnerPackage" or
-              test.highlight,
-          hidden = test.hidden,
-          expand = test.expand,
-          icon = test.icon,
-          collapsable = test.collapsable,
-          namespace = concatenated,
-          value = part,
-          is_full_path = is_full_path and not has_arguments,
-          indent = (current_count * 2) - 1 + offset_indent,
-          preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or
-              options.icons.test,
-          type = is_full_path == false and "namespace" or has_arguments and "test_group" or "test",
-          line_number = is_full_path and test.line_number or nil,
-          file_path = is_full_path and test.file_path or nil
-        }
-        table.insert(expanded, entry)
-        seen[concatenated] = true
-      end
     end
 
-    -- -- Add the full test name with arguments (if any) or just the base name
-    if has_arguments and not seen[full_test_name] then
-      ---@type Test
-      local entry = {
-        id = test.id,
-        namespace = full_test_name,
-        name = full_test_name:match("([^.]+%b())$"),
-        full_name = test.full_name,
-        is_full_path = true,
-        indent = (segment_count * 2) + offset_indent,
-        preIcon = options.icons.test,
-        type = "subcase",
-        collapsable = false,
-        icon = nil,
-        expand = test.expand,
-        highlight = "EasyDotnetTestRunnerSubcase",
-        cs_project_path = test.cs_project_path,
-        solution_file_path = test.solution_file_path,
-        hidden = test.hidden,
-        line_number = test.line_number,
-        file_path = test.file_path
-      }
-      table.insert(expanded, entry)
-      seen[full_test_name] = true
+    local current = root.children
+    for i, part in ipairs(parts) do
+      if not current[part] then
+        current[part] = {
+          name = part,
+          namespace = table.concat(parts, ".", 1, i),
+          children = {},
+          indent = (i * 2) - 1 + offset_indent,
+          type = i == #parts and "test" or "namespace",
+          highlight = i == #parts and "EasyDotnetTestRunnerPackage" or "EasyDotnetTestRunnerDir",
+          preIcon = i == #parts and options.icons.test or options.icons.dir,
+        }
+      end
+      current = current[part].children
     end
   end
 
-  return expanded
+  for _, test in ipairs(tests) do
+    local base_name = test.namespace:match("([^%(]+)") or test.namespace
+    ensure_path(project, base_name)
+
+    -- If the test has arguments, add it as a subcase
+    if test.namespace:find("%(") then
+      local parent = project.children
+      for part in base_name:gmatch("[^.]+") do
+        parent = parent[part].children
+      end
+      parent[test.namespace] = {
+        name = test.namespace:match("([^.]+%b())$"),
+        namespace = test.namespace,
+        children = {},
+        indent = count_segments(base_name) * 2 + offset_indent,
+        type = "subcase",
+        highlight = "EasyDotnetTestRunnerSubcase",
+        preIcon = options.icons.test,
+      }
+    end
+  end
+
+  return project
+end
+
+
+---@class TestNode
+---@field name string
+---@field namespace string
+---@field type string
+---@field indent number
+---@field highlight string
+---@field preIcon string
+---@field children table<string, TestNode>
+
+---@class Project : TestNode
+---@field id string
+---@field cs_project_path string
+---@field solution_file_path string
+---@field full_name string
+---@field hidden boolean
+---@field collapsable boolean
+---@field icon string
+---@field expand table
+---@field icons table
+
+
+---@param tests Test[]
+---@return Project
+local function expand_test_names_with_flags(tests, options, project)
+  local tree = generate_tree(tests, options, project)
+  return tree
 end
 
 local function merge_tables(table1, table2)
@@ -229,13 +226,18 @@ local function discover_tests_for_project_and_update_lines(project, win, options
           }
           table.insert(converted, test)
         end
-        local expanded = expand_test_names_with_flags(converted, options)
+        local project_tree = expand_test_names_with_flags(converted, options, project)
 
-        table.insert(win.lines, project)
-        for _, value in ipairs(expanded) do
-          table.insert(win.lines, value)
+        if not win.tree.children then
+          win.tree.children = {}
         end
-        win.refreshLines()
+        table.insert(win.tree.children, project_tree)
+        -- win.tree = project_tree
+        -- table.insert(win.lines, project)
+        -- for _, value in ipairs(project_tree) do
+        --   table.insert(win.lines, value)
+        -- end
+        win.refreshTree()
       end
     end
   })
@@ -270,6 +272,7 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
   local lines = {}
 
   --Find sln
+  --TODO: readd solution
   ---@type Test
   local sln = {
     id = "",
@@ -297,6 +300,7 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
       ---@type Test
       local project = {
         id = "",
+        children = {},
         cs_project_path = value.path,
         solution_file_path = solutionFilePath,
         namespace = "",
@@ -324,10 +328,11 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
   end
 
 
-  win.lines = lines
-  win.height = #lines > 20 and 20 or #lines
-
-  win.refreshLines()
+  -- TODO: pending state
+  -- win.lines = lines
+  -- win.height = #lines > 20 and 20 or #lines
+  --
+  -- win.refreshLines()
 end
 
 ---@param options TestRunnerOptions
@@ -414,4 +419,3 @@ end
 
 
 return M
-

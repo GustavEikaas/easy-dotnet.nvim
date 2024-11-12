@@ -1,7 +1,24 @@
 local ns_id = require("easy-dotnet.constants").ns_id
 local extensions = require("easy-dotnet.extensions")
+
+
+---@class Window
+---@field tree table<Project>
+---@field jobs table
+---@field appendJob table
+---@field buf integer | nil
+---@field win integer | nil
+---@field height integer
+---@field modifiable boolean
+---@field buf_name string
+---@field filetype string
+---@field filter table
+---@field keymap table
+---@field options table
+
+
 local M = {
-  lines = {},
+  tree = {},
   jobs = {},
   appendJob = nil,
   buf = nil,
@@ -21,7 +38,7 @@ local M = {
 function M.appendJob(id, type, subtask_count)
   local job = { type = type, id = id, subtask_count = (subtask_count and subtask_count > 0) and subtask_count or 1 }
   table.insert(M.jobs, job)
-  M.refreshLines()
+  M.refreshTree()
 
   local on_job_finished_callback = function()
     job.completed = true
@@ -29,7 +46,7 @@ function M.appendJob(id, type, subtask_count)
     if is_all_finished == true then
       M.jobs = {}
     end
-    M.refreshLines()
+    M.refreshTree()
   end
 
   return on_job_finished_callback
@@ -63,12 +80,12 @@ local function setBufferOptions()
   vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
 end
 
--- Translates line num to M.lines index accounting for hidden lines
+-- Translates line num to M.tree index accounting for hidden lines
 local function translateIndex(line_num)
   local i = 0
   local r = nil
 
-  for index, line in ipairs(M.lines) do
+  for index, line in ipairs(M.tree) do
     if line.hidden == false or line.hidden == nil then
       i = i + 1
     end
@@ -86,7 +103,7 @@ end
 local function apply_highlights()
   --Some lines are hidden so tracking the actual line numbers using shadow_index
   local shadow_index = 0
-  for _, value in ipairs(M.lines) do
+  for _, value in ipairs(M.tree) do
     if value.hidden == false or value.hidden == nil then
       shadow_index = shadow_index + 1
       if value.icon == M.options.icons.failed then
@@ -102,24 +119,40 @@ local function apply_highlights()
   end
 end
 
-local function printLines()
-  vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
-  local stringLines = {}
-  for _, line in ipairs(M.lines) do
-    if line.hidden == false or line.hidden == nil then
-      local formatted = string.format("%s%s%s%s", string.rep(" ", line.indent or 0),
-        line.preIcon and (line.preIcon .. " ") or "", line.name,
-        line.icon and line.icon ~= M.options.icons.passed and (" " .. line.icon) or "")
-      table.insert(stringLines, formatted)
+local function flattenTree(tree, result)
+  result = result or {}
+
+  for _, node in pairs(tree or {}) do
+    -- Format the current node and add it to the result
+    local formatted = string.format("%s%s%s%s",
+      string.rep(" ", node.indent or 0),
+      node.preIcon and (node.preIcon .. " ") or "",
+      node.name,
+      node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "")
+    table.insert(result, formatted)
+
+    -- Recursively process children
+    if node.children and next(node.children) then
+      flattenTree(node.children, result)
     end
   end
 
+  return result
+end
+
+local function printNodes()
+  -- vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
+
+  vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
+  print(vim.inspect(M.tree))
+  print("" .. (M.tree.children and #M.tree.children or 0))
+  local stringLines = flattenTree(M.tree.children)
+  print("" .. #stringLines)
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, stringLines)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
-  M.redraw_virtual_text()
 
-  apply_highlights()
+  -- M.redraw_virtual_text()
+  -- apply_highlights()
 end
 
 local function setMappings()
@@ -133,7 +166,7 @@ local function setMappings()
     vim.keymap.set('n', key, function()
       local line_num = vim.api.nvim_win_get_cursor(0)[1]
       local index = translateIndex(line_num)
-      value(index, M.lines[index], M)
+      value(index, M.tree[index], M)
     end, { buffer = M.buf, noremap = true, silent = true })
   end
 end
@@ -254,7 +287,7 @@ M.render = function(mode)
     return
   end
 
-  printLines()
+  printNodes()
   setBufferOptions()
   setMappings()
   return M
@@ -268,11 +301,11 @@ M.refreshMappings = function()
   return M
 end
 
-M.refreshLines = function()
+M.refreshTree = function()
   if M.buf == nil then
     error("Can not refresh buffer before render() has been called")
   end
-  printLines()
+  printNodes()
   return M
 end
 
@@ -281,7 +314,7 @@ M.refresh = function()
   if M.buf == nil then
     error("Can not refresh buffer before render() has been called")
   end
-  printLines()
+  printNodes()
   setBufferOptions()
   return M
 end
