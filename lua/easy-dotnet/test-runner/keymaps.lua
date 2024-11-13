@@ -7,7 +7,7 @@ local function aggregate_status(node, options)
     return node.icon
   end
 
-  local worstStatus = options.icons.passed
+  local worstStatus = ""
 
   for _, child in pairs(node.children) do
     local childWorstStatus = aggregate_status(child, options)
@@ -16,6 +16,8 @@ local function aggregate_status(node, options)
       worstStatus = options.icons.failed
     elseif childWorstStatus == options.icons.skipped and worstStatus ~= options.icons.failed then
       worstStatus = options.icons.skipped
+    elseif childWorstStatus == options.icons.passed and worstStatus ~= options.icons.failed and worstStatus ~= options.icons.skipped then
+      worstStatus = options.icons.passed
     end
   end
 
