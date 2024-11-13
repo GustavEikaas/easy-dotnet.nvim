@@ -193,7 +193,6 @@ local function tree_to_string(tree)
       node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
       "" .. (keys > 1 and "(" .. keys .. ")" or "")
     )
-    --TODO: virtual text
     local highlight = calculate_highlight(node)
     table.insert(highlights, { index = index, highlight = highlight })
     table.insert(result, formatted)
