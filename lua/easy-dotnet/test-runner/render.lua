@@ -153,15 +153,11 @@ end
 local function calculate_highlight(node)
   if node.icon == M.options.icons.failed then
     return "EasyDotnetTestRunnerFailed"
-    -- vim.api.nvim_buf_add_highlight(M.buf, ns_id, "EasyDotnetTestRunnerFailed", shadow_index - 1, 0, -1)
   elseif node.icon == "<Running>" then
-    -- vim.api.nvim_buf_add_highlight(M.buf, ns_id, "EasyDotnetTestRunnerRunning", shadow_index - 1, 0, -1)
     return "EasyDotnetTestRunnerRunning"
   elseif node.icon == M.options.icons.passed then
-    -- vim.api.nvim_buf_add_highlight(M.buf, ns_id, "EasyDotnetTestRunnerPassed", shadow_index - 1, 0, -1)
     return "EasyDotnetTestRunnerPassed"
   elseif node.highlight ~= nil and type(node.highlight) == "string" then
-    -- vim.api.nvim_buf_add_highlight(M.buf, ns_id, node.highlight, shadow_index - 1, 0, -1)
     return node.highlight
   end
   return nil
@@ -387,3 +383,4 @@ end
 
 
 return M
+

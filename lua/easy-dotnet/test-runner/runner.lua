@@ -41,6 +41,8 @@ local function generate_tree(tests, options, project)
           children = {},
           cs_project_path = test.cs_project_path,
           solution_file_path = test.solution_file_path,
+          file_path = test.file_path,
+          line_number = test.line_number,
           expanded = true,
           indent = (i * 2) - 1 + offset_indent,
           type = is_full_path and "test" or "namespace",
@@ -89,6 +91,8 @@ end
 ---@class TestNode
 ---@field name string
 ---@field namespace string
+---@field file_path string
+---@field line_number string
 ---@field solution_file_path string
 ---@field cs_project_path string
 ---@field type string
@@ -233,7 +237,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
 
 
         --TODO: multiple sln support?
-          win.tree.children[project.name] = project_tree
+        win.tree.children[project.name] = project_tree
         win.refreshTree()
       end
     end
