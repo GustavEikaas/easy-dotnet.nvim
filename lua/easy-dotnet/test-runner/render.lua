@@ -210,7 +210,7 @@ local function printNodes()
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, stringLines)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
 
-  -- M.redraw_virtual_text()
+  M.redraw_virtual_text()
   apply_highlights(highlights)
 end
 

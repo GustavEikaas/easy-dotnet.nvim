@@ -36,6 +36,7 @@ local function generate_tree(tests, options, project)
       if not current[part] then
         local is_full_path = i == #parts
         current[part] = {
+          id = test.id,
           name = part,
           namespace = table.concat(parts, ".", 1, i),
           children = {},
@@ -76,6 +77,9 @@ local function generate_tree(tests, options, project)
         solution_file_path = test.solution_file_path,
         expanded = true,
         icon = "",
+        id = test.id,
+        line_number = test.line_number,
+        file_path = test.file_path,
         indent = count_segments(base_name) * 2 + offset_indent,
         type = "subcase",
         highlight = "EasyDotnetTestRunnerSubcase",
@@ -89,6 +93,7 @@ end
 
 
 ---@class TestNode
+---@field id string
 ---@field name string
 ---@field namespace string
 ---@field file_path string
@@ -272,8 +277,6 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
   ---@type Test[]
   local lines = {}
 
-  --Find sln
-  --TODO: readd solution
   ---@type TestNode
   local sln = {
     id = "",
@@ -283,6 +286,8 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     preIcon = options.icons.sln,
     name = solutionFilePath:match("([^/\\]+)$"),
     full_name = solutionFilePath:match("([^/\\]+)$"),
+    file_path = "",
+    line_number = "",
     indent = 0,
     namespace = "",
     hidden = false,
@@ -331,12 +336,7 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     end
   end
 
-
-  -- TODO: pending state
-  -- win.lines = lines
-  -- win.height = #lines > 20 and 20 or #lines
-  --
-  -- win.refreshLines()
+  win.refreshTree()
 end
 
 ---@param options TestRunnerOptions
