@@ -143,29 +143,24 @@ function M.add_gutter_test_signs()
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
-  -- local lines = require("easy-dotnet.test-runner.render").lines
-  --
-  -- local tests = vim.tbl_filter(function(i)
-  --   return i.type == "test" or i.type == "test_group"
-  -- end, lines)
+  ---@param node TestNode
+  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then
+      is_test_file = true
+      local line = node.line_number
+      vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSign, bufnr, { lnum = line - 1, priority = 20 })
 
-  -- for _, value in ipairs(tests) do
-  --   if compare_paths(value.file_path, curr_file) then
-  --     is_test_file = true
-  --     local line = value.line_number
-  --     vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSign, bufnr, { lnum = line - 1, priority = 20 })
-  --
-  --     if value.icon then
-  --       if value.icon == options.icons.failed then
-  --         vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr, { lnum = line - 1, priority = 20 })
-  --       elseif value.icon == options.icons.skipped then
-  --         vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr, { lnum = line - 1, priority = 20 })
-  --       elseif value.icon == options.icons.passed then
-  --         vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr, { lnum = line - 1, priority = 20 })
-  --       end
-  --     end
-  --   end
-  -- end
+      if node.icon then
+        if node.icon == options.icons.failed then
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr, { lnum = line - 1, priority = 20 })
+        elseif node.icon == options.icons.skipped then
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr, { lnum = line - 1, priority = 20 })
+        elseif node.icon == options.icons.passed then
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr, { lnum = line - 1, priority = 20 })
+        end
+      end
+    end
+  end)
 
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   if is_test_file == true then

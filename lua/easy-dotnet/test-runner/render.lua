@@ -33,7 +33,7 @@ local M = {
 
 
 ---Traverses a tree from the given node, giving a callback for every item
----@param tree TestNode
+---@param tree TestNode | nil
 ---@param cb function
 M.traverse = function(tree, cb)
   if not tree then
@@ -383,4 +383,3 @@ end
 
 
 return M
-
