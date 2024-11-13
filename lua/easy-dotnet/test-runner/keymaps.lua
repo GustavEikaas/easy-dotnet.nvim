@@ -2,8 +2,7 @@ local window = require "easy-dotnet.test-runner.window"
 
 ---@param node TestNode
 ---@param options table
-local function aggregateStatus(node, options)
-  --BUG: Failed aggregation does not propagate to grandparents
+local function aggregate_status(node, options)
   if not node.children or next(node.children) == nil then
     return node.icon
   end
@@ -11,7 +10,7 @@ local function aggregateStatus(node, options)
   local worstStatus = options.icons.passed
 
   for _, child in pairs(node.children) do
-    local childWorstStatus = aggregateStatus(child, options)
+    local childWorstStatus = aggregate_status(child, options)
 
     if childWorstStatus == options.icons.failed then
       worstStatus = options.icons.failed
@@ -21,6 +20,7 @@ local function aggregateStatus(node, options)
   end
 
   node.icon = worstStatus
+  return worstStatus
 end
 
 local function parse_status(result, test_line, options)
@@ -65,18 +65,7 @@ local function parse_log_file(relative_log_file_path, win, node, on_completed)
         end)
       end
 
-      -- for _, match in ipairs(matches) do
-      --   local test_line = match.ref
-      --   if test_line.type == "test" or test_line.type == "subcase" then
-      --     for _, value in ipairs(unit_test_results) do
-      --       if match.id == value.id then
-      --         parse_status(value, test_line, win.options)
-      --       end
-      --     end
-      --   end
-      -- end
-
-      aggregateStatus(node, win.options)
+      aggregate_status(node, win.options)
       on_completed()
       win.refreshTree()
     end)
@@ -113,16 +102,6 @@ local function run_csproject(win, node)
     end
   end)
 
-  -- for _, line in ipairs(win.tree) do
-  --   if line.cs_project_path == cs_project_path then
-  --     table.insert(matches, { ref = line, line = line.namespace, id = line.id })
-  --     line.icon = "<Running>"
-  --     if line.type == "test" or line.type == "subcase" then
-  --       testcount = testcount + 1
-  --     end
-  --   end
-  -- end
-  --
   local on_job_finished = win.appendJob(node.cs_project_path, "Run", testcount)
 
   win.refreshTree()
@@ -144,7 +123,6 @@ local function run_test_group(line, win)
   local directory_path = normalized_path:match('^(.*)/[^/]*$')
   local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
 
-  local matches = {}
   local suite_name = line.namespace
   local testcount = 0
   ---@param child TestNode
@@ -154,15 +132,9 @@ local function run_test_group(line, win)
       testcount = testcount + 1
     end
   end)
-  -- for _, test_line in ipairs(win.tree) do
-  --   if line.name == test_line.name:gsub("%b()", "") and line.cs_project_path == test_line.cs_project_path and line.solution_file_path == test_line.solution_file_path then
-  --     table.insert(matches, { ref = test_line, line = test_line.namespace, id = test_line.id })
-  --     test_line.icon = "<Running>"
-  --   end
-  -- end
-  win.refreshTree()
 
   local on_job_finished = win.appendJob(line.name, "Run", testcount)
+  win.refreshTree()
   vim.fn.jobstart(
     string.format('dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"',
       suite_name, get_dotnet_args(win.options), line.cs_project_path, log_file_name),
@@ -190,15 +162,6 @@ local function run_test_suite(line, win)
       testcount = testcount + 1
     end
   end)
-  -- for _, test_line in ipairs(win.tree) do
-  --   if test_line.namespace:match(suite_name) and line.cs_project_path == test_line.cs_project_path and line.solution_file_path == test_line.solution_file_path then
-  --     table.insert(matches, { ref = test_line, line = test_line.namespace, id = test_line.id })
-  --     if test_line.type == "test" or test_line.type == "subcase" then
-  --       testcount = testcount + 1
-  --     end
-  --     test_line.icon = "<Running>"
-  --   end
-  -- end
   win.refreshTree()
 
   local on_job_finished = win.appendJob(line.namespace, "Run", testcount)
