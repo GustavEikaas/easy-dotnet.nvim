@@ -7,6 +7,7 @@ local function trim(s)
   return s:match("^%s*(.-)%s*$")
 end
 
+---@param tests Test[]
 local function generate_tree(tests, options, project)
   local offset_indent = 2
 
@@ -23,7 +24,8 @@ local function generate_tree(tests, options, project)
   ---@param root TestNode Treenode
   ---@param path string E.X neovimdebugproject.test.helpers
   ---@param has_arguments boolean does the test class use classdata,inlinedata etc. Add_ShouldReturnSum(a: -1, b: 1, expected: 0) == true
-  local function ensure_path(root, path, has_arguments)
+  ---@param test Test The test the path was referenced from, used for getting stuff like csproject path and sln path
+  local function ensure_path(root, path, has_arguments, test)
     local parts = {}
     for part in path:gmatch("[^.]+") do
       table.insert(parts, part)
@@ -37,6 +39,8 @@ local function generate_tree(tests, options, project)
           name = part,
           namespace = table.concat(parts, ".", 1, i),
           children = {},
+          cs_project_path = test.cs_project_path,
+          solution_file_path = test.solution_file_path,
           expanded = true,
           indent = (i * 2) - 1 + offset_indent,
           type = is_full_path and "test" or "namespace",
@@ -44,6 +48,7 @@ local function generate_tree(tests, options, project)
               "EasyDotnetTestRunnerTest",
           preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or
               options.icons.test,
+          icon = "",
         }
       end
       current = current[part].children
@@ -53,7 +58,7 @@ local function generate_tree(tests, options, project)
   for _, test in ipairs(tests) do
     local has_arguments = test.namespace:find("%(") ~= nil
     local base_name = test.namespace:match("([^%(]+)") or test.namespace
-    ensure_path(project, base_name, has_arguments)
+    ensure_path(project, base_name, has_arguments, test)
 
     -- If the test has arguments, add it as a subcase
     if test.namespace:find("%(") then
@@ -65,7 +70,10 @@ local function generate_tree(tests, options, project)
         name = test.namespace:match("([^.]+%b())$"),
         namespace = test.namespace,
         children = {},
+        cs_project_path = test.cs_project_path,
+        solution_file_path = test.solution_file_path,
         expanded = true,
+        icon = "",
         indent = count_segments(base_name) * 2 + offset_indent,
         type = "subcase",
         highlight = "EasyDotnetTestRunnerSubcase",
@@ -81,11 +89,14 @@ end
 ---@class TestNode
 ---@field name string
 ---@field namespace string
+---@field solution_file_path string
+---@field cs_project_path string
 ---@field type string
 ---@field indent number
 ---@field expanded boolean
 ---@field highlight string
 ---@field preIcon string
+---@field icon string
 ---@field children table<string, TestNode>
 
 ---@class Project : TestNode
@@ -95,7 +106,6 @@ end
 ---@field full_name string
 ---@field hidden boolean
 ---@field collapsable boolean
----@field icon string
 ---@field expand table
 ---@field icons table
 
@@ -221,7 +231,9 @@ local function discover_tests_for_project_and_update_lines(project, win, options
         end
         local project_tree = expand_test_names_with_flags(converted, options, project)
 
-        win.tree.children[project.name] = project_tree
+
+        --TODO: multiple sln support?
+          win.tree.children[project.name] = project_tree
         win.refreshTree()
       end
     end
@@ -258,7 +270,7 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
 
   --Find sln
   --TODO: readd solution
-  ---@type Test
+  ---@type TestNode
   local sln = {
     id = "",
     solution_file_path = solutionFilePath,

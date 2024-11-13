@@ -1,7 +1,6 @@
 local ns_id = require("easy-dotnet.constants").ns_id
 local extensions = require("easy-dotnet.extensions")
 
-
 ---@class Window
 ---@field tree table<Project>
 ---@field jobs table
@@ -31,6 +30,41 @@ local M = {
   keymap = {},
   options = {}
 }
+
+
+---Traverses a tree from the given node, giving a callback for every item
+---@param tree TestNode
+---@param cb function
+M.traverse = function(tree, cb)
+  if not tree then
+    tree = M.tree
+  end
+  --HACK: handle no tree set
+  if not tree.name then
+    return
+  end
+
+  cb(tree)
+  for _, node in pairs(tree.children or {}) do
+    M.traverse(node, cb)
+  end
+end
+
+M.traverse_expanded = function(tree, cb)
+  if not tree then
+    tree = M.tree
+  end
+  --HACK: handle no tree set
+  if not tree.name then
+    return
+  end
+  cb(tree)
+  for _, node in pairs(tree.children or {}) do
+    if tree.expanded then
+      M.traverse_expanded(node, cb)
+    end
+  end
+end
 
 ---@param id string
 ---@param type "Run" | "Discovery" | "Build"
@@ -84,31 +118,23 @@ end
 ---Only expanded nodes contribute to the line number count, while collapsed nodes and their children are ignored.
 ---
 ---@param line_num number The line number in the buffer to be translated to a node in the tree structure.
----@param tree table The root node of the tree structure to traverse.
+---@param tree TestNode The root node of the tree structure to traverse.
 ---@return TestNode | nil
 local function translateIndex(line_num, tree)
   local current_line = 1
+  local result = nil
 
-  local function traverseNode(node)
+  M.traverse_expanded(tree, function(node)
+    if result ~= nil then
+      return
+    end
     if current_line == line_num then
-      return node
+      result = node
     end
-
     current_line = current_line + 1
+  end)
 
-    if node.expanded then
-      for _, child in pairs(node.children) do
-        local result = traverseNode(child)
-        if result then
-          return result
-        end
-      end
-    end
-
-    return nil
-  end
-
-  return traverseNode(tree) -- Start traversing from the root node
+  return result
 end
 
 
@@ -131,41 +157,36 @@ local function apply_highlights()
   end
 end
 
-local function flattenTree(tree, result, parentExpanded)
-  if parentExpanded == nil then
-    parentExpanded = true
-  end
-  result = result or {}
-
-  if not tree then
-    return { "" }
-  end
-
-  for _, node in pairs(tree or {}) do
-    -- Only add and process the node if its parent is expanded
-    if parentExpanded then
-      -- Format the current node and add it to the result
-      local formatted = string.format("%s%s%s%s",
-        string.rep(" ", node.indent or 0),
-        node.preIcon and (node.preIcon .. " ") or "",
-        node.name,
-        node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "")
-      table.insert(result, formatted)
-
-      -- Recursively process children only if the current node is expanded
-      if node.children and node.expanded then
-        flattenTree(node.children, result, node.expanded)
+local function tree_to_string(tree)
+  local result = {}
+  ---@param node TestNode
+  M.traverse_expanded(tree, function(node)
+    print("stringifying " .. node.name)
+    local keys = 0
+    ---@param i TestNode
+    M.traverse(node, function(i)
+      if i.type == "subcase" or i.type == "test" then
+        keys = keys + 1
       end
     end
-  end
+    )
 
+    local formatted = string.format("%s%s%s%s %s",
+      string.rep(" ", node.indent or 0),
+      node.preIcon and (node.preIcon .. " ") or "",
+      node.name,
+      node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
+      "" .. (keys > 1 and "(" .. keys .. ")" or "")
+    )
+    table.insert(result, formatted)
+  end)
   return result
 end
 
 local function printNodes()
   vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
-  local stringLines = flattenTree({ root = M.tree })
+  local stringLines = tree_to_string(M.tree)
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, stringLines)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
 

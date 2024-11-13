@@ -1,5 +1,6 @@
 local window = require "easy-dotnet.test-runner.window"
 
+
 local function aggregateStatus(matches, options)
   for _, namespace in ipairs(matches) do
     if (namespace.ref.collapsable == true) then
@@ -82,31 +83,40 @@ local function get_dotnet_args(options)
   return table.concat(args, " ") .. " " .. table.concat(options.additional_args or {}, " ")
 end
 
-local function run_csproject(win, cs_project_path)
-  local log_file_name = string.format("%s.xml", cs_project_path:match("([^/\\]+)$"))
-  local normalized_path = cs_project_path:gsub('\\', '/')
+---@param node TestNode
+local function run_csproject(win, node)
+  local log_file_name = string.format("%s.xml", node.cs_project_path:match("([^/\\]+)$"))
+  local normalized_path = node.cs_project_path:gsub('\\', '/')
   -- Find the last slash and extract the directory path
   local directory_path = normalized_path:match('^(.*)/[^/]*$')
   local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
 
   local matches = {}
   local testcount = 0
-  for _, line in ipairs(win.tree) do
-    if line.cs_project_path == cs_project_path then
-      table.insert(matches, { ref = line, line = line.namespace, id = line.id })
-      line.icon = "<Running>"
-      if line.type == "test" or line.type == "subcase" then
-        testcount = testcount + 1
-      end
+  ---@param child TestNode
+  win.traverse(node, function(child)
+    child.icon = "<Running>"
+    if child.type == "test" or child.type == "subcase" then
+      testcount = testcount + 1
     end
-  end
+  end)
 
-  local on_job_finished = win.appendJob(cs_project_path, "Run", testcount)
+  -- for _, line in ipairs(win.tree) do
+  --   if line.cs_project_path == cs_project_path then
+  --     table.insert(matches, { ref = line, line = line.namespace, id = line.id })
+  --     line.icon = "<Running>"
+  --     if line.type == "test" or line.type == "subcase" then
+  --       testcount = testcount + 1
+  --     end
+  --   end
+  -- end
+  --
+  local on_job_finished = win.appendJob(node.cs_project_path, "Run", testcount)
 
   win.refreshTree()
   vim.fn.jobstart(
     string.format('dotnet test --nologo %s %s --logger="trx;logFileName=%s"', get_dotnet_args(win.options),
-      cs_project_path,
+      node.cs_project_path,
       log_file_name), {
       on_exit = function(_, code)
         parse_log_file(relative_log_file_path, win, matches, on_job_finished)
@@ -115,7 +125,7 @@ local function run_csproject(win, cs_project_path)
 end
 
 
----@param line Test
+---@param line TestNode
 local function run_test_group(line, win)
   local log_file_name = string.format("%s.xml", line.name)
   local normalized_path = line.cs_project_path:gsub('\\', '/')
@@ -125,15 +135,19 @@ local function run_test_group(line, win)
   local matches = {}
   local suite_name = line.namespace
   local testcount = 0
-  for _, test_line in ipairs(win.tree) do
-    if line.name == test_line.name:gsub("%b()", "") and line.cs_project_path == test_line.cs_project_path and line.solution_file_path == test_line.solution_file_path then
-      table.insert(matches, { ref = test_line, line = test_line.namespace, id = test_line.id })
-      test_line.icon = "<Running>"
-      if test_line.type == "test" or test_line.type == "subcase" then
-        testcount = testcount + 1
-      end
+  ---@param child TestNode
+  win.traverse(line, function(child)
+    child.icon = "<Running>"
+    if child.type == "test" or child.type == "subcase" then
+      testcount = testcount + 1
     end
-  end
+  end)
+  -- for _, test_line in ipairs(win.tree) do
+  --   if line.name == test_line.name:gsub("%b()", "") and line.cs_project_path == test_line.cs_project_path and line.solution_file_path == test_line.solution_file_path then
+  --     table.insert(matches, { ref = test_line, line = test_line.namespace, id = test_line.id })
+  --     test_line.icon = "<Running>"
+  --   end
+  -- end
   win.refreshTree()
 
   local on_job_finished = win.appendJob(line.name, "Run", testcount)
@@ -227,19 +241,21 @@ local function get_path_from_stack_trace(stack_trace)
   end
 end
 
-local function run_test(line, win)
-  local log_file_name = string.format("%s.xml", line.name)
-  local normalized_path = line.cs_project_path:gsub('\\', '/')
+---@param node TestNode
+local function run_test(node, win)
+  local log_file_name = string.format("%s.xml", node.name)
+  local normalized_path = node.cs_project_path:gsub('\\', '/')
   local directory_path = normalized_path:match('^(.*)/[^/]*$')
   local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
 
   local command = string.format(
     'dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"',
-    line.namespace:gsub("%b()", ""), get_dotnet_args(win.options), line.cs_project_path, log_file_name)
+    node.namespace:gsub("%b()", ""), get_dotnet_args(win.options), node.cs_project_path, log_file_name)
 
-  local on_job_finished = win.appendJob(line.name, "Run")
+  local on_job_finished = win.appendJob(node.name, "Run")
 
-  line.icon = "<Running>"
+  node.icon = "<Running>"
+  print(relative_log_file_path)
   vim.fn.jobstart(
     command, {
       on_exit = function()
@@ -248,9 +264,9 @@ local function run_test(line, win)
           function(unit_test_results)
             local result = unit_test_results[1]
             if result == nil then
-              error(string.format("Status of %s was not present in xml file", line.name))
+              error(string.format("Status of %s was not present in xml file", node.name))
             end
-            parse_status(result, line, win.options)
+            parse_status(result, node, win.options)
             on_job_finished()
             win.refreshTree()
           end)
@@ -296,59 +312,6 @@ local function open_stack_trace(line)
   end
 end
 
---TODO: redo function
-local function expand_section(node, win)
-  node.expanded = node.expanded and false or true
-  -- local newLines = {}
-  -- local action = win.tree[index + 1].hidden == true and "expand" or "collapse"
-  --
-  -- if node.type == "sln" then
-  --   for _, lineDef in ipairs(win.tree) do
-  --     if node.solution_file_path == lineDef.solution_file_path then
-  --       if lineDef ~= node then
-  --         lineDef.hidden = action == "collapse" and true or false
-  --       end
-  --     end
-  --     table.insert(newLines, lineDef)
-  --   end
-  -- elseif node.type == "csproject" then
-  --   for _, lineDef in ipairs(win.tree) do
-  --     if node.cs_project_path == lineDef.cs_project_path and node.solution_file_path == lineDef.solution_file_path then
-  --       if lineDef ~= node then
-  --         lineDef.hidden = action == "collapse" and true or false
-  --       end
-  --     end
-  --     table.insert(newLines, lineDef)
-  --   end
-  -- elseif node.type == "namespace" then
-  --   for _, lineDef in ipairs(win.tree) do
-  --     if lineDef.namespace:match(node.namespace) and node.cs_project_path == lineDef.cs_project_path and node.solution_file_path == lineDef.solution_file_path then
-  --       if lineDef ~= node then
-  --         lineDef.hidden = action == "collapse" and true or false
-  --       end
-  --     end
-  --     table.insert(newLines, lineDef)
-  --   end
-  -- elseif node.type == "test_group" then
-  --   for _, test_line in ipairs(win.tree) do
-  --     if test_line.type == "subcase" and node.namespace == test_line.namespace:gsub("%b()", "") then
-  --       if node ~= test_line then
-  --         test_line.hidden = action == "collapse" and true or false
-  --       end
-  --     end
-  --     table.insert(newLines, test_line)
-  --   end
-  -- elseif node.type == "test" or node.type == "subcase" then
-  --   --TODO: go to file
-  --   return
-  -- else
-  --   error(string.format("Unknown linetype %s", node.type))
-  -- end
-  --
-  --
-  -- win.tree = newLines
-  win.refreshTree()
-end
 
 
 local keymaps = function()
@@ -406,26 +369,24 @@ local keymaps = function()
       end
     end,
     [keymap.expand_all.lhs]          = function(_, win)
-      for _, value in ipairs(win.tree) do
-        value.hidden = false
-      end
+      ---@param node TestNode
+      win.traverse(win.tree, function(node)
+        node.expanded = true
+      end)
+
       win.refreshTree()
-    end,
-    ["a"]                            = function(node, win)
-      print("I cliecked a node")
-      print(node.name)
     end,
     [keymap.collapse_all.lhs]        = function(_, win)
-      for _, value in ipairs(win.tree) do
-        if not (value.type == "csproject" or value.type == "sln") then
-          value.hidden = true
-        end
-      end
+      ---@param node TestNode
+      win.traverse(win.tree, function(node)
+        node.expanded = false
+      end)
       win.refreshTree()
     end,
-    ---@param node Test
+    ---@param node TestNode
     [keymap.expand.lhs]              = function(node, win)
-      expand_section(node, win)
+      node.expanded = node.expanded == false
+      win.refreshTree()
     end,
     [keymap.peek_stacktrace.lhs]     = function(node)
       open_stack_trace(node)
@@ -437,7 +398,7 @@ local keymaps = function()
         end
       end
     end,
-    ---@param node Test
+    ---@param node TestNode
     [keymap.run.lhs]                 = function(node, win)
       if node.type == "sln" then
         for _, value in ipairs(win.tree) do
@@ -446,7 +407,7 @@ local keymaps = function()
           end
         end
       elseif node.type == "csproject" then
-        run_csproject(win, node.cs_project_path)
+        run_csproject(win, node)
       elseif node.type == "namespace" then
         run_test_suite(node, win)
       elseif node.type == "test_group" then
