@@ -138,30 +138,49 @@ local function translateIndex(line_num, tree)
 end
 
 
-local function apply_highlights()
-  --Some lines are hidden so tracking the actual line numbers using shadow_index
-  local shadow_index = 0
-  for _, value in ipairs(M.tree) do
-    if value.hidden == false or value.hidden == nil then
-      shadow_index = shadow_index + 1
-      if value.icon == M.options.icons.failed then
-        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "EasyDotnetTestRunnerFailed", shadow_index - 1, 0, -1)
-      elseif value.icon == "<Running>" then
-        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "EasyDotnetTestRunnerRunning", shadow_index - 1, 0, -1)
-      elseif value.icon == M.options.icons.passed then
-        vim.api.nvim_buf_add_highlight(M.buf, ns_id, "EasyDotnetTestRunnerPassed", shadow_index - 1, 0, -1)
-      elseif value.highlight ~= nil and type(value.highlight) == "string" then
-        vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, shadow_index - 1, 0, -1)
-      end
+---@param highlights Highlight[]
+local function apply_highlights(highlights)
+  for _, value in ipairs(highlights) do
+    if value.highlight ~= nil then
+      vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, value.index - 1, 0, -1)
     end
   end
 end
 
+
+---@param node TestNode
+---@return string | nil
+local function calculate_highlight(node)
+  if node.icon == M.options.icons.failed then
+    return "EasyDotnetTestRunnerFailed"
+    -- vim.api.nvim_buf_add_highlight(M.buf, ns_id, "EasyDotnetTestRunnerFailed", shadow_index - 1, 0, -1)
+  elseif node.icon == "<Running>" then
+    -- vim.api.nvim_buf_add_highlight(M.buf, ns_id, "EasyDotnetTestRunnerRunning", shadow_index - 1, 0, -1)
+    return "EasyDotnetTestRunnerRunning"
+  elseif node.icon == M.options.icons.passed then
+    -- vim.api.nvim_buf_add_highlight(M.buf, ns_id, "EasyDotnetTestRunnerPassed", shadow_index - 1, 0, -1)
+    return "EasyDotnetTestRunnerPassed"
+  elseif node.highlight ~= nil and type(node.highlight) == "string" then
+    -- vim.api.nvim_buf_add_highlight(M.buf, ns_id, node.highlight, shadow_index - 1, 0, -1)
+    return node.highlight
+  end
+  return nil
+end
+
+---@class Highlight
+---@field index number
+---@field highlight string
+
+
+---@param tree TestNode
+---@return string[], table[]
 local function tree_to_string(tree)
   local result = {}
+  local highlights = {}
+  local index = 0
   ---@param node TestNode
   M.traverse_expanded(tree, function(node)
-    print("stringifying " .. node.name)
+    index = index + 1
     local keys = 0
     ---@param i TestNode
     M.traverse(node, function(i)
@@ -178,20 +197,25 @@ local function tree_to_string(tree)
       node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
       "" .. (keys > 1 and "(" .. keys .. ")" or "")
     )
+    --TODO: virtual text
+    local highlight = calculate_highlight(node)
+    table.insert(highlights, { index = index, highlight = highlight })
     table.insert(result, formatted)
   end)
-  return result
+  return result, highlights
 end
+
+
 
 local function printNodes()
   vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
-  local stringLines = tree_to_string(M.tree)
+  local stringLines, highlights = tree_to_string(M.tree)
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, stringLines)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
 
   -- M.redraw_virtual_text()
-  -- apply_highlights()
+  apply_highlights(highlights)
 end
 
 local function setMappings()
