@@ -82,6 +82,7 @@ local function run_test_from_buffer()
       spinner:start_spinner("Running test")
 
       run_test(node.name, node.namespace, node.cs_project_path, function(results)
+        ---@type TestResult
         local worst_outcome = "Passed"
 
         for _, result in pairs(results) do

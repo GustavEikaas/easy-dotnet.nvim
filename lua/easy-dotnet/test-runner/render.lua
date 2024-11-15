@@ -11,13 +11,15 @@ local extensions = require("easy-dotnet.extensions")
 ---@field modifiable boolean
 ---@field buf_name string
 ---@field filetype string
----@field filter string
+---@field filter TestResult
 ---@field keymap table
 ---@field options table
 
 ---@class Highlight
 ---@field index number
 ---@field highlight string
+
+---@alias TestResult '"Failed"' | '"NotExecuted"' | '"Passed"'
 
 local M = {
   tree = {},

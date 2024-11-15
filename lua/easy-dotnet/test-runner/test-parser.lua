@@ -95,7 +95,7 @@ end
 --- @class TestCase
 --- @field id string
 --- @field stackTrace string | nil
---- @field outcome string
+--- @field outcome TestResult
 
 ---@param xml_path string
 M.xml_to_json = function(xml_path, cb)
