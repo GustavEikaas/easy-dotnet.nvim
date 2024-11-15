@@ -11,7 +11,7 @@ local extensions = require("easy-dotnet.extensions")
 ---@field modifiable boolean
 ---@field buf_name string
 ---@field filetype string
----@field filter table
+---@field filter string
 ---@field keymap table
 ---@field options table
 
@@ -63,7 +63,8 @@ M.traverse_expanded = function(tree, cb)
   end
   cb(tree)
   for _, node in pairs(tree.children or {}) do
-    if tree.expanded then
+    local filterpass = M.filter == nil or M.filter == node.icon
+    if tree.expanded and filterpass then
       M.traverse_expanded(node, cb)
     end
   end

@@ -190,22 +190,13 @@ local function isAnyErr(lines, options)
 end
 
 local function filter_failed_tests(win)
-  if win.filter == nil and isAnyErr(win.tree, win.options) then
-    for _, value in ipairs(win.tree) do
-      if value.icon ~= win.options.icons.failed then
-        value.hidden = true
-      end
-    end
-    win.filter = "failed"
+  if win.filter == nil then
+    win.filter = win.options.icons.failed
   else
-    for _, value in ipairs(win.tree) do
-      value.hidden = false
-    end
     win.filter = nil
   end
   win.refreshTree()
 end
-
 
 local function get_path_from_stack_trace(stack_trace)
   stack_trace = table.concat(stack_trace)
