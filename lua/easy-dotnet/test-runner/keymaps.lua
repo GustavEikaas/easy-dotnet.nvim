@@ -67,7 +67,7 @@ local function parse_log_file(relative_log_file_path, win, node, on_completed)
         end)
       end
 
-      aggregate_status(node, win.options)
+      aggregate_status(win.tree, win.options)
       on_completed()
       win.refreshTree()
     end)
