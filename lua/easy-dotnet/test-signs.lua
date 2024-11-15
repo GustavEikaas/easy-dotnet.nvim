@@ -79,58 +79,55 @@ local function run_test_from_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
   local current_line = vim.api.nvim_win_get_cursor(0)[1]
-  -- local lines = require("easy-dotnet.test-runner.render").lines
-  --
-  -- local tests = vim.tbl_filter(function(i)
-  --   return i.type == "test" or i.type == "test_group"
-  -- end, lines)
-  --
-  -- for _, value in ipairs(tests) do
-  --   if compare_paths(value.file_path, curr_file) and value.line_number - 1 == current_line then
-  --     local spinner = require("easy-dotnet.ui-modules.spinner").new()
-  --     spinner:start_spinner("Running test")
-  --
-  --     run_test(value.name, value.namespace, value.cs_project_path, function(results)
-  --       local worst_outcome = "Passed"
-  --
-  --       for _, result in pairs(results) do
-  --         if result.outcome == "Failed" then
-  --           worst_outcome = "Failed"
-  --         elseif result.outcome == "NotExecuted" and worst_outcome ~= "Failed" then
-  --           worst_outcome = "NotExecuted"
-  --         elseif result.outcome == "Passed" and worst_outcome ~= "Failed" and worst_outcome ~= "NotExecuted" then
-  --           worst_outcome = "Passed"
-  --         end
-  --       end
-  --
-  --
-  --       if worst_outcome == "Passed" then
-  --         value.icon = options.icons.passed
-  --         vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr,
-  --           { lnum = current_line, priority = 20 })
-  --         spinner:stop_spinner("Passed")
-  --       elseif worst_outcome == "Failed" then
-  --         value.icon = options.icons.failed
-  --         vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr,
-  --           { lnum = current_line, priority = 20 })
-  --         spinner:stop_spinner("Failed", vim.log.levels.ERROR)
-  --       elseif worst_outcome == "NotExecuted" then
-  --         value.icon = options.icons.skipped
-  --         vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr,
-  --           { lnum = current_line, priority = 20 })
-  --         spinner:stop_spinner("Skipped", vim.log.levels.WARN)
-  --       else
-  --         value.icon = "??"
-  --         spinner:stop_spinner("Test Result Errors", vim.log.levels.WARN)
-  --         vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestError, bufnr,
-  --           { lnum = current_line, priority = 20 })
-  --       end
-  --       require("easy-dotnet.test-runner.render").refreshTree()
-  --     end)
-  --     return
-  --   end
-  -- end
-  -- vim.notify("No tests found on this line")
+
+  ---@param node TestNode
+  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and node.line_number - 1 == current_line then
+      local spinner = require("easy-dotnet.ui-modules.spinner").new()
+      spinner:start_spinner("Running test")
+
+      run_test(node.name, node.namespace, node.cs_project_path, function(results)
+        local worst_outcome = "Passed"
+
+        for _, result in pairs(results) do
+          if result.outcome == "Failed" then
+            worst_outcome = "Failed"
+          elseif result.outcome == "NotExecuted" and worst_outcome ~= "Failed" then
+            worst_outcome = "NotExecuted"
+          elseif result.outcome == "Passed" and worst_outcome ~= "Failed" and worst_outcome ~= "NotExecuted" then
+            worst_outcome = "Passed"
+          end
+        end
+
+
+        if worst_outcome == "Passed" then
+          node.icon = options.icons.passed
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr,
+            { lnum = current_line, priority = 20 })
+          spinner:stop_spinner("Passed")
+        elseif worst_outcome == "Failed" then
+          node.icon = options.icons.failed
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr,
+            { lnum = current_line, priority = 20 })
+          spinner:stop_spinner("Failed", vim.log.levels.ERROR)
+        elseif worst_outcome == "NotExecuted" then
+          node.icon = options.icons.skipped
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr,
+            { lnum = current_line, priority = 20 })
+          spinner:stop_spinner("Skipped", vim.log.levels.WARN)
+        else
+          node.icon = "??"
+          spinner:stop_spinner("Test Result Errors", vim.log.levels.WARN)
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestError, bufnr,
+            { lnum = current_line, priority = 20 })
+        end
+        require("easy-dotnet.test-runner.render").refreshTree()
+      end)
+      return
+    else
+      vim.notify("No tests found on this line")
+    end
+  end)
 end
 
 
