@@ -39,10 +39,16 @@
 ---@field additional_args table
 
 local function get_sdk_path()
-  local sdk_version = vim.system({ "dotnet", "--version" }):wait().stdout:gsub("\r", ""):gsub("\n", "")
-  local isWindows = require("easy-dotnet.extensions").isWindows()
-  local base = isWindows and 'C:/"Program Files"/dotnet/sdk' or "/usr/lib/dotnet/sdk"
-  local sdk_path = vim.fs.joinpath(base, sdk_version)
+  local sdk_version = vim.trim(vim.system({ "dotnet", "--version" }):wait().stdout)
+  local sdk_list = vim.trim(vim.system({ "dotnet", "--list-sdks" }):wait().stdout)
+  local base = nil
+  for line in sdk_list:gmatch("[^\n]+") do
+    if line:find(sdk_version, 1, true) then
+      base = vim.fs.normalize(line:match("%[(.-)%]"))
+      break
+    end
+  end
+  local sdk_path = vim.fs.joinpath(base, sdk_version):gsub("Program Files", '"Program Files"')
   return sdk_path
 end
 
