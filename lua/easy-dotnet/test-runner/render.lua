@@ -65,7 +65,7 @@ M.traverse_expanded = function(tree, cb)
   end
   cb(tree)
   for _, node in pairs(tree.children or {}) do
-    local filterpass = M.filter == nil or M.filter == node.icon
+    local filterpass = M.filter == nil or (M.filter == node.icon or node.icon == "<Running>")
     if tree.expanded and filterpass then
       M.traverse_expanded(node, cb)
     end
