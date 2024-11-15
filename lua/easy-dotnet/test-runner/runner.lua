@@ -1,5 +1,55 @@
 local M = {}
 
+---@class TestNode
+---@field id string
+---@field name string
+---@field namespace string
+---@field file_path string
+---@field line_number number | nil
+---@field solution_file_path string
+---@field cs_project_path string
+---@field type string
+---@field indent number
+---@field expanded boolean
+---@field highlight string
+---@field preIcon string
+---@field icon string
+---@field children table<string, TestNode>
+
+---@class Project : TestNode
+---@field id string
+---@field cs_project_path string
+---@field solution_file_path string
+---@field full_name string
+---@field hidden boolean
+---@field collapsable boolean
+---@field expand table
+---@field icons table
+
+---@class Highlight
+---@field group string
+---@field column_start number | nil
+---@field column_end number | nil
+
+---@class Test
+---@field id string
+---@field type "csproject" | "sln" | "namespace" | "test" | "subcase" | "test_group"
+---@field solution_file_path string
+---@field cs_project_path string
+---@field name string
+---@field full_name string
+---@field namespace string
+---@field preIcon string
+---@field collapsable boolean
+---@field indent number
+---@field hidden boolean
+---@field expand table | nil
+---@field icon string | nil
+---@field highlight string | Highlight| nil
+---@field file_path string | nil
+---@field line_number number | nil
+
+
 ---@param s string
 ---@return string
 local function trim(s)
@@ -7,61 +57,65 @@ local function trim(s)
   return s:match("^%s*(.-)%s*$")
 end
 
+local function count_segments(path)
+  local count = 0
+  for _ in path:gmatch("[^.]+") do
+    count = count + 1
+  end
+  return count
+end
+
+---@param root TestNode Treenode
+---@param path string E.X neovimdebugproject.test.helpers
+---@param has_arguments boolean does the test class use classdata,inlinedata etc. Add_ShouldReturnSum(a: -1, b: 1, expected: 0) == true
+---@param test Test The test the path was referenced from, used for getting stuff like csproject path and sln path
+---@param options TestRunnerOptions
+---@param offset_indent integer
+local function ensure_path(root, path, has_arguments, test, options, offset_indent)
+  local parts = {}
+  for part in path:gmatch("[^.]+") do
+    table.insert(parts, part)
+  end
+
+  local current = root.children
+  for i, part in ipairs(parts) do
+    if not current[part] then
+      local is_full_path = i == #parts
+      current[part] = {
+        id = test.id,
+        name = part,
+        namespace = table.concat(parts, ".", 1, i),
+        cs_project_path = test.cs_project_path,
+        solution_file_path = test.solution_file_path,
+        file_path = test.file_path,
+        line_number = test.line_number,
+        expanded = true,
+        indent = (i * 2) - 1 + offset_indent,
+        type = is_full_path and "test" or "namespace",
+        highlight = not is_full_path and "EasyDotnetTestRunnerDir" or has_arguments and "EasyDotnetTestRunnerPackage" or
+            "EasyDotnetTestRunnerTest",
+        preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or
+            options.icons.test,
+        icon = "",
+        children = {},
+      }
+    end
+    current = current[part].children
+  end
+end
+
 ---@param tests Test[]
+---@param options TestRunnerOptions
+---@param project TestNode
+---@return TestNode
 local function generate_tree(tests, options, project)
   local offset_indent = 2
-
   project.children = project.children or {}
-
-  local function count_segments(path)
-    local count = 0
-    for _ in path:gmatch("[^.]+") do
-      count = count + 1
-    end
-    return count
-  end
-
-  ---@param root TestNode Treenode
-  ---@param path string E.X neovimdebugproject.test.helpers
-  ---@param has_arguments boolean does the test class use classdata,inlinedata etc. Add_ShouldReturnSum(a: -1, b: 1, expected: 0) == true
-  ---@param test Test The test the path was referenced from, used for getting stuff like csproject path and sln path
-  local function ensure_path(root, path, has_arguments, test)
-    local parts = {}
-    for part in path:gmatch("[^.]+") do
-      table.insert(parts, part)
-    end
-
-    local current = root.children
-    for i, part in ipairs(parts) do
-      if not current[part] then
-        local is_full_path = i == #parts
-        current[part] = {
-          id = test.id,
-          name = part,
-          namespace = table.concat(parts, ".", 1, i),
-          children = {},
-          cs_project_path = test.cs_project_path,
-          solution_file_path = test.solution_file_path,
-          file_path = test.file_path,
-          line_number = test.line_number,
-          expanded = true,
-          indent = (i * 2) - 1 + offset_indent,
-          type = is_full_path and "test" or "namespace",
-          highlight = not is_full_path and "EasyDotnetTestRunnerDir" or has_arguments and "EasyDotnetTestRunnerPackage" or
-              "EasyDotnetTestRunnerTest",
-          preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or
-              options.icons.test,
-          icon = "",
-        }
-      end
-      current = current[part].children
-    end
-  end
 
   for _, test in ipairs(tests) do
     local has_arguments = test.namespace:find("%(") ~= nil
     local base_name = test.namespace:match("([^%(]+)") or test.namespace
-    ensure_path(project, base_name, has_arguments, test)
+    ensure_path(project, base_name, has_arguments, test, options, offset_indent)
 
     -- If the test has arguments, add it as a subcase
     if test.namespace:find("%(") then
@@ -91,72 +145,12 @@ local function generate_tree(tests, options, project)
   return project
 end
 
-
----@class TestNode
----@field id string
----@field name string
----@field namespace string
----@field file_path string
----@field line_number string
----@field solution_file_path string
----@field cs_project_path string
----@field type string
----@field indent number
----@field expanded boolean
----@field highlight string
----@field preIcon string
----@field icon string
----@field children table<string, TestNode>
-
----@class Project : TestNode
----@field id string
----@field cs_project_path string
----@field solution_file_path string
----@field full_name string
----@field hidden boolean
----@field collapsable boolean
----@field expand table
----@field icons table
-
-
----@param tests Test[]
----@return Project
-local function expand_test_names_with_flags(tests, options, project)
-  local tree = generate_tree(tests, options, project)
-  return tree
-end
-
 local function merge_tables(table1, table2)
   return vim.tbl_deep_extend("keep", table1, table2)
 end
 
 local default_options = require("easy-dotnet.options").test_runner
-
---- @class Highlight
---- @field group string
---- @field column_start number | nil
---- @field column_end number | nil
-
---- @class Test
---- @field id string
---- @field type "csproject" | "sln" | "namespace" | "test" | "subcase" | "test_group"
---- @field solution_file_path string
---- @field cs_project_path string
---- @field name string
---- @field full_name string
---- @field namespace string
---- @field preIcon string
---- @field collapsable boolean
---- @field indent number
---- @field hidden boolean
---- @field expand table | nil
---- @field icon string | nil
---- @field highlight string | Highlight| nil
---- @field file_path string | nil
---- @field line_number number | nil
-
-
----@param project Test
+---@param project TestNode
 ---@param options TestRunnerOptions
 ---@param sdk_path string
 ---@param dotnet_project DotnetProject
@@ -238,8 +232,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
           }
           table.insert(converted, test)
         end
-        local project_tree = expand_test_names_with_flags(converted, options, project)
-
+        local project_tree = generate_tree(converted, options, project)
 
         --TODO: multiple sln support?
         win.tree.children[project.name] = project_tree
@@ -274,11 +267,9 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     end
   end
 
-  ---@type Test[]
-  local lines = {}
 
   ---@type TestNode
-  local sln = {
+  win.tree = {
     id = "",
     solution_file_path = solutionFilePath,
     cs_project_path = "",
@@ -286,8 +277,8 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     preIcon = options.icons.sln,
     name = solutionFilePath:match("([^/\\]+)$"),
     full_name = solutionFilePath:match("([^/\\]+)$"),
-    file_path = "",
-    line_number = "",
+    file_path = solutionFilePath,
+    line_number = nil,
     indent = 0,
     namespace = "",
     hidden = false,
@@ -298,14 +289,12 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     expanded = true,
     children = {}
   }
-  win.tree = sln
-  table.insert(lines, sln)
 
   local projects = sln_parse.get_projects_from_sln(solutionFilePath)
 
   for _, value in ipairs(projects) do
     if value.isTestProject == true then
-      ---@type Test
+      ---@type TestNode
       local project = {
         id = "",
         children = {},
@@ -315,6 +304,8 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
         type = "csproject",
         expanded = true,
         name = value.name,
+        file_path = value.path,
+        line_number = nil,
         full_name = value.name,
         indent = 2,
         preIcon = options.icons.project,
