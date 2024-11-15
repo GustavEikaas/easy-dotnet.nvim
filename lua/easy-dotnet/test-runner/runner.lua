@@ -14,17 +14,10 @@ local M = {}
 ---@field highlight string
 ---@field preIcon string
 ---@field icon string
+---@field full_name string
+---@field expand table
 ---@field children table<string, TestNode>
 
----@class Project : TestNode
----@field id string
----@field cs_project_path string
----@field solution_file_path string
----@field full_name string
----@field hidden boolean
----@field collapsable boolean
----@field expand table
----@field icons table
 
 ---@class Highlight
 ---@field group string
@@ -40,9 +33,7 @@ local M = {}
 ---@field full_name string
 ---@field namespace string
 ---@field preIcon string
----@field collapsable boolean
 ---@field indent number
----@field hidden boolean
 ---@field expand table | nil
 ---@field icon string | nil
 ---@field highlight string | Highlight| nil
@@ -91,7 +82,7 @@ local function ensure_path(root, path, has_arguments, test, options, offset_inde
         line_number = test.line_number,
         expanded = true,
         indent = (i * 2) - 1 + offset_indent,
-        type = is_full_path and "test" or "namespace",
+        type = not is_full_path and "namespace" or has_arguments and "test_group" or "test",
         highlight = not is_full_path and "EasyDotnetTestRunnerDir" or has_arguments and "EasyDotnetTestRunnerPackage" or
             "EasyDotnetTestRunnerTest",
         preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or
@@ -221,10 +212,8 @@ local function discover_tests_for_project_and_update_lines(project, win, options
             line_number = value.Linenumber,
             preIcon = "",
             indent = 0,
-            collapsable = true,
             type = "test",
             icon = "",
-            hidden = true,
             expand = {},
             highlight = "EasyDotnetTestRunnerTest",
             cs_project_path = project.cs_project_path,
@@ -234,7 +223,6 @@ local function discover_tests_for_project_and_update_lines(project, win, options
         end
         local project_tree = generate_tree(converted, options, project)
 
-        --TODO: multiple sln support?
         win.tree.children[project.name] = project_tree
         win.refreshTree()
       end
@@ -281,8 +269,6 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     line_number = nil,
     indent = 0,
     namespace = "",
-    hidden = false,
-    collapsable = true,
     icon = "",
     expand = {},
     highlight = "EasyDotnetTestRunnerSolution",
@@ -309,8 +295,6 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
         full_name = value.name,
         indent = 2,
         preIcon = options.icons.project,
-        hidden = false,
-        collapsable = true,
         icon = "",
         expand = {},
         highlight = "EasyDotnetTestRunnerProject"

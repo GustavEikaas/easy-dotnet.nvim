@@ -2,7 +2,7 @@ local ns_id = require("easy-dotnet.constants").ns_id
 local extensions = require("easy-dotnet.extensions")
 
 ---@class Window
----@field tree table<Project>
+---@field tree table<string,TestNode>
 ---@field jobs table
 ---@field appendJob table
 ---@field buf integer | nil
@@ -15,6 +15,9 @@ local extensions = require("easy-dotnet.extensions")
 ---@field keymap table
 ---@field options table
 
+---@class Highlight
+---@field index number
+---@field highlight string
 
 local M = {
   tree = {},
@@ -163,9 +166,26 @@ local function calculate_highlight(node)
   return nil
 end
 
----@class Highlight
----@field index number
----@field highlight string
+
+local function node_to_string(node)
+  local total_tests = 0
+  ---@param i TestNode
+  M.traverse(node, function(i)
+    if i.type == "subcase" or i.type == "test" then
+      total_tests = total_tests + 1
+    end
+  end)
+
+  local formatted = string.format("%s%s%s%s %s",
+    string.rep(" ", node.indent or 0),
+    node.preIcon and (node.preIcon .. " ") or "",
+    node.name,
+    node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
+    node.type ~= "subcase" and node.type ~= "test" and string.format("(%s)", total_tests) or ""
+  )
+
+  return formatted
+end
 
 
 ---@param tree TestNode
@@ -177,30 +197,14 @@ local function tree_to_string(tree)
   ---@param node TestNode
   M.traverse_expanded(tree, function(node)
     index = index + 1
-    local keys = 0
-    ---@param i TestNode
-    M.traverse(node, function(i)
-      if i.type == "subcase" or i.type == "test" then
-        keys = keys + 1
-      end
-    end
-    )
 
-    local formatted = string.format("%s%s%s%s %s",
-      string.rep(" ", node.indent or 0),
-      node.preIcon and (node.preIcon .. " ") or "",
-      node.name,
-      node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
-      "" .. (keys > 1 and "(" .. keys .. ")" or "")
-    )
+    local formatted = node_to_string(node)
     local highlight = calculate_highlight(node)
     table.insert(highlights, { index = index, highlight = highlight })
     table.insert(result, formatted)
   end)
   return result, highlights
 end
-
-
 
 local function printNodes()
   vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
