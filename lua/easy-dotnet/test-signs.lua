@@ -30,6 +30,7 @@ local function run_test(name, namespace, cs_project_path, cb)
       end
     })
 end
+
 local function debug_test_from_buffer()
   local success, dap = pcall(function() return require("dap") end)
   if not success then
@@ -39,35 +40,29 @@ local function debug_test_from_buffer()
 
   local curr_file = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
   local current_line = vim.api.nvim_win_get_cursor(0)[1]
-  -- local lines = require("easy-dotnet.test-runner.render").lines
-  -- local tests = vim.tbl_filter(function(i)
-  --   return i.type == "test" or i.type == "test_group"
-  -- end, lines)
+  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and node.line_number - 1 == current_line then
+      --TODO: Investigate why netcoredbg wont work without reopening the buffer????
+      vim.cmd("bdelete")
+      vim.cmd("edit " .. node.file_path)
+      vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
+      dap.toggle_breakpoint()
 
-  -- for _, value in ipairs(tests) do
-  --   if compare_paths(value.file_path, curr_file) and value.line_number - 1 == current_line then
-  --     --TODO: Investigate why netcoredbg wont work without reopening the buffer????
-  --     vim.cmd("bdelete")
-  --     vim.cmd("edit " .. value.file_path)
-  --     vim.api.nvim_win_set_cursor(0, { value.line_number and (value.line_number - 1) or 0, 0 })
-  --     dap.toggle_breakpoint()
-  --
-  --     local dap_configuration = {
-  --       type = "coreclr",
-  --       name = value.name,
-  --       request = "attach",
-  --       processId = function()
-  --         local project_path = value.cs_project_path
-  --         local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
-  --         return res.process_id
-  --       end
-  --     }
-  --     dap.run(dap_configuration)
-  --     --return to avoid running multiple times in case of InlineData|ClassData
-  --     return
-  --   end
-  -- end
-  -- vim.notify("No tests found on this line")
+      local dap_configuration = {
+        type = "coreclr",
+        name = node.name,
+        request = "attach",
+        processId = function()
+          local project_path = node.cs_project_path
+          local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
+          return res.process_id
+        end
+      }
+      dap.run(dap_configuration)
+      --return to avoid running multiple times in case of InlineData|ClassData
+      return
+    end
+  end)
 end
 
 local function run_test_from_buffer()
@@ -124,8 +119,6 @@ local function run_test_from_buffer()
         require("easy-dotnet.test-runner.render").refreshTree()
       end)
       return
-    else
-      vim.notify("No tests found on this line")
     end
   end)
 end
