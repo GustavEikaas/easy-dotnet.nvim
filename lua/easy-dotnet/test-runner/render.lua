@@ -114,7 +114,7 @@ function M.redraw_virtual_text()
 end
 
 local function setBufferOptions()
-  vim.api.nvim_win_set_height(0, M.height)
+  vim.api.nvim_win_set_height(M.win, M.height)
   vim.api.nvim_buf_set_option(M.buf, 'modifiable', M.modifiable)
   vim.api.nvim_buf_set_name(M.buf, M.buf_name)
   vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
