@@ -44,11 +44,11 @@ local function get_sdk_path()
   local base = nil
   for line in sdk_list:gmatch("[^\n]+") do
     if line:find(sdk_version, 1, true) then
-      base = line:match("%[(.-)%]")
+      base = vim.fs.normalize(line:match("%[(.-)%]"))
       break
     end
   end
-  local sdk_path = vim.fs.joinpath(base, sdk_version)
+  local sdk_path = vim.fs.joinpath(base, sdk_version):gsub("Program Files", '"Program Files"')
   return sdk_path
 end
 
