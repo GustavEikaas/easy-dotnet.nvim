@@ -16,8 +16,6 @@ local M = {}
 ---@field icon string
 ---@field expand table | nil
 ---@field children table<string, TestNode>
------@field full_name string
-
 
 ---@class Highlight
 ---@field group string
@@ -26,26 +24,17 @@ local M = {}
 
 ---@class Test
 ---@field id string
----@field type "csproject" | "sln" | "namespace" | "test" | "subcase" | "test_group"
 ---@field solution_file_path string
 ---@field cs_project_path string
----@field name string
----@field full_name string
 ---@field namespace string
----@field preIcon string
----@field indent number
----@field expand table | nil
----@field icon string | nil
----@field highlight string | Highlight| nil
 ---@field file_path string | nil
 ---@field line_number number | nil
 
-
----@param s string
+---@param value string
 ---@return string
-local function trim(s)
+local function trim(value)
   -- Match the string and capture the non-whitespace characters
-  return s:match("^%s*(.-)%s*$")
+  return value:match("^%s*(.-)%s*$")
 end
 
 local function count_segments(path)
@@ -205,18 +194,10 @@ local function discover_tests_for_project_and_update_lines(project, win, options
           local name = value.Name:find("%.") and value.Name or value.Namespace
           ---@type Test
           local test = {
-            id = value.Id,
-            name = name,
-            full_name = name,
             namespace = name,
             file_path = value.FilePath,
             line_number = value.Linenumber,
-            preIcon = "",
-            indent = 0,
-            type = "test",
-            icon = "",
-            expand = {},
-            highlight = "EasyDotnetTestRunnerTest",
+            id = value.Id,
             cs_project_path = project.cs_project_path,
             solution_file_path = project.solution_file_path
           }
