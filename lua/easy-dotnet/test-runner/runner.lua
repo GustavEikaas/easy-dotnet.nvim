@@ -14,9 +14,9 @@ local M = {}
 ---@field highlight string
 ---@field preIcon string
 ---@field icon string
----@field full_name string
----@field expand table
+---@field expand table | nil
 ---@field children table<string, TestNode>
+-----@field full_name string
 
 
 ---@class Highlight
@@ -81,6 +81,7 @@ local function ensure_path(root, path, has_arguments, test, options, offset_inde
         file_path = test.file_path,
         line_number = test.line_number,
         expanded = true,
+        expand = nil,
         indent = (i * 2) - 1 + offset_indent,
         type = not is_full_path and "namespace" or has_arguments and "test_group" or "test",
         highlight = not is_full_path and "EasyDotnetTestRunnerDir" or has_arguments and "EasyDotnetTestRunnerPackage" or
@@ -222,8 +223,13 @@ local function discover_tests_for_project_and_update_lines(project, win, options
           table.insert(converted, test)
         end
         local project_tree = generate_tree(converted, options, project)
+        local hasChildren = next(project_tree.children) ~= nil
 
-        win.tree.children[project.name] = project_tree
+        if hasChildren then
+          win.tree.children[project.name] = project_tree
+        else
+          win.tree.children[project.name] = nil
+        end
         win.refreshTree()
       end
     end
@@ -270,7 +276,7 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     indent = 0,
     namespace = "",
     icon = "",
-    expand = {},
+    expand = nil,
     highlight = "EasyDotnetTestRunnerSolution",
     expanded = true,
     children = {}
@@ -300,6 +306,8 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
         highlight = "EasyDotnetTestRunnerProject"
       }
       local on_job_finished = win.appendJob(value.name, "Discovery")
+      win.tree.children[project.name] = project
+      win.refreshTree()
       --Performance reasons
       if not value.version then
         vim.schedule(function()
@@ -398,3 +406,4 @@ end
 
 
 return M
+
