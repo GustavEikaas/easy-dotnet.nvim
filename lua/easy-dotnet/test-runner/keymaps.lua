@@ -375,7 +375,6 @@ local keymaps = function()
     [keymap.run_all.lhs]             = function(_, win)
       win.traverse(win.tree, function(node)
         if node.type == "csproject" then
-          print(node.name)
           run_csproject(win, node)
         end
       end)
@@ -383,10 +382,8 @@ local keymaps = function()
     ---@param node TestNode
     [keymap.run.lhs]                 = function(node, win)
       if node.type == "sln" then
-        for _, value in ipairs(win.tree) do
-          if value.type == "csproject" and value.solution_file_path == node.solution_file_path then
-            run_csproject(win, value)
-          end
+        for _, value in pairs(node.children) do
+          run_csproject(win, value)
         end
       elseif node.type == "csproject" then
         run_csproject(win, node)
