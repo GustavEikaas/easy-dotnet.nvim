@@ -125,7 +125,8 @@ return {
       run = { lhs = "<leader>r", desc = "run test" },
       peek_stacktrace = { lhs = "<leader>p", desc = "peek stacktrace of failed test" },
       expand = { lhs = "o", desc = "expand" },
-      expand_all = { lhs = "E", desc = "expand all" },
+      expand_node = { lhs = "E", desc = "expand node" },
+      expand_all = { lhs = "-", desc = "expand all" },
       collapse_all = { lhs = "W", desc = "collapse all" },
       close = { lhs = "q", desc = "close testrunner" },
       refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" }

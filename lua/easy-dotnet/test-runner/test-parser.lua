@@ -42,7 +42,7 @@ let extractAndTransformResults (jsonObj: JObject) : JObject option =
         for testCase in results do
             let property = transformTestCase (testCase :?> JObject)
             let testId = property.Name
-            
+
             if transformedResults.ContainsKey(testId) then
                 let outcome = property.Value.["outcome"].ToString()
                 // if there are multiple results with the same testId, we want to know if any of them did not pass
@@ -95,7 +95,7 @@ end
 --- @class TestCase
 --- @field id string
 --- @field stackTrace string | nil
---- @field outcome string
+--- @field outcome TestResult
 
 ---@param xml_path string
 M.xml_to_json = function(xml_path, cb)
@@ -104,11 +104,17 @@ M.xml_to_json = function(xml_path, cb)
   local command = string.format("dotnet fsi %s %s %s", fsx_file, xml_path, outfile)
   ---@type TestCase[]
   local tests = {}
+  local stderr = {}
   vim.fn.jobstart(command, {
     stdout_buffered = true,
+    stderr_buffered = true,
+    on_stderr = function(_, data)
+      stderr = data
+    end,
     on_exit = function(_, code)
       if code ~= 0 then
         vim.notify("Command failed with exit code: " .. code, vim.log.levels.ERROR)
+        print(vim.inspect(stderr))
         return {}
       else
         local file = io.open(outfile)

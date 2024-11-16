@@ -30,6 +30,7 @@ local function run_test(name, namespace, cs_project_path, cb)
       end
     })
 end
+
 local function debug_test_from_buffer()
   local success, dap = pcall(function() return require("dap") end)
   if not success then
@@ -39,25 +40,20 @@ local function debug_test_from_buffer()
 
   local curr_file = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
   local current_line = vim.api.nvim_win_get_cursor(0)[1]
-  local lines = require("easy-dotnet.test-runner.render").lines
-  local tests = vim.tbl_filter(function(i)
-    return i.type == "test" or i.type == "test_group"
-  end, lines)
-
-  for _, value in ipairs(tests) do
-    if compare_paths(value.file_path, curr_file) and value.line_number - 1 == current_line then
+  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and node.line_number - 1 == current_line then
       --TODO: Investigate why netcoredbg wont work without reopening the buffer????
       vim.cmd("bdelete")
-      vim.cmd("edit " .. value.file_path)
-      vim.api.nvim_win_set_cursor(0, { value.line_number and (value.line_number - 1) or 0, 0 })
+      vim.cmd("edit " .. node.file_path)
+      vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
       dap.toggle_breakpoint()
 
       local dap_configuration = {
         type = "coreclr",
-        name = value.name,
+        name = node.name,
         request = "attach",
         processId = function()
-          local project_path = value.cs_project_path
+          local project_path = node.cs_project_path
           local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
           return res.process_id
         end
@@ -66,8 +62,7 @@ local function debug_test_from_buffer()
       --return to avoid running multiple times in case of InlineData|ClassData
       return
     end
-  end
-  vim.notify("No tests found on this line")
+  end)
 end
 
 local function run_test_from_buffer()
@@ -79,18 +74,15 @@ local function run_test_from_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
   local current_line = vim.api.nvim_win_get_cursor(0)[1]
-  local lines = require("easy-dotnet.test-runner.render").lines
 
-  local tests = vim.tbl_filter(function(i)
-    return i.type == "test" or i.type == "test_group"
-  end, lines)
-
-  for _, value in ipairs(tests) do
-    if compare_paths(value.file_path, curr_file) and value.line_number - 1 == current_line then
+  ---@param node TestNode
+  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and node.line_number - 1 == current_line then
       local spinner = require("easy-dotnet.ui-modules.spinner").new()
       spinner:start_spinner("Running test")
 
-      run_test(value.name, value.namespace, value.cs_project_path, function(results)
+      run_test(node.name, node.namespace, node.cs_project_path, function(results)
+        ---@type TestResult
         local worst_outcome = "Passed"
 
         for _, result in pairs(results) do
@@ -105,32 +97,31 @@ local function run_test_from_buffer()
 
 
         if worst_outcome == "Passed" then
-          value.icon = options.icons.passed
+          node.icon = options.icons.passed
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr,
             { lnum = current_line, priority = 20 })
           spinner:stop_spinner("Passed")
         elseif worst_outcome == "Failed" then
-          value.icon = options.icons.failed
+          node.icon = options.icons.failed
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr,
             { lnum = current_line, priority = 20 })
           spinner:stop_spinner("Failed", vim.log.levels.ERROR)
         elseif worst_outcome == "NotExecuted" then
-          value.icon = options.icons.skipped
+          node.icon = options.icons.skipped
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr,
             { lnum = current_line, priority = 20 })
           spinner:stop_spinner("Skipped", vim.log.levels.WARN)
         else
-          value.icon = "??"
+          node.icon = "??"
           spinner:stop_spinner("Test Result Errors", vim.log.levels.WARN)
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestError, bufnr,
             { lnum = current_line, priority = 20 })
         end
-        require("easy-dotnet.test-runner.render").refreshLines()
+        require("easy-dotnet.test-runner.render").refreshTree()
       end)
       return
     end
-  end
-  vim.notify("No tests found on this line")
+  end)
 end
 
 
@@ -143,29 +134,24 @@ function M.add_gutter_test_signs()
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
-  local lines = require("easy-dotnet.test-runner.render").lines
-
-  local tests = vim.tbl_filter(function(i)
-    return i.type == "test" or i.type == "test_group"
-  end, lines)
-
-  for _, value in ipairs(tests) do
-    if compare_paths(value.file_path, curr_file) then
+  ---@param node TestNode
+  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then
       is_test_file = true
-      local line = value.line_number
+      local line = node.line_number
       vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSign, bufnr, { lnum = line - 1, priority = 20 })
 
-      if value.icon then
-        if value.icon == options.icons.failed then
+      if node.icon then
+        if node.icon == options.icons.failed then
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr, { lnum = line - 1, priority = 20 })
-        elseif value.icon == options.icons.skipped then
+        elseif node.icon == options.icons.skipped then
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr, { lnum = line - 1, priority = 20 })
-        elseif value.icon == options.icons.passed then
+        elseif node.icon == options.icons.passed then
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr, { lnum = line - 1, priority = 20 })
         end
       end
     end
-  end
+  end)
 
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   if is_test_file == true then

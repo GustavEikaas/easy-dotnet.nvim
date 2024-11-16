@@ -1,27 +1,29 @@
 local window = require "easy-dotnet.test-runner.window"
 
-local function aggregateStatus(matches, options)
-  for _, namespace in ipairs(matches) do
-    if (namespace.ref.collapsable == true) then
-      local worstStatus = nil
-      for _, res in ipairs(matches) do
-        if res.line:match(namespace.line) then
-          if (res.ref.icon == options.icons.failed) then
-            worstStatus = options.icons.failed
-            namespace.ref.expand = res.ref.expand
-          elseif res.ref.icon == options.icons.skipped then
-            if worstStatus ~= options.icons.failed then
-              worstStatus = options.icons.skipped
-            end
-          end
-        end
-      end
-      namespace.ref.icon = worstStatus == nil and options.icons.passed or worstStatus
+---@param node TestNode
+---@param options table
+local function aggregate_status(node, options)
+  if not node.children or next(node.children) == nil then
+    return node.icon
+  end
+
+  local worstStatus = ""
+
+  for _, child in pairs(node.children) do
+    local childWorstStatus = aggregate_status(child, options)
+
+    if childWorstStatus == options.icons.failed then
+      worstStatus = options.icons.failed
+    elseif childWorstStatus == options.icons.skipped and worstStatus ~= options.icons.failed then
+      worstStatus = options.icons.skipped
+    elseif childWorstStatus == options.icons.passed and worstStatus ~= options.icons.failed and worstStatus ~= options.icons.skipped then
+      worstStatus = options.icons.passed
     end
   end
+
+  node.icon = worstStatus
+  return worstStatus
 end
-
-
 
 local function parse_status(result, test_line, options)
   --TODO: handle more cases like cancelled etc...
@@ -38,35 +40,36 @@ local function parse_status(result, test_line, options)
 end
 
 
-local function parse_log_file(relative_log_file_path, win, matches, on_completed)
+---@param relative_log_file_path string
+---@param win table
+---@param node TestNode
+---@param on_completed function
+local function parse_log_file(relative_log_file_path, win, node, on_completed)
   require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
     ---@param unit_test_results TestCase[]
     function(unit_test_results)
       if #unit_test_results == 0 then
-        for _, value in ipairs(matches) do
-          if value.ref.icon == "<Running>" then
-            value.ref.icon = "<No status reported>"
-            on_completed()
+        win.traverse(node, function(child)
+          if child.icon == "<Running>" then
+            child.icon = "<No status reported>"
           end
-        end
-        win.refreshLines()
+        end)
+        on_completed()
+        win.refreshTree()
         return
       end
 
-      for _, match in ipairs(matches) do
-        local test_line = match.ref
-        if test_line.type == "test" or test_line.type == "subcase" then
-          for _, value in ipairs(unit_test_results) do
-            if match.id == value.id then
-              parse_status(value, test_line, win.options)
-            end
+      for _, value in ipairs(unit_test_results) do
+        win.traverse(node, function(child_node)
+          if (child_node.type == "test" or child_node.type == "subcase") and child_node.id == value.id then
+            parse_status(value, child_node, win.options)
           end
-        end
+        end)
       end
 
-      aggregateStatus(matches, win.options)
+      aggregate_status(win.tree, win.options)
       on_completed()
-      win.refreshLines()
+      win.refreshTree()
     end)
 end
 
@@ -82,93 +85,86 @@ local function get_dotnet_args(options)
   return table.concat(args, " ") .. " " .. table.concat(options.additional_args or {}, " ")
 end
 
-local function run_csproject(win, cs_project_path)
-  local log_file_name = string.format("%s.xml", cs_project_path:match("([^/\\]+)$"))
-  local normalized_path = cs_project_path:gsub('\\', '/')
+---@param node TestNode
+local function run_csproject(win, node)
+  local log_file_name = string.format("%s.xml", node.cs_project_path:match("([^/\\]+)$"))
+  local normalized_path = node.cs_project_path:gsub('\\', '/')
   -- Find the last slash and extract the directory path
   local directory_path = normalized_path:match('^(.*)/[^/]*$')
   local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
 
   local matches = {}
   local testcount = 0
-  for _, line in ipairs(win.lines) do
-    if line.cs_project_path == cs_project_path then
-      table.insert(matches, { ref = line, line = line.namespace, id = line.id })
-      line.icon = "<Running>"
-      if line.type == "test" or line.type == "subcase" then
-        testcount = testcount + 1
-      end
+  ---@param child TestNode
+  win.traverse(node, function(child)
+    child.icon = "<Running>"
+    table.insert(matches, { ref = child, line = child.namespace, id = child.id })
+    if child.type == "test" or child.type == "subcase" then
+      testcount = testcount + 1
     end
-  end
+  end)
 
-  local on_job_finished = win.appendJob(cs_project_path, "Run", testcount)
+  local on_job_finished = win.appendJob(node.cs_project_path, "Run", testcount)
 
-  win.refreshLines()
+  win.refreshTree()
   vim.fn.jobstart(
     string.format('dotnet test --nologo %s %s --logger="trx;logFileName=%s"', get_dotnet_args(win.options),
-      cs_project_path,
+      node.cs_project_path,
       log_file_name), {
       on_exit = function(_, code)
-        parse_log_file(relative_log_file_path, win, matches, on_job_finished)
+        parse_log_file(relative_log_file_path, win, node, on_job_finished)
       end
     })
 end
 
 
----@param line Test
+---@param line TestNode
 local function run_test_group(line, win)
   local log_file_name = string.format("%s.xml", line.name)
   local normalized_path = line.cs_project_path:gsub('\\', '/')
   local directory_path = normalized_path:match('^(.*)/[^/]*$')
   local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
 
-  local matches = {}
   local suite_name = line.namespace
   local testcount = 0
-  for _, test_line in ipairs(win.lines) do
-    if line.name == test_line.name:gsub("%b()", "") and line.cs_project_path == test_line.cs_project_path and line.solution_file_path == test_line.solution_file_path then
-      table.insert(matches, { ref = test_line, line = test_line.namespace, id = test_line.id })
-      test_line.icon = "<Running>"
-      if test_line.type == "test" or test_line.type == "subcase" then
-        testcount = testcount + 1
-      end
+  ---@param child TestNode
+  win.traverse(line, function(child)
+    child.icon = "<Running>"
+    if child.type == "test" or child.type == "subcase" then
+      testcount = testcount + 1
     end
-  end
-  win.refreshLines()
+  end)
 
   local on_job_finished = win.appendJob(line.name, "Run", testcount)
+  win.refreshTree()
   vim.fn.jobstart(
     string.format('dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"',
       suite_name, get_dotnet_args(win.options), line.cs_project_path, log_file_name),
     {
       on_exit = function()
-        parse_log_file(relative_log_file_path, win, matches, on_job_finished)
+        parse_log_file(relative_log_file_path, win, line, on_job_finished)
       end
     })
 end
 
 
 
----@param line Test
+---@param line TestNode
 local function run_test_suite(line, win)
   local log_file_name = string.format("%s.xml", line.namespace)
   local normalized_path = line.cs_project_path:gsub('\\', '/')
   local directory_path = normalized_path:match('^(.*)/[^/]*$')
   local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
 
-  local matches = {}
   local testcount = 0
   local suite_name = line.namespace
-  for _, test_line in ipairs(win.lines) do
-    if test_line.namespace:match(suite_name) and line.cs_project_path == test_line.cs_project_path and line.solution_file_path == test_line.solution_file_path then
-      table.insert(matches, { ref = test_line, line = test_line.namespace, id = test_line.id })
-      if test_line.type == "test" or test_line.type == "subcase" then
-        testcount = testcount + 1
-      end
-      test_line.icon = "<Running>"
+  win.traverse(line, function(child)
+    child.icon = "<Running>"
+    if child.type == "test" or child.type == "subcase" then
+      testcount = testcount + 1
     end
-  end
-  win.refreshLines()
+  end)
+  win.refreshTree()
 
   local on_job_finished = win.appendJob(line.namespace, "Run", testcount)
   vim.fn.jobstart(
@@ -176,7 +172,7 @@ local function run_test_suite(line, win)
       suite_name, get_dotnet_args(win.options), line.cs_project_path, log_file_name),
     {
       on_exit = function()
-        parse_log_file(relative_log_file_path, win, matches, on_job_finished)
+        parse_log_file(relative_log_file_path, win, line, on_job_finished)
       end
     })
 end
@@ -194,22 +190,13 @@ local function isAnyErr(lines, options)
 end
 
 local function filter_failed_tests(win)
-  if win.filter == nil and isAnyErr(win.lines, win.options) then
-    for _, value in ipairs(win.lines) do
-      if value.icon ~= win.options.icons.failed then
-        value.hidden = true
-      end
-    end
-    win.filter = "failed"
+  if win.filter == nil then
+    win.filter = win.options.icons.failed
   else
-    for _, value in ipairs(win.lines) do
-      value.hidden = false
-    end
     win.filter = nil
   end
-  win.refreshLines()
+  win.refreshTree()
 end
-
 
 local function get_path_from_stack_trace(stack_trace)
   stack_trace = table.concat(stack_trace)
@@ -227,19 +214,20 @@ local function get_path_from_stack_trace(stack_trace)
   end
 end
 
-local function run_test(line, win)
-  local log_file_name = string.format("%s.xml", line.name)
-  local normalized_path = line.cs_project_path:gsub('\\', '/')
+---@param node TestNode
+local function run_test(node, win)
+  local log_file_name = string.format("%s.xml", node.name)
+  local normalized_path = node.cs_project_path:gsub('\\', '/')
   local directory_path = normalized_path:match('^(.*)/[^/]*$')
   local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
 
   local command = string.format(
     'dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"',
-    line.namespace:gsub("%b()", ""), get_dotnet_args(win.options), line.cs_project_path, log_file_name)
+    node.namespace:gsub("%b()", ""), get_dotnet_args(win.options), node.cs_project_path, log_file_name)
 
-  local on_job_finished = win.appendJob(line.name, "Run")
+  local on_job_finished = win.appendJob(node.name, "Run")
 
-  line.icon = "<Running>"
+  node.icon = "<Running>"
   vim.fn.jobstart(
     command, {
       on_exit = function()
@@ -248,16 +236,16 @@ local function run_test(line, win)
           function(unit_test_results)
             local result = unit_test_results[1]
             if result == nil then
-              error(string.format("Status of %s was not present in xml file", line.name))
+              error(string.format("Status of %s was not present in xml file", node.name))
             end
-            parse_status(result, line, win.options)
+            parse_status(result, node, win.options)
             on_job_finished()
-            win.refreshLines()
+            win.refreshTree()
           end)
       end
     })
 
-  win.refreshLines()
+  win.refreshTree()
 end
 
 
@@ -296,66 +284,15 @@ local function open_stack_trace(line)
   end
 end
 
-local function expand_section(line, index, win)
-  local newLines = {}
-  local action = win.lines[index + 1].hidden == true and "expand" or "collapse"
-
-  if line.type == "sln" then
-    for _, lineDef in ipairs(win.lines) do
-      if line.solution_file_path == lineDef.solution_file_path then
-        if lineDef ~= line then
-          lineDef.hidden = action == "collapse" and true or false
-        end
-      end
-      table.insert(newLines, lineDef)
-    end
-  elseif line.type == "csproject" then
-    for _, lineDef in ipairs(win.lines) do
-      if line.cs_project_path == lineDef.cs_project_path and line.solution_file_path == lineDef.solution_file_path then
-        if lineDef ~= line then
-          lineDef.hidden = action == "collapse" and true or false
-        end
-      end
-      table.insert(newLines, lineDef)
-    end
-  elseif line.type == "namespace" then
-    for _, lineDef in ipairs(win.lines) do
-      if lineDef.namespace:match(line.namespace) and line.cs_project_path == lineDef.cs_project_path and line.solution_file_path == lineDef.solution_file_path then
-        if lineDef ~= line then
-          lineDef.hidden = action == "collapse" and true or false
-        end
-      end
-      table.insert(newLines, lineDef)
-    end
-  elseif line.type == "test_group" then
-    for _, test_line in ipairs(win.lines) do
-      if test_line.type == "subcase" and line.namespace == test_line.namespace:gsub("%b()", "") then
-        if line ~= test_line then
-          test_line.hidden = action == "collapse" and true or false
-        end
-      end
-      table.insert(newLines, test_line)
-    end
-  elseif line.type == "test" or line.type == "subcase" then
-    --TODO: go to file
-    return
-  else
-    error(string.format("Unknown linetype %s", line.type))
-  end
-
-
-  win.lines = newLines
-  win.refreshLines()
-end
 
 
 local keymaps = function()
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   return {
-    [keymap.filter_failed_tests.lhs] = function(_, _, win)
+    [keymap.filter_failed_tests.lhs] = function(_, win)
       filter_failed_tests(win)
     end,
-    [keymap.refresh_testrunner.lhs]  = function(_, _, win)
+    [keymap.refresh_testrunner.lhs]  = function(_, win)
       local function co_wrapper()
         require("easy-dotnet.test-runner.runner").refresh(win.options, win.options.sdk_path, { build = true })
       end
@@ -363,8 +300,8 @@ local keymaps = function()
       local co = coroutine.create(co_wrapper)
       coroutine.resume(co)
     end,
-    [keymap.debug_test.lhs]          = function(_, line, win)
-      if line.type ~= "test" and line.type ~= "test_group" then
+    [keymap.debug_test.lhs]          = function(node, win)
+      if node.type ~= "test" and node.type ~= "test_group" then
         vim.notify("Debugging is only supported for tests and test_groups")
         return
       end
@@ -374,16 +311,16 @@ local keymaps = function()
         return
       end
       win.hide()
-      vim.cmd("edit " .. line.file_path)
-      vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
+      vim.cmd("edit " .. node.file_path)
+      vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
       dap.toggle_breakpoint()
 
       local dap_configuration = {
         type = "coreclr",
-        name = line.name,
+        name = node.name,
         request = "attach",
         processId = function()
-          local project_path = line.cs_project_path
+          local project_path = node.cs_project_path
           local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
           return res.process_id
         end
@@ -391,71 +328,79 @@ local keymaps = function()
 
       dap.run(dap_configuration)
     end,
-    ---@param line Test
-    [keymap.go_to_file.lhs]          = function(_, line, win)
-      if line.type == "test" or line.type == "subcase" or line.type == "test_group" then
-        if line.file_path ~= nil then
+    ---@param node Test
+    [keymap.go_to_file.lhs]          = function(node, win)
+      if node.type == "test" or node.type == "subcase" or node.type == "test_group" then
+        if node.file_path ~= nil then
           win.hide()
-          vim.cmd("edit " .. line.file_path)
-          vim.api.nvim_win_set_cursor(0, { line.line_number and (line.line_number - 1) or 0, 0 })
+          vim.cmd("edit " .. node.file_path)
+          vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
         end
       else
-        vim.notify("Cant go to " .. line.type)
+        vim.notify("Cant go to " .. node.type)
       end
     end,
-    [keymap.expand_all.lhs]          = function(_, _, win)
-      for _, value in ipairs(win.lines) do
-        value.hidden = false
-      end
-      win.refreshLines()
+    [keymap.expand_all.lhs]          = function(_, win)
+      ---@param node TestNode
+      win.traverse(win.tree, function(node)
+        node.expanded = true
+      end)
+
+      win.refreshTree()
     end,
-    [keymap.collapse_all.lhs]        = function(_, _, win)
-      for _, value in ipairs(win.lines) do
-        if not (value.type == "csproject" or value.type == "sln") then
-          value.hidden = true
+    [keymap.expand_node.lhs]         = function(target_node, win)
+      ---@param node TestNode
+      win.traverse(target_node, function(node)
+        node.expanded = true
+      end)
+
+      win.refreshTree()
+    end,
+
+    [keymap.collapse_all.lhs]        = function(_, win)
+      ---@param node TestNode
+      win.traverse(win.tree, function(node)
+        node.expanded = false
+      end)
+      win.refreshTree()
+    end,
+    ---@param node TestNode
+    [keymap.expand.lhs]              = function(node, win)
+      node.expanded = node.expanded == false
+      win.refreshTree()
+    end,
+    [keymap.peek_stacktrace.lhs]     = function(node)
+      open_stack_trace(node)
+    end,
+    [keymap.run_all.lhs]             = function(_, win)
+      win.traverse(win.tree, function(node)
+        if node.type == "csproject" then
+          run_csproject(win, node)
         end
-      end
-      win.refreshLines()
+      end)
     end,
-    ---@param index number
-    ---@param line Test
-    [keymap.expand.lhs]              = function(index, line, win)
-      expand_section(line, index, win)
-    end,
-    [keymap.peek_stacktrace.lhs]     = function(_, line)
-      open_stack_trace(line)
-    end,
-    [keymap.run_all.lhs]             = function(_, _, win)
-      for _, value in ipairs(win.lines) do
-        if value.type == "csproject" then
-          run_csproject(win, value.cs_project_path)
+    ---@param node TestNode
+    [keymap.run.lhs]                 = function(node, win)
+      if node.type == "sln" then
+        for _, value in pairs(node.children) do
+          run_csproject(win, value)
         end
-      end
-    end,
-    ---@param line Test
-    [keymap.run.lhs]                 = function(_, line, win)
-      if line.type == "sln" then
-        for _, value in ipairs(win.lines) do
-          if value.type == "csproject" and value.solution_file_path == line.solution_file_path then
-            run_csproject(win, value.cs_project_path)
-          end
-        end
-      elseif line.type == "csproject" then
-        run_csproject(win, line.cs_project_path)
-      elseif line.type == "namespace" then
-        run_test_suite(line, win)
-      elseif line.type == "test_group" then
-        run_test_group(line, win)
-      elseif line.type == "subcase" then
+      elseif node.type == "csproject" then
+        run_csproject(win, node)
+      elseif node.type == "namespace" then
+        run_test_suite(node, win)
+      elseif node.type == "test_group" then
+        run_test_group(node, win)
+      elseif node.type == "subcase" then
         vim.notify("Running specific subcases is not supported")
-      elseif line.type == "test" then
-        run_test(line, win)
+      elseif node.type == "test" then
+        run_test(node, win)
       else
-        vim.notify("Unknown line type " .. line.type)
+        vim.notify("Unknown line type " .. node.type)
         return
       end
     end,
-    [keymap.close.lhs]               = function(_, _, win)
+    [keymap.close.lhs]               = function(_, win)
       win.hide()
     end
   }
