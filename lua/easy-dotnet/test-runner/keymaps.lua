@@ -348,6 +348,15 @@ local keymaps = function()
 
       win.refreshTree()
     end,
+    [keymap.expand_node.lhs]         = function(target_node, win)
+      ---@param node TestNode
+      win.traverse(target_node, function(node)
+        node.expanded = true
+      end)
+
+      win.refreshTree()
+    end,
+
     [keymap.collapse_all.lhs]        = function(_, win)
       ---@param node TestNode
       win.traverse(win.tree, function(node)
