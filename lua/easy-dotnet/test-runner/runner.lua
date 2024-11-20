@@ -14,8 +14,12 @@ local M = {}
 ---@field highlight string
 ---@field preIcon string
 ---@field icon string
----@field expand table | nil
+---@field expand TestError | nil
 ---@field children table<string, TestNode>
+
+---@class TestError
+---@field message string
+---@field stack_trace string
 
 ---@class Highlight
 ---@field group string
@@ -283,7 +287,7 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
         indent = 2,
         preIcon = options.icons.project,
         icon = "",
-        expand = {},
+        expand = nil,
         highlight = "EasyDotnetTestRunnerProject"
       }
       local on_job_finished = win.appendJob(value.name, "Discovery")

@@ -31,7 +31,10 @@ local function parse_status(result, test_line, options)
     test_line.icon = options.icons.passed
   elseif result.outcome == "Failed" then
     test_line.icon = options.icons.failed
-    test_line.expand = vim.split(result.message .. "\n" .. result.stackTrace:gsub("^%s+", ""):gsub("\n%s+", "\n"), "\n")
+    test_line.expand = {
+      message = result.message,
+      stack_trace = result.stackTrace
+    }
   elseif result.outcome == "NotExecuted" then
     test_line.icon = options.icons.skipped
   else
@@ -199,7 +202,6 @@ local function filter_failed_tests(win)
 end
 
 local function get_path_from_stack_trace(stack_trace)
-  stack_trace = table.concat(stack_trace)
   -- Pattern to match the file path and line number
   local pattern = "in%s+(.-):line%s+(%d+)"
 
@@ -249,12 +251,13 @@ local function run_test(node, win)
 end
 
 
+---@param line TestNode
 local function open_stack_trace(line)
   if line.expand == nil then
     return
   end
 
-  local path = get_path_from_stack_trace(line.expand)
+  local path = get_path_from_stack_trace(line.expand.stack_trace)
 
   if path ~= nil then
     local ns_id = require("easy-dotnet.constants").ns_id
@@ -262,7 +265,26 @@ local function open_stack_trace(line)
 
     local file_float = window.new_float():pos_left():write_buf(contents):buf_set_filetype("csharp"):create()
 
-    local stack_trace = window:new_float():link_close(file_float):pos_right():write_buf(line.expand):create()
+    local stack_trace = window:new_float():link_close(file_float):pos_right():create() --:write_buf(line.expand):create()
+    local stack_trace_higlight_index = 1
+    local lines = { "Message:" }
+    for _, value in ipairs(vim.split(line.expand.message, "\n")) do
+      table.insert(lines, value)
+      stack_trace_higlight_index = stack_trace_higlight_index + 1
+    end
+    table.insert(lines, "")
+    stack_trace_higlight_index = stack_trace_higlight_index + 1
+    table.insert(lines, "Stack Trace:")
+    for _, value in ipairs(vim.split(line.expand.stack_trace, "\n")) do
+      local stripped = value:gsub("^%s+", "")
+      table.insert(lines, stripped)
+    end
+
+    stack_trace:write_buf(lines)
+    vim.api.nvim_buf_add_highlight(stack_trace.buf, ns_id, "Directory", 0, 0, -1)
+    vim.api.nvim_buf_add_highlight(stack_trace.buf, ns_id, "EasyDotnetTestRunnerFailed", stack_trace_higlight_index, 0,
+      -1)
+    vim.api.nvim_buf_add_highlight(file_float.buf, ns_id, "EasyDotnetTestRunnerFailed", path.line - 1, 0, -1)
 
     local function go_to_file()
       vim.api.nvim_win_close(file_float.win, true)
