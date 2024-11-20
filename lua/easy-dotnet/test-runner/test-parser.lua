@@ -27,7 +27,6 @@ let transformTestCase (testCase: JObject) : JProperty =
     if errorInfo <> null && errorInfo.["Message"] <> null then
         newTestCase.["message"] <- errorInfo.["Message"]
 
-
     new JProperty(testId, newTestCase)
 
 let extractAndTransformResults (jsonObj: JObject) : JObject option =
