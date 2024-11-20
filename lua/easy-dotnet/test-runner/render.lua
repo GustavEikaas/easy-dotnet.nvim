@@ -114,7 +114,9 @@ function M.redraw_virtual_text()
 end
 
 local function setBufferOptions()
-  vim.api.nvim_win_set_height(M.win, M.height)
+  if M.options.viewmode ~= "buf" then
+    vim.api.nvim_win_set_height(M.win, M.height)
+  end
   vim.api.nvim_buf_set_option(M.buf, 'modifiable', M.modifiable)
   vim.api.nvim_buf_set_name(M.buf, M.buf_name)
   vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
@@ -271,6 +273,18 @@ local function get_default_win_opts()
   }
 end
 
+local function has_multiple_listed_buffers()
+  local listed_buffers = 0
+
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_get_option(buf, "buflisted") then
+      listed_buffers = listed_buffers + 1
+    end
+  end
+
+  return listed_buffers > 0
+end
+
 
 -- Toggle function to handle different window modes
 ---@param mode "float" | "split" | "buf"
@@ -286,8 +300,8 @@ function M.hide(mode)
       return true
     end
   elseif mode == "buf" then
-    if M.buf and vim.api.nvim_buf_is_valid(M.buf) then
-      vim.cmd("b#")
+    if M.buf and vim.api.nvim_buf_is_valid(M.buf) and has_multiple_listed_buffers() then
+      vim.cmd("bprev")
       return true
     end
   end
@@ -320,6 +334,7 @@ function M.open(mode)
     if not M.buf then
       M.buf = vim.api.nvim_create_buf(false, true)
     end
+    M.win = vim.api.nvim_get_current_win()
     vim.api.nvim_set_current_buf(M.buf)
     return true
   end
