@@ -242,7 +242,7 @@ Dotnet run|test|build --no-build --no-restore -c prerelease
 
 Integrated test runner inspired by Rider IDE
 ![image](https://github.com/user-attachments/assets/874a1ef1-18cb-43f6-a477-834a783cf785)
-![image](https://github.com/user-attachments/assets/fdc01dbd-4a6a-47be-965e-a4b9c9ae910c)
+![image](https://github.com/user-attachments/assets/2d0512f3-f807-4fbd-bf64-a57eb3c06b18)
 
 - [x] Basic test runner window
   - [x] Grouped by namespace
