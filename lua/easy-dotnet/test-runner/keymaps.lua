@@ -263,9 +263,21 @@ local function open_stack_trace(line)
     local ns_id = require("easy-dotnet.constants").ns_id
     local contents = vim.fn.readfile(path.path)
 
-    local file_float = window.new_float():pos_left():write_buf(contents):buf_set_filetype("csharp"):create()
+    local file_float = window.new_float()
+        :pos_left()
+        :write_buf(contents)
+        :buf_set_filetype("csharp")
+        :create()
+        :with_line_numbers()
 
-    local stack_trace = window:new_float():link_close(file_float):pos_right():create() --:write_buf(line.expand):create()
+    local stack_trace = window
+        :new_float()
+        :link_close(file_float)
+        :pos_right()
+        :create()
+
+    --Set wrap for stacktrace window
+    vim.cmd("setlocal wrap")
     local stack_trace_higlight_index = 1
     local lines = { "Message:" }
     for _, value in ipairs(vim.split(line.expand.message, "\n")) do
