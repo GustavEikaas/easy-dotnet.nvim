@@ -35,6 +35,13 @@ function Window.new_float()
   return self
 end
 
+function Window:with_line_numbers()
+  if self.win ~= nil then
+    vim.api.nvim_win_set_option(self.win, 'number', true)
+  end
+  return self
+end
+
 function Window:buf_set_filetype(filetype)
   if self.buf ~= nil then
     vim.api.nvim_set_option_value('filetype', filetype, { buf = self.buf })
