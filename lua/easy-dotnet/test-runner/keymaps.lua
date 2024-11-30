@@ -31,7 +31,12 @@ local function parse_status(result, test_line, options)
     test_line.icon = options.icons.passed
   elseif result.outcome == "Failed" then
     test_line.icon = options.icons.failed
-    test_line.expand = vim.split(result.message .. "\n" .. result.stackTrace:gsub("^%s+", ""):gsub("\n%s+", "\n"), "\n")
+    if result.message or result.stackTrace then
+      test_line.expand = vim.split(
+        (result.message or "") ..
+        "\n" ..
+        (result.stackTrace or ""):gsub("^%s+", ""):gsub("\n%s+", "\n"), "\n")
+    end
   elseif result.outcome == "NotExecuted" then
     test_line.icon = options.icons.skipped
   else
