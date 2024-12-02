@@ -261,30 +261,34 @@ local function open_stack_trace(line)
 
   local path = get_path_from_stack_trace(line.expand)
 
-  if path ~= nil then
-    local ns_id = require("easy-dotnet.constants").ns_id
-    local contents = vim.fn.readfile(path.path)
+  local ns_id = require("easy-dotnet.constants").ns_id
+  local contents = vim.fn.readfile(line.file_path)
 
-    local file_float = window.new_float():pos_left():write_buf(contents):buf_set_filetype("csharp"):create()
+  --TODO: handle fsharp
+  local file_float = window.new_float():pos_left():write_buf(contents):buf_set_filetype("csharp"):create()
 
-    local stack_trace = window:new_float():link_close(file_float):pos_right():write_buf(line.expand):create()
+  local stack_trace = window:new_float():link_close(file_float):pos_right():write_buf(line.expand):create()
 
-    local function go_to_file()
-      vim.api.nvim_win_close(file_float.win, true)
-      vim.cmd(string.format("edit %s", path.path))
-      vim.api.nvim_win_set_cursor(0, { path.line, 0 })
-      vim.api.nvim_buf_add_highlight(0, ns_id, "EasyDotnetTestRunnerFailed", path.line - 1, 0, -1)
+  local function go_to_file()
+    vim.api.nvim_win_close(file_float.win, true)
+    vim.cmd(string.format("edit %s", line.file_path))
+    if path == nil or path.line == nil then
+      return
     end
+    vim.api.nvim_win_set_cursor(0, { path.line, 0 })
+    vim.api.nvim_buf_add_highlight(0, ns_id, "EasyDotnetTestRunnerFailed", path.line - 1, 0, -1)
+  end
 
-    vim.keymap.set("n", "<leader>gf", function()
-      go_to_file()
-    end, { silent = true, noremap = true, buffer = file_float.buf })
+  vim.keymap.set("n", "<leader>gf", function()
+    go_to_file()
+  end, { silent = true, noremap = true, buffer = file_float.buf })
 
-    vim.keymap.set("n", "<leader>gf", function()
-      go_to_file()
-    end, { silent = true, noremap = true, buffer = stack_trace.buf })
+  vim.keymap.set("n", "<leader>gf", function()
+    go_to_file()
+  end, { silent = true, noremap = true, buffer = stack_trace.buf })
 
 
+  if path ~= nil and path.line ~= nil then
     vim.api.nvim_win_set_cursor(file_float.win, { path.line, 0 })
   end
 end
