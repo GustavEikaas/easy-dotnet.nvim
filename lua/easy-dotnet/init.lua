@@ -98,6 +98,9 @@ M.setup = function(opts)
           end
 
           local sln = require("easy-dotnet.parsers.sln-parse").find_solution_file(true)
+          if sln == nil then
+            print("No solutions found")
+          end
           require("easy-dotnet.default-manager").set_default_solution(old, sln)
         end
         local co = coroutine.create(handler)
