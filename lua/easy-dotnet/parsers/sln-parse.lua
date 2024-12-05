@@ -38,9 +38,26 @@ M.get_projects_from_sln = function(solutionFilePath)
   return projects
 end
 
-M.find_solution_file = function()
-  local file = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.sln$", depth = 3 })
-  return file[1]
+function M.get_solutions()
+  local files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.sln$", depth = 5 })
+  return files
+end
+
+M.find_solution_file = function(noCache)
+  local files = M.get_solutions()
+  local opts = {}
+  for _, value in ipairs(files) do
+    local file = require("easy-dotnet.default-manager").try_get_cache_file(value)
+    if file == true and not noCache then
+      return value
+    end
+    table.insert(opts, { display = value, ordinal = value, value = value })
+  end
+  if #opts == 0 then
+    return nil
+  end
+  local selection = require("easy-dotnet.picker").pick_sync(nil, opts, "Pick solution file")
+  return selection and selection.value or nil
 end
 
 return M

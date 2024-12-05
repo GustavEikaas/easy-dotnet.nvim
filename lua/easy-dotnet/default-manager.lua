@@ -25,11 +25,24 @@ local function get_property(type)
   return string.format("default_%s_project", type)
 end
 
+
+local function file_exists(path)
+  local stat = vim.loop.fs_stat(path)
+  return stat and stat.type == "file"
+end
+
 local function get_or_create_cache_dir()
   local dir = require("easy-dotnet.constants").get_data_directory()
   local file_utils = require("easy-dotnet.file-utils")
   file_utils.ensure_directory_exists(dir)
   return dir
+end
+
+function M.try_get_cache_file(solution_file_path)
+  local sln_name = vim.fs.basename(solution_file_path)
+  local dir = get_or_create_cache_dir()
+  local file = vim.fs.joinpath(dir, sln_name .. ".json")
+  return file_exists(file)
 end
 
 local function get_or_create_cache_file(solution_file_path)
@@ -45,6 +58,42 @@ local function get_or_create_cache_file(solution_file_path)
     ---@type SolutionContent|nil
     decoded = decoded
   }
+end
+
+---Checks for the default project in the solution file.
+---@param solution_file_path string Path to the solution file.
+---@param type TaskType
+---@return DotnetProject|nil
+M.check_default_solution = function(solution_file_path, type)
+  local file = get_or_create_cache_file(solution_file_path)
+  local sln_parse = require("easy-dotnet.parsers.sln-parse")
+
+  local project = file.decoded[get_property(type)]
+  if project ~= nil then
+    local projects = sln_parse.get_projects_from_sln(solution_file_path)
+    table.insert(projects, { path = solution_file_path, display = "Solution", name = "Solution" })
+    for _, value in ipairs(projects) do
+      if value.name == project then
+        return value
+      end
+    end
+  end
+end
+
+M.set_default_solution = function(old_solution_file, solution_file_path)
+  if old_solution_file then
+    local sln_name = vim.fs.basename(old_solution_file)
+    local dir = get_or_create_cache_dir()
+    local file = vim.fs.joinpath(dir, sln_name .. ".json")
+    if file_exists(file) then
+      local success, err = pcall(vim.loop.fs_unlink, file)
+      if not success then
+        print("Failed to delete file: " .. err)
+      end
+    end
+  end
+
+  get_or_create_cache_file(solution_file_path)
 end
 
 ---Checks for the default project in the solution file.

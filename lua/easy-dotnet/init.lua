@@ -84,6 +84,28 @@ M.setup = function(opts)
   local merged_opts = merge_tables(options, opts or {})
   define_highlights_and_signs(merged_opts)
   local commands = {
+    solution = function(args)
+      local sub = args[2]
+      if sub == "select" then
+        local function handler()
+          local files = require("easy-dotnet.parsers.sln-parse").get_solutions()
+          local old = nil
+          for _, value in ipairs(files) do
+            local file = require("easy-dotnet.default-manager").try_get_cache_file(value)
+            if file then
+              old = value
+            end
+          end
+
+          local sln = require("easy-dotnet.parsers.sln-parse").find_solution_file(true)
+          require("easy-dotnet.default-manager").set_default_solution(old, sln)
+        end
+        local co = coroutine.create(handler)
+        coroutine.resume(co)
+      else
+        error("unknown command")
+      end
+    end,
     secrets = function()
       secrets.edit_secrets_picker(merged_opts.secrets.path)
     end,
