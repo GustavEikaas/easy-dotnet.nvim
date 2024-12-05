@@ -42,7 +42,9 @@ function M.try_get_cache_file(solution_file_path)
   local sln_name = vim.fs.basename(solution_file_path)
   local dir = get_or_create_cache_dir()
   local file = vim.fs.joinpath(dir, sln_name .. ".json")
-  return file_exists(file)
+  if file_exists(file) then
+    return file
+  end
 end
 
 local function get_or_create_cache_file(solution_file_path)
