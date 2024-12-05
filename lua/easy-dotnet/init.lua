@@ -285,7 +285,7 @@ M.entity_framework = {
 }
 
 M.is_dotnet_project = function()
-  local project_files = require("easy-dotnet.parsers.sln-parse").find_solution_file() or
+  local project_files = require("easy-dotnet.parsers.sln-parse").get_solutions() or
       require("easy-dotnet.parsers.csproj-parse").find_project_file()
   return project_files ~= nil
 end
