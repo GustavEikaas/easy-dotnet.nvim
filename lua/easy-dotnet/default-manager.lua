@@ -94,6 +94,13 @@ M.set_default_solution = function(old_solution_file, solution_file_path)
   end
 
   get_or_create_cache_file(solution_file_path)
+
+  --HACK: find a better way to invalidate testrunner
+  local testrunner = require("easy-dotnet.test-runner.render")
+  if testrunner.buf then
+    vim.api.nvim_buf_delete(testrunner.buf, { force = true })
+    testrunner.buf = nil
+  end
 end
 
 ---Checks for the default project in the solution file.

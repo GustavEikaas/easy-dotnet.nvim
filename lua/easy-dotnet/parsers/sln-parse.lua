@@ -43,12 +43,12 @@ function M.get_solutions()
   return files
 end
 
-M.find_solution_file = function(noCache)
+M.find_solution_file = function(no_cache)
   local files = M.get_solutions()
   local opts = {}
   for _, value in ipairs(files) do
     local file = require("easy-dotnet.default-manager").try_get_cache_file(value)
-    if file == true and not noCache then
+    if file == true and not no_cache then
       return value
     end
     table.insert(opts, { display = value, ordinal = value, value = value })
