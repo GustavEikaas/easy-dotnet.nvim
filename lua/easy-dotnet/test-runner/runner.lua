@@ -317,7 +317,7 @@ local function open_runner(options, sdk_path)
     return
   end
 
-  local is_reused = win.buf ~= nil
+  local is_reused = win.buf ~= nil and M.tree and M.tree.solution_file_path == solutionFilePath
 
   win.buf_name = "Test manager"
   win.filetype = "easy-dotnet"
@@ -387,4 +387,3 @@ end
 
 
 return M
-

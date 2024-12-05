@@ -308,6 +308,13 @@ function M.hide(mode)
   return false
 end
 
+function M.close()
+  if M.buf then
+    vim.api.nvim_buf_delete(M.buf, { force = true })
+    M.buf = nil
+  end
+end
+
 ---@param mode "float" | "split" | "buf"
 function M.open(mode)
   if not mode then
