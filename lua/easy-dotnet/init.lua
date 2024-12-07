@@ -190,6 +190,9 @@ M.setup = function(opts)
     require("easy-dotnet.fs-mappings").add_test_signs()
   end
 
+  if merged_opts.enablenable_filetypes == true then
+    require('easy-dotnet.filetypes').enable_filetypes()
+  end
 
   M.test_project = commands.test
   M.test_default = function()
