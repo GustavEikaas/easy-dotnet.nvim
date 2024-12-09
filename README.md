@@ -244,7 +244,8 @@ Integrated test runner inspired by Rider IDE
 ![image](https://github.com/user-attachments/assets/874a1ef1-18cb-43f6-a477-834a783cf785)
 ![image](https://github.com/user-attachments/assets/2d0512f3-f807-4fbd-bf64-a57eb3c06b18)
 
-- [x] Basic test runner window
+- [x] Test runner window
+  - [x] Different viewmodes (float/buf/split)
   - [x] Grouped by namespace
   - [x] Passed, skipped, failed
   - [x] Unit test name
@@ -252,7 +253,7 @@ Integrated test runner inspired by Rider IDE
   - [x] Peek stack trace
   - [x] Run sln,project,namespace,test
   - [x] Aggregate test results
-  - [x] Go to file (only for failed tests)
+  - [x] Go to file
 
 ### Keymaps
 - `W` -> Collapse all
@@ -262,10 +263,11 @@ Integrated test runner inspired by Rider IDE
 - `<leader>d` -> `[Experimental]` Debug test under cursor using nvim-dap
 - `<leader>R` -> Run all tests
 - `<leader>p` -> Peek stacktrace on failed test
-- `<leader>fe` -> Show only failed tests
-- `<leader>gf` -> Go to file (only works inside stacktrace float)
+- `<leader>fe` -> Show only failed tests
 - `g` -> Go to file
 - `q` -> Close window
+
+- `<leader>gf` -> Go to file (only works inside stacktrace float)
 
 ### Debugging tests
 Using the keybinding `<leader>d` will set a breakpoint in the test and launch nvim-dap
