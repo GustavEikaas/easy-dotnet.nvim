@@ -232,6 +232,7 @@ Dotnet testrunner
 Dotnet outdated
 Dotnet new
 Dotnet solution select
+Dotnet reset --Deletes all files persisted by easy-dotnet.nvim, use this if you are unable to pick a different solution, project etc.
 ```
 
 Certain commands like Dotnet test|run|build also supports passing some selected additional arguments like.
