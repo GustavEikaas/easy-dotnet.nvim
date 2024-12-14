@@ -62,26 +62,6 @@ local function get_or_create_cache_file(solution_file_path)
   }
 end
 
----Checks for the default project in the solution file.
----@param solution_file_path string Path to the solution file.
----@param type TaskType
----@return DotnetProject|nil
-M.check_default_solution = function(solution_file_path, type)
-  local file = get_or_create_cache_file(solution_file_path)
-  local sln_parse = require("easy-dotnet.parsers.sln-parse")
-
-  local project = file.decoded[get_property(type)]
-  if project ~= nil then
-    local projects = sln_parse.get_projects_from_sln(solution_file_path)
-    table.insert(projects, { path = solution_file_path, display = "Solution", name = "Solution" })
-    for _, value in ipairs(projects) do
-      if value.name == project then
-        return value
-      end
-    end
-  end
-end
-
 M.set_default_solution = function(old_solution_file, solution_file_path)
   if old_solution_file then
     local sln_name = vim.fs.basename(old_solution_file)
