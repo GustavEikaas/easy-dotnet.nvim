@@ -169,7 +169,8 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
           build = function()
             return string.format("dotnet build %s %s", path, args)
           end
-        } 
+        }
+
         local command = commands[action]() .. "\r"
         vim.cmd("vsplit")
         vim.cmd("term " .. command)
