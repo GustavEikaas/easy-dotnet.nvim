@@ -66,7 +66,8 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 - Debugging Helpers: While easy-dotnet.nvim doesn't set up DAP (Debugger Adapter Protocol) for you, it provides useful helper functions for debugging. These include resolving the DLL you are debugging and rebuilding before launching DAP, ensuring a smooth debugging experience.
 - Test runner: Test runner similiar to the one you find in Rider.
 - Outdated command: Makes checking outdated packages a breeze using virtual text
-- (fsproj/fsproj) mappings: Keymappings for .csproj and .fsproj files are automatically available
+- (csproj/fsproj) mappings: Keymappings for .csproj and .fsproj files are automatically available
+- Auto bootstrap namespace: Automatically inserts namespace when opening a newly created `.cs` file
 - Create dotnet templates like with `dotnet new`, automatically adding them to the current solution
 - Package autocomplete inside .csproj and .fsproj files [Check it out](#package-autocomplete)
 - [Rider-like](https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments)
