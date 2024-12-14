@@ -60,16 +60,15 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 
 ## Features
 
-- Solution and Csproj Support: Seamlessly work with entire solutions or individual projects.
+- Solution, csproj and fsproj support: Whether its a single project or a solution containing multiple projects easy-dotnet has you covered.
 - Action Commands: Execute common tasks like building, running, testing, cleaning and restoring with ease.
-- Project Type Resolution: Detect and handle different project types, including web, test, and console applications.
 - User Secrets Management: Edit, create, and preview .NET user secrets directly within Neovim.
 - Debugging Helpers: While easy-dotnet.nvim doesn't set up DAP (Debugger Adapter Protocol) for you, it provides useful helper functions for debugging. These include resolving the DLL you are debugging and rebuilding before launching DAP, ensuring a smooth debugging experience.
 - Test runner: Test runner similiar to the one you find in Rider.
 - Outdated command: Makes checking outdated packages a breeze using virtual text
-- Csproj mappings: Keymappings for .csproj files are automatically available
-- Create dotnet templates like with `dotnet new`
-- Package autocomplete inside .csproj files [Check it out](#package-autocomplete)
+- (fsproj/fsproj) mappings: Keymappings for .csproj and .fsproj files are automatically available
+- Create dotnet templates like with `dotnet new`, automatically adding them to the current solution
+- Package autocomplete inside .csproj and .fsproj files [Check it out](#package-autocomplete)
 - [Rider-like](https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments)
 syntax highlighting for injected languages (sql, json and xml) based on comments
 
@@ -116,6 +115,7 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
     -- Options are not required
     dotnet.setup({
       --Optional function to return the path for the dotnet sdk (e.g C:/ProgramFiles/dotnet/sdk/8.0.0)
+      -- easy-dotnet will resolve the path automatically if this argument is omitted, for a performance improvement you can add a function that returns a hardcoded string
       get_sdk_path = get_sdk_path,
       ---@type TestRunnerOptions
       test_runner = {
@@ -202,22 +202,24 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 
 ```lua
 local dotnet = require("easy-dotnet")
-dotnet.test_project()                               -- Run dotnet test in the project
-dotnet.test_default()                               -- Run dotnet test in the last selected project
-dotnet.test_solution()                              -- Run dotnet test in the solution/csproj
-dotnet.run_project()                                -- Run dotnet run in the project
-dotnet.run_with_profile(true)                       -- Run dotnet run with a specific launch profile, true/false will run with last selected profile and project
-dotnet.run_default()                                -- Run dotnet run in the last selected project
-dotnet.restore()                                    -- Run dotnet restore for the solution/csproj file
-dotnet.secrets()                                    -- Open .NET user-secrets in a new buffer for editing
-dotnet.build()                                      -- Run dotnet build in the project
-dotnet.build_default()                              -- Will build the last selected project
-dotnet.build_solution()                             -- Run dotnet build in the solution
-dotnet.build_quickfix(dotnet_args?: string)         -- Build dotnet project and open build errors in quickfix list
-dotnet.build_default_quickfix(dotnet_args?: string) -- Will build the last selected project and open build errors in quickfix list
-dotnet.clean()                                      -- Run dotnet clean in the project
-dotnet.get_debug_dll()                              -- Return the dll from the bin/debug folder
-dotnet.is_dotnet_project()                          -- Returns true if a csproject or sln file is present in cwd or some folders down
+dotnet.test_project()                                        -- Run dotnet test in the project
+dotnet.test_default()                                        -- Run dotnet test in the last selected project
+dotnet.test_solution()                                       -- Run dotnet test in the solution/csproj
+dotnet.run_project()                                         -- Run dotnet run in the project
+dotnet.run_with_profile(true)                                -- Run dotnet run with a specific launch profile, true/false will run with last selected profile and project
+dotnet.run_default()                                         -- Run dotnet run in the last selected project
+dotnet.restore()                                             -- Run dotnet restore for the solution/csproj file
+dotnet.secrets()                                             -- Open .NET user-secrets in a new buffer for editing
+dotnet.build()                                               -- Run dotnet build in the project
+dotnet.build_default()                                       -- Will build the last selected project
+dotnet.build_solution()                                      -- Run dotnet build in the solution
+dotnet.build_quickfix(dotnet_args?: string)                  -- Build dotnet project and open build errors in quickfix list
+dotnet.build_default_quickfix(dotnet_args?: string)          -- Will build the last selected project and open build errors in quickfix list
+dotnet.clean()                                               -- Run dotnet clean in the project
+dotnet.get_debug_dll()                                       -- Return the dll from the bin/debug folder
+dotnet.is_dotnet_project()                                   -- Returns true if a csproject or sln file is present in cwd or some folders down
+dotnet.get_environment_variables(project_name, project_path) -- Returns the environment variables from the launchSetting.json file
+dotnet.create_new_item(path)                                 -- Spawns a telescope picker for creating a new file based on a dotnet new template
 ```
 
 ### Vim commands
@@ -268,7 +270,7 @@ Integrated test runner inspired by Rider IDE
 - `g` -> Go to file
 - `q` -> Close window
 
-- `<leader>gf` -> Go to file (only works inside stacktrace float)
+- `<leader>gf` -> Go to file (inside stacktrace float)
 
 ### Debugging tests
 Using the keybinding `<leader>d` will set a breakpoint in the test and launch nvim-dap
