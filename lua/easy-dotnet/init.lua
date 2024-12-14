@@ -139,6 +139,11 @@ M.setup = function(opts)
     new = function()
       require("easy-dotnet.actions.new").new()
     end,
+    reset = function()
+      local dir = require("easy-dotnet.constants").get_data_directory()
+      require("plenary.path"):new(dir):rm({ recursive = true })
+      vim.notify("Cached files deleted")
+    end,
     ef = function(args)
       local ef_handler = function()
         local sub = args[2]
