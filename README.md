@@ -247,10 +247,16 @@ Integrated test runner inspired by Rider IDE
 ![image](https://github.com/user-attachments/assets/874a1ef1-18cb-43f6-a477-834a783cf785)
 ![image](https://github.com/user-attachments/assets/2d0512f3-f807-4fbd-bf64-a57eb3c06b18)
 
+Should support all test adapters like NUnit, XUnit, MSTest, Expecto etc..
+If you are experiencing issues with any test adapter please let me know
+
 - [x] Test runner window
   - [x] Different viewmodes (float/buf/split)
   - [x] Grouped by namespace
   - [x] Passed, skipped, failed
+  - [x] Configurable highlights
+  - [x] Filter failed tests
+  - [x] Test counting
   - [x] Unit test name
   - [x] Collapsable hieararchy 
   - [x] Peek stack trace
@@ -269,7 +275,6 @@ Integrated test runner inspired by Rider IDE
 - `<leader>fe` -> Show only failed tests
 - `g` -> Go to file
 - `q` -> Close window
-
 - `<leader>gf` -> Go to file (inside stacktrace float)
 
 ### Debugging tests
