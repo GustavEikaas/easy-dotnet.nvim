@@ -233,6 +233,11 @@ Dotnet secrets
 Dotnet testrunner
 Dotnet outdated
 Dotnet new
+Dotnet ef database drop
+Dotnet ef database update
+Dotnet ef migrations add
+Dotnet ef migrations remove
+Dotnet ef migrations list
 ```
 
 Certain commands like Dotnet test|run|build also supports passing some selected additional arguments like.
