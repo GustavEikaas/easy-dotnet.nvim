@@ -217,6 +217,7 @@ dotnet.build_default_quickfix(dotnet_args?: string) -- Will build the last selec
 dotnet.clean()                                      -- Run dotnet clean in the project
 dotnet.get_debug_dll()                              -- Return the dll from the bin/debug folder
 dotnet.is_dotnet_project()                          -- Returns true if a csproject or sln file is present in cwd or some folders down
+dotnet.try_get_selected_solution()                  -- If a solution is selected returns { basename: string, path: string } otherwise nil
 ```
 
 ### Vim commands
@@ -230,6 +231,7 @@ Dotnet secrets
 Dotnet testrunner
 Dotnet outdated
 Dotnet new
+Dotnet solution select
 ```
 
 Certain commands like Dotnet test|run|build also supports passing some selected additional arguments like.
