@@ -265,6 +265,4 @@ end
 
 M.package_completion_source = require("easy-dotnet.csproj-mappings").package_completion_cmp
 
-
-
 return M
