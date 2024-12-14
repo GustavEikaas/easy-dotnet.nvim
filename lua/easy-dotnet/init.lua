@@ -14,21 +14,15 @@ local function wrap(callback)
   end
 end
 
-local options = require("easy-dotnet.options")
 local actions = require("easy-dotnet.actions")
 local secrets = require("easy-dotnet.secrets")
 local debug = require("easy-dotnet.debugger")
-
-local function merge_tables(default_options, user_options)
-  return vim.tbl_deep_extend("keep", user_options, default_options)
-end
 
 local function slice(array, start_index, end_index)
   local result = {}
   table.move(array, start_index, end_index, 1, result)
   return result
 end
-
 
 ---@param arguments table<string>|nil
 local function args_handler(arguments)
@@ -81,9 +75,9 @@ local function define_highlights_and_signs(merged_opts)
 end
 
 M.setup = function(opts)
-  local merged_opts = merge_tables(options, opts or {})
+  local merged_opts = require("easy-dotnet.options").set_options(opts)
   define_highlights_and_signs(merged_opts)
-  local commands = {
+  local old_commands = {
     solution = function(args)
       local sub = args[2]
       if sub == "select" then
@@ -109,13 +103,13 @@ M.setup = function(opts)
         error("unknown command")
       end
     end,
-    secrets = function()
-      secrets.edit_secrets_picker(merged_opts.secrets.path)
-    end,
-    run = function(args)
-      local extra_args = slice(args, 2, #args)
-      actions.run(merged_opts.terminal, false, args_handler(extra_args))
-    end,
+    -- secrets = function()
+    --   secrets.edit_secrets_picker(merged_opts.secrets.path)
+    -- end,
+    -- run = function(args)
+    --   local extra_args = slice(args, 2, #args)
+    --   actions.run(merged_opts.terminal, false, args_handler(extra_args))
+    -- end,
     test = function(args)
       local extra_args = slice(args, 2, #args)
       actions.test(merged_opts.terminal, false, args_handler(extra_args))
@@ -180,26 +174,46 @@ M.setup = function(opts)
     return words
   end
 
+
+  local function traverse_subcommands(args, parent)
+    if next(args) then
+      local subcommand = parent.subcommands and parent.subcommands[args[1]]
+      if subcommand then
+        print("recurse handler")
+        traverse_subcommands(slice(args, 1, #args), parent)
+      elseif parent.passtrough then
+        print("passthrough handler")
+        parent.handle(args, require("easy-dotnet.options").options)
+      else
+        print("invalid subcommand")
+      end
+    else
+      print("exact handler")
+      parent.handle(args, require("easy-dotnet.options").options)
+    end
+  end
+
   vim.api.nvim_create_user_command('Dotnet',
     function(commandOpts)
       local args = split_by_whitespace(commandOpts.fargs[1])
-      local subcommand = args[1]
-      local func = commands[subcommand]
-      if func then
-        func(args)
+      local command = args[1]
+      local commands = require("easy-dotnet.commands")
+      local subcommand = commands[command]
+      if subcommand then
+        traverse_subcommands(slice(args, 2, #args), subcommand)
       else
-        print("Invalid subcommand:", subcommand)
+        print("Invalid subcommand:", command)
       end
     end,
     {
       nargs = "?",
-      complete = function()
-        local completion = {}
-        for key, _ in pairs(commands) do
-          table.insert(completion, key)
-        end
-        return completion
-      end,
+      -- complete = function()
+      --   local completion = {}
+      --   for key, _ in pairs(commands) do
+      --     table.insert(completion, key)
+      --   end
+      --   return completion
+      -- end,
     }
   )
 
@@ -221,7 +235,7 @@ M.setup = function(opts)
   end
 
 
-  M.test_project = commands.test
+  -- M.test_project = commands.test
   M.test_default = function()
     actions.test(merged_opts.terminal, true)
   end
@@ -231,7 +245,7 @@ M.setup = function(opts)
   M.watch_tests = function()
     actions.test_watcher(merged_opts.test_runner.icons)
   end
-  M.run_project = commands.run
+  -- M.run_project = commands.run
   M.run_with_profile = function(use_default)
     local function co_wrapper()
       actions.run_with_profile(merged_opts.terminal, use_default == nil and false or use_default)
@@ -266,15 +280,15 @@ M.setup = function(opts)
     actions.build(merged_opts.terminal, true)
   end
 
-  M.restore = commands.restore
+  -- M.restore = commands.restore
 
   M.create_new_item = wrap(function(...)
     require("easy-dotnet.actions.new").create_new_item(...)
   end)
 
-  M.secrets = commands.secrets
-  M.build = commands.build
-  M.clean = commands.clean
+  -- M.secrets = commands.secrets
+  -- M.build = commands.build
+  -- M.clean = commands.clean
   M.build_solution = function()
     actions.build_solution(merged_opts.terminal)
   end
@@ -307,5 +321,7 @@ M.is_dotnet_project = function()
 end
 
 M.package_completion_source = require("easy-dotnet.csproj-mappings").package_completion_cmp
+
+
 
 return M
