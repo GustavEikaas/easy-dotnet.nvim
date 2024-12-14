@@ -221,11 +221,12 @@ dotnet.get_debug_dll()                                       -- Return the dll f
 dotnet.is_dotnet_project()                                   -- Returns true if a csproject or sln file is present in cwd or some folders down
 dotnet.get_environment_variables(project_name, project_path) -- Returns the environment variables from the launchSetting.json file
 dotnet.create_new_item(path)                                 -- Spawns a telescope picker for creating a new file based on a dotnet new template
+dotnet.try_get_selected_solution()                  -- If a solution is selected returns { basename: string, path: string } otherwise nil
 ```
 
 ### Vim commands
 ```
-Dotnet run 
+Dotnet run
 Dotnet test 
 Dotnet restore
 Dotnet build 
@@ -239,6 +240,8 @@ Dotnet ef database update
 Dotnet ef migrations add
 Dotnet ef migrations remove
 Dotnet ef migrations list
+Dotnet solution select
+Dotnet reset --Deletes all files persisted by easy-dotnet.nvim, use this if you are unable to pick a different solution, project etc.
 ```
 
 Certain commands like Dotnet test|run|build also supports passing some selected additional arguments like.
