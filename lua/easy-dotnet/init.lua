@@ -1,5 +1,4 @@
 local M = {}
-
 local function wrap(callback)
   return function(...)
     -- Check if we are already in a coroutine
@@ -17,16 +16,13 @@ end
 local function collect_commands_with_handles(parent, prefix)
   local command_handles = {}
 
-  -- Traverse top-level commands
   for name, command in pairs(parent) do
     local full_command = prefix and (prefix .. "_" .. name) or name
 
-    -- Collect the handle if it exists
     if command.handle then
       command_handles[full_command] = command.handle
     end
 
-    -- Recursively collect subcommands if available
     if command.subcommands then
       local subcommand_handles = collect_commands_with_handles(command.subcommands, full_command)
       for sub_name, sub_handle in pairs(subcommand_handles) do
@@ -36,6 +32,25 @@ local function collect_commands_with_handles(parent, prefix)
   end
 
   return command_handles
+end
+
+local function collect_commands(parent, prefix)
+  local commands = {}
+
+  for name, command in pairs(parent) do
+    local full_command = prefix and (prefix .. " " .. name) or name
+    if command.handle then
+      table.insert(commands, full_command)
+    end
+    if command.subcommands then
+      local subcommands = collect_commands(command.subcommands, full_command)
+      for _, sub in ipairs(subcommands) do
+        table.insert(commands, sub)
+      end
+    end
+  end
+
+  return commands
 end
 
 
@@ -48,26 +63,6 @@ local function slice(array, start_index, end_index)
   return result
 end
 
-local function collect_commands(parent, prefix)
-  local commands = {}
-
-  -- Traverse top-level commands
-  for name, command in pairs(parent) do
-    local full_command = prefix and (prefix .. " " .. name) or name
-    if command.handle then
-      table.insert(commands, full_command)
-    end
-    -- Recursively collect subcommands if available
-    if command.subcommands then
-      local subcommands = collect_commands(command.subcommands, full_command)
-      for _, sub in ipairs(subcommands) do
-        table.insert(commands, sub)
-      end
-    end
-  end
-
-  return commands
-end
 
 local function present_command_picker()
   local commands = require("easy-dotnet.commands")
@@ -111,6 +106,33 @@ local function define_highlights_and_signs(merged_opts)
   vim.fn.sign_define(constants.signs.EasyDotnetTestSkipped, { text = icons.skipped })
   vim.fn.sign_define(constants.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
 end
+
+
+local register_legacy_functions = function()
+  ---Deprecated prefer dotnet.test instead
+  ---@deprecated prefer dotnet.test instead
+  M.test_project = function()
+    require("easy-dotnet.commands").test.handle({}, require("easy-dotnet.options").options)
+  end
+
+  ---@deprecated I suspect this is not used as the testrunner seems to be mainly used, if this were to live on it should sync with testrunner
+  M.watch_tests = function()
+    actions.test_watcher(require("easy-dotnet.options").options.test_runner.icons)
+  end
+
+  ---Deprecated prefer dotnet.run instead
+  ---@deprecated prefer dotnet.run instead
+  M.run_with_profile = function(use_default)
+    local function co_wrapper()
+      actions.run_with_profile(require("easy-dotnet.options").options.terminal,
+        use_default == nil and false or use_default)
+    end
+
+    local co = coroutine.create(co_wrapper)
+    coroutine.resume(co)
+  end
+end
+
 
 ---@return table<string>
 local function split_by_whitespace(str)
@@ -160,6 +182,7 @@ M.setup = function(opts)
       local command = args[1]
       if not command then
         present_command_picker()
+        return
       end
       local commands = require("easy-dotnet.commands")
       local subcommand = commands[command]
@@ -173,9 +196,7 @@ M.setup = function(opts)
         print("Invalid subcommand:", command)
       end
     end,
-    {
-      nargs = "?",
-    }
+    { nargs = "?" }
   )
 
   if merged_opts.csproj_mappings == true then
@@ -195,30 +216,6 @@ M.setup = function(opts)
     require("easy-dotnet.fs-mappings").add_test_signs()
   end
 
-
-  -- M.test_project = commands.test
-  -- M.test_default = function()
-  --   actions.test(merged_opts.terminal, true)
-  -- end
-  -- M.test_solution = function()
-  --   actions.test_solution(merged_opts.terminal)
-  -- end
-
-  ---@deprecated I suspect this is not used as the testrunner seems to be mainly used, if this were to live on it should sync with testrunner
-  M.watch_tests = function()
-    actions.test_watcher(merged_opts.test_runner.icons)
-  end
-
-  -- M.run_project = commands.run
-  -- M.run_with_profile = function(use_default)
-  --   local function co_wrapper()
-  --     actions.run_with_profile(merged_opts.terminal, use_default == nil and false or use_default)
-  --   end
-  --
-  --   local co = coroutine.create(co_wrapper)
-  --   coroutine.resume(co)
-  -- end
-
   -- M.testrunner_refresh = function(args)
   --   local function co_wrapper()
   --     require("easy-dotnet.test-runner.runner").refresh(merged_opts.test_runner, merged_opts.get_sdk_path(), args)
@@ -228,40 +225,17 @@ M.setup = function(opts)
   --   coroutine.resume(co)
   -- end
 
-  -- M.run_default = function()
-  --   actions.run(merged_opts.terminal, true, "")
-  -- end
-
-  -- M.build_default_quickfix = function(dotnet_args)
-  --   actions.build_quickfix(true, dotnet_args)
-  -- end
-  --
-  -- M.build_quickfix = function(dotnet_args)
-  --   actions.build_quickfix(false, dotnet_args)
-  -- end
-  --
-  -- M.build_default = function()
-  --   actions.build(merged_opts.terminal, true)
-  -- end
-
-  -- M.restore = commands.restore
-
-  -- M.create_new_item = wrap(function(...)
-  --   require("easy-dotnet.actions.new").create_new_item(...)
-  -- end)
-
-  -- M.secrets = commands.secrets
-  -- M.build = commands.build
-  -- M.clean = commands.clean
-  -- M.build_solution = function()
-  --   actions.build_solution(merged_opts.terminal)
-  -- end
-
-  --expose all commands from dotnet-commands as functions
   for name, handle in pairs(collect_commands_with_handles(require("easy-dotnet.commands"))) do
     M[name] = handle
   end
+  register_legacy_functions()
 end
+
+
+M.create_new_item = wrap(function(...)
+  require("easy-dotnet.actions.new").create_new_item(...)
+end)
+
 
 M.get_debug_dll = debug.get_debug_dll
 M.get_environment_variables = debug.get_environment_variables

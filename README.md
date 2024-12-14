@@ -9,8 +9,6 @@ Are you a .NET developer looking to harness the power of Neovim for your daily c
 > 💡 **Tip:** 
 > This plugin and all its features should work for both **C#** and **F#**.
 
-
-
 >[!IMPORTANT]
 >I need feedback! The last months I have had a blast developing this plugin, i have gotten a lot of feedback from you guys, and I want more! Please dont hesitate to file an issue with an improvement/bug/question etc..
 >And most importantly thank you guys for using my plugin :D
@@ -203,49 +201,80 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 
 ```lua
 local dotnet = require("easy-dotnet")
-dotnet.test_project()                                        -- Run dotnet test in the project
-dotnet.test_default()                                        -- Run dotnet test in the last selected project
-dotnet.test_solution()                                       -- Run dotnet test in the solution/csproj
-dotnet.run_project()                                         -- Run dotnet run in the project
-dotnet.run_with_profile(true)                                -- Run dotnet run with a specific launch profile, true/false will run with last selected profile and project
-dotnet.run_default()                                         -- Run dotnet run in the last selected project
-dotnet.restore()                                             -- Run dotnet restore for the solution/csproj file
-dotnet.secrets()                                             -- Open .NET user-secrets in a new buffer for editing
-dotnet.build()                                               -- Run dotnet build in the project
-dotnet.build_default()                                       -- Will build the last selected project
-dotnet.build_solution()                                      -- Run dotnet build in the solution
+dotnet.get_environment_variables(project_name, project_path) -- Returns the environment variables from the launchSetting.json file
+dotnet.is_dotnet_project()                                   -- Returns true if a csproject or sln file is present in cwd or some folders down
+dotnet.try_get_selected_solution()                  -- If a solution is selected returns { basename: string, path: string } otherwise nil
+dotnet.get_debug_dll()                              -- Return the dll from the bin/debug folder
+dotnet.reset()             --Deletes all files persisted by easy-dotnet.nvim, use this if you are unable to pick a different solution, project etc.dotnet.run_profile()
+dotnet.run_profile_default()
+dotnet.test()
+dotnet.testrunner()
+dotnet.testrunner_refresh()
+dotnet.testrunner_refresh_build()
+dotnet.new()
+dotnet.outdated()
+dotnet.solution_select()
+dotnet.ef_migrations_remove()
+dotnet.ef_migrations_add()
+dotnet.ef_migrations_list()
+dotnet.ef_database_drop()
+dotnet.ef_database_update()
+dotnet.ef_database_update_pick()
+dotnet.createfile(path)                                 -- Spawns a telescope picker for creating a new file based on a dotnet new template
+dotnet.build_default_quickfix()
+dotnet.test_solution()
+dotnet.build_solution()
+--TODO: ensure table<string> compatibility
 dotnet.build_quickfix(dotnet_args?: string)                  -- Build dotnet project and open build errors in quickfix list
 dotnet.build_default_quickfix(dotnet_args?: string)          -- Will build the last selected project and open build errors in quickfix list
+--TODO: accepts args now?
+dotnet.build_default()                                       -- Will build the last selected project
+dotnet.test_default()                                        -- Run dotnet test in the last selected project
+dotnet.run()
+dotnet.run_default()
+dotnet.secrets()                                             -- Open telescope picker for .NET user-secrets 
+dotnet.build()                                               -- Run dotnet build in the project
 dotnet.clean()                                               -- Run dotnet clean in the project
-dotnet.get_debug_dll()                                       -- Return the dll from the bin/debug folder
-dotnet.is_dotnet_project()                                   -- Returns true if a csproject or sln file is present in cwd or some folders down
-dotnet.get_environment_variables(project_name, project_path) -- Returns the environment variables from the launchSetting.json file
-dotnet.create_new_item(path)                                 -- Spawns a telescope picker for creating a new file based on a dotnet new template
-dotnet.try_get_selected_solution()                  -- If a solution is selected returns { basename: string, path: string } otherwise nil
+dotnet.restore()                                             -- Run dotnet restore for the solution/csproj/fsproj file
 ```
 
 ### Vim commands
 ```
-Dotnet run
-Dotnet test 
-Dotnet restore
-Dotnet build 
-Dotnet clean
-Dotnet secrets
+Run :Dotnet in nvim to list all commands
+```
+```
 Dotnet testrunner
-Dotnet outdated
-Dotnet new
-Dotnet ef database drop
+Dotnet testrunner refresh
+Dotnet testrunner refresh build
+Dotnet run
+Dotnet run default
+Dotnet run profile
+Dotnet run profile default
+Dotnet test
+Dotnet test default
+Dotnet test solution
+Dotnet build
+Dotnet build quickfix
+Dotnet build solution
+Dotnet build default
+Dotnet build default quickfix
 Dotnet ef database update
+Dotnet ef database update pick
+Dotnet ef database drop
 Dotnet ef migrations add
 Dotnet ef migrations remove
 Dotnet ef migrations list
+Dotnet secrets
+Dotnet restore
+Dotnet clean
+Dotnet new
+Dotnet createfile
 Dotnet solution select
-Dotnet reset --Deletes all files persisted by easy-dotnet.nvim, use this if you are unable to pick a different solution, project etc.
+Dotnet outdated
+Dotnet reset
 ```
 
 Certain commands like Dotnet test|run|build also supports passing some selected additional arguments like.
-
 ```
 Dotnet run|test|build --no-build --no-restore -c prerelease
 ```
