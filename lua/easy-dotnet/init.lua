@@ -77,7 +77,6 @@ local function present_command_picker()
   end)
 end
 
-
 local function define_highlights_and_signs(merged_opts)
   local constants = require("easy-dotnet.constants")
   vim.api.nvim_set_hl(0, "EasyDotnetPackage", {
