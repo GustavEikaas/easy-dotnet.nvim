@@ -29,7 +29,7 @@ end
 ---@param entry table
 ---@param get_secret_path function
 local secrets_preview = function(self, entry, get_secret_path)
-  if entry.value.secrets == false then
+  if not entry.value.secrets then
     vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "Secrets file does not exist", "<CR> to create" })
     return
   end
@@ -39,6 +39,17 @@ local secrets_preview = function(self, entry, get_secret_path)
   end
 end
 
+local function create_directory(dir)
+  if vim.loop.fs_stat(dir) == nil then                                         -- Check if directory exists
+    assert(vim.loop.fs_mkdir(dir, 493), "Failed to create directory: " .. dir) -- 493 = 0755 permissions
+  end
+end
+
+local function append_to_file(file, content)
+  local fd = assert(vim.loop.fs_open(file, "a+", 420)) -- 420 = 0644 permissions
+  assert(vim.loop.fs_write(fd, content, -1))           -- Append content
+  vim.loop.fs_close(fd)
+end
 --- Initializes secrets for a given project
 ---@param project_file_path string
 ---@param get_secret_path function
@@ -57,8 +68,8 @@ local init_secrets = function(project_file_path, get_secret_path)
   local guid = extract_secret_guid(value)
   local path = get_secret_path(guid)
   local parentDir = vim.fs.dirname(path)
-  os.execute("mkdir " .. parentDir)
-  os.execute("echo { } >> " .. path)
+  create_directory(parentDir)
+  append_to_file(path, "{ }\n")
 
   handler:close()
   vim.notify("User secrets created")
@@ -73,7 +84,7 @@ local function csproj_fallback(get_secret_path)
   end
 
   local csproj = csproj_parse.get_project_from_csproj(csproj_path)
-  if csproj.secrets == false then
+  if not csproj.secrets then
     local secret_id = init_secrets(csproj.path, get_secret_path)
     csproj.secrets = secret_id
   end
@@ -100,7 +111,7 @@ M.edit_secrets_picker = function(get_secret_path)
   end
 
   picker.preview_picker(nil, projectsWithSecrets, function(item)
-    if item.secrets == false then
+    if not item.secrets then
       local secret_id = init_secrets(item.path, get_secret_path)
       item.secrets = secret_id
     end
