@@ -36,7 +36,7 @@ end
 
 local actions = require("easy-dotnet.actions")
 
-
+---This entire object is exposed, any change to this will possibly be a breaking change, tread carefully
 ---@type Command
 M.run = {
   handle = function(args, options)

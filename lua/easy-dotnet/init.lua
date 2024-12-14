@@ -14,6 +14,31 @@ local function wrap(callback)
   end
 end
 
+local function collect_commands_with_handles(parent, prefix)
+  local command_handles = {}
+
+  -- Traverse top-level commands
+  for name, command in pairs(parent) do
+    local full_command = prefix and (prefix .. "_" .. name) or name
+
+    -- Collect the handle if it exists
+    if command.handle then
+      command_handles[full_command] = command.handle
+    end
+
+    -- Recursively collect subcommands if available
+    if command.subcommands then
+      local subcommand_handles = collect_commands_with_handles(command.subcommands, full_command)
+      for sub_name, sub_handle in pairs(subcommand_handles) do
+        command_handles[sub_name] = sub_handle
+      end
+    end
+  end
+
+  return command_handles
+end
+
+
 local actions = require("easy-dotnet.actions")
 local debug = require("easy-dotnet.debugger")
 
@@ -231,6 +256,11 @@ M.setup = function(opts)
   -- M.build_solution = function()
   --   actions.build_solution(merged_opts.terminal)
   -- end
+
+  --expose all commands from dotnet-commands as functions
+  for name, handle in pairs(collect_commands_with_handles(require("easy-dotnet.commands"))) do
+    M[name] = handle
+  end
 end
 
 M.get_debug_dll = debug.get_debug_dll
