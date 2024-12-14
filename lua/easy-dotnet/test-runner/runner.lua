@@ -126,11 +126,6 @@ local function generate_tree(tests, options, project)
   return project
 end
 
-local function merge_tables(table1, table2)
-  return vim.tbl_deep_extend("keep", table1, table2)
-end
-
-local default_options = require("easy-dotnet.options").test_runner
 ---@param project TestNode
 ---@param options TestRunnerOptions
 ---@param sdk_path string
@@ -375,12 +370,9 @@ M.refresh = function(options, sdk_path, args)
 end
 
 M.runner = function(options, sdk_path)
-  ---@type TestRunnerOptions
-  local mergedOpts = merge_tables(options or {}, default_options)
-
   coroutine.wrap(
     function()
-      open_runner(mergedOpts, sdk_path)
+      open_runner(options, sdk_path)
     end
   )()
 end

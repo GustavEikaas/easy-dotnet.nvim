@@ -3,7 +3,7 @@ local M = {}
 
 ---@class Command
 ---@field subcommands table<string,Command> | nil
----@field handle function<string,nil>
+---@field handle nil | fun(args: table<string>, options: table): nil
 ---@field passtrough boolean | nil
 
 local function slice(array, start_index, end_index)
@@ -137,19 +137,24 @@ M.createfile = {
 }
 
 M.testrunner = {
-  handle = function(args, options)
+  handle = function(_, options)
     require("easy-dotnet.test-runner.runner").runner(options.test_runner, options.get_sdk_path)
   end,
   subcommands = {
-    --TODO: broken contract with {build: true} -> build?
     refresh = {
-      handle = function(args, options)
-        --TODO: handle build
-        require("easy-dotnet.test-runner.runner").refresh(options.test_runner, options.get_sdk_path(), args)
-      end
+      handle = function(_, options)
+        require("easy-dotnet.test-runner.runner").refresh(options.test_runner, options.get_sdk_path(), { build = false })
+      end,
+      subcommands = {
+        build = {
+          handle = function(_, options)
+            require("easy-dotnet.test-runner.runner").refresh(options.test_runner, options.get_sdk_path(),
+              { build = true })
+          end
+        }
+      }
     }
   }
-
 }
 
 M.outdated = {
@@ -180,6 +185,7 @@ M.reset = {
 
 
 M.solution = {
+  handle = nil,
   subcommands = {
     select = {
       handle = function()
@@ -203,10 +209,10 @@ M.solution = {
 }
 
 M.ef = {
-  handle = function() end,
+  handle = nil,
   subcommands = {
     database = {
-      handle = function() end,
+      handle = nil,
       subcommands = {
         update = {
           handle = function()
@@ -228,7 +234,7 @@ M.ef = {
       }
     },
     migrations = {
-      handle = function() end,
+      handle = nil,
       subcommands = {
         add = {
           passtrough = true,

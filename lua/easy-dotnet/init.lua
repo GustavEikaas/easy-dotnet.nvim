@@ -29,8 +29,9 @@ local function collect_commands(parent, prefix)
   -- Traverse top-level commands
   for name, command in pairs(parent) do
     local full_command = prefix and (prefix .. " " .. name) or name
-    table.insert(commands, full_command)
-
+    if command.handle then
+      table.insert(commands, full_command)
+    end
     -- Recursively collect subcommands if available
     if command.subcommands then
       local subcommands = collect_commands(command.subcommands, full_command)
@@ -98,6 +99,13 @@ local function split_by_whitespace(str)
   return words
 end
 
+local function collect_keys(tbl)
+  local keys = {}
+  for key, _ in pairs(tbl) do
+    table.insert(keys, key)
+  end
+  return keys
+end
 
 local function traverse_subcommands(args, parent)
   if next(args) then
@@ -109,11 +117,13 @@ local function traverse_subcommands(args, parent)
     else
       print("Invalid subcommand:", args[1])
     end
-  else
+  elseif parent.handle then
     parent.handle(args, require("easy-dotnet.options").options)
+  else
+    local required = collect_keys(parent.subcommands)
+    print("Missing required argument " .. vim.inspect(required))
   end
 end
-
 
 M.setup = function(opts)
   local merged_opts = require("easy-dotnet.options").set_options(opts)
