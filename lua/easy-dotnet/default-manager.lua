@@ -25,11 +25,26 @@ local function get_property(type)
   return string.format("default_%s_project", type)
 end
 
+
+local function file_exists(path)
+  local stat = vim.loop.fs_stat(path)
+  return stat and stat.type == "file"
+end
+
 local function get_or_create_cache_dir()
   local dir = require("easy-dotnet.constants").get_data_directory()
   local file_utils = require("easy-dotnet.file-utils")
   file_utils.ensure_directory_exists(dir)
   return dir
+end
+
+function M.try_get_cache_file(solution_file_path)
+  local sln_name = vim.fs.basename(solution_file_path)
+  local dir = get_or_create_cache_dir()
+  local file = vim.fs.joinpath(dir, sln_name .. ".json")
+  if file_exists(file) then
+    return file
+  end
 end
 
 local function get_or_create_cache_file(solution_file_path)
@@ -45,6 +60,22 @@ local function get_or_create_cache_file(solution_file_path)
     ---@type SolutionContent|nil
     decoded = decoded
   }
+end
+
+M.set_default_solution = function(old_solution_file, solution_file_path)
+  if old_solution_file then
+    local sln_name = vim.fs.basename(old_solution_file)
+    local dir = get_or_create_cache_dir()
+    local file = vim.fs.joinpath(dir, sln_name .. ".json")
+    if file_exists(file) then
+      local success, err = pcall(vim.loop.fs_unlink, file)
+      if not success then
+        print("Failed to delete file: " .. err)
+      end
+    end
+  end
+
+  get_or_create_cache_file(solution_file_path)
 end
 
 ---Checks for the default project in the solution file.

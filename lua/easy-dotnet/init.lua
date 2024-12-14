@@ -84,6 +84,31 @@ M.setup = function(opts)
   local merged_opts = merge_tables(options, opts or {})
   define_highlights_and_signs(merged_opts)
   local commands = {
+    solution = function(args)
+      local sub = args[2]
+      if sub == "select" then
+        local function handler()
+          local files = require("easy-dotnet.parsers.sln-parse").get_solutions()
+          local old = nil
+          for _, value in ipairs(files) do
+            local file = require("easy-dotnet.default-manager").try_get_cache_file(value)
+            if file then
+              old = value
+            end
+          end
+
+          local sln = require("easy-dotnet.parsers.sln-parse").find_solution_file(true)
+          if sln == nil then
+            print("No solutions found")
+          end
+          require("easy-dotnet.default-manager").set_default_solution(old, sln)
+        end
+        local co = coroutine.create(handler)
+        coroutine.resume(co)
+      else
+        error("unknown command")
+      end
+    end,
     secrets = function()
       secrets.edit_secrets_picker(merged_opts.secrets.path)
     end,
@@ -113,6 +138,11 @@ M.setup = function(opts)
     end,
     new = function()
       require("easy-dotnet.actions.new").new()
+    end,
+    reset = function()
+      local dir = require("easy-dotnet.constants").get_data_directory()
+      require("plenary.path"):new(dir):rm({ recursive = true })
+      vim.notify("Cached files deleted")
     end,
     ef = function(args)
       local ef_handler = function()
@@ -256,6 +286,14 @@ end
 M.get_debug_dll = debug.get_debug_dll
 M.get_environment_variables = debug.get_environment_variables
 
+M.try_get_selected_solution = function()
+  local file = require("easy-dotnet.parsers.sln-parse").try_get_selected_solution_file()
+  return {
+    basename = vim.fs.basename(file),
+    path = file
+  }
+end
+
 M.experimental = {
   start_debugging_test_project = debug.start_debugging_test_project
 }
@@ -266,7 +304,7 @@ M.entity_framework = {
 }
 
 M.is_dotnet_project = function()
-  local project_files = require("easy-dotnet.parsers.sln-parse").find_solution_file() or
+  local project_files = require("easy-dotnet.parsers.sln-parse").get_solutions() or
       require("easy-dotnet.parsers.csproj-parse").find_project_file()
   return project_files ~= nil
 end
