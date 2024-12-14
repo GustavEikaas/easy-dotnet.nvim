@@ -206,8 +206,9 @@ dotnet.is_dotnet_project()                                   -- Returns true if 
 dotnet.try_get_selected_solution()                  -- If a solution is selected returns { basename: string, path: string } otherwise nil
 dotnet.get_debug_dll()                              -- Return the dll from the bin/debug folder
 dotnet.reset()             --Deletes all files persisted by easy-dotnet.nvim, use this if you are unable to pick a different solution, project etc.dotnet.run_profile()
-dotnet.run_profile_default()
-dotnet.test()
+dotnet.test(dotnet_args?: string | string[] | nil)
+dotnet.test_solution(dotnet_args?: string | string[] | nil)
+dotnet.test_default(dotnet_args?: string | string[] | nil)                                        -- Run dotnet test in the last selected project
 dotnet.testrunner()
 dotnet.testrunner_refresh()
 dotnet.testrunner_refresh_build()
@@ -215,25 +216,21 @@ dotnet.new()
 dotnet.outdated()
 dotnet.solution_select()
 dotnet.ef_migrations_remove()
-dotnet.ef_migrations_add()
+dotnet.ef_migrations_add(name: string)
 dotnet.ef_migrations_list()
 dotnet.ef_database_drop()
 dotnet.ef_database_update()
 dotnet.ef_database_update_pick()
 dotnet.createfile(path)                                 -- Spawns a telescope picker for creating a new file based on a dotnet new template
-dotnet.build_default_quickfix()
-dotnet.test_solution()
-dotnet.build_solution()
---TODO: ensure table<string> compatibility
-dotnet.build_quickfix(dotnet_args?: string)                  -- Build dotnet project and open build errors in quickfix list
-dotnet.build_default_quickfix(dotnet_args?: string)          -- Will build the last selected project and open build errors in quickfix list
---TODO: accepts args now?
-dotnet.build_default()                                       -- Will build the last selected project
-dotnet.test_default()                                        -- Run dotnet test in the last selected project
-dotnet.run()
-dotnet.run_default()
+dotnet.build(dotnet_args?: string | string[] | nil)                                               -- Run dotnet build in the project
+dotnet.build_solution(dotnet_args?: string | string[] | nil)
+dotnet.build_quickfix(dotnet_args?: string | string[] | nil)                  -- Build dotnet project and open build errors in quickfix list
+dotnet.build_default(dotnet_args?: string | string[] | nil)                                       -- Will build the last selected project
+dotnet.build_default_quickfix(dotnet_args?: string | string[] | nil)          -- Will build the last selected project and open build errors in quickfix list
+dotnet.run(dotnet_args?: string | string[] | nil)
+dotnet.run_profile_default(dotnet_args?: string | string[] | nil)
+dotnet.run_default(dotnet_args?: string | string[] | nil)
 dotnet.secrets()                                             -- Open telescope picker for .NET user-secrets 
-dotnet.build()                                               -- Run dotnet build in the project
 dotnet.clean()                                               -- Run dotnet clean in the project
 dotnet.restore()                                             -- Run dotnet restore for the solution/csproj/fsproj file
 ```

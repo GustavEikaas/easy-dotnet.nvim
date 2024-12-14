@@ -62,13 +62,14 @@ M.run_test_picker = function(on_select, use_default, args)
   end, use_default)
 end
 
-M.test_solution = function(term)
+M.test_solution = function(term, args)
+  args = args or ""
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if solutionFilePath == nil then
     vim.notify(error_messages.no_project_definition_found)
     return
   end
-  term(solutionFilePath, "test", "")
+  term(solutionFilePath, "test", args or "")
 end
 
 

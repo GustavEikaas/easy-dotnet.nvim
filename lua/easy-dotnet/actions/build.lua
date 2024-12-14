@@ -155,13 +155,13 @@ M.build_project_quickfix = function(use_default, dotnet_args)
 end
 
 
-M.build_solution = function(term)
+M.build_solution = function(term, args)
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if solutionFilePath == nil then
     vim.notify(error_messages.no_project_definition_found)
     return
   end
-  term(solutionFilePath, "build", "")
+  term(solutionFilePath, "build", args or "")
 end
 
 return M

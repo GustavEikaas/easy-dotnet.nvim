@@ -43,24 +43,25 @@ local function pick_project(use_default)
 end
 
 ---@param term function
-local function csproj_fallback(term)
+local function csproj_fallback(term, args)
   local csproj_path = csproj_parse.find_project_file()
   if (csproj_path == nil) then
     vim.notify(error_messages.no_project_definition_found)
     return
   end
   picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } },
-    function(i) term(i.path, "run") end, "Run project")
+    function(i) term(i.path, "run", args) end, "Run project")
 end
 
 ---@param term function
 ---@param use_default boolean
 ---@param args string | nil
 M.run_project_picker = function(term, use_default, args)
+  args = args or ""
   local default_manager = require("easy-dotnet.default-manager")
   local solution_file_path = sln_parse.find_solution_file()
   if solution_file_path == nil then
-    csproj_fallback(term)
+    csproj_fallback(term, args)
     return
   end
 
@@ -141,13 +142,15 @@ local function get_or_pick_profile(use_default, project, solution_file_path)
 end
 
 ---@param use_default boolean
-M.run_project_with_profile = function(term, use_default)
+M.run_project_with_profile = function(term, use_default, args)
+  args = args or ""
   local project, solution_file_path = pick_project(use_default)
   if not project then
     error("Failed to select project")
   end
   local profile = get_or_pick_profile(use_default, project, solution_file_path)
-  term(project.path, "run", profile and string.format("--launch-profile '%s'", profile) or "")
+  local arg = profile and string.format("--launch-profile '%s'", profile) or ""
+  term(project.path, "run", arg .. " " .. args)
 end
 
 return M

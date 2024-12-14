@@ -3,7 +3,7 @@ local M = {}
 
 ---@class Command
 ---@field subcommands table<string,Command> | nil
----@field handle nil | fun(args: table<string>, options: table): nil
+---@field handle nil | fun(args: table<string>|string, options: table): nil
 ---@field passtrough boolean | nil
 
 local function slice(array, start_index, end_index)
@@ -12,11 +12,16 @@ local function slice(array, start_index, end_index)
   return result
 end
 
----@param arguments table<string>|nil
+---@param arguments table<string>| nil | string
 local function passthrough_dotnet_cli_args_handler(arguments)
   if not arguments or #arguments == 0 then
     return ""
   end
+
+  if type(arguments) == "string" then
+    return arguments
+  end
+
   local loweredArgument = arguments[1]:lower()
   if loweredArgument == "release" then
     return string.format("-c release %s", passthrough_dotnet_cli_args_handler(slice(arguments, 2, #arguments) or ""))
@@ -45,18 +50,18 @@ M.run = {
   passtrough = true,
   subcommands = {
     default = {
-      handle = function(_, options)
-        actions.run(options.terminal, true, "")
+      handle = function(args, options)
+        actions.run(options.terminal, true, passthrough_dotnet_cli_args_handler(args))
       end
     },
     profile = {
-      handle = function(_, options)
-        actions.run_with_profile(options.terminal, false)
+      handle = function(args, options)
+        actions.run_with_profile(options.terminal, false, passthrough_dotnet_cli_args_handler(args))
       end,
       subcommands = {
         default = {
-          handle = function(_, options)
-            actions.run_with_profile(options.terminal, true)
+          handle = function(args, options)
+            actions.run_with_profile(options.terminal, true, passthrough_dotnet_cli_args_handler(args))
           end
         }
       }
@@ -78,13 +83,13 @@ M.test = {
   passtrough = true,
   subcommands = {
     default = {
-      handle = function(_, options)
-        actions.test(options.terminal, true)
+      handle = function(args, options)
+        actions.test(options.terminal, true, passthrough_dotnet_cli_args_handler(args))
       end
     },
     solution = {
-      handle = function(_, options)
-        actions.test_solution(options.terminal)
+      handle = function(args, options)
+        actions.test_solution(options.terminal, passthrough_dotnet_cli_args_handler(args))
       end
     }
   }
