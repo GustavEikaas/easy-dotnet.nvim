@@ -70,7 +70,6 @@ local function present_command_picker()
 
   vim.ui.select(all_commands, { prompt = "Select a Dotnet Command" }, function(selected)
     if selected then
-      -- Simulate the selected command being run as a user would type it
       vim.cmd("Dotnet " .. selected)
     else
       vim.notify("No command selected", vim.log.levels.INFO)
