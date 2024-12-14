@@ -43,6 +43,16 @@ function M.get_solutions()
   return files
 end
 
+M.try_get_selected_solution_file = function()
+  local files = M.get_solutions()
+  for _, value in ipairs(files) do
+    local file = require("easy-dotnet.default-manager").try_get_cache_file(value)
+    if file then
+      return value
+    end
+  end
+end
+
 M.find_solution_file = function(no_cache)
   local files = M.get_solutions()
   local opts = {}

@@ -283,6 +283,14 @@ end
 M.get_debug_dll = debug.get_debug_dll
 M.get_environment_variables = debug.get_environment_variables
 
+M.try_get_selected_solution = function()
+  local file = require("easy-dotnet.parsers.sln-parse").try_get_selected_solution_file()
+  return {
+    basename = vim.fs.basename(file),
+    path = file
+  }
+end
+
 M.experimental = {
   start_debugging_test_project = debug.start_debugging_test_project
 }
