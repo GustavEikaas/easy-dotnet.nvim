@@ -29,7 +29,6 @@ end
 ---@param entry table
 ---@param get_secret_path function
 local secrets_preview = function(self, entry, get_secret_path)
-  print(vim.inspect(entry))
   if not entry.value.secrets then
     vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, { "Secrets file does not exist", "<CR> to create" })
     return
@@ -97,7 +96,6 @@ end
 
 M.edit_secrets_picker = function(get_secret_path)
   local solutionFilePath = sln_parse.find_solution_file()
-  print(solutionFilePath)
   if solutionFilePath == nil then
     csproj_fallback(get_secret_path)
     return
@@ -113,8 +111,6 @@ M.edit_secrets_picker = function(get_secret_path)
   end
 
   picker.preview_picker(nil, projectsWithSecrets, function(item)
-    print(vim.inspect(item))
-
     if not item.secrets then
       local secret_id = init_secrets(item.path, get_secret_path)
       item.secrets = secret_id
