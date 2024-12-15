@@ -143,7 +143,7 @@ M.createfile = {
 
 M.testrunner = {
   handle = function(_, options)
-    require("easy-dotnet.test-runner.runner").runner(options.test_runner, options.get_sdk_path)
+    require("easy-dotnet.test-runner.runner").runner(options.test_runner, options.get_sdk_path())
   end,
   subcommands = {
     refresh = {
