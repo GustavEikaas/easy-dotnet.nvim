@@ -51,6 +51,10 @@ end
 ---@param term function
 ---@param use_default boolean
 M.build_project_picker = function(term, use_default, args)
+  term = term or require("easy-dotnet.options").options.terminal
+  use_default = use_default or false
+  args = args or ""
+
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
     csproj_fallback(term)
@@ -101,6 +105,9 @@ end
 ---@param use_default boolean
 ---@param dotnet_args string | nil
 M.build_project_quickfix = function(use_default, dotnet_args)
+  use_default = use_default or false
+  dotnet_args = dotnet_args or ""
+
   if M.pending == true then
     vim.notify("Build already pending...", vim.log.levels.ERROR)
     return
@@ -156,6 +163,9 @@ end
 
 
 M.build_solution = function(term, args)
+  term = term or require("easy-dotnet.options").options.terminal
+  args = args or ""
+
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if solutionFilePath == nil then
     vim.notify(error_messages.no_project_definition_found)

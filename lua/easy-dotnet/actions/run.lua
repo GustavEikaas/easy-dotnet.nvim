@@ -53,10 +53,12 @@ local function csproj_fallback(term, args)
     function(i) term(i.path, "run", args) end, "Run project")
 end
 
----@param term function
----@param use_default boolean
+---@param term function | nil
+---@param use_default boolean | nil
 ---@param args string | nil
 M.run_project_picker = function(term, use_default, args)
+  term = term or require("easy-dotnet.options").options.terminal
+  use_default = use_default or false
   args = args or ""
   local default_manager = require("easy-dotnet.default-manager")
   local solution_file_path = sln_parse.find_solution_file()
@@ -143,6 +145,8 @@ end
 
 ---@param use_default boolean
 M.run_project_with_profile = function(term, use_default, args)
+  term = term or require("easy-dotnet.options").options.terminal
+  use_default = use_default or false
   args = args or ""
   local project, solution_file_path = pick_project(use_default)
   if not project then

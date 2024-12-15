@@ -328,6 +328,10 @@ local function open_runner(options, sdk_path)
 end
 
 M.refresh = function(options, sdk_path, args)
+  options = options or require("easy-dotnet.options").options.test_runner
+  sdk_path = sdk_path or require("easy-dotnet.options").options.get_sdk_path()
+  args = args or { build = false }
+
   local win = require("easy-dotnet.test-runner.render")
   if #win.jobs > 0 then
     vim.notify("Cant refresh while waiting for pending jobs", vim.log.levels.WARN)
@@ -370,6 +374,8 @@ M.refresh = function(options, sdk_path, args)
 end
 
 M.runner = function(options, sdk_path)
+  options = options or require("easy-dotnet.options").options.test_runner
+  sdk_path = sdk_path or require("easy-dotnet.options").options.get_sdk_path()
   coroutine.wrap(
     function()
       open_runner(options, sdk_path)
