@@ -1,12 +1,15 @@
 local M = {}
 
-M.picker = function(bufnr, options, on_select_cb, title)
+M.picker = function(bufnr, options, on_select_cb, title, autopick)
+  if autopick == nil then
+    autopick = true
+  end
   if (#options == 0) then
     error("No options provided, minimum 1 is required")
   end
 
   -- Auto pick if only one option present
-  if (#options == 1) then
+  if (#options == 1 and autopick == true) then
     on_select_cb(options[1])
     return
   end
@@ -98,7 +101,12 @@ M.preview_picker = function(bufnr, options, on_select_cb, title, previewer)
   picker:find()
 end
 
-M.pick_sync = function(bufnr, options, title)
+---@generic T
+---@param bufnr number | nil
+---@param options table<T>
+---@param title string | nil
+---@return T
+M.pick_sync = function(bufnr, options, title, autopick)
   local co = coroutine.running()
   local selected = nil
   M.picker(bufnr, options, function(i)
@@ -106,7 +114,7 @@ M.pick_sync = function(bufnr, options, title)
     if coroutine.status(co) ~= "running" then
       coroutine.resume(co)
     end
-  end, title)
+  end, title or "", autopick)
   if not selected then
     coroutine.yield()
   end
