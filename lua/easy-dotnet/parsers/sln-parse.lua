@@ -8,6 +8,87 @@ local function generate_relative_path_for_project(path, slnpath)
   return res
 end
 
+M.find_project_files = function()
+  local csfiles = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.csproj$", depth = 3 })
+  local fsfiles = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.fsproj$", depth = 3 })
+  local normalized = {}
+  for _, value in ipairs(csfiles) do
+    table.insert(normalized, vim.fs.normalize(value))
+  end
+  for _, value in ipairs(fsfiles) do
+    table.insert(normalized, vim.fs.normalize(value))
+  end
+  return normalized
+end
+
+
+---Dotnet solution add with telescope picker
+---@param slnpath string
+function M.add_project_to_solution(slnpath)
+  local sln_projects = M.get_projects_from_sln(slnpath)
+  local projects = M.find_project_files()
+
+  local options = {}
+  for _, value in ipairs(projects) do
+    if not extensions.any(sln_projects, function(a) return vim.fs.normalize(a.path) == value end) then
+      table.insert(options, {
+        display = value,
+        ordinal = value,
+        value = value
+      })
+    end
+  end
+  if #options == 0 then
+    print("No projects found")
+    return
+  end
+
+  local value = require("easy-dotnet.picker").pick_sync(nil, options, "Project to add to sln", false)
+  if not value then
+    return
+  end
+  local res = vim.system({
+    "dotnet",
+    "sln",
+    slnpath,
+    "add",
+    value.value
+  }):wait()
+  if res.code == 0 then
+    vim.notify("Success")
+  else
+    vim.notify("Failed to add project to solution", vim.log.levels.ERROR)
+  end
+end
+
+---Dotnet solution remove with telescope picker
+---@param slnpath string
+function M.remove_project_from_solution(slnpath)
+  local projects = M.get_projects_from_sln(slnpath)
+
+  if #projects == 0 then
+    print("No projects found")
+    return
+  end
+
+  local value = require("easy-dotnet.picker").pick_sync(nil, projects, "Project to remove from sln", false)
+  if not value then
+    return
+  end
+  local res = vim.system({
+    "dotnet",
+    "sln",
+    slnpath,
+    "remove",
+    value.path
+  }):wait()
+  if res.code == 0 then
+    vim.notify("Success")
+  else
+    vim.notify("Failed to remove project from solution", vim.log.levels.ERROR)
+  end
+end
+
 -- TODO: Investigate using dotnet sln list command
 ---@param solutionFilePath string
 ---@return DotnetProject[]
@@ -38,6 +119,7 @@ M.get_projects_from_sln = function(solutionFilePath)
   return projects
 end
 
+---@return table<string>
 function M.get_solutions()
   local files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.sln$", depth = 5 })
   return files
@@ -59,6 +141,7 @@ M.find_solution_file = function(no_cache)
   for _, value in ipairs(files) do
     local file = require("easy-dotnet.default-manager").try_get_cache_file(value)
     if file and not no_cache then
+      ---@type string
       return value
     end
     table.insert(opts, { display = value, ordinal = value, value = value })
