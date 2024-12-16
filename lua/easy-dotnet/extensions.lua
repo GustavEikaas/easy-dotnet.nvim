@@ -171,7 +171,6 @@ E.any = function(tbl, cb)
     error("Expected function or table, received: " .. table_type)
   end
 end
-
 local function find_table(tbl, cb)
   for _, item in ipairs(tbl) do
     if cb(item) then
