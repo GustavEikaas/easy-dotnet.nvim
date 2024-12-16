@@ -209,6 +209,20 @@ M.solution = {
         end
         require("easy-dotnet.default-manager").set_default_solution(old, sln)
       end
+    },
+    add = {
+      handle = function()
+        local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
+        assert(type(sln_file) == "string")
+        require("easy-dotnet.parsers.sln-parse").add_project_to_solution(sln_file)
+      end
+    },
+    remove = {
+      handle = function()
+        local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
+        assert(type(sln_file) == "string")
+        require("easy-dotnet.parsers.sln-parse").remove_project_from_solution(sln_file)
+      end
     }
   }
 }
