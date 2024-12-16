@@ -105,6 +105,20 @@ M.setup = function(opts)
         end
         local co = coroutine.create(handler)
         coroutine.resume(co)
+      elseif sub == "add" then
+        local co = coroutine.create(function()
+          local s = require("easy-dotnet.parsers.sln-parse").find_solution_file()
+          assert(type(s) == "string")
+          require("easy-dotnet.parsers.sln-parse").add_project_to_solution(s)
+        end)
+        coroutine.resume(co)
+      elseif sub == "remove" then
+        local co = coroutine.create(function()
+          local s = require("easy-dotnet.parsers.sln-parse").find_solution_file()
+          assert(type(s) == "string")
+          require("easy-dotnet.parsers.sln-parse").remove_project_from_solution(s)
+        end)
+        coroutine.resume(co)
       else
         error("unknown command")
       end
