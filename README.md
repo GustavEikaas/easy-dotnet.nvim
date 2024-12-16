@@ -241,6 +241,8 @@ Dotnet ef migrations add
 Dotnet ef migrations remove
 Dotnet ef migrations list
 Dotnet solution select
+Dotnet solution add
+Dotnet solution remove
 Dotnet reset --Deletes all files persisted by easy-dotnet.nvim, use this if you are unable to pick a different solution, project etc.
 ```
 
