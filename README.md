@@ -267,6 +267,8 @@ Dotnet clean
 Dotnet new
 Dotnet createfile
 Dotnet solution select
+Dotnet solution add
+Dotnet solution remove
 Dotnet outdated
 Dotnet reset
 ```
