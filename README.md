@@ -199,16 +199,68 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 
 ### Lua functions
 
+**Legend**
+- `<TS>` -> Telescope selector
+- `<DArgs>` -> Dotnet args (e.g `--no-build`, `--configuration release`). Always optional
+- `<TS Default>` -> Telescope selector but persists the selection for all future use 
+- `<sln>` -> Solution file
+
+| **Function**                                   | **Description**                                                                                              |
+|-----------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| `dotnet.run_profile()`                        | `dotnet run --project <TS> --launch-profile <TS>`                                                                                                       |
+| `dotnet.run()` | `dotnet run --project <TS> <DArgs>`                                                                                                             |
+| `dotnet.run_default()` | `dotnet run --project <TS Default> <DArgs>` |
+| `dotnet.run_profile_default()` | `dotnet run --project <TS Default> --launch-profile <TS> <DArgs>` |
+||  
+| `dotnet.build()` | `dotnet build <TS> <DArgs>` |
+| `dotnet.build_solution()` | `dotnet build <sln> <DArgs>` |
+| `dotnet.build_quickfix()` | `dotnet build <TS> <DArgs>` and opens build errors in the quickfix list |
+| `dotnet.build_default()` | `dotnet build <TS Default> <DArgs>` |
+| `dotnet.build_default_quickfix()` | `dotnet build <TS Default> <DArgs>` and opens build errors in the quickfix list |
+||
+| `dotnet.test()` | `dotnet test <TS> <DArgs>` |
+| `dotnet.test_solution()` | `dotnet test <TS> <DArgs>` |
+| `dotnet.test_default()` | `dotnet test <TS Default> <DArgs>` |
+||
+| `dotnet.testrunner()`                         | Shows or hides the testrunner                                                                                            |
+| `dotnet.testrunner_refresh()`                 | Refreshes the testrunner                                                                                                          |
+| `dotnet.testrunner_refresh_build()`           | Builds the sln, then refreshes the testrunner                                                                                   |
+||
+| `dotnet.is_dotnet_project()`                  | Returns `true` if a `.csproj` or `.sln` file is present in the current working directory or subfolders       |
+| `dotnet.try_get_selected_solution()`          | If a solution is selected, returns `{ basename: string, path: string }`, otherwise `nil`                    |
+| `dotnet.new()`                                | Telescope picker for creating a new template based on `Dotnet new`                                                                                                            |
+| `dotnet.outdated()`                           | Runs `Dotnet outdated` in supported file types (`.csproj`, `.fsproj`, `Directory.Packages.props`, `Packages.props`) and displays virtual text with the latest package versions. |
+||
+| `dotnet.solution_select()`                    | Select the solution file for easy-dotnet.nvim to use, useful when multiple .sln files are present in the project.     |
+| `dotnet.solution_add()`                       | `dotnet sln <sln> add <TS>`.                                                                                                            |
+| `dotnet.solution_remove()`                    | `dotnet sln <sln> remove <TS>`.                                                                                                            |
+||
+| `dotnet.ef_migrations_remove()`               |  Removes the last applied Entity Framework migration                                                                                                          |
+| `dotnet.ef_migrations_add(name: string)`      |  Adds a new Entity Framework migration with the specified name.                                                                                                            |
+| `dotnet.ef_migrations_list()`                 |  Lists all applied Entity Framework migrations.                                                                                                           |
+| `dotnet.ef_database_drop()`                   |  Drops the database for the selected project.                                                                                                           |
+| `dotnet.ef_database_update()`                 |  Updates the database to the latest migration.                                                                                                          |
+| `dotnet.ef_database_update_pick()`            |  Opens a Telescope picker to update the database to a selected migration.                                                                                                          |
+||
+| `dotnet.createfile(path)`                     | Spawns a Telescope picker for creating a new file based on a `.NET new` template                            |
+| `dotnet.secrets()`                            | Opens Telescope picker for `.NET user-secrets`                                                              |
+| `dotnet.clean()`                              | Runs `dotnet clean` in the project                                                                          |
+| `dotnet.restore()` | Runs `dotnet restore` for the solution, `.csproj`, or `.fsproj` file                                        |
+| `dotnet.get_debug_dll()`                      | Returns the DLL from the `bin/debug` folder                                                                 |
+| `dotnet.get_environment_variables(project_name, project_path)` | Returns the environment variables from the `launchSetting.json` file                                         |
+| `dotnet.reset()`                              | Deletes all files persisted by `easy-dotnet.nvim`. Use this if unable to pick a different solution or project |
+
+
 ```lua
 local dotnet = require("easy-dotnet")
-dotnet.get_environment_variables(project_name, project_path) -- Returns the environment variables from the launchSetting.json file
-dotnet.is_dotnet_project()                                   -- Returns true if a csproject or sln file is present in cwd or some folders down
-dotnet.try_get_selected_solution()                  -- If a solution is selected returns { basename: string, path: string } otherwise nil
-dotnet.get_debug_dll()                              -- Return the dll from the bin/debug folder
-dotnet.reset()             --Deletes all files persisted by easy-dotnet.nvim, use this if you are unable to pick a different solution, project etc.dotnet.run_profile()
-dotnet.test(dotnet_args?: string | string[] | nil)
-dotnet.test_solution(dotnet_args?: string | string[] | nil)
-dotnet.test_default(dotnet_args?: string | string[] | nil)                                        -- Run dotnet test in the last selected project
+dotnet.get_environment_variables(project_name, project_path
+dotnet.is_dotnet_project()                                 
+dotnet.try_get_selected_solution()                         
+dotnet.get_debug_dll()                                     
+dotnet.reset()                                             
+dotnet.test()
+dotnet.test_solution()
+dotnet.test_default()
 dotnet.testrunner()
 dotnet.testrunner_refresh()
 dotnet.testrunner_refresh_build()
@@ -221,18 +273,18 @@ dotnet.ef_migrations_list()
 dotnet.ef_database_drop()
 dotnet.ef_database_update()
 dotnet.ef_database_update_pick()
-dotnet.createfile(path)                                 -- Spawns a telescope picker for creating a new file based on a dotnet new template
-dotnet.build(dotnet_args?: string | string[] | nil)                                               -- Run dotnet build in the project
-dotnet.build_solution(dotnet_args?: string | string[] | nil)
-dotnet.build_quickfix(dotnet_args?: string | string[] | nil)                  -- Build dotnet project and open build errors in quickfix list
-dotnet.build_default(dotnet_args?: string | string[] | nil)                                       -- Will build the last selected project
-dotnet.build_default_quickfix(dotnet_args?: string | string[] | nil)          -- Will build the last selected project and open build errors in quickfix list
-dotnet.run(dotnet_args?: string | string[] | nil)
-dotnet.run_profile_default(dotnet_args?: string | string[] | nil)
-dotnet.run_default(dotnet_args?: string | string[] | nil)
-dotnet.secrets()                                             -- Open telescope picker for .NET user-secrets 
-dotnet.clean()                                               -- Run dotnet clean in the project
-dotnet.restore()                                             -- Run dotnet restore for the solution/csproj/fsproj file
+dotnet.createfile(path: string)                                    
+dotnet.build()                           
+dotnet.build_solution()
+dotnet.build_quickfix()                 
+dotnet.build_default()                 
+dotnet.build_default_quickfix()       
+dotnet.run()
+dotnet.run_profile_default()
+dotnet.run_default()
+dotnet.secrets()                                                          
+dotnet.clean()                                                           
+dotnet.restore()                   
 ```
 
 ### Vim commands

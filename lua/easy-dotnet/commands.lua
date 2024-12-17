@@ -100,9 +100,11 @@ M.test = {
 }
 
 M.restore = {
-  handle = function(_, options)
-    actions.restore(options.terminal)
-  end
+  handle = function(args, options)
+    local string_args = type(args) == "table" and table.concat(args, " ") or args or ""
+    actions.restore(options.terminal, string_args)
+  end,
+  passthrough = true
 }
 
 M.build = {
