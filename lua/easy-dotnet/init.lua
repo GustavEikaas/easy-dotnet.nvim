@@ -1,3 +1,8 @@
+local actions = require("easy-dotnet.actions")
+local debug = require("easy-dotnet.debugger")
+local constants = require("easy-dotnet.constants")
+local commands = require("easy-dotnet.commands")
+
 local M = {}
 local function wrap(callback)
   return function(...)
@@ -13,10 +18,9 @@ local function wrap(callback)
   end
 end
 
-local function collect_commands_with_handles(parent, prefix)
-  local command_handles = {}
 
-  for name, command in pairs(parent) do
+local function collect_commands_with_handles(parent, prefix)
+  return vim.iter(parent):fold({}, function(command_handles, name, command)
     local full_command = prefix and (prefix .. "_" .. name) or name
 
     if command.handle then
@@ -24,48 +28,38 @@ local function collect_commands_with_handles(parent, prefix)
     end
 
     if command.subcommands then
-      local subcommand_handles = collect_commands_with_handles(command.subcommands, full_command)
-      for sub_name, sub_handle in pairs(subcommand_handles) do
-        command_handles[sub_name] = sub_handle
-      end
+      vim.iter(collect_commands_with_handles(command.subcommands, full_command))
+          :each(function(sub_name, sub_handle)
+            command_handles[sub_name] = sub_handle
+          end)
     end
-  end
 
-  return command_handles
+    return command_handles
+  end)
 end
 
 local function collect_commands(parent, prefix)
-  local commands = {}
-
-  for name, command in pairs(parent) do
+  return vim.iter(parent):fold({}, function(commands, name, command)
     local full_command = prefix and (prefix .. " " .. name) or name
+
     if command.handle then
       table.insert(commands, full_command)
     end
+
     if command.subcommands then
-      local subcommands = collect_commands(command.subcommands, full_command)
-      for _, sub in ipairs(subcommands) do
-        table.insert(commands, sub)
-      end
+      vim.iter(collect_commands(command.subcommands, full_command))
+          :each(function(sub)
+            table.insert(commands, sub)
+          end)
     end
-  end
 
-  return commands
+    return commands
+  end)
 end
 
-
-local actions = require("easy-dotnet.actions")
-local debug = require("easy-dotnet.debugger")
-
-local function slice(array, start_index, end_index)
-  local result = {}
-  table.move(array, start_index, end_index, 1, result)
-  return result
-end
 
 
 local function present_command_picker()
-  local commands = require("easy-dotnet.commands")
   local all_commands = collect_commands(commands)
 
   vim.ui.select(all_commands, { prompt = "Select a Dotnet Command" }, function(selected)
@@ -78,7 +72,6 @@ local function present_command_picker()
 end
 
 local function define_highlights_and_signs(merged_opts)
-  local constants = require("easy-dotnet.constants")
   vim.api.nvim_set_hl(0, "EasyDotnetPackage", {
     fg = '#000000',
     bg = '#ffffff',
@@ -137,7 +130,7 @@ local function traverse_subcommands(args, parent)
   if next(args) then
     local subcommand = parent.subcommands and parent.subcommands[args[1]]
     if subcommand then
-      traverse_subcommands(slice(args, 2, #args), subcommand)
+      traverse_subcommands(vim.list_slice(args, 2, #args), subcommand)
     elseif parent.passtrough then
       parent.handle(args, require("easy-dotnet.options").options)
     else
@@ -163,10 +156,9 @@ M.setup = function(opts)
         present_command_picker()
         return
       end
-      local commands = require("easy-dotnet.commands")
       local subcommand = commands[command]
       if subcommand then
-        wrap(function() traverse_subcommands(slice(args, 2, #args), subcommand) end)()
+        wrap(function() traverse_subcommands(vim.list_slice(args, 2, #args), subcommand) end)()
       else
         print("Invalid subcommand:", command)
       end
@@ -191,17 +183,16 @@ M.setup = function(opts)
     require("easy-dotnet.fs-mappings").add_test_signs()
   end
 
-  for name, handle in pairs(collect_commands_with_handles(require("easy-dotnet.commands"))) do
+  vim.iter(collect_commands_with_handles(commands)):each(function(name, handle)
     M[name] = wrap(function(args, options) handle(args, options or require("easy-dotnet.options").options) end)
-  end
+  end)
+
   register_legacy_functions()
 end
-
 
 M.create_new_item = wrap(function(...)
   require("easy-dotnet.actions.new").create_new_item(...)
 end)
-
 
 M.get_debug_dll = debug.get_debug_dll
 M.get_environment_variables = debug.get_environment_variables
