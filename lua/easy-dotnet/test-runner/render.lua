@@ -1,5 +1,4 @@
 local ns_id = require("easy-dotnet.constants").ns_id
-local extensions = require("easy-dotnet.extensions")
 
 ---@class Window
 ---@field tree table<string,TestNode>
@@ -72,6 +71,16 @@ M.traverse_expanded = function(tree, cb)
   end
 end
 
+local function every_table(tbl, cb)
+  for _, item in ipairs(tbl) do
+    if not cb(item) then
+      return false
+    end
+  end
+  return true
+end
+
+
 ---@param id string
 ---@param type "Run" | "Discovery" | "Build"
 ---@param subtask_count number | nil
@@ -82,7 +91,7 @@ function M.appendJob(id, type, subtask_count)
 
   local on_job_finished_callback = function()
     job.completed = true
-    local is_all_finished = extensions.every(M.jobs, function(s) return s.completed end)
+    local is_all_finished = every_table(M.jobs, function(s) return s.completed end)
     if is_all_finished == true then
       M.jobs = {}
     end
