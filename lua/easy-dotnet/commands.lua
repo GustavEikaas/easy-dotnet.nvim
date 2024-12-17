@@ -33,6 +33,13 @@ local function passthrough_dotnet_cli_args_handler(arguments)
     passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments)))
 end
 
+---@param args string | string[] | nil
+---@return string
+local function stringify_args(args)
+  ---@type string
+  return type(args) == "table" and table.concat(args, " ") or args or ""
+end
+
 local actions = require("easy-dotnet.actions")
 
 ---This entire object is exposed, any change to this will possibly be a breaking change, tread carefully
@@ -96,8 +103,7 @@ M.test = {
 
 M.restore = {
   handle = function(args, options)
-    local string_args = type(args) == "table" and table.concat(args, " ") or args or ""
-    actions.restore(options.terminal, string_args)
+    actions.restore(options.terminal, stringify_args(args))
   end,
   passthrough = true
 }
@@ -181,8 +187,7 @@ M.outdated = {
 
 M.clean = {
   handle = function(args)
-    local string_args = type(args) == "table" and table.concat(args, " ") or args or ""
-    require("easy-dotnet.actions.clean").clean_solution(string_args)
+    require("easy-dotnet.actions.clean").clean_solution(stringify_args(args))
   end,
   passthrough = true
 }
