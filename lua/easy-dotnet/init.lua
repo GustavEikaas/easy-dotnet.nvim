@@ -129,7 +129,7 @@ local function traverse_subcommands(args, parent)
     local subcommand = parent.subcommands and parent.subcommands[args[1]]
     if subcommand then
       traverse_subcommands(vim.list_slice(args, 2, #args), subcommand)
-    elseif parent.passtrough then
+    elseif parent.passthrough then
       parent.handle(args, require("easy-dotnet.options").options)
     else
       print("Invalid subcommand:", args[1])

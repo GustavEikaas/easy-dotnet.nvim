@@ -4,13 +4,7 @@ local M = {}
 ---@class Command
 ---@field subcommands table<string,Command> | nil
 ---@field handle nil | fun(args: table<string>|string, options: table): nil
----@field passtrough boolean | nil
-
-local function slice(array, start_index, end_index)
-  local result = {}
-  table.move(array, start_index, end_index, 1, result)
-  return result
-end
+---@field passthrough boolean | nil
 
 ---@param arguments table<string>| nil | string
 local function passthrough_dotnet_cli_args_handler(arguments)
@@ -24,16 +18,21 @@ local function passthrough_dotnet_cli_args_handler(arguments)
 
   local loweredArgument = arguments[1]:lower()
   if loweredArgument == "release" then
-    return string.format("-c release %s", passthrough_dotnet_cli_args_handler(slice(arguments, 2, #arguments) or ""))
+    return string.format("-c release %s",
+      passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments) or ""))
   elseif loweredArgument == "debug" then
-    return string.format("-c debug %s", passthrough_dotnet_cli_args_handler(slice(arguments, 2, #arguments) or ""))
+    return string.format("-c debug %s",
+      passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments) or ""))
   elseif loweredArgument == "-c" then
     local flag = string.format("-c %s", #arguments >= 2 and arguments[2] or "")
-    return string.format("%s %s", flag, passthrough_dotnet_cli_args_handler(slice(arguments, 3, #arguments) or ""))
+    return string.format("%s %s", flag,
+      passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 3, #arguments) or ""))
   elseif loweredArgument == "--no-build" then
-    return string.format("--no-build %s", passthrough_dotnet_cli_args_handler(slice(arguments, 2, #arguments) or ""))
+    return string.format("--no-build %s",
+      passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments) or ""))
   elseif loweredArgument == "--no-restore" then
-    return string.format("--no-restore %s", passthrough_dotnet_cli_args_handler(slice(arguments, 2, #arguments) or ""))
+    return string.format("--no-restore %s",
+      passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments) or ""))
   else
     vim.notify("Unknown argument to dotnet build " .. loweredArgument, vim.log.levels.WARN)
   end
@@ -47,22 +46,25 @@ M.run = {
   handle = function(args, options)
     actions.run(options.terminal, false, passthrough_dotnet_cli_args_handler(args))
   end,
-  passtrough = true,
+  passthrough = true,
   subcommands = {
     default = {
       handle = function(args, options)
         actions.run(options.terminal, true, passthrough_dotnet_cli_args_handler(args))
-      end
+      end,
+      passthrough = true
     },
     profile = {
       handle = function(args, options)
         actions.run_with_profile(options.terminal, false, passthrough_dotnet_cli_args_handler(args))
       end,
+      passthrough = true,
       subcommands = {
         default = {
           handle = function(args, options)
             actions.run_with_profile(options.terminal, true, passthrough_dotnet_cli_args_handler(args))
-          end
+          end,
+          passthrough = true
         }
       }
     }
@@ -80,17 +82,19 @@ M.test = {
   handle = function(args, options)
     actions.test(options.terminal, false, passthrough_dotnet_cli_args_handler(args))
   end,
-  passtrough = true,
+  passthrough = true,
   subcommands = {
     default = {
       handle = function(args, options)
         actions.test(options.terminal, true, passthrough_dotnet_cli_args_handler(args))
-      end
+      end,
+      passthrough = true
     },
     solution = {
       handle = function(args, options)
         actions.test_solution(options.terminal, passthrough_dotnet_cli_args_handler(args))
-      end
+      end,
+      passthrough = true
     }
   }
 }
@@ -106,31 +110,33 @@ M.build = {
     local terminal = options and options.terminal or nil
     actions.build(terminal, false, passthrough_dotnet_cli_args_handler(args))
   end,
-  passtrough = true,
+  passthrough = true,
   subcommands = {
     quickfix = {
       handle = function(args)
         actions.build_quickfix(false, passthrough_dotnet_cli_args_handler(args))
       end,
-      passtrough = true
+      passthrough = true
     },
     solution = {
       handle = function(args, options)
         local terminal = options and options.terminal or nil
         actions.build_solution(terminal, passthrough_dotnet_cli_args_handler(args))
-      end
+      end,
+      passthrough = true
     },
     default = {
       handle = function(args, options)
         local terminal = options and options.terminal or nil
         actions.build(terminal, true, passthrough_dotnet_cli_args_handler(args))
       end,
-      passtrough = true,
+      passthrough = true,
       subcommands = {
         quickfix = {
           handle = function(args)
             actions.build_quickfix(true, passthrough_dotnet_cli_args_handler(args))
-          end
+          end,
+          passthrough = true
         }
       }
     }
@@ -264,7 +270,7 @@ M.ef = {
       handle = nil,
       subcommands = {
         add = {
-          passtrough = true,
+          passthrough = true,
           handle = function(args)
             require("easy-dotnet.ef-core.migration").add_migration(args[1])
           end
