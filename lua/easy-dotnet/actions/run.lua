@@ -1,5 +1,4 @@
 local M = {}
-local extensions = require("easy-dotnet.extensions")
 local picker = require("easy-dotnet.picker")
 local parsers = require("easy-dotnet.parsers")
 local csproj_parse = parsers.csproj_parser
@@ -25,9 +24,9 @@ local function pick_project(use_default)
     return default, solution_file_path
   end
 
-  local projects = extensions.filter(sln_parse.get_projects_from_sln(solution_file_path), function(i)
+  local projects = vim.tbl_filter(function(i)
     return i.runnable == true
-  end)
+  end, sln_parse.get_projects_from_sln(solution_file_path))
 
   if #projects == 0 then
     vim.notify(error_messages.no_runnable_projects_found)
@@ -73,9 +72,9 @@ M.run_project_picker = function(term, use_default, args)
     return
   end
 
-  local projects = extensions.filter(sln_parse.get_projects_from_sln(solution_file_path), function(i)
+  local projects = vim.tbl_filter(function(i)
     return i.runnable == true
-  end)
+  end, sln_parse.get_projects_from_sln(solution_file_path))
 
   if #projects == 0 then
     vim.notify(error_messages.no_runnable_projects_found)

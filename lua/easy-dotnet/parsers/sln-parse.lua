@@ -21,7 +21,6 @@ M.find_project_files = function()
   return normalized
 end
 
-
 ---Dotnet solution add with telescope picker
 ---@param slnpath string
 function M.add_project_to_solution(slnpath)
@@ -30,7 +29,7 @@ function M.add_project_to_solution(slnpath)
 
   local options = {}
   for _, value in ipairs(projects) do
-    if not extensions.any(sln_projects, function(a) return vim.fs.normalize(a.path) == value end) then
+    if not vim.tbl_contains(sln_projects, function(a) return vim.fs.normalize(a.path) == value end, { predicate = true }) then
       table.insert(options, {
         display = value,
         ordinal = value,
@@ -93,29 +92,25 @@ end
 ---@param solutionFilePath string
 ---@return DotnetProject[]
 M.get_projects_from_sln = function(solutionFilePath)
-  local file = io.open(solutionFilePath, "r")
-
-  if not file then
-    error("Failed to open file " .. solutionFilePath)
-  end
+  local file_contents = vim.fn.readfile(solutionFilePath)
   local regexp = 'Project%("{(.-)}"%).*= "(.-)", "(.-)", "{.-}"'
 
-  local projectLines = extensions.filter(file:lines(), function(line)
+  local projectLines = vim.tbl_filter(function(line)
     local id, name, path = line:match(regexp)
     if id and name and path and (path:match("%.csproj$") or path:match("%.fsproj$")) then
       return true
     end
     return false
-  end)
+  end, file_contents)
 
-  local projects = extensions.map(projectLines, function(line)
+  local projects = vim.tbl_map(function(line)
     local csproj_parser     = require("easy-dotnet.parsers.csproj-parse")
     local _, _, path        = line:match(regexp)
     local project_file_path = generate_relative_path_for_project(path, solutionFilePath)
     local project           = csproj_parser.get_project_from_project_file(project_file_path)
     return project
-  end)
-  file:close()
+  end, projectLines)
+
   return projects
 end
 

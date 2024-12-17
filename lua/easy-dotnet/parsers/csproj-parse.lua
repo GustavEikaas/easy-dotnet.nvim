@@ -27,8 +27,7 @@ local function extract_from_project(project_file_path, pattern)
   if not file then
     return false
   end
-
-  local contains_pattern = extensions.find(file:lines(), function(line)
+  local contains_pattern = vim.iter(file:lines()):find(function(line)
     local value = line:match(pattern)
     if value then
       return true
