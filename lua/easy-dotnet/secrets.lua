@@ -1,5 +1,4 @@
 local M = {}
-local extensions = require("easy-dotnet.extensions")
 local parsers = require("easy-dotnet.parsers")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser

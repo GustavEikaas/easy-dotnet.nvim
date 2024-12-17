@@ -1,5 +1,4 @@
 local M = {}
-local extensions = require("easy-dotnet.extensions")
 local picker = require("easy-dotnet.picker")
 local error_messages = require("easy-dotnet.error-messages")
 local parsers = require("easy-dotnet.parsers")
@@ -22,10 +21,8 @@ local function select_project(solution_file_path, cb, use_default)
     return cb(default)
   end
 
-  local projects = extensions.filter(sln_parse.get_projects_from_sln(solution_file_path),
-    function(i)
-      return i.isTestProject == true
-    end)
+  local projects = vim.tbl_filter(function(i) return i.isTestProject == true end,
+    sln_parse.get_projects_from_sln(solution_file_path))
 
 
   if #projects == 0 then
