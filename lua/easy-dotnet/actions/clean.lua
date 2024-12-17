@@ -5,14 +5,15 @@ local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
 
 
-M.clean_solution = function()
+M.clean_solution = function(args)
+  args = args or ""
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if solutionFilePath == nil then
     vim.notify(error_messages.no_project_definition_found)
     return
   end
 
-  local command = string.format("dotnet clean %s", solutionFilePath)
+  local command = string.format("dotnet clean %s %s", solutionFilePath, args)
   local err_lines = {}
 
   vim.fn.jobstart(
@@ -27,7 +28,7 @@ M.clean_solution = function()
       end,
       on_exit = function(_, code)
         if code ~= 0 then
-          vim.notify("Command failed")
+          vim.notify("Command failed " .. command)
         else
           vim.notify(solutionFilePath .. " cleaned")
         end

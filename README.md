@@ -203,7 +203,7 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 - `<TS>` -> Telescope selector
 - `<DArgs>` -> Dotnet args (e.g `--no-build`, `--configuration release`). Always optional
 - `<TS Default>` -> Telescope selector but persists the selection for all future use 
-- `<sln>` -> Solution file
+- `<sln>` -> Solution file (in some cases .csproj or .fsproj is used as fallback if no .sln file exists)
 
 | **Function**                                   | **Description**                                                                                              |
 |-----------------------------------------------|--------------------------------------------------------------------------------------------------------------|
@@ -221,6 +221,8 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 | `dotnet.test()` | `dotnet test <TS> <DArgs>` |
 | `dotnet.test_solution()` | `dotnet test <TS> <DArgs>` |
 | `dotnet.test_default()` | `dotnet test <TS Default> <DArgs>` |
+||
+| `dotnet.restore()` | `dotnet restore <sln> <Dargs>` |
 ||
 | `dotnet.testrunner()`                         | Shows or hides the testrunner                                                                                            |
 | `dotnet.testrunner_refresh()`                 | Refreshes the testrunner                                                                                                          |
@@ -245,7 +247,6 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 | `dotnet.createfile(path)`                     | Spawns a Telescope picker for creating a new file based on a `.NET new` template                            |
 | `dotnet.secrets()`                            | Opens Telescope picker for `.NET user-secrets`                                                              |
 | `dotnet.clean()`                              | Runs `dotnet clean` in the project                                                                          |
-| `dotnet.restore()` | Runs `dotnet restore` for the solution, `.csproj`, or `.fsproj` file                                        |
 | `dotnet.get_debug_dll()`                      | Returns the DLL from the `bin/debug` folder                                                                 |
 | `dotnet.get_environment_variables(project_name, project_path)` | Returns the environment variables from the `launchSetting.json` file                                         |
 | `dotnet.reset()`                              | Deletes all files persisted by `easy-dotnet.nvim`. Use this if unable to pick a different solution or project |

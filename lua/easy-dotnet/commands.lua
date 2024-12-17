@@ -185,9 +185,11 @@ M.outdated = {
 }
 
 M.clean = {
-  handle = function()
-    require("easy-dotnet.actions.clean").clean_solution()
-  end
+  handle = function(args)
+    local string_args = type(args) == "table" and table.concat(args, " ") or args or ""
+    require("easy-dotnet.actions.clean").clean_solution(string_args)
+  end,
+  passthrough = true
 }
 
 M.new = {
