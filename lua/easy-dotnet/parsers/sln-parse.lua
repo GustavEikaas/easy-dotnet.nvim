@@ -21,15 +21,6 @@ M.find_project_files = function()
   return normalized
 end
 
-local function any_table(tbl, cb)
-  for _, item in ipairs(tbl) do
-    if cb(item) then
-      return true
-    end
-  end
-  return false
-end
-
 ---Dotnet solution add with telescope picker
 ---@param slnpath string
 function M.add_project_to_solution(slnpath)
@@ -38,7 +29,7 @@ function M.add_project_to_solution(slnpath)
 
   local options = {}
   for _, value in ipairs(projects) do
-    if not any_table(sln_projects, function(a) return vim.fs.normalize(a.path) == value end) then
+    if not vim.tbl_contains(sln_projects, function(a) return vim.fs.normalize(a.path) == value end, { predicate = true }) then
       table.insert(options, {
         display = value,
         ordinal = value,

@@ -14,15 +14,6 @@ local M = {}
 ---@field isConsoleProject boolean
 ---@field isWebProject boolean
 
-local function find_iterator(tbl, cb)
-  for line in tbl do
-    if cb(line) then
-      return line
-    end
-  end
-  return false
-end
-
 --- Extracts a pattern from a file
 ---@param project_file_path string
 ---@param pattern string
@@ -36,8 +27,7 @@ local function extract_from_project(project_file_path, pattern)
   if not file then
     return false
   end
-
-  local contains_pattern = find_iterator(file:lines(), function(line)
+  local contains_pattern = vim.iter(file:lines()):find(function(line)
     local value = line:match(pattern)
     if value then
       return true
