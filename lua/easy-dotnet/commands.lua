@@ -33,9 +33,10 @@ local function passthrough_dotnet_cli_args_handler(arguments)
   elseif loweredArgument == "--no-restore" then
     return string.format("--no-restore %s",
       passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments) or ""))
-  else
-    vim.notify("Unknown argument to dotnet build " .. loweredArgument, vim.log.levels.WARN)
   end
+
+  return string.format("%s %s", loweredArgument,
+    passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments)))
 end
 
 local actions = require("easy-dotnet.actions")
