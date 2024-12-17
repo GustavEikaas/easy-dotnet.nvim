@@ -17,22 +17,16 @@ local function passthrough_dotnet_cli_args_handler(arguments)
   end
 
   local loweredArgument = arguments[1]:lower()
+  -- Shorthand dotnet build release -> dotnet build -c release
   if loweredArgument == "release" then
     return string.format("-c release %s",
       passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments) or ""))
   elseif loweredArgument == "debug" then
     return string.format("-c debug %s",
       passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments) or ""))
-  elseif loweredArgument == "-c" then
-    local flag = string.format("-c %s", #arguments >= 2 and arguments[2] or "")
-    return string.format("%s %s", flag,
+  elseif loweredArgument == "-c" or loweredArgument == "--configuration" then
+    return string.format("%s %s %s", loweredArgument, (#arguments >= 2 and arguments[2] or ""),
       passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 3, #arguments) or ""))
-  elseif loweredArgument == "--no-build" then
-    return string.format("--no-build %s",
-      passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments) or ""))
-  elseif loweredArgument == "--no-restore" then
-    return string.format("--no-restore %s",
-      passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments) or ""))
   end
 
   return string.format("%s %s", loweredArgument,
