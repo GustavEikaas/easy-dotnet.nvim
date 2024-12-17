@@ -101,9 +101,9 @@ M.edit_secrets_picker = function(get_secret_path)
     return
   end
 
-  local projectsWithSecrets = extensions.filter(sln_parse.get_projects_from_sln(solutionFilePath), function(i)
+  local projectsWithSecrets = vim.tbl_filter(function(i)
     return i.path ~= nil and i.runnable == true
-  end)
+  end, sln_parse.get_projects_from_sln(solutionFilePath))
 
   if #projectsWithSecrets == 0 then
     vim.notify(error_messages.no_runnable_projects_found)
