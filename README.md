@@ -254,7 +254,7 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 
 ```lua
 local dotnet = require("easy-dotnet")
-dotnet.get_environment_variables(project_name, project_path
+dotnet.get_environment_variables(project_name, project_path)
 dotnet.is_dotnet_project()                                 
 dotnet.try_get_selected_solution()                         
 dotnet.get_debug_dll()                                     
