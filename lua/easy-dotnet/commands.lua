@@ -17,25 +17,27 @@ local function passthrough_dotnet_cli_args_handler(arguments)
   end
 
   local loweredArgument = arguments[1]:lower()
+  -- Shorthand dotnet build release -> dotnet build -c release
   if loweredArgument == "release" then
     return string.format("-c release %s",
       passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments) or ""))
   elseif loweredArgument == "debug" then
     return string.format("-c debug %s",
       passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments) or ""))
-  elseif loweredArgument == "-c" then
-    local flag = string.format("-c %s", #arguments >= 2 and arguments[2] or "")
-    return string.format("%s %s", flag,
+  elseif loweredArgument == "-c" or loweredArgument == "--configuration" then
+    return string.format("%s %s %s", loweredArgument, (#arguments >= 2 and arguments[2] or ""),
       passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 3, #arguments) or ""))
-  elseif loweredArgument == "--no-build" then
-    return string.format("--no-build %s",
-      passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments) or ""))
-  elseif loweredArgument == "--no-restore" then
-    return string.format("--no-restore %s",
-      passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments) or ""))
-  else
-    vim.notify("Unknown argument to dotnet build " .. loweredArgument, vim.log.levels.WARN)
   end
+
+  return string.format("%s %s", loweredArgument,
+    passthrough_dotnet_cli_args_handler(vim.list_slice(arguments, 2, #arguments)))
+end
+
+---@param args string | string[] | nil
+---@return string
+local function stringify_args(args)
+  ---@type string
+  return type(args) == "table" and table.concat(args, " ") or args or ""
 end
 
 local actions = require("easy-dotnet.actions")
@@ -101,8 +103,7 @@ M.test = {
 
 M.restore = {
   handle = function(args, options)
-    local string_args = type(args) == "table" and table.concat(args, " ") or args or ""
-    actions.restore(options.terminal, string_args)
+    actions.restore(options.terminal, stringify_args(args))
   end,
   passthrough = true
 }
@@ -186,8 +187,7 @@ M.outdated = {
 
 M.clean = {
   handle = function(args)
-    local string_args = type(args) == "table" and table.concat(args, " ") or args or ""
-    require("easy-dotnet.actions.clean").clean_solution(string_args)
+    require("easy-dotnet.actions.clean").clean_solution(stringify_args(args))
   end,
   passthrough = true
 }
