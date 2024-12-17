@@ -103,7 +103,8 @@ M.restore = {
 
 M.build = {
   handle = function(args, options)
-    actions.build(options.terminal, false, passthrough_dotnet_cli_args_handler(args))
+    local terminal = options and options.terminal or nil
+    actions.build(terminal, false, passthrough_dotnet_cli_args_handler(args))
   end,
   passtrough = true,
   subcommands = {
@@ -114,14 +115,15 @@ M.build = {
       passtrough = true
     },
     solution = {
-      handle = function(_, options)
-        --TODO: support additional args
-        actions.build_solution(options.terminal)
+      handle = function(args, options)
+        local terminal = options and options.terminal or nil
+        actions.build_solution(terminal, passthrough_dotnet_cli_args_handler(args))
       end
     },
     default = {
       handle = function(args, options)
-        actions.build(options.terminal, true, passthrough_dotnet_cli_args_handler(args))
+        local terminal = options and options.terminal or nil
+        actions.build(terminal, true, passthrough_dotnet_cli_args_handler(args))
       end,
       passtrough = true,
       subcommands = {
@@ -143,18 +145,24 @@ M.createfile = {
 
 M.testrunner = {
   handle = function(_, options)
-    require("easy-dotnet.test-runner.runner").runner(options.test_runner, options.get_sdk_path())
+    local test_runner = options and options.test_runner or nil
+    local sdk_path = options and options.get_sdk_path() or nil
+    require("easy-dotnet.test-runner.runner").runner(test_runner, sdk_path)
   end,
   subcommands = {
     refresh = {
       handle = function(_, options)
-        require("easy-dotnet.test-runner.runner").refresh(options.test_runner, options.get_sdk_path(), { build = false })
+        local test_runner = options and options.test_runner or nil
+        local sdk_path = options and options.get_sdk_path() or nil
+        require("easy-dotnet.test-runner.runner").refresh(test_runner, sdk_path, { build = false })
       end,
       subcommands = {
         build = {
           handle = function(_, options)
-            require("easy-dotnet.test-runner.runner").refresh(options.test_runner, options.get_sdk_path(),
-              { build = true })
+            local test_runner = options and options.test_runner or nil
+            local sdk_path = options and options.get_sdk_path() or nil
+
+            require("easy-dotnet.test-runner.runner").refresh(test_runner, sdk_path, { build = true })
           end
         }
       }

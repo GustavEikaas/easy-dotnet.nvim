@@ -185,11 +185,7 @@ M.setup = function(opts)
       local commands = require("easy-dotnet.commands")
       local subcommand = commands[command]
       if subcommand then
-        local function execute()
-          traverse_subcommands(slice(args, 2, #args), subcommand)
-        end
-        local co = coroutine.create(execute)
-        coroutine.resume(co)
+        wrap(function() traverse_subcommands(slice(args, 2, #args), subcommand) end)()
       else
         print("Invalid subcommand:", command)
       end
@@ -215,7 +211,7 @@ M.setup = function(opts)
   end
 
   for name, handle in pairs(collect_commands_with_handles(require("easy-dotnet.commands"))) do
-    M[name] = handle
+    M[name] = wrap(function(args, options) handle(args, options or require("easy-dotnet.options").options) end)
   end
   register_legacy_functions()
 end

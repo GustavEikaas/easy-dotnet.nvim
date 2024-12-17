@@ -48,7 +48,7 @@ local function csproj_fallback(term)
   end, "Build project(s)")
 end
 
----@param term function
+---@param term function | nil
 ---@param use_default boolean
 M.build_project_picker = function(term, use_default, args)
   term = term or require("easy-dotnet.options").options.terminal
