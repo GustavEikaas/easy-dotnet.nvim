@@ -223,6 +223,7 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 | `dotnet.test_default()` | `dotnet test <TS Default> <DArgs>` |
 ||
 | `dotnet.restore()` | `dotnet restore <sln> <Dargs>` |
+| `dotnet.clean()`                              | `dotnet clean <sln> <DArgs>`                                                                          |
 ||
 | `dotnet.testrunner()`                         | Shows or hides the testrunner                                                                                            |
 | `dotnet.testrunner_refresh()`                 | Refreshes the testrunner                                                                                                          |
@@ -246,7 +247,6 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 ||
 | `dotnet.createfile(path)`                     | Spawns a Telescope picker for creating a new file based on a `.NET new` template                            |
 | `dotnet.secrets()`                            | Opens Telescope picker for `.NET user-secrets`                                                              |
-| `dotnet.clean()`                              | Runs `dotnet clean` in the project                                                                          |
 | `dotnet.get_debug_dll()`                      | Returns the DLL from the `bin/debug` folder                                                                 |
 | `dotnet.get_environment_variables(project_name, project_path)` | Returns the environment variables from the `launchSetting.json` file                                         |
 | `dotnet.reset()`                              | Deletes all files persisted by `easy-dotnet.nvim`. Use this if unable to pick a different solution or project |
