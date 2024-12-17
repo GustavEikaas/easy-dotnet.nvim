@@ -326,11 +326,6 @@ Dotnet outdated
 Dotnet reset
 ```
 
-Certain commands like Dotnet test|run|build also supports passing some selected additional arguments like.
-```
-Dotnet run|test|build --no-build --no-restore -c prerelease
-```
-
 ## Testrunner
 
 Integrated test runner inspired by Rider IDE
