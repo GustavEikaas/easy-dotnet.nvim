@@ -121,35 +121,16 @@ local register_legacy_functions = function()
   ---Deprecated prefer dotnet.run instead
   ---@deprecated prefer dotnet.run instead
   M.run_with_profile = function(use_default)
-    local function co_wrapper()
+    wrap(function()
       actions.run_with_profile(require("easy-dotnet.options").options.terminal,
         use_default == nil and false or use_default)
-    end
-
-    local co = coroutine.create(co_wrapper)
-    coroutine.resume(co)
+    end)()
   end
 end
-
 
 ---@return table<string>
 local function split_by_whitespace(str)
-  if not str then
-    return {}
-  end
-  local words = {}
-  for word in str:gmatch("%S+") do
-    table.insert(words, word)
-  end
-  return words
-end
-
-local function collect_keys(tbl)
-  local keys = {}
-  for key, _ in pairs(tbl) do
-    table.insert(keys, key)
-  end
-  return keys
+  return str and vim.iter(str:gmatch("%S+")):totable() or {}
 end
 
 local function traverse_subcommands(args, parent)
@@ -165,7 +146,7 @@ local function traverse_subcommands(args, parent)
   elseif parent.handle then
     parent.handle(args, require("easy-dotnet.options").options)
   else
-    local required = collect_keys(parent.subcommands)
+    local required = vim.tbl_keys(parent.subcommands)
     print("Missing required argument " .. vim.inspect(required))
   end
 end
