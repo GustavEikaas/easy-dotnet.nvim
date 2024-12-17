@@ -57,8 +57,6 @@ local function collect_commands(parent, prefix)
   end)
 end
 
-
-
 local function present_command_picker()
   local all_commands = collect_commands(commands)
 
