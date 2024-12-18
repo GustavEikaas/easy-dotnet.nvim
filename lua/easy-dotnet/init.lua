@@ -1,5 +1,9 @@
-local M = {}
+local actions = require("easy-dotnet.actions")
+local debug = require("easy-dotnet.debugger")
+local constants = require("easy-dotnet.constants")
+local commands = require("easy-dotnet.commands")
 
+local M = {}
 local function wrap(callback)
   return function(...)
     -- Check if we are already in a coroutine
@@ -14,46 +18,58 @@ local function wrap(callback)
   end
 end
 
-local options = require("easy-dotnet.options")
-local actions = require("easy-dotnet.actions")
-local secrets = require("easy-dotnet.secrets")
-local debug = require("easy-dotnet.debugger")
 
-local function merge_tables(default_options, user_options)
-  return vim.tbl_deep_extend("keep", user_options, default_options)
+local function collect_commands_with_handles(parent, prefix)
+  return vim.iter(parent):fold({}, function(command_handles, name, command)
+    local full_command = prefix and (prefix .. "_" .. name) or name
+
+    if command.handle then
+      command_handles[full_command] = command.handle
+    end
+
+    if command.subcommands then
+      vim.iter(collect_commands_with_handles(command.subcommands, full_command))
+          :each(function(sub_name, sub_handle)
+            command_handles[sub_name] = sub_handle
+          end)
+    end
+
+    return command_handles
+  end)
 end
 
-local function slice(array, start_index, end_index)
-  local result = {}
-  table.move(array, start_index, end_index, 1, result)
-  return result
+local function collect_commands(parent, prefix)
+  return vim.iter(parent):fold({}, function(commands, name, command)
+    local full_command = prefix and (prefix .. " " .. name) or name
+
+    if command.handle then
+      table.insert(commands, full_command)
+    end
+
+    if command.subcommands then
+      vim.iter(collect_commands(command.subcommands, full_command))
+          :each(function(sub)
+            table.insert(commands, sub)
+          end)
+    end
+
+    return commands
+  end)
 end
 
+local function present_command_picker()
+  local all_commands = collect_commands(commands)
 
----@param arguments table<string>|nil
-local function args_handler(arguments)
-  if not arguments or #arguments == 0 then
-    return ""
-  end
-  local loweredArgument = arguments[1]:lower()
-  if loweredArgument == "release" then
-    return string.format("-c release %s", args_handler(slice(arguments, 2, #arguments) or ""))
-  elseif loweredArgument == "debug" then
-    return string.format("-c debug %s", args_handler(slice(arguments, 2, #arguments) or ""))
-  elseif loweredArgument == "-c" then
-    local flag = string.format("-c %s", #arguments >= 2 and arguments[2] or "")
-    return string.format("%s %s", flag, args_handler(slice(arguments, 3, #arguments) or ""))
-  elseif loweredArgument == "--no-build" then
-    return string.format("--no-build %s", args_handler(slice(arguments, 2, #arguments) or ""))
-  elseif loweredArgument == "--no-restore" then
-    return string.format("--no-restore %s", args_handler(slice(arguments, 2, #arguments) or ""))
-  else
-    vim.notify("Unknown argument to dotnet build " .. loweredArgument, vim.log.levels.WARN)
-  end
+  vim.ui.select(all_commands, { prompt = "Select a Dotnet Command" }, function(selected)
+    if selected then
+      vim.cmd("Dotnet " .. selected)
+    else
+      vim.notify("No command selected", vim.log.levels.INFO)
+    end
+  end)
 end
 
 local function define_highlights_and_signs(merged_opts)
-  local constants = require("easy-dotnet.constants")
   vim.api.nvim_set_hl(0, "EasyDotnetPackage", {
     fg = '#000000',
     bg = '#ffffff',
@@ -80,141 +96,72 @@ local function define_highlights_and_signs(merged_opts)
   vim.fn.sign_define(constants.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
 end
 
-M.setup = function(opts)
-  local merged_opts = merge_tables(options, opts or {})
-  define_highlights_and_signs(merged_opts)
-  local commands = {
-    solution = function(args)
-      local sub = args[2]
-      if sub == "select" then
-        local function handler()
-          local files = require("easy-dotnet.parsers.sln-parse").get_solutions()
-          local old = nil
-          for _, value in ipairs(files) do
-            local file = require("easy-dotnet.default-manager").try_get_cache_file(value)
-            if file then
-              old = value
-            end
-          end
 
-          local sln = require("easy-dotnet.parsers.sln-parse").find_solution_file(true)
-          if sln == nil then
-            print("No solutions found")
-          end
-          require("easy-dotnet.default-manager").set_default_solution(old, sln)
-        end
-        local co = coroutine.create(handler)
-        coroutine.resume(co)
-      elseif sub == "add" then
-        local co = coroutine.create(function()
-          local s = require("easy-dotnet.parsers.sln-parse").find_solution_file()
-          assert(type(s) == "string")
-          require("easy-dotnet.parsers.sln-parse").add_project_to_solution(s)
-        end)
-        coroutine.resume(co)
-      elseif sub == "remove" then
-        local co = coroutine.create(function()
-          local s = require("easy-dotnet.parsers.sln-parse").find_solution_file()
-          assert(type(s) == "string")
-          require("easy-dotnet.parsers.sln-parse").remove_project_from_solution(s)
-        end)
-        coroutine.resume(co)
-      else
-        error("unknown command")
-      end
-    end,
-    secrets = function()
-      secrets.edit_secrets_picker(merged_opts.secrets.path)
-    end,
-    run = function(args)
-      local extra_args = slice(args, 2, #args)
-      actions.run(merged_opts.terminal, false, args_handler(extra_args))
-    end,
-    test = function(args)
-      local extra_args = slice(args, 2, #args)
-      actions.test(merged_opts.terminal, false, args_handler(extra_args))
-    end,
-    restore = function()
-      actions.restore(merged_opts.terminal)
-    end,
-    build = function(args)
-      local extra_args = slice(args, 2, #args)
-      actions.build(merged_opts.terminal, false, args_handler(extra_args))
-    end,
-    testrunner = function()
-      require("easy-dotnet.test-runner.runner").runner(merged_opts.test_runner, merged_opts.get_sdk_path())
-    end,
-    outdated = function()
-      require("easy-dotnet.outdated.outdated").outdated()
-    end,
-    clean = function()
-      require("easy-dotnet.actions.clean").clean_solution()
-    end,
-    new = function()
-      require("easy-dotnet.actions.new").new()
-    end,
-    reset = function()
-      local dir = require("easy-dotnet.constants").get_data_directory()
-      require("plenary.path"):new(dir):rm({ recursive = true })
-      vim.notify("Cached files deleted")
-    end,
-    ef = function(args)
-      local ef_handler = function()
-        local sub = args[2]
-        if sub == "database" then
-          if args[3] == "update" then
-            M.entity_framework.database.database_update(args[4])
-          elseif args[3] == "drop" then
-            M.entity_framework.database.database_drop()
-          end
-        elseif sub == "migrations" then
-          if args[3] == "add" then
-            M.entity_framework.migration.add_migration(args[4])
-          elseif args[3] == "remove" then
-            M.entity_framework.migration.remove_migration()
-          elseif args[3] == "list" then
-            M.entity_framework.migration.list_migrations()
-          end
-        else
-          vim.notify("Unknown command")
-        end
-      end
-      local co = coroutine.create(ef_handler)
-
-      coroutine.resume(co)
-    end
-  }
-
-  ---@return table<string>
-  local function split_by_whitespace(str)
-    local words = {}
-    for word in str:gmatch("%S+") do
-      table.insert(words, word)
-    end
-    return words
+local register_legacy_functions = function()
+  ---Deprecated prefer dotnet.test instead
+  ---@deprecated prefer dotnet.test instead
+  M.test_project = function()
+    require("easy-dotnet.commands").test.handle({}, require("easy-dotnet.options").options)
   end
+
+  ---@deprecated I suspect this is not used as the testrunner seems to be mainly used, if this were to live on it should sync with testrunner
+  M.watch_tests = function()
+    actions.test_watcher(require("easy-dotnet.options").options.test_runner.icons)
+  end
+
+  ---Deprecated prefer dotnet.run instead
+  ---@deprecated prefer dotnet.run instead
+  M.run_with_profile = function(use_default)
+    wrap(function()
+      actions.run_with_profile(require("easy-dotnet.options").options.terminal,
+        use_default == nil and false or use_default)
+    end)()
+  end
+end
+
+---@return table<string>
+local function split_by_whitespace(str)
+  return str and vim.iter(str:gmatch("%S+")):totable() or {}
+end
+
+local function traverse_subcommands(args, parent)
+  if next(args) then
+    local subcommand = parent.subcommands and parent.subcommands[args[1]]
+    if subcommand then
+      traverse_subcommands(vim.list_slice(args, 2, #args), subcommand)
+    elseif parent.passthrough then
+      parent.handle(args, require("easy-dotnet.options").options)
+    else
+      print("Invalid subcommand:", args[1])
+    end
+  elseif parent.handle then
+    parent.handle(args, require("easy-dotnet.options").options)
+  else
+    local required = vim.tbl_keys(parent.subcommands)
+    print("Missing required argument " .. vim.inspect(required))
+  end
+end
+
+M.setup = function(opts)
+  local merged_opts = require("easy-dotnet.options").set_options(opts)
+  define_highlights_and_signs(merged_opts)
 
   vim.api.nvim_create_user_command('Dotnet',
     function(commandOpts)
       local args = split_by_whitespace(commandOpts.fargs[1])
-      local subcommand = args[1]
-      local func = commands[subcommand]
-      if func then
-        func(args)
+      local command = args[1]
+      if not command then
+        present_command_picker()
+        return
+      end
+      local subcommand = commands[command]
+      if subcommand then
+        wrap(function() traverse_subcommands(vim.list_slice(args, 2, #args), subcommand) end)()
       else
-        print("Invalid subcommand:", subcommand)
+        print("Invalid subcommand:", command)
       end
     end,
-    {
-      nargs = "?",
-      complete = function()
-        local completion = {}
-        for key, _ in pairs(commands) do
-          table.insert(completion, key)
-        end
-        return completion
-      end,
-    }
+    { nargs = "?" }
   )
 
   if merged_opts.csproj_mappings == true then
@@ -234,65 +181,16 @@ M.setup = function(opts)
     require("easy-dotnet.fs-mappings").add_test_signs()
   end
 
-
-  M.test_project = commands.test
-  M.test_default = function()
-    actions.test(merged_opts.terminal, true)
-  end
-  M.test_solution = function()
-    actions.test_solution(merged_opts.terminal)
-  end
-  M.watch_tests = function()
-    actions.test_watcher(merged_opts.test_runner.icons)
-  end
-  M.run_project = commands.run
-  M.run_with_profile = function(use_default)
-    local function co_wrapper()
-      actions.run_with_profile(merged_opts.terminal, use_default == nil and false or use_default)
-    end
-
-    local co = coroutine.create(co_wrapper)
-    coroutine.resume(co)
-  end
-
-  M.testrunner_refresh = function(args)
-    local function co_wrapper()
-      require("easy-dotnet.test-runner.runner").refresh(merged_opts.test_runner, merged_opts.get_sdk_path(), args)
-    end
-
-    local co = coroutine.create(co_wrapper)
-    coroutine.resume(co)
-  end
-
-  M.run_default = function()
-    actions.run(merged_opts.terminal, true, "")
-  end
-
-  M.build_default_quickfix = function(dotnet_args)
-    actions.build_quickfix(true, dotnet_args)
-  end
-
-  M.build_quickfix = function(dotnet_args)
-    actions.build_quickfix(false, dotnet_args)
-  end
-
-  M.build_default = function()
-    actions.build(merged_opts.terminal, true)
-  end
-
-  M.restore = commands.restore
-
-  M.create_new_item = wrap(function(...)
-    require("easy-dotnet.actions.new").create_new_item(...)
+  vim.iter(collect_commands_with_handles(commands)):each(function(name, handle)
+    M[name] = wrap(function(args, options) handle(args, options or require("easy-dotnet.options").options) end)
   end)
 
-  M.secrets = commands.secrets
-  M.build = commands.build
-  M.clean = commands.clean
-  M.build_solution = function()
-    actions.build_solution(merged_opts.terminal)
-  end
+  register_legacy_functions()
 end
+
+M.create_new_item = wrap(function(...)
+  require("easy-dotnet.actions.new").create_new_item(...)
+end)
 
 M.get_debug_dll = debug.get_debug_dll
 M.get_environment_variables = debug.get_environment_variables

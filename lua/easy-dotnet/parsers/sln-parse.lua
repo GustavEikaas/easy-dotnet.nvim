@@ -135,6 +135,7 @@ M.try_get_selected_solution_file = function()
   end
 end
 
+---@return string | nil
 M.find_solution_file = function(no_cache)
   local files = M.get_solutions()
   local opts = {}

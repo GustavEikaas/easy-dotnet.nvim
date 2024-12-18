@@ -126,11 +126,6 @@ local function generate_tree(tests, options, project)
   return project
 end
 
-local function merge_tables(table1, table2)
-  return vim.tbl_deep_extend("keep", table1, table2)
-end
-
-local default_options = require("easy-dotnet.options").test_runner
 ---@param project TestNode
 ---@param options TestRunnerOptions
 ---@param sdk_path string
@@ -333,6 +328,10 @@ local function open_runner(options, sdk_path)
 end
 
 M.refresh = function(options, sdk_path, args)
+  options = options or require("easy-dotnet.options").options.test_runner
+  sdk_path = sdk_path or require("easy-dotnet.options").options.get_sdk_path()
+  args = args or { build = false }
+
   local win = require("easy-dotnet.test-runner.render")
   if #win.jobs > 0 then
     vim.notify("Cant refresh while waiting for pending jobs", vim.log.levels.WARN)
@@ -375,12 +374,11 @@ M.refresh = function(options, sdk_path, args)
 end
 
 M.runner = function(options, sdk_path)
-  ---@type TestRunnerOptions
-  local mergedOpts = merge_tables(options or {}, default_options)
-
+  options = options or require("easy-dotnet.options").options.test_runner
+  sdk_path = sdk_path or require("easy-dotnet.options").options.get_sdk_path()
   coroutine.wrap(
     function()
-      open_runner(mergedOpts, sdk_path)
+      open_runner(options, sdk_path)
     end
   )()
 end
