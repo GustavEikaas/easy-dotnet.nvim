@@ -111,8 +111,10 @@ M.pick_sync = function(bufnr, options, title, autopick)
   local selected = nil
   M.picker(bufnr, options, function(i)
     selected = i
-    if coroutine.status(co) ~= "running" then
-      coroutine.resume(co)
+    if co then
+      if coroutine.status(co) ~= "running" then
+        coroutine.resume(co)
+      end
     end
   end, title or "", autopick)
   if not selected then
