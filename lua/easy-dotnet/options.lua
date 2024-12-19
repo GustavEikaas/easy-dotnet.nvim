@@ -54,10 +54,12 @@ end
 
 local function get_secret_path(secret_guid)
   local path = ""
-  local home_dir = vim.fn.expand('~')
+  local home_dir = vim.fn.expand("~")
   if require("easy-dotnet.extensions").isWindows() then
-    local secret_path = home_dir ..
-        '\\AppData\\Roaming\\Microsoft\\UserSecrets\\' .. secret_guid .. "\\secrets.json"
+    local secret_path = home_dir
+      .. "\\AppData\\Roaming\\Microsoft\\UserSecrets\\"
+      .. secret_guid
+      .. "\\secrets.json"
     path = secret_path
   else
     local secret_path = home_dir .. "/.microsoft/usersecrets/" .. secret_guid .. "/secrets.json"
@@ -65,7 +67,6 @@ local function get_secret_path(secret_guid)
   end
   return path
 end
-
 
 local M = {
   options = {
@@ -87,7 +88,7 @@ local M = {
         end,
         build = function()
           return string.format("dotnet build %s %s", path, args)
-        end
+        end,
       }
       local command = commands[action]()
       if require("easy-dotnet.extensions").isWindows() == true then
@@ -131,21 +132,35 @@ local M = {
         expand_all = { lhs = "-", desc = "expand all" },
         collapse_all = { lhs = "W", desc = "collapse all" },
         close = { lhs = "q", desc = "close testrunner" },
-        refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" }
+        refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" },
       },
       additional_args = {},
     },
     csproj_mappings = true,
     fsproj_mappings = true,
-    auto_bootstrap_namespace = true,
-  }
+    auto_bootstrap_namespace = {
+      type = "block_scoped",
+      enabled = true
+    },
+  },
 }
 
 local function merge_tables(default_options, user_options)
   return vim.tbl_deep_extend("keep", user_options, default_options)
 end
 
+--- Auto_bootstrap namespace can be either true or table with config
+local function handle_auto_bootstrap_namespace(a)
+  if type(a.auto_bootstrap_namespace) ~= "table" then
+    a.auto_bootstrap_namespace = {
+      type = "block_scoped",
+      enabled = a.auto_bootstrap_namespace == true
+    }
+  end
+end
+
 M.set_options = function(a)
+  handle_auto_bootstrap_namespace(a)
   M.options = merge_tables(M.options, a)
   return M.options
 end
