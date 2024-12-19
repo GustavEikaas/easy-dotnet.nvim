@@ -46,7 +46,13 @@ local function generate_csharp_namespace(cs_file_path, csproj_path, maxdepth)
   local csproj_basename = get_basename_without_ext(csproj_path)
 
   local relative_path_parts = {}
-  while cs_file_dir ~= csproj_dir and cs_file_dir ~= "/" and cs_file_dir ~= "~" and cs_file_dir ~= "" and curr_depth < maxdepth do
+  while
+    cs_file_dir ~= csproj_dir
+    and cs_file_dir ~= "/"
+    and cs_file_dir ~= "~"
+    and cs_file_dir ~= ""
+    and curr_depth < maxdepth
+  do
     table.insert(relative_path_parts, 1, vim.fn.fnamemodify(cs_file_dir, ":t"))
     cs_file_dir = get_parent_directory(cs_file_dir)
     curr_depth = curr_depth + 1
@@ -71,7 +77,31 @@ local function is_buffer_empty(buf)
   return true
 end
 
-local function auto_bootstrap_namespace(bufnr)
+local bootstrap = function(namespace, type_keyword, file_name, file_scoped)
+  if file_scoped then
+    return {
+      string.format("namespace %s;", namespace),
+      "",
+      string.format("public %s %s", type_keyword, file_name),
+      "{",
+      "",
+      "}",
+    }
+  else
+    return {
+      string.format("namespace %s", namespace),
+      "{",
+      string.format("  public %s %s", type_keyword, file_name),
+      "  {",
+      "",
+      "  }",
+      "}",
+      " ",
+    }
+  end
+end
+
+local function auto_bootstrap_namespace(bufnr, file_scoped)
   local max_depth = 50
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
@@ -90,28 +120,19 @@ local function auto_bootstrap_namespace(bufnr)
   local is_interface = file_name:sub(1, 1) == "I" and file_name:sub(2, 2):match("%u")
   local type_keyword = is_interface and "interface" or "class"
 
-  local bootstrap_lines = {
-    string.format("namespace %s", namespace),
-    "{",
-    string.format("  public %s %s", type_keyword, file_name),
-    "  {",
-    "",
-    "  }",
-    "}",
-    " "
-  }
+  local bootstrap_lines = bootstrap(namespace, type_keyword, file_name, file_scoped)
 
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, bootstrap_lines)
   vim.cmd("w")
 end
 
-M.auto_bootstrap_namespace = function()
+M.auto_bootstrap_namespace = function(file_scoped)
   vim.api.nvim_create_autocmd({ "BufReadPost" }, {
     pattern = "*.cs",
     callback = function()
       local bufnr = vim.api.nvim_get_current_buf()
-      auto_bootstrap_namespace(bufnr)
-    end
+      auto_bootstrap_namespace(bufnr, file_scoped)
+    end,
   })
 end
 
@@ -120,7 +141,7 @@ M.add_test_signs = function()
     pattern = "*.cs",
     callback = function()
       require("easy-dotnet.test-signs").add_gutter_test_signs()
-    end
+    end,
   })
 end
 
