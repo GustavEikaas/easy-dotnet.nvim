@@ -182,8 +182,11 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
       },
       csproj_mappings = true,
       fsproj_mappings = true,
-      auto_bootstrap_namespace = true,
-      file_scoped = true
+      auto_bootstrap_namespace = {
+          --block_scoped, file_scoped
+          type = "block_scoped",
+          enabled = true
+      },
     })
 
     -- Example command

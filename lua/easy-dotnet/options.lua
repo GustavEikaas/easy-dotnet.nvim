@@ -139,7 +139,7 @@ local M = {
     csproj_mappings = true,
     fsproj_mappings = true,
     auto_bootstrap_namespace = {
-      type = "file_scoped",
+      type = "block_scoped",
       enabled = true
     },
   },
@@ -153,7 +153,7 @@ end
 local function handle_auto_bootstrap_namespace(a)
   if type(a.auto_bootstrap_namespace) ~= "table" then
     a.auto_bootstrap_namespace = {
-      type = "file_scoped",
+      type = "block_scoped",
       enabled = a.auto_bootstrap_namespace == true
     }
   end
