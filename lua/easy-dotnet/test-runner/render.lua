@@ -1,5 +1,4 @@
 local ns_id = require("easy-dotnet.constants").ns_id
-local extensions = require("easy-dotnet.extensions")
 
 ---@class Window
 ---@field tree table<string,TestNode>
@@ -82,7 +81,7 @@ function M.appendJob(id, type, subtask_count)
 
   local on_job_finished_callback = function()
     job.completed = true
-    local is_all_finished = extensions.every(M.jobs, function(s) return s.completed end)
+    local is_all_finished = vim.iter(M.jobs):all(function(s) return s.completed end)
     if is_all_finished == true then
       M.jobs = {}
     end
