@@ -138,8 +138,10 @@ local M = {
     },
     csproj_mappings = true,
     fsproj_mappings = true,
-    auto_bootstrap_namespace = true,
-    file_scoped = true,
+    auto_bootstrap_namespace = {
+      type = "file_scoped",
+      enabled = true
+    },
   },
 }
 
@@ -147,7 +149,18 @@ local function merge_tables(default_options, user_options)
   return vim.tbl_deep_extend("keep", user_options, default_options)
 end
 
+--- Auto_bootstrap namespace can be either true or table with config
+local function handle_auto_bootstrap_namespace(a)
+  if type(a.auto_bootstrap_namespace) ~= "table" then
+    a.auto_bootstrap_namespace = {
+      type = "file_scoped",
+      enabled = a.auto_bootstrap_namespace == true
+    }
+  end
+end
+
 M.set_options = function(a)
+  handle_auto_bootstrap_namespace(a)
   M.options = merge_tables(M.options, a)
   return M.options
 end

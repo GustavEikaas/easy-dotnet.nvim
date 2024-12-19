@@ -191,8 +191,8 @@ M.setup = function(opts)
     require("easy-dotnet.fsproj-mappings").attach_mappings()
   end
 
-  if merged_opts.auto_bootstrap_namespace == true then
-    require("easy-dotnet.cs-mappings").auto_bootstrap_namespace(merged_opts.file_scoped)
+  if merged_opts.auto_bootstrap_namespace.enabled == true then
+    require("easy-dotnet.cs-mappings").auto_bootstrap_namespace(merged_opts.auto_bootstrap_namespace.type)
   end
 
   if merged_opts.test_runner.enable_buffer_test_execution then

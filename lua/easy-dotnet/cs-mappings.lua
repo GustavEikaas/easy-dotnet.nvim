@@ -77,8 +77,11 @@ local function is_buffer_empty(buf)
   return true
 end
 
-local bootstrap = function(namespace, type_keyword, file_name, file_scoped)
-  if file_scoped then
+---@alias BootstrapNamespaceMode "file_scoped" | "block_scoped"
+
+---@param mode BootstrapNamespaceMode
+local bootstrap = function(namespace, type_keyword, file_name, mode)
+  if mode == "file_scoped" then
     return {
       string.format("namespace %s;", namespace),
       "",
@@ -101,7 +104,8 @@ local bootstrap = function(namespace, type_keyword, file_name, file_scoped)
   end
 end
 
-local function auto_bootstrap_namespace(bufnr, file_scoped)
+---@param mode BootstrapNamespaceMode
+local function auto_bootstrap_namespace(bufnr, mode)
   local max_depth = 50
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
@@ -120,18 +124,19 @@ local function auto_bootstrap_namespace(bufnr, file_scoped)
   local is_interface = file_name:sub(1, 1) == "I" and file_name:sub(2, 2):match("%u")
   local type_keyword = is_interface and "interface" or "class"
 
-  local bootstrap_lines = bootstrap(namespace, type_keyword, file_name, file_scoped)
+  local bootstrap_lines = bootstrap(namespace, type_keyword, file_name, mode)
 
   vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, bootstrap_lines)
   vim.cmd("w")
 end
 
-M.auto_bootstrap_namespace = function(file_scoped)
+---@param mode BootstrapNamespaceMode
+M.auto_bootstrap_namespace = function(mode)
   vim.api.nvim_create_autocmd({ "BufReadPost" }, {
     pattern = "*.cs",
     callback = function()
       local bufnr = vim.api.nvim_get_current_buf()
-      auto_bootstrap_namespace(bufnr, file_scoped)
+      auto_bootstrap_namespace(bufnr, mode)
     end,
   })
 end
