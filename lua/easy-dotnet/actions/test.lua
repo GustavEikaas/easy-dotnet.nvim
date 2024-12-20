@@ -1,5 +1,4 @@
 local M = {}
-local extensions = require("easy-dotnet.extensions")
 local picker = require("easy-dotnet.picker")
 local error_messages = require("easy-dotnet.error-messages")
 local parsers = require("easy-dotnet.parsers")
@@ -22,10 +21,8 @@ local function select_project(solution_file_path, cb, use_default)
     return cb(default)
   end
 
-  local projects = extensions.filter(sln_parse.get_projects_from_sln(solution_file_path),
-    function(i)
-      return i.isTestProject == true
-    end)
+  local projects = vim.tbl_filter(function(i) return i.isTestProject == true end,
+    sln_parse.get_projects_from_sln(solution_file_path))
 
 
   if #projects == 0 then
@@ -50,25 +47,31 @@ end
 
 ---@param use_default boolean
 ---@param args string|nil
-M.run_test_picker = function(on_select, use_default, args)
+M.run_test_picker = function(term, use_default, args)
+  term = term or require("easy-dotnet.options").options.terminal
+  use_default = use_default or false
+  args = args or ""
+
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
-    csproj_fallback(on_select)
+    csproj_fallback(term)
     return
   end
 
   select_project(solutionFilePath, function(project)
-    on_select(project.path, "test", args)
+    term(project.path, "test", args)
   end, use_default)
 end
 
-M.test_solution = function(term)
+M.test_solution = function(term, args)
+  term = term or require("easy-dotnet.options").options.terminal
+  args = args or ""
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if solutionFilePath == nil then
     vim.notify(error_messages.no_project_definition_found)
     return
   end
-  term(solutionFilePath, "test", "")
+  term(solutionFilePath, "test", args or "")
 end
 
 

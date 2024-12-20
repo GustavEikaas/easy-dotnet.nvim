@@ -302,12 +302,7 @@ local keymaps = function()
       filter_failed_tests(win)
     end,
     [keymap.refresh_testrunner.lhs]  = function(_, win)
-      local function co_wrapper()
-        require("easy-dotnet.test-runner.runner").refresh(win.options, win.options.sdk_path, { build = true })
-      end
-
-      local co = coroutine.create(co_wrapper)
-      coroutine.resume(co)
+      vim.cmd("Dotnet testrunner refresh build")
     end,
     [keymap.debug_test.lhs]          = function(node, win)
       if node.type ~= "test" and node.type ~= "test_group" then

@@ -1,5 +1,4 @@
 local M = {}
-local extensions = require("easy-dotnet.extensions")
 local picker = require("easy-dotnet.picker")
 local parsers = require("easy-dotnet.parsers")
 local csproj_parse = parsers.csproj_parser
@@ -25,9 +24,9 @@ local function pick_project(use_default)
     return default, solution_file_path
   end
 
-  local projects = extensions.filter(sln_parse.get_projects_from_sln(solution_file_path), function(i)
+  local projects = vim.tbl_filter(function(i)
     return i.runnable == true
-  end)
+  end, sln_parse.get_projects_from_sln(solution_file_path))
 
   if #projects == 0 then
     vim.notify(error_messages.no_runnable_projects_found)
@@ -43,24 +42,27 @@ local function pick_project(use_default)
 end
 
 ---@param term function
-local function csproj_fallback(term)
+local function csproj_fallback(term, args)
   local csproj_path = csproj_parse.find_project_file()
   if (csproj_path == nil) then
     vim.notify(error_messages.no_project_definition_found)
     return
   end
   picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } },
-    function(i) term(i.path, "run") end, "Run project")
+    function(i) term(i.path, "run", args) end, "Run project")
 end
 
----@param term function
----@param use_default boolean
+---@param term function | nil
+---@param use_default boolean | nil
 ---@param args string | nil
 M.run_project_picker = function(term, use_default, args)
+  term = term or require("easy-dotnet.options").options.terminal
+  use_default = use_default or false
+  args = args or ""
   local default_manager = require("easy-dotnet.default-manager")
   local solution_file_path = sln_parse.find_solution_file()
   if solution_file_path == nil then
-    csproj_fallback(term)
+    csproj_fallback(term, args)
     return
   end
 
@@ -70,9 +72,9 @@ M.run_project_picker = function(term, use_default, args)
     return
   end
 
-  local projects = extensions.filter(sln_parse.get_projects_from_sln(solution_file_path), function(i)
+  local projects = vim.tbl_filter(function(i)
     return i.runnable == true
-  end)
+  end, sln_parse.get_projects_from_sln(solution_file_path))
 
   if #projects == 0 then
     vim.notify(error_messages.no_runnable_projects_found)
@@ -141,13 +143,17 @@ local function get_or_pick_profile(use_default, project, solution_file_path)
 end
 
 ---@param use_default boolean
-M.run_project_with_profile = function(term, use_default)
+M.run_project_with_profile = function(term, use_default, args)
+  term = term or require("easy-dotnet.options").options.terminal
+  use_default = use_default or false
+  args = args or ""
   local project, solution_file_path = pick_project(use_default)
   if not project then
     error("Failed to select project")
   end
   local profile = get_or_pick_profile(use_default, project, solution_file_path)
-  term(project.path, "run", profile and string.format("--launch-profile '%s'", profile) or "")
+  local arg = profile and string.format("--launch-profile '%s'", profile) or ""
+  term(project.path, "run", arg .. " " .. args)
 end
 
 return M
