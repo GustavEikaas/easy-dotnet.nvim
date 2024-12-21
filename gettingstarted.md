@@ -128,21 +128,6 @@ in `init.lua` add at the bottom
 }
 ```
 
-we get an error message
-
-
-```
-Failed to run `config` for easy-dotnet.nvim
-vim/shared.lua:382: after the second argument: expected table, got nil
-# stacktrace: 
-  - vim\shared.lua:936 _in_ **validate**    
-  - vim\shared.lua:382 _in_ **merge_tables**     
-  - easy-dotnet.nvim\lua\easy-dotnet\options.lua:149 _in_ **set_options**   
-  - easy-dotnet.nvim\lua\easy-dotnet\init.lua:146 _in_ **setup**    
-  - init.lua:90 _in_ **config**      
-  - init.lua:77      
-Press ENTER or type command to continuue
-```
 
 
 ## Compiling and running hello world
