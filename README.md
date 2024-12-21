@@ -43,6 +43,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
     - [Project](#project)
     - [Configuration file](#configuration-file)
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
+    - [Integrating with neo-tree](#integrating-with-neo-tree)
 11. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
@@ -469,6 +470,32 @@ Adding the following configuration to your nvim-tree will allow for creating fil
         end, opts('Create file from dotnet template'))
       end
     })
+```
+
+### Integrating with neo-tree
+Adding the following configuration to your neo-tree will allow for creating files using dotnet templates
+
+```lua
+      require("neo-tree").setup({
+      ---...other options
+        filesystem = {
+          window = {
+            mappings = {
+              -- Make the mapping anything you want
+              ["R"] = "easy",
+            },
+          },
+          commands = {
+            ["easy"] = function(state)
+              local node = state.tree:get_node()
+              local path = node.type == "directory" and node.path or vim.fs.dirname(node.path)
+              require("easy-dotnet").create_new_item(path, function()
+                require("neo-tree.sources.manager").refresh(state.name)
+              end)
+            end
+          }
+        },
+      })
 ```
 
 ## EntityFramework
