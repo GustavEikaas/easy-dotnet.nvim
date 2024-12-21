@@ -479,7 +479,6 @@ Adding the following configuration to your neo-tree will allow for creating file
       require("neo-tree").setup({
       ---...other options
         filesystem = {
-          use_libuv_file_watcher = false,
           window = {
             mappings = {
               -- Make the mapping anything you want
