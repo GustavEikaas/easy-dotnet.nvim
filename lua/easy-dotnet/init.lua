@@ -181,8 +181,13 @@ M.setup = function(opts)
     require("easy-dotnet.fs-mappings").add_test_signs()
   end
 
+  if merged_opts.enable_filetypes == true then
+    require('easy-dotnet.filetypes').enable_filetypes()
+  end
+
   vim.iter(collect_commands_with_handles(commands)):each(function(name, handle)
     M[name] = wrap(function(args, options) handle(args, options or require("easy-dotnet.options").options) end)
+
   end)
 
   register_legacy_functions()
