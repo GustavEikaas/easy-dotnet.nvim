@@ -9,8 +9,8 @@ We use chocolatey as the package manager. To get up and running we need a few to
 ```
 > choco install neovim
 > choco install ripgrep
-> choco install zip
-> choco install choco install dotnet-8.0-sdk
+> choco install choco 
+> choco install dotnet-8.0-sdk
 > choco install git
 > choco install fzf
 ```
@@ -25,7 +25,7 @@ you should now open a new terminal and start neovim
 
 ## Installing neovim plugin manager
 
-first we need to create the folder to the config file (we use powershell). Then we start neovim to configure
+first we need to create the folder for the config file (we use powershell). Then we start neovim to configure
 
 ``` 
 > 
@@ -33,11 +33,7 @@ first we need to create the folder to the config file (we use powershell). Then 
 > nvim $env:LOCALAPPDATA\nvim\init.lua
 ```
 
-## Seting up neovim 
-
-Starting neovim is an underwhelming surprise the first time. Let's change that.
-
-add the following to `init.lua`
+Starting neovim is an underwhelming surprise the first time. Let's change that. Add the following to `init.lua`
 
 ```
 -- Set <space> as the leader key
@@ -52,13 +48,11 @@ vim.opt.number = true
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.opt.mouse = 'a'
 
-vim.opt.showmode = true
-
 -- add this if you want to be able to copy from neovim to windows programs
 vim.schedule(function() vim.opt.clipboard = 'unnamedplus' end)
 ```
 
-restarting neovim you will see you have line numbers
+Restarting neovim you will see you have line numbers
 
 
 
@@ -95,10 +89,30 @@ require("lazy").setup({
 })
 ```
 
-close and restart nvim by typing `:q` and <enter> a few times. if we were succesfull you will see new colors in the editor (from `tokyonight.nvim`).
+Close nvim by typing `:wqa` and <enter>. Reopen nvim, if we were succesfull, you will see new colors in the editor (from `tokyonight.nvim`).
 
 
-## Install easy-dotnet plugin
+
+## Install the Roslyn LSP
+
+An LSP is pretty much required. Either omnisharp or roslyn. My recommendation is roslyn because it is a very good plugin. We should link to the repo and refer to the setup section of the readme.
+
+in `init.lua` add at the bottom
+
+```
+{
+    "seblj/roslyn.nvim",
+    ft = "cs",
+    opts = {
+        -- your configuration comes here; leave empty for default settings
+    }
+}
+```
+
+The configuration is elaborate. You should read ore at https://github.com/seblj/roslyn.nvim
+
+
+## Install the easy-dotnet plugin
 
 Finally, it's time to install the plugin that enable us to do .net development in neovim.
 
@@ -129,4 +143,8 @@ vim/shared.lua:382: after the second argument: expected table, got nil
   - init.lua:77      
 Press ENTER or type command to continuue
 ```
+
+
+## Compiling and running hello world
+
 
