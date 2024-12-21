@@ -43,6 +43,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
     - [Project](#project)
     - [Configuration file](#configuration-file)
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
+    - [Integrating with neo-tree](#integrating-with-neo-tree)
 11. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
@@ -475,16 +476,6 @@ Adding the following configuration to your nvim-tree will allow for creating fil
 Adding the following configuration to your neo-tree will allow for creating files using dotnet templates
 
 ```lua
-  {
-    "nvim-neo-tree/neo-tree.nvim",
-    branch = "v3.x",
-    dependencies = {
-      "nvim-lua/plenary.nvim",
-      "nvim-tree/nvim-web-devicons",
-      "MunifTanjim/nui.nvim",
-      -- "3rd/image.nvim", 
-    },
-    config = function()
       require("neo-tree").setup({
       ---...other options
         filesystem = {
@@ -506,8 +497,6 @@ Adding the following configuration to your neo-tree will allow for creating file
           }
         },
       })
-    end
-  }
 ```
 
 ## EntityFramework
