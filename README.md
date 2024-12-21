@@ -471,6 +471,45 @@ Adding the following configuration to your nvim-tree will allow for creating fil
     })
 ```
 
+### Integrating with neo-tree
+Adding the following configuration to your neo-tree will allow for creating files using dotnet templates
+
+```lua
+  {
+    "nvim-neo-tree/neo-tree.nvim",
+    branch = "v3.x",
+    dependencies = {
+      "nvim-lua/plenary.nvim",
+      "nvim-tree/nvim-web-devicons",
+      "MunifTanjim/nui.nvim",
+      -- "3rd/image.nvim", 
+    },
+    config = function()
+      require("neo-tree").setup({
+      ---...other options
+        filesystem = {
+          use_libuv_file_watcher = false,
+          window = {
+            mappings = {
+              -- Make the mapping anything you want
+              ["R"] = "easy",
+            },
+          },
+          commands = {
+            ["easy"] = function(state)
+              local node = state.tree:get_node()
+              local path = node.type == "directory" and node.path or vim.fs.dirname(node.path)
+              require("easy-dotnet").create_new_item(path, function()
+                require("neo-tree.sources.manager").refresh(state.name)
+              end)
+            end
+          }
+        },
+      })
+    end
+  }
+```
+
 ## EntityFramework
 Common EntityFramework commands have been added mainly to reduce the overhead of writing `--project .. --startup-project ..`. 
 
