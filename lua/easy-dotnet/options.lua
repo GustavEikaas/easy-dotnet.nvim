@@ -146,7 +146,7 @@ local function merge_tables(default_options, user_options)
 end
 
 M.set_options = function(a)
-  M.options = merge_tables(M.options, a)
+  M.options = merge_tables(M.options, a or {})
   return M.options
 end
 
