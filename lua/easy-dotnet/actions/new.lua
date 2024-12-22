@@ -295,7 +295,9 @@ local function name_input_sync()
   return name
 end
 
-M.create_new_item = function(path)
+---@param path string
+---@param cb function | nil
+M.create_new_item = function(path, cb)
   local template = require("easy-dotnet.picker").pick_sync(nil,
     {
       { value = "buildprops",     display = "MSBuild Directory.Build.props File",   type = "MSBuild/props" },
@@ -347,6 +349,9 @@ M.create_new_item = function(path)
       if code == 0 then
       else
         vim.notify("Command failed")
+      end
+      if cb then
+        cb()
       end
     end
   })

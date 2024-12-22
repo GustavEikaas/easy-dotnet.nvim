@@ -158,8 +158,7 @@ local function handle_auto_bootstrap_namespace(a)
 end
 
 M.set_options = function(a)
-  handle_auto_bootstrap_namespace(a)
-  M.options = merge_tables(M.options, a)
+  M.options = merge_tables(M.options, a or {})
   return M.options
 end
 

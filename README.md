@@ -1,22 +1,24 @@
 # Easy-dotnet.nvim
-
 <a href="https://dotfyle.com/plugins/GustavEikaas/easy-dotnet.nvim">
- <img src="https://dotfyle.com/plugins/GustavEikaas/easy-dotnet.nvim/shield?style=flat" />
+	<img src="https://dotfyle.com/plugins/GustavEikaas/easy-dotnet.nvim/shield?style=flat" />
 </a>
 
 ## Simplifying .NET development in Neovim
-
 Are you a .NET developer looking to harness the power of Neovim for your daily coding tasks? Look no further! easy-dotnet.nvim is here to streamline your workflow and make .NET development in Neovim a breeze.
 
-> 💡 **Tip:**
+> 💡 **Tip:** 
 > This plugin and all its features should work for both **C#** and **F#**.
+
+>[!IMPORTANT]
+> Neovim >= 0.10.0 is required for this plugin to work
+> There is a [PR](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/205) for backwards compatibility with Neovim 0.9.5
 
 >[!IMPORTANT]
 >I need feedback! The last months I have had a blast developing this plugin, i have gotten a lot of feedback from you guys, and I want more! Please dont hesitate to file an issue with an improvement/bug/question etc..
 >And most importantly thank you guys for using my plugin :D
 
-## Motivation
 
+## Motivation
 As a developer transitioning from Rider to Neovim, I found myself missing the simplicity of running projects with just a single button click. Tired of typing out lengthy terminal commands for common tasks like running, testing, and managing user secrets, I decided to create easy-dotnet.nvim. This plugin aims to bridge the gap between the convenience of IDEs like Rider and the flexibility of Neovim.
 
 # Table of Contents
@@ -45,6 +47,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
     - [Project](#project)
     - [Configuration file](#configuration-file)
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
+    - [Integrating with neo-tree](#integrating-with-neo-tree)
 11. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
@@ -490,25 +493,48 @@ Adding the following configuration to your nvim-tree will allow for creating fil
     })
 ```
 
-## EntityFramework
+### Integrating with neo-tree
+Adding the following configuration to your neo-tree will allow for creating files using dotnet templates
 
-Common EntityFramework commands have been added mainly to reduce the overhead of writing `--project .. --startup-project ..`.
+```lua
+      require("neo-tree").setup({
+      ---...other options
+        filesystem = {
+          window = {
+            mappings = {
+              -- Make the mapping anything you want
+              ["R"] = "easy",
+            },
+          },
+          commands = {
+            ["easy"] = function(state)
+              local node = state.tree:get_node()
+              local path = node.type == "directory" and node.path or vim.fs.dirname(node.path)
+              require("easy-dotnet").create_new_item(path, function()
+                require("neo-tree.sources.manager").refresh(state.name)
+              end)
+            end
+          }
+        },
+      })
+```
+
+## EntityFramework
+Common EntityFramework commands have been added mainly to reduce the overhead of writing `--project .. --startup-project ..`. 
 
 ### Requirements
-
 This functionality relies on dotnet-ef tool, install using `dotnet tool install --global dotnet-ef`
 
 ### Database
-
 - `Dotnet ef database update`
 - `Dotnet ef database update pick` --allows to pick which migration to apply
 - `Dotnet ef database drop`
 
 ### Migrations
-
 - `Dotnet ef migrations add <name>`
 - `Dotnet ef migrations remove`
 - `Dotnet ef migrations list`
+
 
 ## Language injections
 
