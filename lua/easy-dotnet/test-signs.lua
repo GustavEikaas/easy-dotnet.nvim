@@ -1,3 +1,4 @@
+local polyfills = require "easy-dotnet.polyfills"
 local M = {}
 
 local function compare_paths(path1, path2)
@@ -9,7 +10,7 @@ local function run_test(name, namespace, cs_project_path, cb)
   local log_file_name = string.format("%s.xml", namespace:gsub("%b()", ""))
   local normalized_path = vim.fs.normalize(cs_project_path)
   local directory_path = vim.fs.dirname(normalized_path)
-  local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
+  local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
 
   local command = string.format(
     "dotnet test --filter='%s' --nologo %s --logger='trx;logFileName=%s'",

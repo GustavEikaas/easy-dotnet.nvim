@@ -10,10 +10,6 @@ Are you a .NET developer looking to harness the power of Neovim for your daily c
 > This plugin and all its features should work for both **C#** and **F#**.
 
 >[!IMPORTANT]
-> Neovim >= 0.10.0 is required for this plugin to work
-> There is a [PR](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/205) for backwards compatibility with Neovim 0.9.5
-
->[!IMPORTANT]
 >I need feedback! The last months I have had a blast developing this plugin, i have gotten a lot of feedback from you guys, and I want more! Please dont hesitate to file an issue with an improvement/bug/question etc..
 >And most importantly thank you guys for using my plugin :D
 

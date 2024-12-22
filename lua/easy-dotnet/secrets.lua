@@ -4,6 +4,7 @@ local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local picker = require("easy-dotnet.picker")
 local error_messages = require("easy-dotnet.error-messages")
+local polyfills = require("easy-dotnet.polyfills")
 
 --- Reads a file and returns the lines in a lua table
 ---@param filePath string
@@ -100,7 +101,7 @@ M.edit_secrets_picker = function(get_secret_path)
     return
   end
 
-  local projectsWithSecrets = vim.tbl_filter(function(i)
+  local projectsWithSecrets = polyfills.tbl_filter(function(i)
     return i.path ~= nil and i.runnable == true
   end, sln_parse.get_projects_from_sln(solutionFilePath))
 
