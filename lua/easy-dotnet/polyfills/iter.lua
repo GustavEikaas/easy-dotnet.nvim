@@ -1,3 +1,4 @@
+--TODO: Remove this file once majority of users have migrated to >= 0.10.0
 --- @brief
 ---
 --- [vim.iter()]() is an interface for [iterable]s: it wraps a table or function argument into an

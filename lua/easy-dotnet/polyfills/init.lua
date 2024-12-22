@@ -1,3 +1,4 @@
+--TODO: Remove this file once majority of users have migrated to >= 0.10.0
 local M = {
   fs = {}
 }
