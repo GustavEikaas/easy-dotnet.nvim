@@ -27,13 +27,13 @@ local function extract_from_project(project_file_path, pattern)
   if not file then
     return false
   end
-  local contains_pattern = vim.iter(file:lines()):find(function(line)
-    local value = line:match(pattern)
-    if value then
-      return true
+  local contains_pattern = false
+  for line in file:lines() do
+    if line:match(pattern) then
+      contains_pattern = true
+      break
     end
-    return false
-  end)
+  end
 
   local result = (type(contains_pattern) == "string" and contains_pattern:match(pattern)) or false
 

@@ -21,8 +21,12 @@ local function select_project(solution_file_path, cb, use_default)
     return cb(default)
   end
 
-  local projects = vim.tbl_filter(function(i) return i.isTestProject == true end,
-    sln_parse.get_projects_from_sln(solution_file_path))
+  local projects = {}
+  for _, project in ipairs(sln_parse.get_projects_from_sln(solution_file_path)) do
+    if project.isTestProject == true then
+      table.insert(projects, project)
+    end
+  end
 
 
   if #projects == 0 then

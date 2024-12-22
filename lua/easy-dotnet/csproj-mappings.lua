@@ -89,9 +89,10 @@ M.package_completion_cmp = {
           search_term), {
           stdout_buffered = true,
           on_stdout = function(_, data)
-            local items = vim.tbl_map(function(i)
-              return { label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', ""), kind = 18 }
-            end, data)
+            local items = {}
+            for _, i in ipairs(data) do
+              table.insert(items, { label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', ""), kind = 18 })
+            end
             callback({ items = items, isIncomplete = true })
           end,
         })
@@ -106,7 +107,8 @@ M.package_completion_cmp = {
             local index = 0
             local latest = nil
             local last_index = #data - 1
-            local items = vim.tbl_map(function(i)
+            local items = {}
+            for _, i in ipairs(data) do
               index = index + 1
               local cmp_item = {
                 label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', ""),
@@ -118,8 +120,8 @@ M.package_completion_cmp = {
               if index == last_index then
                 latest = cmp_item.label
               end
-              return cmp_item
-            end, data)
+              table.insert(items, cmp_item)
+            end
 
             if latest then
               table.insert(items, {

@@ -28,8 +28,19 @@ function M.add_project_to_solution(slnpath)
   local projects = M.find_project_files()
 
   local options = {}
+  local sln_project_paths = {}
+  for _, project in ipairs(sln_projects) do
+    table.insert(sln_project_paths, vim.fs.normalize(project.path))
+  end
   for _, value in ipairs(projects) do
-    if not vim.tbl_contains(sln_projects, function(a) return vim.fs.normalize(a.path) == value end, { predicate = true }) then
+    local is_present = false
+    for _, sln_project_path in ipairs(sln_project_paths) do
+      if sln_project_path == value then
+        is_present = true
+        break
+      end
+    end
+    if not is_present then
       table.insert(options, {
         display = value,
         ordinal = value,
@@ -95,21 +106,24 @@ M.get_projects_from_sln = function(solutionFilePath)
   local file_contents = vim.fn.readfile(solutionFilePath)
   local regexp = 'Project%("{(.-)}"%).*= "(.-)", "(.-)", "{.-}"'
 
-  local projectLines = vim.tbl_filter(function(line)
+  local projectLines = {}
+  for _, line in ipairs(file_contents) do
     local id, name, path = line:match(regexp)
     if id and name and path and (path:match("%.csproj$") or path:match("%.fsproj$")) then
-      return true
+      table.insert(projectLines, line)
     end
-    return false
-  end, file_contents)
+  end
 
-  local projects = vim.tbl_map(function(line)
-    local csproj_parser     = require("easy-dotnet.parsers.csproj-parse")
-    local _, _, path        = line:match(regexp)
-    local project_file_path = generate_relative_path_for_project(path, solutionFilePath)
-    local project           = csproj_parser.get_project_from_project_file(project_file_path)
-    return project
-  end, projectLines)
+  local projects = {}
+  for _, line in ipairs(file_contents) do
+    local id, name, path = line:match(regexp)
+    if id and name and path and (path:match("%.csproj$") or path:match("%.fsproj$")) then
+      local csproj_parser     = require("easy-dotnet.parsers.csproj-parse")
+      local project_file_path = generate_relative_path_for_project(path, solutionFilePath)
+      local project           = csproj_parser.get_project_from_project_file(project_file_path)
+      table.insert(projects, project)
+    end
+  end
 
   return projects
 end

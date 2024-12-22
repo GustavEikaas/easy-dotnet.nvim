@@ -20,7 +20,8 @@ end
 
 
 local function collect_commands_with_handles(parent, prefix)
-  return vim.iter(parent):fold({}, function(command_handles, name, command)
+  local command_handles = {}
+  for name, command in pairs(parent) do
     local full_command = prefix and (prefix .. "_" .. name) or name
 
     if command.handle then
@@ -28,18 +29,18 @@ local function collect_commands_with_handles(parent, prefix)
     end
 
     if command.subcommands then
-      vim.iter(collect_commands_with_handles(command.subcommands, full_command))
-          :each(function(sub_name, sub_handle)
-            command_handles[sub_name] = sub_handle
-          end)
+      local subcommand_handles = collect_commands_with_handles(command.subcommands, full_command)
+      for sub_name, sub_handle in pairs(subcommand_handles) do
+        command_handles[sub_name] = sub_handle
+      end
     end
-
-    return command_handles
-  end)
+  end
+  return command_handles
 end
 
 local function collect_commands(parent, prefix)
-  return vim.iter(parent):fold({}, function(commands, name, command)
+  local commands = {}
+  for name, command in pairs(parent) do
     local full_command = prefix and (prefix .. " " .. name) or name
 
     if command.handle then
@@ -47,14 +48,13 @@ local function collect_commands(parent, prefix)
     end
 
     if command.subcommands then
-      vim.iter(collect_commands(command.subcommands, full_command))
-          :each(function(sub)
-            table.insert(commands, sub)
-          end)
+      local subcommands = collect_commands(command.subcommands, full_command)
+      for _, sub in ipairs(subcommands) do
+        table.insert(commands, sub)
+      end
     end
-
-    return commands
-  end)
+  end
+  return commands
 end
 
 local function present_command_picker()
@@ -121,7 +121,14 @@ end
 
 ---@return table<string>
 local function split_by_whitespace(str)
-  return str and vim.iter(str:gmatch("%S+")):totable() or {}
+  local result = {}
+  if not str then
+    return result
+  end
+  for word in str:gmatch("%S+") do
+    table.insert(result, word)
+  end
+  return result
 end
 
 local function traverse_subcommands(args, parent)
@@ -137,7 +144,10 @@ local function traverse_subcommands(args, parent)
   elseif parent.handle then
     parent.handle(args, require("easy-dotnet.options").options)
   else
-    local required = vim.tbl_keys(parent.subcommands)
+    local required = {}
+    for key in pairs(parent.subcommands) do
+      table.insert(required, key)
+    end
     print("Missing required argument " .. vim.inspect(required))
   end
 end
@@ -181,9 +191,9 @@ M.setup = function(opts)
     require("easy-dotnet.fs-mappings").add_test_signs()
   end
 
-  vim.iter(collect_commands_with_handles(commands)):each(function(name, handle)
+  for name, handle in pairs(collect_commands_with_handles(commands)) do
     M[name] = wrap(function(args, options) handle(args, options or require("easy-dotnet.options").options) end)
-  end)
+  end
 
   register_legacy_functions()
 end

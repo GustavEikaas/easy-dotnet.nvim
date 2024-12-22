@@ -63,9 +63,12 @@ M.start_debugging_test_project = function(project_path)
   local sln_file = sln_parse.find_solution_file()
   assert(sln_file, "Failed to find a solution file")
   local projects = sln_parse.get_projects_from_sln(sln_file)
-  local test_projects = vim.tbl_filter(function(i)
-    return i.isTestProject
-  end, projects)
+  local test_projects = {}
+  for _, project in ipairs(projects) do
+    if project.isTestProject then
+      table.insert(test_projects, project)
+    end
+  end
   local test_project = project_path and project_path or picker.pick_sync(nil, test_projects, "Pick test project").path
   assert(test_project, "No project selected")
 
@@ -103,9 +106,12 @@ end
 M.get_dll_for_solution_project = function(sln_file)
   local projects = sln_parse.get_projects_from_sln(sln_file)
   ---@type DotnetProject[]
-  local runnable_projects = vim.tbl_filter(function(i)
-    return i.runnable == true
-  end, projects)
+  local runnable_projects = {}
+  for _, project in ipairs(projects) do
+    if project.runnable then
+      table.insert(runnable_projects, project)
+    end
+  end
 
   ---@type DotnetProject
   local project

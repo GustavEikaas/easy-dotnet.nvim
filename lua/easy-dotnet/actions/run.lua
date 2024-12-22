@@ -24,9 +24,12 @@ local function pick_project(use_default)
     return default, solution_file_path
   end
 
-  local projects = vim.tbl_filter(function(i)
-    return i.runnable == true
-  end, sln_parse.get_projects_from_sln(solution_file_path))
+  local projects = {}
+  for _, i in ipairs(sln_parse.get_projects_from_sln(solution_file_path)) do
+    if i.runnable == true then
+      table.insert(projects, i)
+    end
+  end
 
   if #projects == 0 then
     vim.notify(error_messages.no_runnable_projects_found)
@@ -72,9 +75,12 @@ M.run_project_picker = function(term, use_default, args)
     return
   end
 
-  local projects = vim.tbl_filter(function(i)
-    return i.runnable == true
-  end, sln_parse.get_projects_from_sln(solution_file_path))
+  local projects = {}
+  for _, i in ipairs(sln_parse.get_projects_from_sln(solution_file_path)) do
+    if i.runnable == true then
+      table.insert(projects, i)
+    end
+  end
 
   if #projects == 0 then
     vim.notify(error_messages.no_runnable_projects_found)

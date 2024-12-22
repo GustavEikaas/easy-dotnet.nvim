@@ -81,7 +81,13 @@ function M.appendJob(id, type, subtask_count)
 
   local on_job_finished_callback = function()
     job.completed = true
-    local is_all_finished = vim.iter(M.jobs):all(function(s) return s.completed end)
+    local is_all_finished = true
+    for _, a in ipairs(M.jobs) do
+      if not a.completed then
+        is_all_finished = false
+        break
+      end
+    end
     if is_all_finished == true then
       M.jobs = {}
     end
