@@ -299,6 +299,7 @@ end
 ---@param path string
 ---@param cb function | nil
 M.create_new_item = function(path, cb)
+  path = path or "."
   local template = require("easy-dotnet.picker").pick_sync(nil,
     {
       { value = "buildprops",     display = "MSBuild Directory.Build.props File",   type = "MSBuild/props" },
