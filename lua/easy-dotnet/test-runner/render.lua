@@ -380,11 +380,8 @@ M.render = function(mode)
   end
 
   printNodes()
-print("setBufferOptions")
   setBufferOptions()
-print("setMappings")
   setMappings()
-print("setMappings done")
   return M
 end
 
