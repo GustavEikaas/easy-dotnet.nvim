@@ -1,3 +1,4 @@
+local polyfills = require "easy-dotnet.polyfills"
 local M = {}
 
 ---@param file file*
@@ -20,7 +21,7 @@ end
 ---@return string
 M.ensure_and_get_fsx_path = function(script_template, script_name)
   local dir = require("easy-dotnet.constants").get_data_directory()
-  local filepath = vim.fs.joinpath(dir, script_name)
+  local filepath = polyfills.fs.joinpath(dir, script_name)
   local file = io.open(filepath, "r")
   if file then
     check_and_upgrade_script(file, filepath, script_template, script_name)

@@ -1,3 +1,4 @@
+local polyfills = require "easy-dotnet.polyfills"
 local M = {}
 
 local function readFile(filePath)
@@ -77,7 +78,7 @@ M.outdated = function()
   if path:match("[^/\\]+%.%a+proj") then
     local project_name = vim.fs.basename(path:gsub("%.csproj$", ""):gsub("%.fsproj$", ""))
     local data_dir = require("easy-dotnet.constants").get_data_directory()
-    local outPath = vim.fs.joinpath(data_dir, "package.json")
+    local outPath = polyfills.fs.joinpath(data_dir, "package.json")
     local cmd = string.format("dotnet-outdated %s --output %s", path, outPath)
     vim.fn.jobstart(cmd, {
       on_exit = function(_, b)
@@ -116,7 +117,7 @@ M.outdated = function()
     local sln_parse = require("easy-dotnet.parsers.sln-parse")
     local solutionFilePath = sln_parse.find_solution_file()
     local data_dir = require("easy-dotnet.constants").get_data_directory()
-    local outPath = vim.fs.joinpath(data_dir, "package.json")
+    local outPath = polyfills.fs.joinpath(data_dir, "package.json")
     local cmd = string.format("dotnet-outdated %s --output %s", solutionFilePath, outPath)
     vim.fn.jobstart(cmd, {
       on_exit = function(_, b)

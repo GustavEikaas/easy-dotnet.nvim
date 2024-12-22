@@ -1,3 +1,4 @@
+local polyfills = require "easy-dotnet.polyfills"
 local M = {}
 
 local function sln_add_project(sln_path, project)
@@ -20,7 +21,7 @@ local function get_dotnet_new_args(name)
 
   local folder_path = sln_path:gsub("[\\/][^\\/]*%.sln$", "")
   local project_name = sln_path:match("[^\\/]+%.sln$"):gsub("%.sln$", "") .. "." .. name
-  local output = vim.fs.joinpath(folder_path, project_name)
+  local output = polyfills.fs.joinpath(folder_path, project_name)
   return {
     sln_path = sln_path,
     output = output,

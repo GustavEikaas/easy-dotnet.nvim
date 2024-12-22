@@ -4,6 +4,7 @@ local parsers = require("easy-dotnet.parsers")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
+local polyfills = require("easy-dotnet.polyfills")
 
 ---@param use_default boolean
 ---@return DotnetProject, string | nil
@@ -24,7 +25,7 @@ local function pick_project(use_default)
     return default, solution_file_path
   end
 
-  local projects = vim.tbl_filter(function(i)
+  local projects = polyfills.tbl_filter(function(i)
     return i.runnable == true
   end, sln_parse.get_projects_from_sln(solution_file_path))
 
@@ -72,7 +73,7 @@ M.run_project_picker = function(term, use_default, args)
     return
   end
 
-  local projects = vim.tbl_filter(function(i)
+  local projects = polyfills.tbl_filter(function(i)
     return i.runnable == true
   end, sln_parse.get_projects_from_sln(solution_file_path))
 
@@ -90,7 +91,7 @@ end
 
 ---@param project DotnetProject
 local function pick_profile(project)
-  local path = vim.fs.joinpath(vim.fs.dirname(project.path), "Properties/launchSettings.json")
+  local path = polyfills.fs.joinpath(vim.fs.dirname(project.path), "Properties/launchSettings.json")
   --In case of OUT OF MEM, this would be another way: cat launchSettings.json | jq '.profiles | to_entries[] | select(.value.commandName == \"Project\") | .key'
   local success, content = pcall(function()
     return table.concat(vim.fn.readfile(path), "\n")
