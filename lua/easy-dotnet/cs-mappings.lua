@@ -46,13 +46,7 @@ local function generate_csharp_namespace(cs_file_path, csproj_path, maxdepth)
   local csproj_basename = get_basename_without_ext(csproj_path)
 
   local relative_path_parts = {}
-  while
-    cs_file_dir ~= csproj_dir
-    and cs_file_dir ~= "/"
-    and cs_file_dir ~= "~"
-    and cs_file_dir ~= ""
-    and curr_depth < maxdepth
-  do
+  while cs_file_dir ~= csproj_dir and cs_file_dir ~= "/" and cs_file_dir ~= "~" and cs_file_dir ~= "" and curr_depth < maxdepth do
     table.insert(relative_path_parts, 1, vim.fn.fnamemodify(cs_file_dir, ":t"))
     cs_file_dir = get_parent_directory(cs_file_dir)
     curr_depth = curr_depth + 1

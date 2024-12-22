@@ -54,12 +54,10 @@ end
 
 local function get_secret_path(secret_guid)
   local path = ""
-  local home_dir = vim.fn.expand("~")
+  local home_dir = vim.fn.expand('~')
   if require("easy-dotnet.extensions").isWindows() then
-    local secret_path = home_dir
-      .. "\\AppData\\Roaming\\Microsoft\\UserSecrets\\"
-      .. secret_guid
-      .. "\\secrets.json"
+    local secret_path = home_dir .. 
+      "\\AppData\\Roaming\\Microsoft\\UserSecrets\\" .. secret_guid .. "\\secrets.json"
     path = secret_path
   else
     local secret_path = home_dir .. "/.microsoft/usersecrets/" .. secret_guid .. "/secrets.json"
@@ -88,7 +86,7 @@ local M = {
         end,
         build = function()
           return string.format("dotnet build %s %s", path, args)
-        end,
+        end
       }
       local command = commands[action]()
       if require("easy-dotnet.extensions").isWindows() == true then
@@ -132,7 +130,7 @@ local M = {
         expand_all = { lhs = "-", desc = "expand all" },
         collapse_all = { lhs = "W", desc = "collapse all" },
         close = { lhs = "q", desc = "close testrunner" },
-        refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" },
+        refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" }
       },
       additional_args = {},
     },
