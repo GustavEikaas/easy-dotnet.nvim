@@ -27,7 +27,7 @@ local function collect_commands_with_handles(parent, prefix)
     end
 
     if command.subcommands then
-      vim .iter(collect_commands_with_handles(command.subcommands, full_command))
+      vim.iter(collect_commands_with_handles(command.subcommands, full_command))
         :each(function(sub_name, sub_handle)
           command_handles[sub_name] = sub_handle
         end)
@@ -85,14 +85,14 @@ local function define_highlights_and_signs(merged_opts)
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerPackage, { link = "Include" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerPassed, { link = "DiagnosticOk" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerFailed, { link = "DiagnosticError" })
-  vim.api.nvim_set_hl( 0, constants.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
 
   local icons = merged_opts.test_runner.icons
-  vim.fn.sign_define( constants.signs.EasyDotnetTestSign, { text = icons.test, texthl = "Character" })
-  vim.fn.sign_define( constants.signs.EasyDotnetTestPassed, { text = icons.passed, texthl = "EasyDotnetTestRunnerPassed" })
-  vim.fn.sign_define( constants.signs.EasyDotnetTestFailed, { text = icons.failed, texthl = "EasyDotnetTestRunnerFailed" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestSign, { text = icons.test, texthl = "Character" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestPassed, { text = icons.passed, texthl = "EasyDotnetTestRunnerPassed" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestFailed, { text = icons.failed, texthl = "EasyDotnetTestRunnerFailed" })
   vim.fn.sign_define(constants.signs.EasyDotnetTestSkipped, { text = icons.skipped })
-  vim.fn.sign_define( constants.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
 end
 
 local register_legacy_functions = function()
@@ -144,20 +144,21 @@ M.setup = function(opts)
   local merged_opts = require("easy-dotnet.options").set_options(opts)
   define_highlights_and_signs(merged_opts)
 
-  vim.api.nvim_create_user_command("Dotnet", function(commandOpts)
-    local args = split_by_whitespace(commandOpts.fargs[1])
-    local command = args[1]
-    if not command then
-      present_command_picker()
-      return
-    end
-    local subcommand = commands[command]
-    if subcommand then
-      wrap(function() traverse_subcommands(vim.list_slice(args, 2, #args), subcommand) end)()
-    else
-      print("Invalid subcommand:", command)
-    end
-  end, { nargs = "?" }
+  vim.api.nvim_create_user_command("Dotnet",
+    function(commandOpts)
+      local args = split_by_whitespace(commandOpts.fargs[1])
+      local command = args[1]
+      if not command then
+        present_command_picker()
+        return
+      end
+      local subcommand = commands[command]
+      if subcommand then
+        wrap(function() traverse_subcommands(vim.list_slice(args, 2, #args), subcommand) end)()
+      else
+        print("Invalid subcommand:", command)
+      end
+    end, { nargs = "?" }
   )
 
   if merged_opts.csproj_mappings == true then
@@ -211,7 +212,7 @@ M.entity_framework = {
 }
 
 M.is_dotnet_project = function()
-  local project_files = require("easy-dotnet.parsers.sln-parse").get_solutions() or 
+  local project_files = require("easy-dotnet.parsers.sln-parse").get_solutions() or
     require("easy-dotnet.parsers.csproj-parse").find_project_file()
   return project_files ~= nil
 end
