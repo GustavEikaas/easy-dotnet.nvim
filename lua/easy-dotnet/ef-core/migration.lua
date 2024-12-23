@@ -48,7 +48,6 @@ end
 
 
 M.list_migrations = function()
-  local conf = require('telescope.config').values
   local selections = require("easy-dotnet.ef-core.utils").pick_projects()
   local project = selections.project
   local startup_project = selections.startup_project
@@ -87,16 +86,7 @@ M.list_migrations = function()
             }
           end
         }
-        local picker = require('telescope.pickers').new(opts, {
-          prompt_title = "Migrations",
-          finder = require('telescope.finders').new_table {
-            results = migrations,
-            entry_maker = opts.entry_maker,
-          },
-          sorter = require('telescope.config').values.generic_sorter({}),
-          previewer = conf.grep_previewer(opts)
-        })
-        picker:find()
+        require("easy-dotnet.pickers").migration_picker(opts, migrations)
       else
         spinner:stop_spinner("Failed to load migrations", vim.log.levels.ERROR)
       end
