@@ -63,4 +63,47 @@ M.picker = function(bufnr, options, on_select_cb, title, autopick)
   })
 end
 
+M.migration_picker = function(opts, migration)
+  -- Ensure the 'entry_maker' is provided in 'opts'
+  local entry_maker = opts.entry_maker
+    or function(entry)
+      return {
+        display = entry.display or tostring(entry),
+        value = entry,
+        ordinal = entry.display or tostring(entry),
+      }
+    end
+
+  -- Prepare the list of display strings for fzf-lua
+  local fzf_options = {}
+  local fzf_entries = {}
+  for _, entry in ipairs(migration) do
+    local item = entry_maker(entry)
+    table.insert(fzf_options, item.display) -- Display text shown in fzf
+    table.insert(fzf_entries, item) -- Store the full item for selection
+  end
+
+  -- Use fzf-lua to show the picker
+  require("fzf-lua").fzf_exec(fzf_options, {
+    prompt = "Migrations", -- Title of the fzf picker
+    on_select = function(selected_entry)
+      -- Find the corresponding item from the migration list
+      local selected_value = nil
+      for _, item in ipairs(fzf_entries) do
+        if item.display == selected_entry then
+          selected_value = item
+          break
+        end
+      end
+      -- Call the callback with the selected item
+      if selected_value then
+        opts.on_select(selected_value.value)
+      end
+    end,
+    fzf_opts = {
+      ["--preview"] = opts.preview_command or "echo {1}", -- Optional preview command
+    },
+  })
+end
+
 return M
