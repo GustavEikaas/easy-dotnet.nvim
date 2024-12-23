@@ -4,6 +4,7 @@ local error_messages = require("easy-dotnet.error-messages")
 local parsers = require("easy-dotnet.parsers")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
+local polyfills = require("easy-dotnet.polyfills")
 
 local function csproj_fallback(on_select)
   local csproj_path = csproj_parse.find_project_file()
@@ -21,7 +22,7 @@ local function select_project(solution_file_path, cb, use_default)
     return cb(default)
   end
 
-  local projects = vim.tbl_filter(function(i) return i.isTestProject == true end,
+  local projects = polyfills.tbl_filter(function(i) return i.isTestProject == true end,
     sln_parse.get_projects_from_sln(solution_file_path))
 
 

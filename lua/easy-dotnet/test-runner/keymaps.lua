@@ -1,4 +1,5 @@
 local window = require "easy-dotnet.test-runner.window"
+local polyfills = require "easy-dotnet.polyfills"
 
 ---@param node TestNode
 ---@param options table
@@ -96,7 +97,7 @@ local function run_csproject(win, node)
   local normalized_path = node.cs_project_path:gsub('\\', '/')
   -- Find the last slash and extract the directory path
   local directory_path = normalized_path:match('^(.*)/[^/]*$')
-  local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
+  local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
 
   local matches = {}
   local testcount = 0
@@ -128,7 +129,7 @@ local function run_test_group(line, win)
   local log_file_name = string.format("%s.xml", line.name)
   local normalized_path = line.cs_project_path:gsub('\\', '/')
   local directory_path = normalized_path:match('^(.*)/[^/]*$')
-  local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
+  local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
 
   local suite_name = line.namespace
   local testcount = 0
@@ -159,7 +160,7 @@ local function run_test_suite(line, win)
   local log_file_name = string.format("%s.xml", line.namespace)
   local normalized_path = line.cs_project_path:gsub('\\', '/')
   local directory_path = normalized_path:match('^(.*)/[^/]*$')
-  local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
+  local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
 
   local testcount = 0
   local suite_name = line.namespace
@@ -224,7 +225,7 @@ local function run_test(node, win)
   local log_file_name = string.format("%s.xml", node.name)
   local normalized_path = node.cs_project_path:gsub('\\', '/')
   local directory_path = normalized_path:match('^(.*)/[^/]*$')
-  local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
+  local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
 
   local command = string.format(
     'dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"',

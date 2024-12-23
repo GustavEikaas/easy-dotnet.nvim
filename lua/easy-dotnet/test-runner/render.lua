@@ -1,4 +1,5 @@
 local ns_id = require("easy-dotnet.constants").ns_id
+local polyfills = require("easy-dotnet.polyfills")
 
 ---@class Window
 ---@field tree table<string,TestNode>
@@ -81,7 +82,7 @@ function M.appendJob(id, type, subtask_count)
 
   local on_job_finished_callback = function()
     job.completed = true
-    local is_all_finished = vim.iter(M.jobs):all(function(s) return s.completed end)
+    local is_all_finished = polyfills.iter(M.jobs):all(function(s) return s.completed end)
     if is_all_finished == true then
       M.jobs = {}
     end
@@ -119,7 +120,8 @@ local function setBufferOptions()
   vim.api.nvim_buf_set_option(M.buf, 'modifiable', M.modifiable)
   vim.api.nvim_buf_set_name(M.buf, M.buf_name)
   vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
-  vim.api.nvim_buf_set_option(M.buf, "cursorline", true)
+  --Crashes on nvim 0.9.5??
+  -- vim.api.nvim_buf_set_option(M.buf, "cursorline", true)
 end
 
 ---Translates a line number to the corresponding node in the tree structure, considering the `expanded` flag of nodes.

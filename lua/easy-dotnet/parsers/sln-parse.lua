@@ -1,10 +1,10 @@
-local extensions = require "easy-dotnet.extensions"
+local polyfills = require "easy-dotnet.polyfills"
 local M = {}
 
 -- Generates a relative path from cwd to the project.csproj file
 local function generate_relative_path_for_project(path, slnpath)
   local dir = vim.fs.dirname(slnpath)
-  local res = vim.fs.joinpath(dir, path):gsub("\\", "/")
+  local res = polyfills.fs.joinpath(dir, path):gsub("\\", "/")
   return res
 end
 
@@ -29,7 +29,7 @@ function M.add_project_to_solution(slnpath)
 
   local options = {}
   for _, value in ipairs(projects) do
-    if not vim.tbl_contains(sln_projects, function(a) return vim.fs.normalize(a.path) == value end, { predicate = true }) then
+    if not polyfills.tbl_contains(sln_projects, function(a) return vim.fs.normalize(a.path) == value end, { predicate = true }) then
       table.insert(options, {
         display = value,
         ordinal = value,
@@ -46,18 +46,27 @@ function M.add_project_to_solution(slnpath)
   if not value then
     return
   end
-  local res = vim.system({
+  vim.fn.jobstart({
     "dotnet",
     "sln",
     slnpath,
     "add",
-    value.value
-  }):wait()
-  if res.code == 0 then
-    vim.notify("Success")
-  else
-    vim.notify("Failed to add project to solution", vim.log.levels.ERROR)
-  end
+    value.value,
+  }, {
+    stdout_buffered = true,
+    stderr_buffered = true,
+    on_exit = function(_, exit_code)
+      if exit_code == 0 then
+        vim.schedule(function()
+          vim.notify("Success")
+        end)
+      else
+        vim.schedule(function()
+          vim.notify("Failed to add project to solution", vim.log.levels.ERROR)
+        end)
+      end
+    end,
+  })
 end
 
 ---Dotnet solution remove with telescope picker
@@ -74,18 +83,27 @@ function M.remove_project_from_solution(slnpath)
   if not value then
     return
   end
-  local res = vim.system({
+  vim.fn.jobstart({
     "dotnet",
     "sln",
     slnpath,
     "remove",
     value.path
-  }):wait()
-  if res.code == 0 then
-    vim.notify("Success")
-  else
-    vim.notify("Failed to remove project from solution", vim.log.levels.ERROR)
-  end
+  }, {
+    stdout_buffered = true,
+    stderr_buffered = true,
+    on_exit = function(_, exit_code)
+      if exit_code == 0 then
+        vim.schedule(function()
+          vim.notify("Success")
+        end)
+      else
+        vim.schedule(function()
+          vim.notify("Failed to remove project from solution", vim.log.levels.ERROR)
+        end)
+      end
+    end,
+  })
 end
 
 -- TODO: Investigate using dotnet sln list command
@@ -95,7 +113,7 @@ M.get_projects_from_sln = function(solutionFilePath)
   local file_contents = vim.fn.readfile(solutionFilePath)
   local regexp = 'Project%("{(.-)}"%).*= "(.-)", "(.-)", "{.-}"'
 
-  local projectLines = vim.tbl_filter(function(line)
+  local projectLines = polyfills.tbl_filter(function(line)
     local id, name, path = line:match(regexp)
     if id and name and path and (path:match("%.csproj$") or path:match("%.fsproj$")) then
       return true
@@ -103,7 +121,7 @@ M.get_projects_from_sln = function(solutionFilePath)
     return false
   end, file_contents)
 
-  local projects = vim.tbl_map(function(line)
+  local projects = polyfills.tbl_map(function(line)
     local csproj_parser     = require("easy-dotnet.parsers.csproj-parse")
     local _, _, path        = line:match(regexp)
     local project_file_path = generate_relative_path_for_project(path, solutionFilePath)

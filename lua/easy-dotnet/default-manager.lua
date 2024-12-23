@@ -1,3 +1,4 @@
+local polyfills = require "easy-dotnet.polyfills"
 ---@class DefaultProfile
 ---@field project string
 ---@field profile string
@@ -41,7 +42,7 @@ end
 function M.try_get_cache_file(solution_file_path)
   local sln_name = vim.fs.basename(solution_file_path)
   local dir = get_or_create_cache_dir()
-  local file = vim.fs.joinpath(dir, sln_name .. ".json")
+  local file = polyfills.fs.joinpath(dir, sln_name .. ".json")
   if file_exists(file) then
     return file
   end
@@ -51,7 +52,7 @@ local function get_or_create_cache_file(solution_file_path)
   local sln_name = vim.fs.basename(solution_file_path)
   local file_utils = require("easy-dotnet.file-utils")
   local dir = get_or_create_cache_dir()
-  local file = vim.fs.joinpath(dir, sln_name .. ".json")
+  local file = polyfills.fs.joinpath(dir, sln_name .. ".json")
   file_utils.ensure_json_file_exists(file)
 
   local _, decoded = pcall(vim.fn.json_decode, vim.fn.readfile(file))
@@ -66,7 +67,7 @@ M.set_default_solution = function(old_solution_file, solution_file_path)
   if old_solution_file then
     local sln_name = vim.fs.basename(old_solution_file)
     local dir = get_or_create_cache_dir()
-    local file = vim.fs.joinpath(dir, sln_name .. ".json")
+    local file = polyfills.fs.joinpath(dir, sln_name .. ".json")
     if file_exists(file) then
       local success, err = pcall(vim.loop.fs_unlink, file)
       if not success then
