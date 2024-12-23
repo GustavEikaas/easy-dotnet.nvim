@@ -144,7 +144,7 @@ M.setup = function(opts)
   local merged_opts = require("easy-dotnet.options").set_options(opts)
   define_highlights_and_signs(merged_opts)
 
-  vim.api.nvim_create_user_command("Dotnet",
+  vim.api.nvim_create_user_command('Dotnet',
     function(commandOpts)
       local args = split_by_whitespace(commandOpts.fargs[1])
       local command = args[1]
@@ -158,7 +158,8 @@ M.setup = function(opts)
       else
         print("Invalid subcommand:", command)
       end
-    end, { nargs = "?" }
+    end, 
+    { nargs = "?" }
   )
 
   if merged_opts.csproj_mappings == true then
@@ -203,7 +204,7 @@ M.try_get_selected_solution = function()
 end
 
 M.experimental = {
-  start_debugging_test_project = debug.start_debugging_test_project,
+  start_debugging_test_project = debug.start_debugging_test_project
 }
 
 M.entity_framework = {

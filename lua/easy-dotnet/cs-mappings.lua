@@ -131,7 +131,7 @@ M.auto_bootstrap_namespace = function(mode)
     callback = function()
       local bufnr = vim.api.nvim_get_current_buf()
       auto_bootstrap_namespace(bufnr, mode)
-    end,
+    end
   })
 end
 
@@ -140,7 +140,7 @@ M.add_test_signs = function()
     pattern = "*.cs",
     callback = function()
       require("easy-dotnet.test-signs").add_gutter_test_signs()
-    end,
+    end
   })
 end
 
