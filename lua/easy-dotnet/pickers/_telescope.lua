@@ -1,5 +1,25 @@
 local M = {}
 
+---@generic T
+---@param bufnr number | nil
+---@param options table<T>
+---@param title string | nil
+---@return T
+M.pick_sync = function(bufnr, options, title, autopick)
+  local co = coroutine.running()
+  local selected = nil
+  M.picker(bufnr, options, function(i)
+    selected = i
+    if coroutine.status(co) ~= "running" then
+      coroutine.resume(co)
+    end
+  end, title or "", autopick)
+  if not selected then
+    coroutine.yield()
+  end
+  return selected
+end
+
 M.picker = function(bufnr, options, on_select_cb, title, autopick)
   if autopick == nil then
     autopick = true
@@ -99,26 +119,6 @@ M.preview_picker = function(bufnr, options, on_select_cb, title, previewer)
     end,
   })
   picker:find()
-end
-
----@generic T
----@param bufnr number | nil
----@param options table<T>
----@param title string | nil
----@return T
-M.pick_sync = function(bufnr, options, title, autopick)
-  local co = coroutine.running()
-  local selected = nil
-  M.picker(bufnr, options, function(i)
-    selected = i
-    if coroutine.status(co) ~= "running" then
-      coroutine.resume(co)
-    end
-  end, title or "", autopick)
-  if not selected then
-    coroutine.yield()
-  end
-  return selected
 end
 
 M.migration_picker = function(opts, migration)
