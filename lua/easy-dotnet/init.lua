@@ -159,7 +159,7 @@ M.setup = function(opts)
       else
         print("Invalid subcommand:", command)
       end
-    end, 
+    end,
     { nargs = "?" }
   )
 
