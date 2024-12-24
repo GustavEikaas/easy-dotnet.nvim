@@ -73,9 +73,9 @@ M.run = {
   }
 }
 
-M.nuget = {
+M.add = {
   subcommands = {
-    search = {
+    package = {
       handle = function()
         require("easy-dotnet.nuget").search_nuget()
       end,
