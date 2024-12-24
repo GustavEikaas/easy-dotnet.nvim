@@ -3,13 +3,17 @@ local M = {}
 
 local function wrap(callback)
   return function(...)
-    -- Check if we are already in a coroutine
-    if coroutine.running() then
-      -- If already in a coroutine, call the callback directly
+    -- Check if we are in a coroutine
+    local co = coroutine.running()
+    if co then
+      -- If in a coroutine, just call the callback directly
       callback(...)
     else
-      -- If not, create a new coroutine and resume it
-      local co = coroutine.create(callback)
+      -- If not in a coroutine, create a new coroutine and resume it
+      local co = coroutine.create(function(...)
+        callback(...)
+      end)
+      -- Start the coroutine
       coroutine.resume(co, ...)
     end
   end
@@ -93,8 +97,11 @@ end
 local function on_package_selected(package)
   local versions = vim.fn.split(vim.fn.system('dotnet package search ' ..
     package .. ' --exact-match --format json | jq \'.searchResult[].packages[].version\''):gsub('"', ''), '\n')
-  local reversed_versions = reverse_list(versions)
-  vim.ui.select(reversed_versions, { prompt = "Select a version" }, function(selected_version)
+  local reversed_versions = reverse_list(require("easy-dotnet.polyfills").tbl_map(function(v)
+    return { display = v, value = v, ordinal = v }
+  end, versions))
+
+  require("easy-dotnet.picker").picker(nil, reversed_versions, function(selected_version)
     local sln_file_path = sln_parse.find_solution_file()
     if not sln_file_path then
       vim.notify("No solution file found")
@@ -102,19 +109,20 @@ local function on_package_selected(package)
     end
     local projects = sln_parse.get_projects_from_sln(sln_file_path)
     require("easy-dotnet.picker").picker(nil, projects, function(selected_project)
-      vim.fn.jobstart(
-        "dotnet add " .. selected_project.path .. " package " .. package .. " --version " .. selected_version, {
-          on_exit = function(_, code)
-            if code == 0 then
-              vim.notify("Installed " .. package .. "@" .. selected_version .. " in " .. selected_project.display)
-            else
-              vim.notify("Failed to install " ..
-                package .. "@" .. selected_version .. " in " .. selected_project.display, vim.log.levels.ERROR)
-            end
+      local command = string.format("dotnet add %s package %s --version %s", selected_project.path, package,
+        selected_version.value)
+      vim.fn.jobstart(command, {
+        on_exit = function(_, code)
+          if code == 0 then
+            vim.notify("Installed " .. package .. "@" .. selected_version.value .. " in " .. selected_project.display)
+          else
+            vim.notify("Failed to install " ..
+              package .. "@" .. selected_version.value .. " in " .. selected_project.display, vim.log.levels.ERROR)
           end
-        })
+        end
+      })
     end, "Select a project", true)
-  end)
+  end, "Select a version")
 end
 
 M.search_nuget = function()
