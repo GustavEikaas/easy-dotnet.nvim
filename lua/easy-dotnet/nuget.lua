@@ -121,13 +121,4 @@ M.search_nuget = function()
   telescope_nuget_search(on_package_selected)
 end
 
-vim.api.nvim_create_user_command('NS', function()
-  wrap(function()
-    M.search_nuget()
-  end)()
-end, {
-  nargs = 0,
-  complete = nil,
-})
-
 return M
