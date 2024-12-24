@@ -20,7 +20,6 @@ local function wrap(callback)
   end
 end
 
-
 local function collect_commands_with_handles(parent, prefix)
   return polyfills.iter(parent):fold({}, function(command_handles, name, command)
     local full_command = prefix and (prefix .. "_" .. name) or name
@@ -98,7 +97,6 @@ local function define_highlights_and_signs(merged_opts)
   vim.fn.sign_define(constants.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
 end
 
-
 local register_legacy_functions = function()
   ---Deprecated prefer dotnet.test instead
   ---@deprecated prefer dotnet.test instead
@@ -174,8 +172,10 @@ M.setup = function(opts)
     require("easy-dotnet.fsproj-mappings").attach_mappings()
   end
 
-  if merged_opts.auto_bootstrap_namespace == true then
-    require("easy-dotnet.cs-mappings").auto_bootstrap_namespace()
+  if merged_opts.auto_bootstrap_namespace.enabled == true then
+    require("easy-dotnet.cs-mappings").auto_bootstrap_namespace(
+      merged_opts.auto_bootstrap_namespace.type
+    )
   end
 
   if merged_opts.test_runner.enable_buffer_test_execution then
@@ -216,7 +216,7 @@ M.entity_framework = {
 
 M.is_dotnet_project = function()
   local project_files = require("easy-dotnet.parsers.sln-parse").get_solutions() or
-      require("easy-dotnet.parsers.csproj-parse").find_project_file()
+    require("easy-dotnet.parsers.csproj-parse").find_project_file()
   return project_files ~= nil
 end
 
