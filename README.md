@@ -10,10 +10,6 @@ Are you a .NET developer looking to harness the power of Neovim for your daily c
 > This plugin and all its features should work for both **C#** and **F#**.
 
 >[!IMPORTANT]
-> Neovim >= 0.10.0 is required for this plugin to work
-> There is a [PR](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/205) for backwards compatibility with Neovim 0.9.5
-
->[!IMPORTANT]
 >I need feedback! The last months I have had a blast developing this plugin, i have gotten a lot of feedback from you guys, and I want more! Please dont hesitate to file an issue with an improvement/bug/question etc..
 >And most importantly thank you guys for using my plugin :D
 
@@ -78,11 +74,11 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 
 ## Setup
 
+
 >[!IMPORTANT]
 >Remember to also setup the cmp source for autocomplete
 
 ### Without options
-
 ```lua
 -- lazy.nvim
 {
@@ -95,7 +91,6 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 ```
 
 ### With options
-
 ```lua
 -- lazy.nvim
 {
@@ -210,10 +205,9 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 ### Lua functions
 
 **Legend**
-
 - `<TS>` -> Telescope selector
 - `<DArgs>` -> Dotnet args (e.g `--no-build`, `--configuration release`). Always optional
-- `<TS Default>` -> Telescope selector but persists the selection for all future use
+- `<TS Default>` -> Telescope selector but persists the selection for all future use 
 - `<sln>` -> Solution file (in some cases .csproj or .fsproj is used as fallback if no .sln file exists)
 
 | **Function**                                   | **Description**                                                                                              |
@@ -262,6 +256,7 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 | `dotnet.get_environment_variables(project_name, project_path)` | Returns the environment variables from the `launchSetting.json` file                                         |
 | `dotnet.reset()`                              | Deletes all files persisted by `easy-dotnet.nvim`. Use this if unable to pick a different solution or project |
 
+
 ```lua
 local dotnet = require("easy-dotnet")
 dotnet.get_environment_variables(project_name, project_path)
@@ -299,11 +294,9 @@ dotnet.restore()
 ```
 
 ### Vim commands
-
 ```
 Run :Dotnet in nvim to list all commands
 ```
-
 ```
 Dotnet testrunner
 Dotnet testrunner refresh
@@ -355,14 +348,13 @@ If you are experiencing issues with any test adapter please let me know
   - [x] Filter failed tests
   - [x] Test counting
   - [x] Unit test name
-  - [x] Collapsable hieararchy
+  - [x] Collapsable hieararchy 
   - [x] Peek stack trace
   - [x] Run sln,project,namespace,test
   - [x] Aggregate test results
   - [x] Go to file
 
 ### Keymaps
-
 - `W` -> Collapse all
 - `E` -> Expand all
 - `o` -> Expand/collapse under cursor
@@ -370,22 +362,19 @@ If you are experiencing issues with any test adapter please let me know
 - `<leader>d` -> `[Experimental]` Debug test under cursor using nvim-dap
 - `<leader>R` -> Run all tests
 - `<leader>p` -> Peek stacktrace on failed test
-- `<leader>fe` -> Show only failed tests
-
+- `<leader>fe` -> Show only failed tests
 - `g` -> Go to file
 - `q` -> Close window
 - `<leader>gf` -> Go to file (inside stacktrace float)
 
 ### Debugging tests
-
 Using the keybinding `<leader>d` will set a breakpoint in the test and launch nvim-dap
 
-<https://github.com/user-attachments/assets/b56891c9-1b65-4522-8057-43eff3d1102d>
+https://github.com/user-attachments/assets/b56891c9-1b65-4522-8057-43eff3d1102d
 
 ### Running tests directly from buffer
 
 Gutter signs will appear indicating runnable tests
-
 - `<leader>r` to run test
 
 >[!IMPORTANT]
@@ -396,13 +385,13 @@ Gutter signs will appear indicating runnable tests
 ### Debugging tests directly from buffer
 
 Gutter signs will appear indicating runnable tests
-
 - `<leader>d` to debug test
 
 >[!IMPORTANT]
 >Nvim dap must be installed and coreclr adapter must be configured
 
 ![image](https://github.com/user-attachments/assets/209aca03-397a-424f-973c-c53bae260031)
+
 
 ## Outdated
 
@@ -415,10 +404,10 @@ Supports the following filetypes
 - Directory.Packages.props
 - Packages.props
 
+
 ![image](https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113)
 
 ### Requirements
-
 This functionality relies on dotnet-outdated-tool, install using `dotnet tool install -g dotnet-outdated-tool`
 
 ## Project mappings
@@ -426,19 +415,16 @@ This functionality relies on dotnet-outdated-tool, install using `dotnet tool in
 Key mappings are available automatically within `.csproj` and `.fsproj` files
 
 ### Add reference
-
 `<leader>ar` -> Opens a telescope picker for selecting which project reference to add
 
 ![image](https://github.com/user-attachments/assets/dec096be-8a87-4dd8-aaec-8c22849d1640)
 
 ### Package autocomplete
-
 When editing package references inside a .csproject file it is possible to enable autocomplete.
 This will trigger autocomplete for `<PackageReference Include="<cmp-trigger>" Version="<cmp-trigger>" />`
 This functionality relies on `jq` so ensure that is installed on your system.
 
 Using nvim-cmp
-
 ```lua
     cmp.register_source("easy-dotnet", require("easy-dotnet").package_completion_source)
     ...
@@ -449,7 +435,6 @@ Using nvim-cmp
     }),
     ...
 ```
-
 ![image](https://github.com/user-attachments/assets/81809aa8-704b-4481-9445-3985ddef6c98)
 
 >[!NOTE]
@@ -458,17 +443,15 @@ Using nvim-cmp
 ![image](https://github.com/user-attachments/assets/2b59735f-941e-44d2-93cf-76b13ac3e76f)
 
 ## New
-
 Create dotnet templates as with `dotnet new <templatename>`
 Try it out by running `Dotnet new`
 
 ### Project
-<https://github.com/user-attachments/assets/aa067c17-3611-4490-afc8-41d98a526729>
+https://github.com/user-attachments/assets/aa067c17-3611-4490-afc8-41d98a526729
 
 ### Configuration file
 
 If a configuration file is selected it will
-
 1. Create the configuration file and place it next to your solution file. (solution files and gitignore files are placed in cwd)
 
 ### Integrating with nvim-tree
@@ -538,12 +521,12 @@ This functionality relies on dotnet-ef tool, install using `dotnet tool install 
 
 ## Language injections
 
-[Rider-like](https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments)
+[Rider-like](https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments) 
 syntax highlighting for injected languages (sql, json and xml) based on comments.
 
 Just add single-line comment like `//language=json` before string to start using this.
 
-### Showcase
+### Showcase 
 
 Language injection with raw json string as an example.
 
@@ -551,7 +534,7 @@ Language injection with raw json string as an example.
 
 ### Requirements
 
-This functionality is based on [Treesitter](https://github.com/nvim-treesitter/nvim-treesitter)
+This functionality is based on [Treesitter](https://github.com/nvim-treesitter/nvim-treesitter) 
 and parsers for `sql`, `json` and `xml`, so make sure you have these parsers installed: `:TSInstall sql json xml`.
 
 ### Support matrix
@@ -662,7 +645,6 @@ return M
 
 For profiles to be read it must contain a profile with the name of your csproject
 The file is expected to be in the Properties/launchsettings.json relative to your .csproject file
-
 ```json
 {
   "profiles": {
@@ -682,7 +664,6 @@ The file is expected to be in the Properties/launchsettings.json relative to you
 ### Advanced example
 
 Dependencies:
-
 - which-key
 - overseer
 - netcoredbg
@@ -732,7 +713,6 @@ return tmpl
 ```
 
 **Overseer component**
-
 ```lua
 return {
   desc = "Show Spinner",
@@ -977,10 +957,10 @@ return {
 
 ```
 
+
 ## Advanced configurations
 
 ### Overseer
-
 Thanks to [franroa](https://github.com/franroa) for sharing his configuration with the community
 
 - It watches the run and test commands
@@ -1088,6 +1068,7 @@ return {
 
 </details>
 
+
 ## Signs
 
 <details>
@@ -1111,3 +1092,4 @@ return {
 <!-- sign-end -->
 
 </details>
+
