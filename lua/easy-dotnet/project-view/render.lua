@@ -187,6 +187,29 @@ local function build_structure(args)
 end
 
 local sep = { "" }
+local function open_browser(url)
+  if vim.fn.has("mac") == 1 then
+    vim.fn.system("open " .. url)
+  elseif vim.fn.has("unix") == 1 then
+    vim.fn.system("xdg-open " .. url)
+  elseif vim.fn.has("win32") == 1 then
+    vim.fn.system("start " .. url)
+  else
+    error("Unknown OS, please raise an issue")
+    return
+  end
+end
+
+local function open_package_browser_keymap(ref)
+  return {
+    key = "<C-b>",
+    handler = function()
+      local package_name = ref:match("^(.-)@")
+      --TODO: determine which feed the package comes from
+      open_browser("https://www.nuget.org/packages/" .. package_name)
+    end
+  }
+end
 
 local function remove_package_keymap(ref)
   return {
@@ -286,7 +309,8 @@ local function stringify_project_header()
     table.insert(args, { "  None", "Question" })
   else
     for _, ref in ipairs(M.package_refs) do
-      table.insert(args, { string.format("  %s", ref), "Question", { remove_package_keymap(ref) } })
+      table.insert(args,
+        { string.format("  %s", ref), "Question", { remove_package_keymap(ref), open_package_browser_keymap(ref) } })
     end
   end
 
