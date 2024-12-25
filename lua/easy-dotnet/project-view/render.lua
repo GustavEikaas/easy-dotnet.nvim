@@ -215,7 +215,9 @@ local function add_project_keymap()
     handler = function()
       --HACK: fix this
       local cleanup = nil
-      local res = require("easy-dotnet.csproj-mappings").add_project_reference(M.project.path, function()
+      local add = M.project.language == "csharp" and require("easy-dotnet.csproj-mappings").add_project_reference or
+      require("easy-dotnet.fsproj-mappings").add_project_reference
+      local res = add(M.project.path, function()
         if cleanup then
           cleanup()
         end
