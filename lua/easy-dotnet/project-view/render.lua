@@ -31,6 +31,10 @@ local M = {
   options = {}
 }
 
+M.keymap = {
+  ["q"] = function() M.hide() end
+}
+
 ---@param output string[]
 ---@returns string[]
 local function extract_projects(output)
@@ -145,9 +149,7 @@ function M.redraw_virtual_text()
 end
 
 local function set_buffer_options()
-  if M.options.viewmode ~= "buf" then
-    vim.api.nvim_win_set_height(M.win, M.height)
-  end
+  vim.api.nvim_win_set_height(M.win, M.height)
   vim.api.nvim_buf_set_option(M.buf, 'modifiable', M.modifiable)
   vim.api.nvim_buf_set_name(M.buf, M.buf_name)
   vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
@@ -216,7 +218,7 @@ local function add_project_keymap()
       --HACK: fix this
       local cleanup = nil
       local add = M.project.language == "csharp" and require("easy-dotnet.csproj-mappings").add_project_reference or
-      require("easy-dotnet.fsproj-mappings").add_project_reference
+          require("easy-dotnet.fsproj-mappings").add_project_reference
       local res = add(M.project.path, function()
         if cleanup then
           cleanup()
@@ -341,22 +343,17 @@ local function print_lines()
 end
 
 local function set_mappings()
-  -- if M.keymap == nil then
-  --   return
-  -- end
-  -- if M.buf == nil then
-  --   return
-  -- end
-  -- for key, value in pairs(M.keymap) do
-  --   vim.keymap.set('n', key, function()
-  --     local line_num = vim.api.nvim_win_get_cursor(0)[1]
-  --     local node = translate_index(line_num, M.lines)
-  --     if not node then
-  --       error("Current line is not a node")
-  --     end
-  --     value(node, M)
-  --   end, { buffer = M.buf, noremap = true, silent = true })
-  -- end
+  if M.keymap == nil then
+    return
+  end
+  if M.buf == nil then
+    return
+  end
+  for key, value in pairs(M.keymap) do
+    vim.keymap.set('n', key, function()
+      value()
+    end, { buffer = M.buf, noremap = true, silent = true })
+  end
 end
 
 M.set_keymaps = function(mappings)
