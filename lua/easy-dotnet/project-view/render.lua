@@ -202,6 +202,7 @@ end
 
 local function open_package_browser_keymap(ref)
   return {
+    --TODO: customize keybindings
     key = "<C-b>",
     handler = function()
       local package_name = ref:match("^(.-)@")
@@ -213,6 +214,7 @@ end
 
 local function remove_package_keymap(ref)
   return {
+    --TODO: customize keybindings
     key = "r",
     handler = function()
       local cleanup = M.append_job("Removing package " .. ref)
