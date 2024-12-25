@@ -31,6 +31,87 @@ local M = {
   options = {}
 }
 
+---@param output string[]
+---@returns string[]
+local function extract_projects(output)
+  local projects = {}
+  for _, value in ipairs(output) do
+    local sanitized = value:gsub("\n", ""):gsub("\r", "")
+    if sanitized:match("%.csproj$") or sanitized:match("%.fsproj$") then
+      table.insert(projects, sanitized)
+    end
+  end
+
+  return projects
+end
+
+
+---@param project DotnetProject
+local function discover_project_references(project)
+  local finished = M.append_job("Discovering project references")
+
+  vim.fn.jobstart({ "dotnet", "list", project.path, "reference" }, {
+    stdout_buffered = true,
+    on_exit = function(_, code)
+      finished()
+      M.refresh()
+      if code ~= 0 then
+        return
+      end
+    end,
+    on_stdout = function(_, data, _)
+      local projects = extract_projects(data)
+      if vim.tbl_isempty(projects) then
+        M.project_refs = nil
+      else
+        M.project_refs = projects
+      end
+    end
+  })
+end
+
+
+local function dotnet_restore(project, cb)
+  local finished = M.append_job("Restoring packages")
+  vim.fn.jobstart({ "dotnet", "restore", project.path }, {
+    on_exit = function(_, code)
+      finished()
+      M.refresh()
+      cb()
+      if code ~= 0 then
+        vim.notify("Dotnet restore failed", vim.log.levels.ERROR)
+        return
+      end
+    end
+  })
+end
+
+---@param project DotnetProject
+local function discover_package_references(project)
+  local finished = M.append_job("Discovering package references")
+  local command = string.format(
+    "dotnet list %s package --format json | jq '[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]'",
+    project.path)
+  vim.fn.jobstart(command, {
+    stdout_buffered = true,
+    on_exit = function(_, code)
+      finished()
+      M.refresh()
+      if code ~= 0 then
+        return
+      end
+    end,
+    on_stdout = function(_, data, _)
+      local package_refs = {}
+      local packages = vim.fn.json_decode(data)
+      for _, v in ipairs(packages) do
+        table.insert(package_refs, string.format("%s@%s", v.name, v.version))
+      end
+      M.package_refs = package_refs
+    end
+  })
+end
+
 ---@param id string
 function M.append_job(id)
   local job = { id = id }
@@ -52,7 +133,7 @@ end
 function M.redraw_virtual_text()
   if #M.jobs > 0 then
     vim.api.nvim_buf_set_extmark(M.buf, ns_id, 0, 0, {
-      virt_text = { { string.format("%s", "Loading..."), "Character" } },
+      virt_text = { { string.format("%s", M.jobs[1].id), "Character" } },
       virt_text_pos = "right_align",
       priority = 200,
     })
@@ -70,16 +151,6 @@ local function set_buffer_options()
   -- vim.api.nvim_buf_set_option(M.buf, "cursorline", true)
 end
 
----Translates a line number to the corresponding node in the tree structure, considering the `expanded` flag of nodes.
----Only expanded nodes contribute to the line number count, while collapsed nodes and their children are ignored.
----@param line_num number The line number in the buffer to be translated to a node in the tree structure.
----@param lines string
----@return string
-local function translate_index(line_num, lines)
-  return lines[line_num]
-end
-
-
 ---@param highlights Highlight[]
 local function apply_highlights(highlights)
   for _, value in ipairs(highlights) do
@@ -93,18 +164,65 @@ end
 local function build_structure(args)
   local struct = {}
   local highlights = {}
+  local keymaps = {}
   for i, s in ipairs(args) do
     local text = s[1]
     local highlight = s[2] or nil
+    local keymap = s[3] or nil
     table.insert(struct, text)
     if highlight then
       table.insert(highlights, { index = i, highlight = highlight })
     end
+    if keymap then
+      table.insert(keymaps, { index = i, keymap = keymap })
+    end
   end
-  return struct, highlights
+  return struct, highlights, keymaps
 end
 
 local sep = { "" }
+
+local function remove_package_keymap(ref)
+  return {
+    key = "r",
+    handler = function()
+      local cleanup = M.append_job("Removing package " .. ref)
+      local package_name = ref:match("^(.-)@")
+      vim.fn.jobstart(string.format("dotnet remove %s package %s ", M.project.path, package_name), {
+        on_exit = function(_, code)
+          cleanup()
+          if code ~= 0 then
+            vim.notify("Command failed", vim.log.levels.ERROR)
+          else
+            vim.notify("Package removed " .. package_name)
+            dotnet_restore(M.project, function()
+              discover_package_references(M.project)
+            end)
+          end
+        end
+      })
+    end
+  }
+end
+
+
+local function remove_project_keymap(ref)
+  return {
+    key = "r",
+    handler = function()
+      vim.fn.jobstart(string.format("dotnet remove %s reference %s ", M.project.path, ref), {
+        on_exit = function(_, code)
+          if code ~= 0 then
+            vim.notify("Command failed", vim.log.levels.ERROR)
+          else
+            vim.notify("Project removed " .. ref)
+            discover_project_references(M.project)
+          end
+        end
+      })
+    end
+  }
+end
 
 local function stringify_project_header()
   local project = M.project
@@ -120,25 +238,25 @@ local function stringify_project_header()
     { string.format("Language: %s", project.language), "Question" },
     sln_path and { string.format("Solution: %s", vim.fn.fnamemodify(sln_path, ":t")), "Question" } or nil,
     sep,
-    { "Project References:", "Character" }
+    { "Project References: (a)dd (r)emove", "Character" }
   }
 
   if not M.project_refs then
     table.insert(args, { "  None", "Question" })
   else
     for _, ref in ipairs(M.project_refs) do
-      table.insert(args, { string.format("  %s", vim.fs.basename(ref)), "Question" })
+      table.insert(args, { string.format("  %s", vim.fs.basename(ref)), "Question", { remove_project_keymap(ref) } })
     end
   end
 
   table.insert(args, sep)
-  table.insert(args, { "Package References:", "Character" })
+  table.insert(args, { "Package References: (a)dd (r)emove", "Character" })
 
   if not M.package_refs then
     table.insert(args, { "  None", "Question" })
   else
     for _, ref in ipairs(M.package_refs) do
-      table.insert(args, { string.format("  %s", ref), "Question" })
+      table.insert(args, { string.format("  %s", ref), "Question", { remove_package_keymap(ref) } })
     end
   end
 
@@ -157,31 +275,60 @@ end
 local function print_lines()
   vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
-  local stringLines, highlights = stringify()
+  local stringLines, highlights, keymaps = stringify()
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, stringLines)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
+
+  if keymaps ~= nil then
+    local keys = {}
+    for _, value in ipairs(keymaps) do
+      for _, keymap in ipairs(value.keymap) do
+        keys[keymap.key] = keymap.key
+      end
+    end
+
+
+    --Register all keymaps
+    for key, _ in pairs(keys) do
+      vim.keymap.set("n", key, function()
+        local current_line = vim.api.nvim_win_get_cursor(0)[1]
+        for _, value in ipairs(keymaps) do
+          --Ensure keymap is valid for current line
+          if value.index == current_line then
+            for _, keymap in ipairs(value.keymap) do
+              --Ensure keymap is valid for current key
+              if keymap.key == key then
+                keymap.handler()
+              end
+            end
+          end
+        end
+      end, { silent = true, noremap = true })
+    end
+  end
+
 
   M.redraw_virtual_text()
   apply_highlights(highlights)
 end
 
 local function set_mappings()
-  if M.keymap == nil then
-    return
-  end
-  if M.buf == nil then
-    return
-  end
-  for key, value in pairs(M.keymap) do
-    vim.keymap.set('n', key, function()
-      local line_num = vim.api.nvim_win_get_cursor(0)[1]
-      local node = translate_index(line_num, M.tree)
-      if not node then
-        error("Current line is not a node")
-      end
-      value(node, M)
-    end, { buffer = M.buf, noremap = true, silent = true })
-  end
+  -- if M.keymap == nil then
+  --   return
+  -- end
+  -- if M.buf == nil then
+  --   return
+  -- end
+  -- for key, value in pairs(M.keymap) do
+  --   vim.keymap.set('n', key, function()
+  --     local line_num = vim.api.nvim_win_get_cursor(0)[1]
+  --     local node = translate_index(line_num, M.lines)
+  --     if not node then
+  --       error("Current line is not a node")
+  --     end
+  --     value(node, M)
+  --   end, { buffer = M.buf, noremap = true, silent = true })
+  -- end
 end
 
 M.set_keymaps = function(mappings)
@@ -251,71 +398,6 @@ function M.toggle()
   end
 end
 
----@param output string[]
----returns string[]
-local function extract_projects(output)
-  local projects = {}
-  for _, value in ipairs(output) do
-    local sanitized = value:gsub("\n", ""):gsub("\r", "")
-    if sanitized:match("%.csproj$") or sanitized:match("%.fsproj$") then
-      table.insert(projects, sanitized)
-    end
-  end
-
-  return projects
-end
-
----@param project DotnetProject
-local function discover_package_references(project)
-  local finished = M.append_job("package_refs")
-  local command = string.format(
-    "dotnet list %s package --format json | jq '[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]'",
-    project.path)
-  vim.fn.jobstart(command, {
-    stdout_buffered = true,
-    on_exit = function(_, code)
-      finished()
-      M.refresh()
-      if code ~= 0 then
-        return
-      end
-    end,
-    on_stdout = function(_, data, _)
-      local package_refs = {}
-      local packages = vim.fn.json_decode(data)
-      for _, v in ipairs(packages) do
-        table.insert(package_refs, string.format("%s@%s", v.name, v.version))
-      end
-      M.package_refs = package_refs
-    end
-  })
-end
-
-
----@param project DotnetProject
-local function discover_project_references(project)
-  local finished = M.append_job("project_refs")
-
-  vim.fn.jobstart({ "dotnet", "list", project.path, "reference" }, {
-    stdout_buffered = true,
-    on_exit = function(_, code)
-      finished()
-      M.refresh()
-      if code ~= 0 then
-        return
-      end
-    end,
-    on_stdout = function(_, data, _)
-      local projects = extract_projects(data)
-      if vim.tbl_isempty(projects) then
-        M.project_refs = nil
-      else
-        M.project_refs = projects
-      end
-    end
-  })
-end
-
 ---@param project DotnetProject
 ---@param sln_path string | nil
 M.render = function(project, sln_path)
@@ -327,7 +409,9 @@ M.render = function(project, sln_path)
   end
 
   discover_project_references(project)
-  discover_package_references(project)
+  dotnet_restore(project, function()
+    discover_package_references(project)
+  end)
 
   print_lines()
   set_buffer_options()
