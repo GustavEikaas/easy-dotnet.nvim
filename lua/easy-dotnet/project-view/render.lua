@@ -116,7 +116,7 @@ end
 function M.append_job(id)
   local job = { id = id }
   table.insert(M.jobs, job)
-  M.redraw_virtual_text()
+  M.refresh()
 
   local on_job_finished_callback = function()
     job.completed = true
@@ -124,7 +124,7 @@ function M.append_job(id)
     if is_all_finished == true then
       M.jobs = {}
     end
-    M.redraw_virtual_text()
+    M.refresh()
   end
 
   return on_job_finished_callback
@@ -132,8 +132,9 @@ end
 
 function M.redraw_virtual_text()
   if #M.jobs > 0 then
+    local current_job = M.jobs[1].id
     vim.api.nvim_buf_set_extmark(M.buf, ns_id, 0, 0, {
-      virt_text = { { string.format("%s", M.jobs[1].id), "Character" } },
+      virt_text = { { current_job, "Character" } },
       virt_text_pos = "right_align",
       priority = 200,
     })
@@ -205,13 +206,34 @@ local function remove_package_keymap(ref)
   }
 end
 
+local function add_project_keymap()
+  return {
+    key = "a",
+    handler = function()
+      --HACK: fix this
+      local cleanup = nil
+      local res = require("easy-dotnet.csproj-mappings").add_project_reference(M.project.path, function()
+        if cleanup then
+          cleanup()
+        end
+        discover_project_references(M.project)
+      end)
+      if res ~= false then
+        cleanup = M.append_job("Adding project reference")
+      end
+    end
+
+  }
+end
 
 local function remove_project_keymap(ref)
   return {
     key = "r",
     handler = function()
+      local cleanup = M.append_job("Removing project reference")
       vim.fn.jobstart(string.format("dotnet remove %s reference %s ", M.project.path, ref), {
         on_exit = function(_, code)
+          cleanup()
           if code ~= 0 then
             vim.notify("Command failed", vim.log.levels.ERROR)
           else
@@ -238,14 +260,15 @@ local function stringify_project_header()
     { string.format("Language: %s", project.language), "Question" },
     sln_path and { string.format("Solution: %s", vim.fn.fnamemodify(sln_path, ":t")), "Question" } or nil,
     sep,
-    { "Project References: (a)dd (r)emove", "Character" }
+    { "Project References: (a)dd (r)emove", "Character", { add_project_keymap() } }
   }
 
   if not M.project_refs then
-    table.insert(args, { "  None", "Question" })
+    table.insert(args, { "  None", "Question", { add_project_keymap() } })
   else
     for _, ref in ipairs(M.project_refs) do
-      table.insert(args, { string.format("  %s", vim.fs.basename(ref)), "Question", { remove_project_keymap(ref) } })
+      table.insert(args,
+        { string.format("  %s", vim.fs.basename(ref)), "Question", { remove_project_keymap(ref), add_project_keymap() } })
     end
   end
 
