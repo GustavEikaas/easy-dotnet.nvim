@@ -82,51 +82,63 @@ local function get_all_versions(package)
   return reverse_list(versions)
 end
 
-local function add_package(package)
+---@return string
+local function get_project()
+  local sln_file_path = sln_parse.find_solution_file()
+  if not sln_file_path then
+    vim.notify("No solution file found", vim.log.levels.ERROR)
+    error("No solution file found")
+  end
+  local projects = sln_parse.get_projects_from_sln(sln_file_path)
+  return picker.pick_sync(nil, projects, "Select a project", true).path
+end
+
+---@param project_path string | nil
+local function add_package(package, project_path)
+  print("Getting versions...")
   local versions = polyfills.tbl_map(function(v)
     return { value = v, display = v }
   end, get_all_versions(package))
 
   local selected_version = picker.pick_sync(nil, versions, "Select a version", true)
-  local sln_file_path = sln_parse.find_solution_file()
-  if not sln_file_path then
-    vim.notify("No solution file found")
-    return
-  end
-  local projects = sln_parse.get_projects_from_sln(sln_file_path)
-  local selected_project = picker.pick_sync(nil, projects, "Select a project", true)
   vim.notify("Adding package...")
-  local command = string.format("dotnet add %s package %s --version %s", selected_project.path, package,
+  local selected_project = project_path or get_project()
+  local command = string.format("dotnet add %s package %s --version %s", selected_project, package,
     selected_version.value)
+  local co = coroutine.running()
   vim.fn.jobstart(command, {
     on_exit = function(_, ex_code)
       if ex_code == 0 then
         vim.notify("Restoring packages...")
-        vim.fn.jobstart(string.format("dotnet restore %s", selected_project.path), {
+        vim.fn.jobstart(string.format("dotnet restore %s", selected_project), {
           on_exit = function(_, code)
             if code ~= 0 then
               vim.notify("Dotnet restore failed...", vim.log.levels.ERROR)
               --Retry usings users terminal, this will present the error for them. Not sure if this is the correct design choice
-              require("easy-dotnet.options").options.terminal(selected_project.path, "restore", "")
+              require("easy-dotnet.options").options.terminal(selected_project, "restore", "")
             else
-              vim.notify(string.format("Installed %s@%s in %s", package, selected_version.value, selected_project
-                .display))
+              vim.notify(string.format("Installed %s@%s in %s", package, selected_version.value,
+                vim.fs.basename(selected_project)))
             end
           end
         })
       else
         vim.notify(
-          string.format("Failed to install %s@%s in %s", package, selected_version.value, selected_project.display),
+          string.format("Failed to install %s@%s in %s", package, selected_version.value,
+            vim.fs.basename(selected_project)),
           vim.log.levels.ERROR)
       end
+      coroutine.resume(co)
     end
   })
+  coroutine.yield()
 end
 
-M.search_nuget = function()
+---@param project_path string | nil
+M.search_nuget = function(project_path)
   -- fzf_nuget_search(on_package_selected)
   local package = telescope_nuget_search()
-  add_package(package)
+  add_package(package, project_path)
 end
 
 return M

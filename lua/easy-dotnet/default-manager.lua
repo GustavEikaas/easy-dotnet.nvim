@@ -11,13 +11,13 @@ local polyfills = require "easy-dotnet.polyfills"
 
 local M = {}
 
----@alias TaskType '"build"' | '"test"' | '"run"' | '"launch-profile"'
+---@alias TaskType '"build"' | '"test"' | '"run"' | '"launch-profile"' | "view"
 
 ---Gets the property name for the given type.
 ---@param type TaskType
 ---@return string
 local function get_property(type)
-  if not (type == "build" or type == "test" or type == "run" or type == "launch-profile") then
+  if not (type == "build" or type == "test" or type == "run" or type == "launch-profile" or type == "view") then
     error("Expected build, test or run received " .. type)
   end
   if type == "launch-profile" then
