@@ -40,7 +40,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 9. [Outdated](#outdated)
    - [Requirements](#requirements)
 10. [Add](#add)
-   - [Add package](#add-package)
+    - [Add package](#add-package)
 11. [Project mappings](#project-mappings)
     - [Add reference](#add-reference)
     - [Package autocomplete](#package-autocomplete)
@@ -377,7 +377,8 @@ If you are experiencing issues with any test adapter please let me know
 - `<leader>d` -> `[Experimental]` Debug test under cursor using nvim-dap
 - `<leader>R` -> Run all tests
 - `<leader>p` -> Peek stacktrace on failed test
-- `<leader>fe` -> Show only failed tests
+- `<leader>fe` -> Show only failed tests
+
 - `g` -> Go to file
 - `q` -> Close window
 - `<leader>gf` -> Go to file (inside stacktrace float)
