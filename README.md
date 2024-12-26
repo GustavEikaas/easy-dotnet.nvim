@@ -119,7 +119,7 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
     dotnet.setup({
       --Optional function to return the path for the dotnet sdk (e.g C:/ProgramFiles/dotnet/sdk/8.0.0)
       -- easy-dotnet will resolve the path automatically if this argument is omitted, for a performance improvement you can add a function that returns a hardcoded string
-      -- This function should be added for a performance improvement🚀
+      -- You should define this function to return a hardcoded path for a performance improvement 🚀
       get_sdk_path = get_sdk_path,
       ---@type TestRunnerOptions
       test_runner = {
