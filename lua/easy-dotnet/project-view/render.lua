@@ -28,11 +28,11 @@ local M = {
   buf_name = "",
   filetype = "",
   keymap = {},
-  options = {}
+  options = {},
 }
 
 M.keymap = {
-  ["q"] = function() M.hide() end
+  ["q"] = function() M.hide() end,
 }
 
 ---@param output string[]
@@ -41,14 +41,11 @@ local function extract_projects(output)
   local projects = {}
   for _, value in ipairs(output) do
     local sanitized = value:gsub("\n", ""):gsub("\r", "")
-    if sanitized:match("%.csproj$") or sanitized:match("%.fsproj$") then
-      table.insert(projects, sanitized)
-    end
+    if sanitized:match("%.csproj$") or sanitized:match("%.fsproj$") then table.insert(projects, sanitized) end
   end
 
   return projects
 end
-
 
 ---@param project DotnetProject
 local function discover_project_references(project)
@@ -59,9 +56,7 @@ local function discover_project_references(project)
     on_exit = function(_, code)
       finished()
       M.refresh()
-      if code ~= 0 then
-        return
-      end
+      if code ~= 0 then return end
     end,
     on_stdout = function(_, data, _)
       local projects = extract_projects(data)
@@ -70,10 +65,9 @@ local function discover_project_references(project)
       else
         M.project_refs = projects
       end
-    end
+    end,
   })
 end
-
 
 local function dotnet_restore(project, cb)
   local finished = M.append_job("Restoring packages")
@@ -86,7 +80,7 @@ local function dotnet_restore(project, cb)
         vim.notify("Dotnet restore failed", vim.log.levels.ERROR)
         return
       end
-    end
+    end,
   })
 end
 
@@ -96,17 +90,13 @@ local function discover_package_references(project)
   --Incase of out of mem, do some jq tricks to read line by line
   --TODO: research the frameworks[]
   --TODO: is it possible to resolve transitive dependencies?
-  local command = string.format(
-    "dotnet list %s package --format json | jq '[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]'",
-    project.path)
+  local command = string.format("dotnet list %s package --format json | jq '[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]'", project.path)
   vim.fn.jobstart(command, {
     stdout_buffered = true,
     on_exit = function(_, code)
       finished()
       M.refresh()
-      if code ~= 0 then
-        return
-      end
+      if code ~= 0 then return end
     end,
     on_stdout = function(_, data, _)
       local package_refs = {}
@@ -115,7 +105,7 @@ local function discover_package_references(project)
         table.insert(package_refs, string.format("%s@%s", v.name, v.version))
       end
       M.package_refs = package_refs
-    end
+    end,
   })
 end
 
@@ -128,9 +118,7 @@ function M.append_job(id)
   local on_job_finished_callback = function()
     job.completed = true
     local is_all_finished = polyfills.iter(M.jobs):all(function(s) return s.completed end)
-    if is_all_finished == true then
-      M.jobs = {}
-    end
+    if is_all_finished == true then M.jobs = {} end
     M.refresh()
   end
 
@@ -150,7 +138,7 @@ end
 
 local function set_buffer_options()
   vim.api.nvim_win_set_height(M.win, M.height)
-  vim.api.nvim_buf_set_option(M.buf, 'modifiable', M.modifiable)
+  vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
   vim.api.nvim_buf_set_name(M.buf, M.buf_name)
   vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
   --Crashes on nvim 0.9.5??
@@ -160,9 +148,7 @@ end
 ---@param highlights Highlight[]
 local function apply_highlights(highlights)
   for _, value in ipairs(highlights) do
-    if value.highlight ~= nil then
-      vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, value.index - 1, 0, -1)
-    end
+    if value.highlight ~= nil then vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, value.index - 1, 0, -1) end
   end
 end
 
@@ -176,12 +162,8 @@ local function build_structure(args)
     local highlight = s[2] or nil
     local keymap = s[3] or nil
     table.insert(struct, text)
-    if highlight then
-      table.insert(highlights, { index = i, highlight = highlight })
-    end
-    if keymap then
-      table.insert(keymaps, { index = i, keymap = keymap })
-    end
+    if highlight then table.insert(highlights, { index = i, highlight = highlight }) end
+    if keymap then table.insert(keymaps, { index = i, keymap = keymap }) end
   end
   return struct, highlights, keymaps
 end
@@ -208,7 +190,7 @@ local function open_package_browser_keymap(ref)
       local package_name = ref:match("^(.-)@")
       --TODO: determine which feed the package comes from
       open_browser("https://www.nuget.org/packages/" .. package_name)
-    end
+    end,
   }
 end
 
@@ -226,13 +208,11 @@ local function remove_package_keymap(ref)
             vim.notify("Command failed", vim.log.levels.ERROR)
           else
             vim.notify("Package removed " .. package_name)
-            dotnet_restore(M.project, function()
-              discover_package_references(M.project)
-            end)
+            dotnet_restore(M.project, function() discover_package_references(M.project) end)
           end
-        end
+        end,
       })
-    end
+    end,
   }
 end
 
@@ -242,7 +222,7 @@ local function add_package_keymap()
     handler = function()
       require("easy-dotnet.nuget").search_nuget(M.project.path)
       discover_package_references(M.project)
-    end
+    end,
   }
 end
 
@@ -252,19 +232,13 @@ local function add_project_keymap()
     handler = function()
       --HACK: fix this
       local cleanup = nil
-      local add = M.project.language == "csharp" and require("easy-dotnet.csproj-mappings").add_project_reference or
-          require("easy-dotnet.fsproj-mappings").add_project_reference
+      local add = M.project.language == "csharp" and require("easy-dotnet.csproj-mappings").add_project_reference or require("easy-dotnet.fsproj-mappings").add_project_reference
       local res = add(M.project.path, function()
-        if cleanup then
-          cleanup()
-        end
+        if cleanup then cleanup() end
         discover_project_references(M.project)
       end)
-      if res ~= false then
-        cleanup = M.append_job("Adding project reference")
-      end
-    end
-
+      if res ~= false then cleanup = M.append_job("Adding project reference") end
+    end,
   }
 end
 
@@ -282,36 +256,32 @@ local function remove_project_keymap(ref)
             vim.notify("Project removed " .. ref)
             discover_project_references(M.project)
           end
-        end
+        end,
       })
-    end
+    end,
   }
 end
 
 local function stringify_project_header()
   local project = M.project
   local sln_path = M.sln_path
-  if not project then
-    return { "No project selected" }, {}
-  end
-
+  if not project then return { "No project selected" }, {} end
 
   local args = {
-    { string.format("Project: %s", project.name),                                                                                                           "Character" },
-    { string.format("Version: %s", project.version),                                                                                                        "Question" },
-    { string.format("Language: %s", project.language == "csharp" and "C#" or project.language == "fsharp" and "F#" or "Unknown"),                           "Question" },
+    { string.format("Project: %s", project.name), "Character" },
+    { string.format("Version: %s", project.version), "Question" },
+    { string.format("Language: %s", project.language == "csharp" and "C#" or project.language == "fsharp" and "F#" or "Unknown"), "Question" },
     { string.format("Type: %s", project.isWebProject and "Web" or project.isConsoleProject and "Console" or project.isTestProject and "Test" or "Unknown"), "Question" },
     sln_path and { string.format("Solution: %s", vim.fn.fnamemodify(sln_path, ":t")), "Question" } or nil,
     sep,
-    { "Project References: (a)dd (r)emove", "Character", { add_project_keymap() } }
+    { "Project References: (a)dd (r)emove", "Character", { add_project_keymap() } },
   }
 
   if not M.project_refs then
     table.insert(args, { "  None", "Question", { add_project_keymap() } })
   else
     for _, ref in ipairs(M.project_refs) do
-      table.insert(args,
-        { string.format("  %s", vim.fs.basename(ref)), "Question", { remove_project_keymap(ref), add_project_keymap() } })
+      table.insert(args, { string.format("  %s", vim.fs.basename(ref)), "Question", { remove_project_keymap(ref), add_project_keymap() } })
     end
   end
 
@@ -322,20 +292,16 @@ local function stringify_project_header()
     table.insert(args, { "  None", "Question" })
   else
     for _, ref in ipairs(M.package_refs) do
-      table.insert(args,
-        { string.format("  %s", ref), "Question", { add_package_keymap(), remove_package_keymap(ref), open_package_browser_keymap(ref) } })
+      table.insert(args, { string.format("  %s", ref), "Question", { add_package_keymap(), remove_package_keymap(ref), open_package_browser_keymap(ref) } })
     end
   end
-
 
   return build_structure(args)
 end
 
 local function stringify()
   local project = M.project
-  if not project then
-    return { "No project selected" }, {}
-  end
+  if not project then return { "No project selected" }, {} end
   return stringify_project_header()
 end
 
@@ -354,7 +320,6 @@ local function print_lines()
       end
     end
 
-
     --Register all keymaps
     for key, _ in pairs(keys) do
       vim.keymap.set("n", key, function()
@@ -364,11 +329,7 @@ local function print_lines()
           if value.index == current_line then
             for _, keymap in ipairs(value.keymap) do
               --Ensure keymap is valid for current key
-              if keymap.key == key then
-                coroutine.wrap(function()
-                  keymap.handler()
-                end)()
-              end
+              if keymap.key == key then coroutine.wrap(function() keymap.handler() end)() end
             end
           end
         end
@@ -376,22 +337,15 @@ local function print_lines()
     end
   end
 
-
   M.redraw_virtual_text()
   apply_highlights(highlights)
 end
 
 local function set_mappings()
-  if M.keymap == nil then
-    return
-  end
-  if M.buf == nil then
-    return
-  end
+  if M.keymap == nil then return end
+  if M.buf == nil then return end
   for key, value in pairs(M.keymap) do
-    vim.keymap.set('n', key, function()
-      value()
-    end, { buffer = M.buf, noremap = true, silent = true })
+    vim.keymap.set("n", key, function() value() end, { buffer = M.buf, noremap = true, silent = true })
   end
 end
 
@@ -403,12 +357,9 @@ end
 
 ---@param options TestRunnerOptions
 M.set_options = function(options)
-  if options then
-    M.options = options
-  end
+  if options then M.options = options end
   return M
 end
-
 
 local function get_default_win_opts()
   local width = math.floor(vim.o.columns * 0.8)
@@ -422,7 +373,7 @@ local function get_default_win_opts()
     col = math.floor((vim.o.columns - width) / 2),
     row = math.floor((vim.o.lines - height) / 2),
     style = "minimal",
-    border = "rounded"
+    border = "rounded",
   }
 end
 
@@ -445,9 +396,7 @@ function M.close()
 end
 
 function M.open()
-  if not M.buf then
-    M.buf = vim.api.nvim_create_buf(false, true)
-  end
+  if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
   local win_opts = get_default_win_opts()
   M.win = vim.api.nvim_open_win(M.buf, true, win_opts)
   vim.api.nvim_buf_set_option(M.buf, "bufhidden", "hide")
@@ -463,9 +412,7 @@ function M.toggle()
 end
 
 local function window_destroy()
-  if M.win and vim.api.nvim_win_is_valid(M.win) then
-    vim.api.nvim_win_close(M.win, true)
-  end
+  if M.win and vim.api.nvim_win_is_valid(M.win) then vim.api.nvim_win_close(M.win, true) end
   M.win = nil
 end
 
@@ -476,14 +423,10 @@ M.render = function(project, sln_path)
   M.project = project
   M.sln_path = sln_path
   local isVisible = M.toggle()
-  if not isVisible then
-    return
-  end
+  if not isVisible then return end
 
   discover_project_references(project)
-  dotnet_restore(project, function()
-    discover_package_references(project)
-  end)
+  dotnet_restore(project, function() discover_package_references(project) end)
 
   print_lines()
   set_buffer_options()
@@ -492,22 +435,17 @@ M.render = function(project, sln_path)
 end
 
 M.refresh_mappings = function()
-  if M.buf == nil then
-    error("Can not refresh buffer before render() has been called")
-  end
+  if M.buf == nil then error("Can not refresh buffer before render() has been called") end
   set_mappings()
   return M
 end
 
 --- Refreshes the buffer if lines have changed
 M.refresh = function()
-  if M.buf == nil then
-    error("Can not refresh buffer before render() has been called")
-  end
+  if M.buf == nil then error("Can not refresh buffer before render() has been called") end
   print_lines()
   set_buffer_options()
   return M
 end
-
 
 return M

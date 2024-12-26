@@ -1,7 +1,7 @@
-local polyfills = require "easy-dotnet.polyfills"
+local polyfills = require("easy-dotnet.polyfills")
 local M = {}
 
-M.ns_id = vim.api.nvim_create_namespace('easy-dotnet')
+M.ns_id = vim.api.nvim_create_namespace("easy-dotnet")
 M.sign_namespace = "EasyDotnetTestSignGroup"
 
 M.get_data_directory = function()
@@ -20,7 +20,7 @@ M.highlights = {
   EasyDotnetTestRunnerPackage = "EasyDotnetTestRunnerPackage",
   EasyDotnetTestRunnerPassed = "EasyDotnetTestRunnerPassed",
   EasyDotnetTestRunnerFailed = "EasyDotnetTestRunnerFailed",
-  EasyDotnetTestRunnerRunning = "EasyDotnetTestRunnerRunning"
+  EasyDotnetTestRunnerRunning = "EasyDotnetTestRunnerRunning",
 }
 
 M.signs = {
@@ -28,7 +28,7 @@ M.signs = {
   EasyDotnetTestPassed = "EasyDotnetTestPassed",
   EasyDotnetTestFailed = "EasyDotnetTestFailed",
   EasyDotnetTestSkipped = "EasyDotnetTestSkipped",
-  EasyDotnetTestError = "EasyDotnetTestError"
+  EasyDotnetTestError = "EasyDotnetTestError",
 }
 
 return M

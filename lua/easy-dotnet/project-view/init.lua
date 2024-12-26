@@ -23,9 +23,7 @@ end
 
 M.open_or_toggle = function()
   local sln_path = sln_parse.find_solution_file()
-  select_project(sln_path, function(i)
-    window.render(i, sln_path)
-  end)
+  select_project(sln_path, function(i) window.render(i, sln_path) end)
 end
 
 M.open_or_toggle_default = function()
@@ -45,9 +43,7 @@ M.open_or_toggle_default = function()
     return
   end
 
-  select_project(sln_path, function(i)
-    window.render(i, sln_path)
-  end)
+  select_project(sln_path, function(i) window.render(i, sln_path) end)
 end
 
 return M

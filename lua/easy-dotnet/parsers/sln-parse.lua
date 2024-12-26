@@ -1,4 +1,4 @@
-local polyfills = require "easy-dotnet.polyfills"
+local polyfills = require("easy-dotnet.polyfills")
 local M = {}
 
 -- Generates a relative path from cwd to the project.csproj file
@@ -33,7 +33,7 @@ function M.add_project_to_solution(slnpath)
       table.insert(options, {
         display = value,
         ordinal = value,
-        value = value
+        value = value,
       })
     end
   end
@@ -43,9 +43,7 @@ function M.add_project_to_solution(slnpath)
   end
 
   local value = require("easy-dotnet.picker").pick_sync(nil, options, "Project to add to sln", false)
-  if not value then
-    return
-  end
+  if not value then return end
   vim.fn.jobstart({
     "dotnet",
     "sln",
@@ -57,13 +55,9 @@ function M.add_project_to_solution(slnpath)
     stderr_buffered = true,
     on_exit = function(_, exit_code)
       if exit_code == 0 then
-        vim.schedule(function()
-          vim.notify("Success")
-        end)
+        vim.schedule(function() vim.notify("Success") end)
       else
-        vim.schedule(function()
-          vim.notify("Failed to add project to solution", vim.log.levels.ERROR)
-        end)
+        vim.schedule(function() vim.notify("Failed to add project to solution", vim.log.levels.ERROR) end)
       end
     end,
   })
@@ -80,27 +74,21 @@ function M.remove_project_from_solution(slnpath)
   end
 
   local value = require("easy-dotnet.picker").pick_sync(nil, projects, "Project to remove from sln", false)
-  if not value then
-    return
-  end
+  if not value then return end
   vim.fn.jobstart({
     "dotnet",
     "sln",
     slnpath,
     "remove",
-    value.path
+    value.path,
   }, {
     stdout_buffered = true,
     stderr_buffered = true,
     on_exit = function(_, exit_code)
       if exit_code == 0 then
-        vim.schedule(function()
-          vim.notify("Success")
-        end)
+        vim.schedule(function() vim.notify("Success") end)
       else
-        vim.schedule(function()
-          vim.notify("Failed to remove project from solution", vim.log.levels.ERROR)
-        end)
+        vim.schedule(function() vim.notify("Failed to remove project from solution", vim.log.levels.ERROR) end)
       end
     end,
   })
@@ -115,17 +103,15 @@ M.get_projects_from_sln = function(solutionFilePath)
 
   local projectLines = polyfills.tbl_filter(function(line)
     local id, name, path = line:match(regexp)
-    if id and name and path and (path:match("%.csproj$") or path:match("%.fsproj$")) then
-      return true
-    end
+    if id and name and path and (path:match("%.csproj$") or path:match("%.fsproj$")) then return true end
     return false
   end, file_contents)
 
   local projects = polyfills.tbl_map(function(line)
-    local csproj_parser     = require("easy-dotnet.parsers.csproj-parse")
-    local _, _, path        = line:match(regexp)
+    local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
+    local _, _, path = line:match(regexp)
     local project_file_path = generate_relative_path_for_project(path, solutionFilePath)
-    local project           = csproj_parser.get_project_from_project_file(project_file_path)
+    local project = csproj_parser.get_project_from_project_file(project_file_path)
     return project
   end, projectLines)
 
@@ -142,9 +128,7 @@ M.try_get_selected_solution_file = function()
   local files = M.get_solutions()
   for _, value in ipairs(files) do
     local file = require("easy-dotnet.default-manager").try_get_cache_file(value)
-    if file then
-      return value
-    end
+    if file then return value end
   end
 end
 
@@ -160,9 +144,7 @@ M.find_solution_file = function(no_cache)
     end
     table.insert(opts, { display = value, ordinal = value, value = value })
   end
-  if #opts == 0 then
-    return nil
-  end
+  if #opts == 0 then return nil end
   local selection = require("easy-dotnet.picker").pick_sync(nil, opts, "Pick solution file")
   return selection and selection.value or nil
 end

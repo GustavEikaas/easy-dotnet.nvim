@@ -33,21 +33,16 @@ local M = {
   filetype = "",
   filter = nil,
   keymap = {},
-  options = {}
+  options = {},
 }
-
 
 ---Traverses a tree from the given node, giving a callback for every item
 ---@param tree TestNode | nil
 ---@param cb function
 M.traverse = function(tree, cb)
-  if not tree then
-    tree = M.tree
-  end
+  if not tree then tree = M.tree end
   --HACK: handle no tree set
-  if not tree.name then
-    return
-  end
+  if not tree.name then return end
 
   cb(tree)
   for _, node in pairs(tree.children or {}) do
@@ -56,19 +51,13 @@ M.traverse = function(tree, cb)
 end
 
 M.traverse_expanded = function(tree, cb)
-  if not tree then
-    tree = M.tree
-  end
+  if not tree then tree = M.tree end
   --HACK: handle no tree set
-  if not tree.name then
-    return
-  end
+  if not tree.name then return end
   cb(tree)
   for _, node in pairs(tree.children or {}) do
     local filterpass = M.filter == nil or (M.filter == node.icon or node.icon == "<Running>")
-    if tree.expanded and filterpass then
-      M.traverse_expanded(node, cb)
-    end
+    if tree.expanded and filterpass then M.traverse_expanded(node, cb) end
   end
 end
 
@@ -76,16 +65,18 @@ end
 ---@param type "Run" | "Discovery" | "Build"
 ---@param subtask_count number | nil
 function M.appendJob(id, type, subtask_count)
-  local job = { type = type, id = id, subtask_count = (subtask_count and subtask_count > 0) and subtask_count or 1 }
+  local job = {
+    type = type,
+    id = id,
+    subtask_count = (subtask_count and subtask_count > 0) and subtask_count or 1,
+  }
   table.insert(M.jobs, job)
   M.refreshTree()
 
   local on_job_finished_callback = function()
     job.completed = true
     local is_all_finished = polyfills.iter(M.jobs):all(function(s) return s.completed end)
-    if is_all_finished == true then
-      M.jobs = {}
-    end
+    if is_all_finished == true then M.jobs = {} end
     M.refreshTree()
   end
 
@@ -98,15 +89,18 @@ function M.redraw_virtual_text()
     local completed_count = 0
     for _, value in ipairs(M.jobs) do
       total_subtask_count = total_subtask_count + value.subtask_count
-      if value.completed == true then
-        completed_count = completed_count + value.subtask_count
-      end
+      if value.completed == true then completed_count = completed_count + value.subtask_count end
     end
 
     local job_type = M.jobs[1].type
 
     vim.api.nvim_buf_set_extmark(M.buf, ns_id, 0, 0, {
-      virt_text = { { string.format("%s %s/%s", job_type == "Run" and "Running" or job_type == "Discovery" and "Discovering" or "Building", completed_count, total_subtask_count), "Character" } },
+      virt_text = {
+        {
+          string.format("%s %s/%s", job_type == "Run" and "Running" or job_type == "Discovery" and "Discovering" or "Building", completed_count, total_subtask_count),
+          "Character",
+        },
+      },
       virt_text_pos = "right_align",
       priority = 200,
     })
@@ -114,10 +108,8 @@ function M.redraw_virtual_text()
 end
 
 local function setBufferOptions()
-  if M.options.viewmode ~= "buf" then
-    vim.api.nvim_win_set_height(M.win, M.height)
-  end
-  vim.api.nvim_buf_set_option(M.buf, 'modifiable', M.modifiable)
+  if M.options.viewmode ~= "buf" then vim.api.nvim_win_set_height(M.win, M.height) end
+  vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
   vim.api.nvim_buf_set_name(M.buf, M.buf_name)
   vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
   --Crashes on nvim 0.9.5??
@@ -135,28 +127,20 @@ local function translateIndex(line_num, tree)
   local result = nil
 
   M.traverse_expanded(tree, function(node)
-    if result ~= nil then
-      return
-    end
-    if current_line == line_num then
-      result = node
-    end
+    if result ~= nil then return end
+    if current_line == line_num then result = node end
     current_line = current_line + 1
   end)
 
   return result
 end
 
-
 ---@param highlights Highlight[]
 local function apply_highlights(highlights)
   for _, value in ipairs(highlights) do
-    if value.highlight ~= nil then
-      vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, value.index - 1, 0, -1)
-    end
+    if value.highlight ~= nil then vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, value.index - 1, 0, -1) end
   end
 end
-
 
 ---@param node TestNode
 ---@return string | nil
@@ -173,17 +157,15 @@ local function calculate_highlight(node)
   return nil
 end
 
-
 local function node_to_string(node)
   local total_tests = 0
   ---@param i TestNode
   M.traverse(node, function(i)
-    if i.type == "subcase" or i.type == "test" then
-      total_tests = total_tests + 1
-    end
+    if i.type == "subcase" or i.type == "test" then total_tests = total_tests + 1 end
   end)
 
-  local formatted = string.format("%s%s%s%s %s",
+  local formatted = string.format(
+    "%s%s%s%s %s",
     string.rep(" ", node.indent or 0),
     node.preIcon and (node.preIcon .. " ") or "",
     node.name,
@@ -193,7 +175,6 @@ local function node_to_string(node)
 
   return formatted
 end
-
 
 ---@param tree TestNode
 ---@return string[], table[]
@@ -225,19 +206,13 @@ local function printNodes()
 end
 
 local function setMappings()
-  if M.keymap == nil then
-    return
-  end
-  if M.buf == nil then
-    return
-  end
+  if M.keymap == nil then return end
+  if M.buf == nil then return end
   for key, value in pairs(M.keymap()) do
-    vim.keymap.set('n', key, function()
+    vim.keymap.set("n", key, function()
       local line_num = vim.api.nvim_win_get_cursor(0)[1]
       local node = translateIndex(line_num, M.tree)
-      if not node then
-        error("Current line is not a node")
-      end
+      if not node then error("Current line is not a node") end
       value(node, M)
     end, { buffer = M.buf, noremap = true, silent = true })
   end
@@ -251,12 +226,9 @@ end
 
 ---@param options TestRunnerOptions
 M.setOptions = function(options)
-  if options then
-    M.options = options
-  end
+  if options then M.options = options end
   return M
 end
-
 
 local function get_default_win_opts()
   local width = math.floor(vim.o.columns * 0.8)
@@ -270,7 +242,7 @@ local function get_default_win_opts()
     col = math.floor((vim.o.columns - width) / 2),
     row = math.floor((vim.o.lines - height) / 2),
     style = "minimal",
-    border = "rounded"
+    border = "rounded",
   }
 end
 
@@ -278,22 +250,17 @@ local function has_multiple_listed_buffers()
   local listed_buffers = 0
 
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_get_option(buf, "buflisted") then
-      listed_buffers = listed_buffers + 1
-    end
+    if vim.api.nvim_buf_get_option(buf, "buflisted") then listed_buffers = listed_buffers + 1 end
   end
 
   return listed_buffers > 0
 end
 
-
 -- Toggle function to handle different window modes
 ---@param mode "float" | "split" | "buf"
 -- Function to hide the window or buffer based on the mode
 function M.hide(mode)
-  if not mode then
-    mode = M.options.viewmode
-  end
+  if not mode then mode = M.options.viewmode end
   if mode == "float" or mode == "split" then
     if M.win and vim.api.nvim_win_is_valid(M.win) then
       vim.api.nvim_win_close(M.win, false)
@@ -318,30 +285,22 @@ end
 
 ---@param mode "float" | "split" | "buf"
 function M.open(mode)
-  if not mode then
-    mode = M.options.viewmode
-  end
+  if not mode then mode = M.options.viewmode end
 
   if mode == "float" then
-    if not M.buf then
-      M.buf = vim.api.nvim_create_buf(false, true)
-    end
+    if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
     local win_opts = get_default_win_opts()
     M.win = vim.api.nvim_open_win(M.buf, true, win_opts)
     vim.api.nvim_buf_set_option(M.buf, "bufhidden", "hide")
     return true
   elseif mode == "split" then
-    if not M.buf then
-      M.buf = vim.api.nvim_create_buf(false, true)
-    end
+    if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
     vim.cmd("split")
     M.win = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_buf(M.win, M.buf)
     return true
   elseif mode == "buf" then
-    if not M.buf then
-      M.buf = vim.api.nvim_create_buf(false, true)
-    end
+    if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
     M.win = vim.api.nvim_get_current_win()
     vim.api.nvim_set_current_buf(M.buf)
     return true
@@ -351,9 +310,7 @@ end
 
 ---@param mode "float" | "split" | "buf"
 function M.toggle(mode)
-  if not mode then
-    mode = M.options.viewmode
-  end
+  if not mode then mode = M.options.viewmode end
 
   if mode == "float" or mode == "split" then
     if M.win and vim.api.nvim_win_is_valid(M.win) then
@@ -375,9 +332,7 @@ end
 ---@param mode "float" | "split" | "buf"
 M.render = function(mode)
   local isVisible = M.toggle(mode)
-  if not isVisible then
-    return
-  end
+  if not isVisible then return end
 
   printNodes()
   setBufferOptions()
@@ -386,30 +341,23 @@ M.render = function(mode)
 end
 
 M.refreshMappings = function()
-  if M.buf == nil then
-    error("Can not refresh buffer before render() has been called")
-  end
+  if M.buf == nil then error("Can not refresh buffer before render() has been called") end
   setMappings()
   return M
 end
 
 M.refreshTree = function()
-  if M.buf == nil then
-    error("Can not refresh buffer before render() has been called")
-  end
+  if M.buf == nil then error("Can not refresh buffer before render() has been called") end
   printNodes()
   return M
 end
 
 --- Refreshes the buffer if lines have changed
 M.refresh = function()
-  if M.buf == nil then
-    error("Can not refresh buffer before render() has been called")
-  end
+  if M.buf == nil then error("Can not refresh buffer before render() has been called") end
   printNodes()
   setBufferOptions()
   return M
 end
-
 
 return M

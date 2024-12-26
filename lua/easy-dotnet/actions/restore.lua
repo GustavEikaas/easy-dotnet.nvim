@@ -17,5 +17,4 @@ M.restore = function(term, args)
   term(project, "restore", args)
 end
 
-
 return M

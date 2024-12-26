@@ -1,4 +1,4 @@
-local polyfills = require "easy-dotnet.polyfills"
+local polyfills = require("easy-dotnet.polyfills")
 ---@class TestRunnerIcons
 ---@field passed string
 ---@field skipped string
@@ -55,10 +55,9 @@ end
 
 local function get_secret_path(secret_guid)
   local path = ""
-  local home_dir = vim.fn.expand('~')
+  local home_dir = vim.fn.expand("~")
   if require("easy-dotnet.extensions").isWindows() then
-    local secret_path = home_dir .. 
-      "\\AppData\\Roaming\\Microsoft\\UserSecrets\\" .. secret_guid .. "\\secrets.json"
+    local secret_path = home_dir .. "\\AppData\\Roaming\\Microsoft\\UserSecrets\\" .. secret_guid .. "\\secrets.json"
     path = secret_path
   else
     local secret_path = home_dir .. "/.microsoft/usersecrets/" .. secret_guid .. "/secrets.json"
@@ -76,23 +75,13 @@ local M = {
     ---@param args string
     terminal = function(path, action, args)
       local commands = {
-        run = function()
-          return string.format("dotnet run --project %s %s", path, args)
-        end,
-        test = function()
-          return string.format("dotnet test %s %s", path, args)
-        end,
-        restore = function()
-          return string.format("dotnet restore %s %s", path, args)
-        end,
-        build = function()
-          return string.format("dotnet build %s %s", path, args)
-        end
+        run = function() return string.format("dotnet run --project %s %s", path, args) end,
+        test = function() return string.format("dotnet test %s %s", path, args) end,
+        restore = function() return string.format("dotnet restore %s %s", path, args) end,
+        build = function() return string.format("dotnet build %s %s", path, args) end,
       }
       local command = commands[action]()
-      if require("easy-dotnet.extensions").isWindows() == true then
-        command = command .. "\r"
-      end
+      if require("easy-dotnet.extensions").isWindows() == true then command = command .. "\r" end
       vim.cmd("vsplit")
       vim.cmd("term " .. command)
     end,
@@ -131,7 +120,7 @@ local M = {
         expand_all = { lhs = "-", desc = "expand all" },
         collapse_all = { lhs = "W", desc = "collapse all" },
         close = { lhs = "q", desc = "close testrunner" },
-        refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" }
+        refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" },
       },
       additional_args = {},
     },
@@ -139,23 +128,19 @@ local M = {
     fsproj_mappings = true,
     auto_bootstrap_namespace = {
       type = "block_scoped",
-      enabled = true
+      enabled = true,
     },
   },
 }
 
-local function merge_tables(default_options, user_options)
-  return vim.tbl_deep_extend("keep", user_options, default_options)
-end
+local function merge_tables(default_options, user_options) return vim.tbl_deep_extend("keep", user_options, default_options) end
 
 --- Auto_bootstrap namespace can be either true or table with config
 local function handle_auto_bootstrap_namespace(a)
-  if type(a.auto_bootstrap_namespace) ~= "table" then
-    a.auto_bootstrap_namespace = {
-      type = "block_scoped",
-      enabled = a.auto_bootstrap_namespace == true
-    }
-  end
+  if type(a.auto_bootstrap_namespace) ~= "table" then a.auto_bootstrap_namespace = {
+    type = "block_scoped",
+    enabled = a.auto_bootstrap_namespace == true,
+  } end
 end
 
 M.set_options = function(a)

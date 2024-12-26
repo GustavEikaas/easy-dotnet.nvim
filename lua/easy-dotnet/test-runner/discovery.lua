@@ -100,9 +100,7 @@ module TestDiscovery =
 local script_name = "test_discovery.fsx"
 
 ---@return string
-local ensure_and_get_fsx_path = function()
-  return require("easy-dotnet.scripts.utils").ensure_and_get_fsx_path(script_template, script_name)
-end
+local ensure_and_get_fsx_path = function() return require("easy-dotnet.scripts.utils").ensure_and_get_fsx_path(script_template, script_name) end
 
 M.get_script_path = ensure_and_get_fsx_path
 

@@ -1,6 +1,6 @@
 --TODO: Remove this file once majority of users have migrated to >= 0.10.0
 local M = {
-  fs = {}
+  fs = {},
 }
 
 --- Return a list of all keys used in a table.
@@ -12,7 +12,7 @@ local M = {
 ---@param t table<T, any> (table) Table
 ---@return T[] : List of keys
 function M.tbl_keys(t)
-  vim.validate({ t = { t, 't' } })
+  vim.validate({ t = { t, "t" } })
   --- @cast t table<any,any>
 
   local keys = {}
@@ -22,9 +22,7 @@ function M.tbl_keys(t)
   return keys
 end
 
-function M.fs.joinpath(...)
-  return (table.concat({ ... }, '/'):gsub('//+', '/'))
-end
+function M.fs.joinpath(...) return (table.concat({ ... }, "/"):gsub("//+", "/")) end
 
 --- Return a list of all values used in a table.
 --- However, the order of the return table of values is not guaranteed.
@@ -33,11 +31,11 @@ end
 ---@param t table<any, T> (table) Table
 ---@return T[] : List of values
 function M.tbl_values(t)
-  vim.validate({ t = { t, 't' } })
+  vim.validate({ t = { t, "t" } })
 
   local values = {}
   for _, v in
-  pairs(t --[[@as table<any,any>]])
+    pairs(t --[[@as table<any,any>]])
   do
     table.insert(values, v)
   end
@@ -51,7 +49,7 @@ end
 ---@param t table<any, T> Table
 ---@return table : Table of transformed values
 function M.tbl_map(func, t)
-  vim.validate({ func = { func, 'c' }, t = { t, 't' } })
+  vim.validate({ func = { func, "c" }, t = { t, "t" } })
   --- @cast t table<any,any>
 
   local rettab = {} --- @type table<any,any>
@@ -68,14 +66,12 @@ end
 ---@param t table<any, T> (table) Table
 ---@return T[] : Table of filtered values
 function M.tbl_filter(func, t)
-  vim.validate({ func = { func, 'c' }, t = { t, 't' } })
+  vim.validate({ func = { func, "c" }, t = { t, "t" } })
   --- @cast t table<any,any>
 
   local rettab = {} --- @type table<any,any>
   for _, entry in pairs(t) do
-    if func(entry) then
-      rettab[#rettab + 1] = entry
-    end
+    if func(entry) then rettab[#rettab + 1] = entry end
   end
   return rettab
 end
@@ -105,23 +101,19 @@ end
 ---@param opts? M.tbl_contains.Opts Keyword arguments |kwargs|:
 ---@return boolean `true` if `t` contains `value`
 function M.tbl_contains(t, value, opts)
-  vim.validate({ t = { t, 't' }, opts = { opts, 't', true } })
+  vim.validate({ t = { t, "t" }, opts = { opts, "t", true } })
   --- @cast t table<any,any>
 
   local pred --- @type fun(v: any): boolean?
   if opts and opts.predicate then
-    M.validate({ value = { value, 'c' } })
+    M.validate({ value = { value, "c" } })
     pred = value
   else
-    pred = function(v)
-      return v == value
-    end
+    pred = function(v) return v == value end
   end
 
   for _, v in pairs(t) do
-    if pred(v) then
-      return true
-    end
+    if pred(v) then return true end
   end
   return false
 end
@@ -134,13 +126,11 @@ end
 ---@param value any Value to compare
 ---@return boolean `true` if `t` contains `value`
 function M.list_contains(t, value)
-  vim.validate({ t = { t, 't' } })
+  vim.validate({ t = { t, "t" } })
   --- @cast t table<any,any>
 
   for _, v in ipairs(t) do
-    if v == value then
-      return true
-    end
+    if v == value then return true end
   end
   return false
 end

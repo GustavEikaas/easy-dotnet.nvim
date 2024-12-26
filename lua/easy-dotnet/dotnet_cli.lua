@@ -3,9 +3,7 @@ local M = {}
 ---@param source string source project file path
 ---@param target string target project file path
 ---@return string
-function M.add_project(source, target)
-  return string.format("dotnet add %s reference %s", source, target)
-end
+function M.add_project(source, target) return string.format("dotnet add %s reference %s", source, target) end
 
 --- `dotnet package search <QUERY> [--take <NUMBER>] [--format <FORMAT>] [--exact-match]`
 --- Search for nuget packages meeting the search term.

@@ -5,9 +5,9 @@ M.__index = M
 ---Spinner symbol presets
 M.spinner_presets = {
   default = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" },
-  lines = { '-', '\\', '|', '/' },
-  dots = { '.', '..', '...', '....' },
-  arrows = { '→', '↘', '↓', '↙', '←', '↖', '↑', '↗' },
+  lines = { "-", "\\", "|", "/" },
+  dots = { ".", "..", "...", "...." },
+  arrows = { "→", "↘", "↓", "↙", "←", "↖", "↑", "↗" },
 }
 
 ---Creates a new spinner instance.
@@ -26,8 +26,8 @@ end
 ---@param pendingText string The text to display while the spinner is running.
 function M:update_spinner(pendingText)
   if self.spinner_timer then
-    self.notify_id = vim.notify(pendingText .. ' ' .. self.spinner_symbols[self.spinner_index], vim.log.levels.INFO, {
-      title = 'Progress',
+    self.notify_id = vim.notify(pendingText .. " " .. self.spinner_symbols[self.spinner_index], vim.log.levels.INFO, {
+      title = "Progress",
       replace = self.notify_id,
     })
     self.spinner_index = (self.spinner_index % #self.spinner_symbols) + 1
@@ -54,15 +54,13 @@ end
 ---@param finishText string The message to display when the spinner stops.
 ---@param level integer | nil One of the values from |vim.log.levels|.
 function M:stop_spinner(finishText, level)
-  if not level then
-    level = vim.log.levels.INFO
-  end
+  if not level then level = vim.log.levels.INFO end
   if self.spinner_timer then
     self.spinner_timer:stop()
     self.spinner_timer:close()
     self.spinner_timer = nil
     vim.notify(finishText, level, {
-      title = 'Progress',
+      title = "Progress",
       replace = self.notify_id,
     })
     self.notify_id = nil
