@@ -66,6 +66,7 @@ M.check = function()
   ensure_dep_installed("jq")
   ensure_dep_installed({ "dotnet-outdated", "-h" }, "dotnet tool install --global dotnet-outdated-tool")
   ensure_dep_installed("dotnet-ef", "dotnet tool install --global dotnet-ef")
+  ensure_dep_installed({ "netcoredbg", "--version" }, "https://github.com/samsung/netcoredbg")
 
   vim.health.start("easy-dotnet lua dependencies")
   ensure_nvim_dep_installed("plenary", "https://github.com/nvim-lua/plenary.nvim")
