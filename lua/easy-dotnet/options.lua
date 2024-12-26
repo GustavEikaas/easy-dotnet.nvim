@@ -1,3 +1,4 @@
+local polyfills = require "easy-dotnet.polyfills"
 ---@class TestRunnerIcons
 ---@field passed string
 ---@field skipped string
@@ -39,8 +40,8 @@
 ---@field additional_args table
 
 local function get_sdk_path()
-  local sdk_version = vim.trim(vim.system({ "dotnet", "--version" }):wait().stdout)
-  local sdk_list = vim.trim(vim.system({ "dotnet", "--list-sdks" }):wait().stdout)
+  local sdk_version = vim.trim(vim.fn.system("dotnet --version"))
+  local sdk_list = vim.trim(vim.fn.system("dotnet --list-sdks"))
   local base = nil
   for line in sdk_list:gmatch("[^\n]+") do
     if line:find(sdk_version, 1, true) then
@@ -48,7 +49,7 @@ local function get_sdk_path()
       break
     end
   end
-  local sdk_path = vim.fs.joinpath(base, sdk_version):gsub("Program Files", '"Program Files"')
+  local sdk_path = polyfills.fs.joinpath(base, sdk_version):gsub("Program Files", '"Program Files"')
   return sdk_path
 end
 
@@ -56,8 +57,8 @@ local function get_secret_path(secret_guid)
   local path = ""
   local home_dir = vim.fn.expand('~')
   if require("easy-dotnet.extensions").isWindows() then
-    local secret_path = home_dir ..
-        '\\AppData\\Roaming\\Microsoft\\UserSecrets\\' .. secret_guid .. "\\secrets.json"
+    local secret_path = home_dir .. 
+      "\\AppData\\Roaming\\Microsoft\\UserSecrets\\" .. secret_guid .. "\\secrets.json"
     path = secret_path
   else
     local secret_path = home_dir .. "/.microsoft/usersecrets/" .. secret_guid .. "/secrets.json"
@@ -65,7 +66,6 @@ local function get_secret_path(secret_guid)
   end
   return path
 end
-
 
 local M = {
   options = {
@@ -137,15 +137,29 @@ local M = {
     },
     csproj_mappings = true,
     fsproj_mappings = true,
-    auto_bootstrap_namespace = true,
-  }
+    auto_bootstrap_namespace = {
+      type = "block_scoped",
+      enabled = true
+    },
+  },
 }
 
 local function merge_tables(default_options, user_options)
   return vim.tbl_deep_extend("keep", user_options, default_options)
 end
 
+--- Auto_bootstrap namespace can be either true or table with config
+local function handle_auto_bootstrap_namespace(a)
+  if type(a.auto_bootstrap_namespace) ~= "table" then
+    a.auto_bootstrap_namespace = {
+      type = "block_scoped",
+      enabled = a.auto_bootstrap_namespace == true
+    }
+  end
+end
+
 M.set_options = function(a)
+  handle_auto_bootstrap_namespace(a)
   M.options = merge_tables(M.options, a or {})
   return M.options
 end

@@ -1,4 +1,5 @@
 local extensions = require "easy-dotnet.extensions"
+local polyfills  = require "easy-dotnet.polyfills"
 local M = {}
 
 ---@class DotnetProject
@@ -27,7 +28,7 @@ local function extract_from_project(project_file_path, pattern)
   if not file then
     return false
   end
-  local contains_pattern = vim.iter(file:lines()):find(function(line)
+  local contains_pattern = polyfills.iter(file:lines()):find(function(line)
     local value = line:match(pattern)
     if value then
       return true
@@ -138,7 +139,7 @@ M.get_project_from_project_file = function(project_file_path)
               project_file_path)))
           .Properties
       local target = string.format("%s%s", value.AssemblyName, value.TargetExt)
-      local path = vim.fs.joinpath(vim.fs.dirname(project_file_path), value.OutputPath:gsub("\\", "/"), target)
+      local path = polyfills.fs.joinpath(vim.fs.dirname(project_file_path), value.OutputPath:gsub("\\", "/"), target)
       local msbuild_target_framework = value.TargetFramework:gsub("%net", "")
 
       c["version"] = msbuild_target_framework
@@ -152,7 +153,7 @@ M.get_project_from_project_file = function(project_file_path)
 
   project_cache[project_file_path] = project
   if version then
-    project_cache[project_file_path].dll_path = vim.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug",
+    project_cache[project_file_path].dll_path = polyfills.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug",
       "net" .. version, name .. ".dll")
   end
 

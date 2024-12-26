@@ -3,12 +3,13 @@ local picker = require("easy-dotnet.picker")
 local parsers = require("easy-dotnet.parsers")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
+local polyfills = require("easy-dotnet.polyfills")
 
 M.get_debug_dll = function()
   local sln_file = sln_parse.find_solution_file()
   local result = sln_file ~= nil and M.get_dll_for_solution_project(sln_file) or M.get_dll_for_project()
-  local relative_dll_path = vim.fs.joinpath(vim.fn.getcwd(), result.dll)
-  local relative_project_path = vim.fs.joinpath(vim.fn.getcwd(), result.project)
+  local relative_dll_path = polyfills.fs.joinpath(vim.fn.getcwd(), result.dll)
+  local relative_project_path = polyfills.fs.joinpath(vim.fn.getcwd(), result.project)
   return {
     dll_path = result.dll,
     project_path = result.project,
@@ -63,7 +64,7 @@ M.start_debugging_test_project = function(project_path)
   local sln_file = sln_parse.find_solution_file()
   assert(sln_file, "Failed to find a solution file")
   local projects = sln_parse.get_projects_from_sln(sln_file)
-  local test_projects = vim.tbl_filter(function(i)
+  local test_projects = polyfills.tbl_filter(function(i)
     return i.isTestProject
   end, projects)
   local test_project = project_path and project_path or picker.pick_sync(nil, test_projects, "Pick test project").path
@@ -77,7 +78,7 @@ M.start_debugging_test_project = function(project_path)
 end
 
 M.get_environment_variables = function(project_name, relative_project_path)
-  local launchSettings = vim.fs.joinpath(relative_project_path, "Properties", "launchSettings.json")
+  local launchSettings = polyfills.fs.joinpath(relative_project_path, "Properties", "launchSettings.json")
 
   local stat = vim.loop.fs_stat(launchSettings)
   if stat == nil then
@@ -103,7 +104,7 @@ end
 M.get_dll_for_solution_project = function(sln_file)
   local projects = sln_parse.get_projects_from_sln(sln_file)
   ---@type DotnetProject[]
-  local runnable_projects = vim.tbl_filter(function(i)
+  local runnable_projects = polyfills.tbl_filter(function(i)
     return i.runnable == true
   end, projects)
 

@@ -8,6 +8,7 @@ local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
 local default_manager = require("easy-dotnet.default-manager")
+local polyfills = require("easy-dotnet.polyfills")
 
 
 local function select_project(solution_file_path, cb, use_default)
@@ -113,7 +114,7 @@ M.build_project_quickfix = function(use_default, dotnet_args)
     return
   end
   local data_dir = require("easy-dotnet.constants").get_data_directory()
-  local logPath = vim.fs.joinpath(data_dir, "build.log")
+  local logPath = polyfills.fs.joinpath(data_dir, "build.log")
 
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then

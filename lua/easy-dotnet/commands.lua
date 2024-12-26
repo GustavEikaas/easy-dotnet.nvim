@@ -73,6 +73,16 @@ M.run = {
   }
 }
 
+M.add = {
+  subcommands = {
+    package = {
+      handle = function()
+        require("easy-dotnet.nuget").search_nuget()
+      end,
+    },
+  }
+}
+
 M.secrets = {
   handle = function(_, options)
     local secrets = require("easy-dotnet.secrets")

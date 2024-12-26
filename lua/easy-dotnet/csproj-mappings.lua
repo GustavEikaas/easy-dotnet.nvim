@@ -1,6 +1,7 @@
 local M = {}
 
 local picker = require("easy-dotnet.picker")
+local polyfills = require("easy-dotnet.polyfills")
 local csproj = require("easy-dotnet.parsers.csproj-parse")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local error_messages = require("easy-dotnet.error-messages")
@@ -89,7 +90,7 @@ M.package_completion_cmp = {
           search_term), {
           stdout_buffered = true,
           on_stdout = function(_, data)
-            local items = vim.tbl_map(function(i)
+            local items = polyfills.tbl_map(function(i)
               return { label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', ""), kind = 18 }
             end, data)
             callback({ items = items, isIncomplete = true })
@@ -106,7 +107,7 @@ M.package_completion_cmp = {
             local index = 0
             local latest = nil
             local last_index = #data - 1
-            local items = vim.tbl_map(function(i)
+            local items = polyfills.tbl_map(function(i)
               index = index + 1
               local cmp_item = {
                 label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', ""),

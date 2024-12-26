@@ -2,6 +2,7 @@ local actions = require("easy-dotnet.actions")
 local debug = require("easy-dotnet.debugger")
 local constants = require("easy-dotnet.constants")
 local commands = require("easy-dotnet.commands")
+local polyfills = require("easy-dotnet.polyfills")
 
 local M = {}
 local function wrap(callback)
@@ -18,9 +19,8 @@ local function wrap(callback)
   end
 end
 
-
 local function collect_commands_with_handles(parent, prefix)
-  return vim.iter(parent):fold({}, function(command_handles, name, command)
+  return polyfills.iter(parent):fold({}, function(command_handles, name, command)
     local full_command = prefix and (prefix .. "_" .. name) or name
 
     if command.handle then
@@ -28,7 +28,7 @@ local function collect_commands_with_handles(parent, prefix)
     end
 
     if command.subcommands then
-      vim.iter(collect_commands_with_handles(command.subcommands, full_command))
+      polyfills.iter(collect_commands_with_handles(command.subcommands, full_command))
           :each(function(sub_name, sub_handle)
             command_handles[sub_name] = sub_handle
           end)
@@ -39,7 +39,7 @@ local function collect_commands_with_handles(parent, prefix)
 end
 
 local function collect_commands(parent, prefix)
-  return vim.iter(parent):fold({}, function(commands, name, command)
+  return polyfills.iter(parent):fold({}, function(commands, name, command)
     local full_command = prefix and (prefix .. " " .. name) or name
 
     if command.handle then
@@ -47,7 +47,7 @@ local function collect_commands(parent, prefix)
     end
 
     if command.subcommands then
-      vim.iter(collect_commands(command.subcommands, full_command))
+      polyfills.iter(collect_commands(command.subcommands, full_command))
           :each(function(sub)
             table.insert(commands, sub)
           end)
@@ -96,7 +96,6 @@ local function define_highlights_and_signs(merged_opts)
   vim.fn.sign_define(constants.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
 end
 
-
 local register_legacy_functions = function()
   ---Deprecated prefer dotnet.test instead
   ---@deprecated prefer dotnet.test instead
@@ -121,7 +120,7 @@ end
 
 ---@return table<string>
 local function split_by_whitespace(str)
-  return str and vim.iter(str:gmatch("%S+")):totable() or {}
+  return str and polyfills.iter(str:gmatch("%S+")):totable() or {}
 end
 
 local function traverse_subcommands(args, parent)
@@ -137,7 +136,7 @@ local function traverse_subcommands(args, parent)
   elseif parent.handle then
     parent.handle(args, require("easy-dotnet.options").options)
   else
-    local required = vim.tbl_keys(parent.subcommands)
+    local required = polyfills.tbl_keys(parent.subcommands)
     print("Missing required argument " .. vim.inspect(required))
   end
 end
@@ -172,8 +171,10 @@ M.setup = function(opts)
     require("easy-dotnet.fsproj-mappings").attach_mappings()
   end
 
-  if merged_opts.auto_bootstrap_namespace == true then
-    require("easy-dotnet.cs-mappings").auto_bootstrap_namespace()
+  if merged_opts.auto_bootstrap_namespace.enabled == true then
+    require("easy-dotnet.cs-mappings").auto_bootstrap_namespace(
+      merged_opts.auto_bootstrap_namespace.type
+    )
   end
 
   if merged_opts.test_runner.enable_buffer_test_execution then
@@ -181,7 +182,7 @@ M.setup = function(opts)
     require("easy-dotnet.fs-mappings").add_test_signs()
   end
 
-  vim.iter(collect_commands_with_handles(commands)):each(function(name, handle)
+  polyfills.iter(collect_commands_with_handles(commands)):each(function(name, handle)
     M[name] = wrap(function(args, options) handle(args, options or require("easy-dotnet.options").options) end)
   end)
 
@@ -214,7 +215,7 @@ M.entity_framework = {
 
 M.is_dotnet_project = function()
   local project_files = require("easy-dotnet.parsers.sln-parse").get_solutions() or
-      require("easy-dotnet.parsers.csproj-parse").find_project_file()
+    require("easy-dotnet.parsers.csproj-parse").find_project_file()
   return project_files ~= nil
 end
 
