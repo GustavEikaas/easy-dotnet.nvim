@@ -121,6 +121,7 @@ M.build_project_quickfix = function(use_default, dotnet_args)
     local csproj = csproj_parse.find_project_file()
     if csproj == nil then
       vim.notify(messages.no_project_definition_found)
+      return
     end
     local command = string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", csproj, logPath, dotnet_args or "")
     M.pending = true
