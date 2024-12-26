@@ -36,26 +36,29 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
    - [Debugging tests from buffer](#debugging-tests-directly-from-buffer)
 8. [Outdated](#outdated)
    - [Requirements](#requirements)
-9. [Project mappings](#project-mappings)
-   - [Add reference](#add-reference)
-   - [Package autocomplete](#package-autocomplete)
-10. [New](#new)
+9. [Add](#add)
+   - [Add package](#add-package)
+10. [Project mappings](#project-mappings)
+    - [Add reference](#add-reference)
+    - [Package autocomplete](#package-autocomplete)
+11. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
     - [Integrating with neo-tree](#integrating-with-neo-tree)
-11. [EntityFramework](#entityframework)
+12. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
-12. [Language injections](#language-injections)
+13. [Language injections](#language-injections)
     - [Showcase](#showcase)
     - [Requirements](#requirements-2)
     - [Support matrix](#support-matrix)
-13. [Nvim-dap configuration](#nvim-dap-configuration)
+14. [Nvim-dap configuration](#nvim-dap-configuration)
     - [Basic example](#basic-example)
     - [Advanced example](#advanced-example)
-14. [Advanced configurations](#advanced-configurations)
+15. [Advanced configurations](#advanced-configurations)
     - [Overseer](#overseer)
+16. [Troubleshooting](#troubleshooting)
 
 ## Features
 
@@ -116,6 +119,7 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
     dotnet.setup({
       --Optional function to return the path for the dotnet sdk (e.g C:/ProgramFiles/dotnet/sdk/8.0.0)
       -- easy-dotnet will resolve the path automatically if this argument is omitted, for a performance improvement you can add a function that returns a hardcoded string
+      -- You should define this function to return a hardcoded path for a performance improvement 🚀
       get_sdk_path = get_sdk_path,
       ---@type TestRunnerOptions
       test_runner = {
@@ -409,6 +413,18 @@ Supports the following filetypes
 
 ### Requirements
 This functionality relies on dotnet-outdated-tool, install using `dotnet tool install -g dotnet-outdated-tool`
+
+## Add
+
+### Add package
+
+Adding nuget packages are available using the `:Dotnet add package` command. This will allow you to browse for nuget packages.
+
+![image](https://github.com/user-attachments/assets/00a9d38a-6afe-42ec-b971-04191fee1d59)
+
+### Requirements
+This functionality relies on `jq` so ensure that is installed on your system.
+
 
 ## Project mappings
 
@@ -1044,6 +1060,11 @@ return {
 }
 
 ```
+
+## Troubleshooting
+
+- Update the plugin to latest version
+- Run `:checkhealth easy-dotnet`
 
 ## Highlight groups
 
