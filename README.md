@@ -407,11 +407,11 @@ Gutter signs will appear indicating runnable tests
 
 ![image](https://github.com/user-attachments/assets/209aca03-397a-424f-973c-c53bae260031)
 
-## Project View
+## Project view
 
 Get a comprehensive overview of a project's dependencies, and easily manage NuGet packages and project references.
 
-![image](https://github.com/user-attachments/assets/39cf4968-2a6d-4b77-a950-bb2afd94eb69)
+![image](https://github.com/user-attachments/assets/2e0e2e25-0a2b-4864-bc3b-64b4048967e5)
 
 ### Features
 - **Project Details**: View project name, solution, language, and target version.
