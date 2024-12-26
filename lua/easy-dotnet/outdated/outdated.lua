@@ -1,11 +1,9 @@
-local polyfills = require "easy-dotnet.polyfills"
+local polyfills = require("easy-dotnet.polyfills")
 local M = {}
 
 local function readFile(filePath)
   local file = io.open(filePath, "r")
-  if not file then
-    return nil
-  end
+  if not file then return nil end
 
   local content = {}
   for line in file:lines() do
@@ -25,9 +23,7 @@ local function readPackageInfo(path, project_name)
   end
   local parsedJson = vim.fn.json_decode(table.concat(contents))
   for _, value in ipairs(parsedJson.Projects) do
-    if value.Name == project_name then
-      return value.TargetFrameworks[1].Dependencies
-    end
+    if value.Name == project_name then return value.TargetFrameworks[1].Dependencies end
   end
   return {}
 end
@@ -53,7 +49,6 @@ local function readSolutionPackagesInfo(path)
   return deps
 end
 
-
 local function find_package_reference_in_buffer(package_name)
   local buf = vim.api.nvim_get_current_buf()
 
@@ -63,9 +58,7 @@ local function find_package_reference_in_buffer(package_name)
 
   for line_number = 1, num_lines do
     local line = vim.api.nvim_buf_get_lines(buf, line_number - 1, line_number, false)[1]
-    if line and line:match(pattern) then
-      return line_number
-    end
+    if line and line:match(pattern) then return line_number end
   end
 
   return nil
@@ -94,7 +87,7 @@ M.outdated = function()
             return
           end
 
-          local bnr = vim.fn.bufnr('%')
+          local bnr = vim.fn.bufnr("%")
           local ns_id = require("easy-dotnet.constants").ns_id
           for _, value in ipairs(deps) do
             local line = find_package_reference_in_buffer(value.Name)
@@ -133,7 +126,7 @@ M.outdated = function()
             return
           end
 
-          local bnr = vim.fn.bufnr('%')
+          local bnr = vim.fn.bufnr("%")
           local ns_id = require("easy-dotnet.constants").ns_id
           for _, value in ipairs(deps) do
             local line = find_package_reference_in_buffer(value.Name)
@@ -153,8 +146,7 @@ M.outdated = function()
       end,
     })
   else
-    vim.notify("Current buffer is not *.csproj, *.fsproj, directory.packages.props or packages.props",
-      vim.log.levels.ERROR)
+    vim.notify("Current buffer is not *.csproj, *.fsproj, directory.packages.props or packages.props", vim.log.levels.ERROR)
   end
 end
 return M

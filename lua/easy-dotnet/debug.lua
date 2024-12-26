@@ -2,7 +2,7 @@ local M = {}
 
 M.write_to_log = function(message)
   --TODO: constants.get_data_dir
-  local log_path = vim.fn.stdpath "data" .. "/easy-dotnet-log.txt"
+  local log_path = vim.fn.stdpath("data") .. "/easy-dotnet-log.txt"
   -- Open the file in append mode
   local file, err = vim.loop.fs_open(log_path, "a", 438) -- 438 is the octal value for file permissions 0666
 
@@ -12,7 +12,7 @@ M.write_to_log = function(message)
   end
 
   -- Write the message to the file
-  if (type(message) == "table") then
+  if type(message) == "table" then
     vim.loop.fs_write(file, M.table_to_string(message) .. "\n", -1)
   elseif type(message) == "string" then
     vim.loop.fs_write(file, message .. "\n", -1)

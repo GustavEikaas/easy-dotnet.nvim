@@ -11,9 +11,7 @@ local polyfills = require("easy-dotnet.polyfills")
 ---@return table | nil
 local function readFile(filePath)
   local file = io.open(filePath, "r")
-  if not file then
-    return nil
-  end
+  if not file then return nil end
 
   local content = {}
   for line in file:lines() do
@@ -34,20 +32,18 @@ local secrets_preview = function(self, entry, get_secret_path)
     return
   end
   local content = readFile(get_secret_path(entry.value.secrets))
-  if content ~= nil then
-    vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, content)
-  end
+  if content ~= nil then vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, content) end
 end
 
 local function create_directory(dir)
-  if vim.loop.fs_stat(dir) == nil then                                         -- Check if directory exists
+  if vim.loop.fs_stat(dir) == nil then -- Check if directory exists
     assert(vim.loop.fs_mkdir(dir, 493), "Failed to create directory: " .. dir) -- 493 = 0755 permissions
   end
 end
 
 local function append_to_file(file, content)
   local fd = assert(vim.loop.fs_open(file, "a+", 420)) -- 420 = 0644 permissions
-  assert(vim.loop.fs_write(fd, content, -1))           -- Append content
+  assert(vim.loop.fs_write(fd, content, -1)) -- Append content
   vim.loop.fs_close(fd)
 end
 --- Initializes secrets for a given project
@@ -61,9 +57,7 @@ local init_secrets = function(project_file_path, get_secret_path)
   end
 
   local handler = io.popen("Dotnet user-secrets init --project " .. project_file_path)
-  if handler == nil then
-    error("Failed to create user-secrets for " .. project_file_path)
-  end
+  if handler == nil then error("Failed to create user-secrets for " .. project_file_path) end
   local value = handler:read("*a")
   local guid = extract_secret_guid(value)
   local path = get_secret_path(guid)
@@ -78,7 +72,7 @@ end
 
 local function csproj_fallback(get_secret_path)
   local csproj_path = csproj_parse.find_project_file()
-  if (csproj_path == nil) then
+  if csproj_path == nil then
     vim.notify(error_messages.no_project_definition_found)
     return
   end
@@ -101,9 +95,7 @@ M.edit_secrets_picker = function(get_secret_path)
     return
   end
 
-  local projectsWithSecrets = polyfills.tbl_filter(function(i)
-    return i.path ~= nil and i.runnable == true
-  end, sln_parse.get_projects_from_sln(solutionFilePath))
+  local projectsWithSecrets = polyfills.tbl_filter(function(i) return i.path ~= nil and i.runnable == true end, sln_parse.get_projects_from_sln(solutionFilePath))
 
   if #projectsWithSecrets == 0 then
     vim.notify(error_messages.no_runnable_projects_found)
@@ -117,9 +109,7 @@ M.edit_secrets_picker = function(get_secret_path)
     end
     local path = get_secret_path(item.secrets)
     vim.cmd("edit! " .. path)
-  end, "Secrets", function(self, entry)
-    secrets_preview(self, entry, get_secret_path)
-  end)
+  end, "Secrets", function(self, entry) secrets_preview(self, entry, get_secret_path) end)
 end
 
 return M

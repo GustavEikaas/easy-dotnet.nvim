@@ -7,9 +7,7 @@ M.ensure_directory_exists = function(path)
   if not stat then
     -- Directory doesn't exist, create it
     local success, err = uv.fs_mkdir(path, 511) -- 511 is 0777 in octal
-    if not success then
-      print("Failed to create directory: " .. err)
-    end
+    if not success then print("Failed to create directory: " .. err) end
   elseif stat.type ~= "directory" then
     print(path .. " exists but is not a directory!")
   end
@@ -28,9 +26,7 @@ M.ensure_json_file_exists = function(filepath)
       return
     end
     local content = "{}"
-    if content then
-      file:write(content)
-    end
+    if content then file:write(content) end
 
     file:close()
   end
@@ -44,9 +40,7 @@ M.overwrite_file = function(filepath, content)
     print("Failed to create the file: " .. filepath)
     return
   end
-  if content then
-    file:write(content)
-  end
+  if content then file:write(content) end
 
   file:close()
 end

@@ -78,9 +78,7 @@ local M = {}
 ---@class Iter
 local Iter = {}
 Iter.__index = Iter
-Iter.__call = function(self)
-  return self:next()
-end
+Iter.__call = function(self) return self:next() end
 
 --- Special case implementations for iterators on list tables.
 ---@nodoc
@@ -90,30 +88,24 @@ end
 ---@field _tail number Index to the end of a table iterator (exclusive)
 local ArrayIter = {}
 ArrayIter.__index = setmetatable(ArrayIter, Iter)
-ArrayIter.__call = function(self)
-  return self:next()
-end
+ArrayIter.__call = function(self) return self:next() end
 
 --- Packed tables use this as their metatable
 local packedmt = {}
 
 local function unpack(t)
-  if type(t) == 'table' and getmetatable(t) == packedmt then
-    return _G.unpack(t, 1, t.n)
-  end
+  if type(t) == "table" and getmetatable(t) == packedmt then return _G.unpack(t, 1, t.n) end
   return t
 end
 
 local function pack(...)
-  local n = select('#', ...)
-  if n > 1 then
-    return setmetatable({ n = n, ... }, packedmt)
-  end
+  local n = select("#", ...)
+  if n > 1 then return setmetatable({ n = n, ... }, packedmt) end
   return ...
 end
 
 local function sanitize(t)
-  if type(t) == 'table' and getmetatable(t) == packedmt then
+  if type(t) == "table" and getmetatable(t) == packedmt then
     -- Remove length tag and metatable
     t.n = nil
     setmetatable(t, nil)
@@ -129,16 +121,14 @@ end
 ---@param result table output table that contains flattened result
 ---@return table|nil flattened table if it can be flattened, otherwise nil
 local function flatten(t, max_depth, depth, result)
-  if depth < max_depth and type(t) == 'table' then
+  if depth < max_depth and type(t) == "table" then
     for k, v in pairs(t) do
-      if type(k) ~= 'number' or k <= 0 or math.floor(k) ~= k then
+      if type(k) ~= "number" or k <= 0 or math.floor(k) ~= k then
         -- short-circuit: this is not a list like table
         return nil
       end
 
-      if flatten(v, max_depth, depth + 1, result) == nil then
-        return nil
-      end
+      if flatten(v, max_depth, depth + 1, result) == nil then return nil end
     end
   elseif t ~= nil then
     result[#result + 1] = t
@@ -157,9 +147,7 @@ end
 ---@return boolean True if the iterator stage should continue, false otherwise
 ---@return any Function arguments.
 local function continue(...)
-  if select(1, ...) ~= nil then
-    return false, ...
-  end
+  if select(1, ...) ~= nil then return false, ... end
   return true
 end
 
@@ -173,9 +161,7 @@ end
 ---@return boolean True if the iterator pipeline should continue, false otherwise
 ---@return any Return values of f
 local function apply(f, ...)
-  if select(1, ...) ~= nil then
-    return continue(f(...))
-  end
+  if select(1, ...) ~= nil then return continue(f(...)) end
   return false
 end
 
@@ -193,9 +179,7 @@ end
 ---@return Iter
 function Iter:filter(f)
   return self:map(function(...)
-    if f(...) then
-      return ...
-    end
+    if f(...) then return ... end
   end)
 end
 
@@ -235,7 +219,7 @@ end
 ---@return Iter
 ---@diagnostic disable-next-line:unused-local
 function Iter:flatten(depth) -- luacheck: no unused args
-  error('flatten() requires an array-like table')
+  error("flatten() requires an array-like table")
 end
 
 ---@private
@@ -248,9 +232,7 @@ function ArrayIter:flatten(depth)
     local flattened = flatten(self._table[i], depth, 0, {})
 
     -- exit early if we try to flatten a dict-like table
-    if flattened == nil then
-      error('flatten() requires an array-like table')
-    end
+    if flattened == nil then error("flatten() requires an array-like table") end
 
     for _, v in pairs(flattened) do
       target[#target + 1] = v
@@ -316,15 +298,11 @@ function Iter:map(f)
   ---@param ... any Values to return if cont is false.
   ---@return any
   local function fn(cont, ...)
-    if cont then
-      return fn(apply(f, next(self)))
-    end
+    if cont then return fn(apply(f, next(self))) end
     return ...
   end
 
-  self.next = function()
-    return fn(apply(f, next(self)))
-  end
+  self.next = function() return fn(apply(f, next(self))) end
   return self
 end
 
@@ -400,9 +378,7 @@ function Iter:totable()
 
   while true do
     local args = pack(self:next())
-    if args == nil then
-      break
-    end
+    if args == nil then break end
 
     t[#t + 1] = sanitize(args)
   end
@@ -411,9 +387,7 @@ end
 
 ---@private
 function ArrayIter:totable()
-  if self.next ~= ArrayIter.next or self._head >= self._tail then
-    return Iter.totable(self)
-  end
+  if self.next ~= ArrayIter.next or self._head >= self._tail then return Iter.totable(self) end
 
   local needs_sanitize = getmetatable(self._table[self._head]) == packedmt
 
@@ -448,9 +422,7 @@ end
 ---
 --- @param delim string Delimiter
 --- @return string
-function Iter:join(delim)
-  return table.concat(self:totable(), delim)
-end
+function Iter:join(delim) return table.concat(self:totable(), delim) end
 
 --- Folds ("reduces") an iterator into a single value. [Iter:reduce()]()
 ---
@@ -549,9 +521,7 @@ end
 --- ```
 ---
 ---@return Iter
-function Iter:rev()
-  error('rev() requires an array-like table')
-end
+function Iter:rev() error("rev() requires an array-like table") end
 
 ---@private
 function ArrayIter:rev()
@@ -577,15 +547,11 @@ end
 --- ```
 ---
 ---@return any
-function Iter:peek()
-  error('peek() requires an array-like table')
-end
+function Iter:peek() error("peek() requires an array-like table") end
 
 ---@private
 function ArrayIter:peek()
-  if self._head ~= self._tail then
-    return self._table[self._head]
-  end
+  if self._head ~= self._tail then return self._table[self._head] end
 end
 
 --- Find the first value in the iterator that satisfies the given predicate.
@@ -612,11 +578,9 @@ end
 ---@param f any
 ---@return any
 function Iter:find(f)
-  if type(f) ~= 'function' then
+  if type(f) ~= "function" then
     local val = f
-    f = function(v)
-      return v == val
-    end
+    f = function(v) return v == val end
   end
 
   local result = nil
@@ -659,16 +623,14 @@ end
 ---@return any
 ---@diagnostic disable-next-line: unused-local
 function Iter:rfind(f) -- luacheck: no unused args
-  error('rfind() requires an array-like table')
+  error("rfind() requires an array-like table")
 end
 
 ---@private
 function ArrayIter:rfind(f)
-  if type(f) ~= 'function' then
+  if type(f) ~= "function" then
     local val = f
-    f = function(v)
-      return v == val
-    end
+    f = function(v) return v == val end
   end
 
   local inc = self._head < self._tail and 1 or -1
@@ -731,9 +693,7 @@ end
 --- ```
 ---
 ---@return any
-function Iter:pop()
-  error('pop() requires an array-like table')
-end
+function Iter:pop() error("pop() requires an array-like table") end
 
 --- @nodoc
 function ArrayIter:pop()
@@ -761,9 +721,7 @@ end
 ---@see Iter.last
 ---
 ---@return any
-function Iter:rpeek()
-  error('rpeek() requires an array-like table')
-end
+function Iter:rpeek() error("rpeek() requires an array-like table") end
 
 ---@nodoc
 function ArrayIter:rpeek()
@@ -798,9 +756,7 @@ end
 function ArrayIter:skip(n)
   local inc = self._head < self._tail and n or -n
   self._head = self._head + inc
-  if (inc > 0 and self._head > self._tail) or (inc < 0 and self._head < self._tail) then
-    self._head = self._tail
-  end
+  if (inc > 0 and self._head > self._tail) or (inc < 0 and self._head < self._tail) then self._head = self._tail end
   return self
 end
 
@@ -820,16 +776,14 @@ end
 ---@return Iter
 ---@diagnostic disable-next-line: unused-local
 function Iter:rskip(n) -- luacheck: no unused args
-  error('rskip() requires an array-like table')
+  error("rskip() requires an array-like table")
 end
 
 ---@private
 function ArrayIter:rskip(n)
   local inc = self._head < self._tail and n or -n
   self._tail = self._tail - inc
-  if (inc > 0 and self._head > self._tail) or (inc < 0 and self._head < self._tail) then
-    self._head = self._tail
-  end
+  if (inc > 0 and self._head > self._tail) or (inc < 0 and self._head < self._tail) then self._head = self._tail end
   return self
 end
 
@@ -872,13 +826,11 @@ end
 ---@return Iter
 ---@diagnostic disable-next-line: unused-local
 function Iter:slice(first, last) -- luacheck: no unused args
-  error('slice() requires an array-like table')
+  error("slice() requires an array-like table")
 end
 
 ---@private
-function ArrayIter:slice(first, last)
-  return self:skip(math.max(0, first - 1)):rskip(math.max(0, self._tail - last - 1))
-end
+function ArrayIter:slice(first, last) return self:skip(math.max(0, first - 1)):rskip(math.max(0, self._tail - last - 1)) end
 
 --- Returns true if any of the items in the iterator match the given predicate.
 ---
@@ -1018,13 +970,11 @@ end
 ---@private
 function Iter.new(src, ...)
   local it = {}
-  if type(src) == 'table' then
+  if type(src) == "table" then
     local mt = getmetatable(src)
-    if mt and type(mt.__call) == 'function' then
+    if mt and type(mt.__call) == "function" then
       ---@private
-      function it.next()
-        return src()
-      end
+      function it.next() return src() end
 
       setmetatable(it, Iter)
       return it
@@ -1034,15 +984,13 @@ function Iter.new(src, ...)
 
     -- O(n): scan the source table to decide if it is an array (only positive integer indices).
     for k, v in pairs(src) do
-      if type(k) ~= 'number' or k <= 0 or math.floor(k) ~= k then
-        return Iter.new(pairs(src))
-      end
+      if type(k) ~= "number" or k <= 0 or math.floor(k) ~= k then return Iter.new(pairs(src)) end
       t[#t + 1] = v -- Coerce to list-like table.
     end
     return ArrayIter.new(t)
   end
 
-  if type(src) == 'function' then
+  if type(src) == "function" then
     local s, var = ...
 
     --- Use a closure to handle var args returned from iterator
@@ -1056,13 +1004,11 @@ function Iter.new(src, ...)
     end
 
     ---@private
-    function it.next()
-      return fn(src(s, var))
-    end
+    function it.next() return fn(src(s, var)) end
 
     setmetatable(it, Iter)
   else
-    error('src must be a table or function')
+    error("src must be a table or function")
   end
   return it
 end
@@ -1083,8 +1029,5 @@ function ArrayIter.new(t)
 end
 
 return setmetatable(M, {
-  __call = function(_, ...)
-    return Iter.new(...)
-  end,
+  __call = function(_, ...) return Iter.new(...) end,
 }) --[[@as IterMod]]
-
