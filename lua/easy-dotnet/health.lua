@@ -1,3 +1,4 @@
+--checkhealth easy-dotnet
 local M = {}
 
 ---@param command  string | table<string>
@@ -15,11 +16,20 @@ local function ensure_dep_installed(command, advice)
 end
 
 
-local function ensure_nvim_dep_installed(pkg, advice)
+---@param required boolean | nil
+local function ensure_nvim_dep_installed(pkg, advice, required)
+  if required == nil then
+    required = true
+  end
+
   local advice_lines = type(advice) == "string" and { advice } or advice
   local success = pcall(function() require(pkg) end)
   if not success then
-    vim.health.error(pkg .. " not installed", advice_lines)
+    if not required then
+      vim.health.warn(pkg .. " not installed", advice_lines)
+    else
+      vim.health.error(pkg .. " not installed", advice_lines)
+    end
   else
     vim.health.ok(pkg .. " installed")
   end
@@ -33,6 +43,23 @@ local function measure_function(cb)
   return elapsed_time
 end
 
+
+local function check_coreclr_configured()
+  local success, s = pcall(function() return require("dap") end)
+  if not success or not s then
+    --verifying nvim-dap is done in another check
+    return
+  end
+  for key, _ in pairs(s.adapters) do
+    if key == "coreclr" then
+      vim.health.ok("coreclr is configured")
+      return
+    end
+  end
+  vim.health.error("coreclr is not configured",
+    { "https://github.com/GustavEikaas/easy-dotnet.nvim?tab=readme-ov-file#nvim-dap-configuration" })
+end
+
 M.check = function()
   vim.health.start("easy-dotnet CLI dependencies")
   ensure_dep_installed({ "dotnet", "-h" })
@@ -42,10 +69,15 @@ M.check = function()
 
   vim.health.start("easy-dotnet lua dependencies")
   ensure_nvim_dep_installed("plenary", "https://github.com/nvim-lua/plenary.nvim")
-  ensure_nvim_dep_installed("dap", "https://github.com/mfussenegger/nvim-dap")
+  ensure_nvim_dep_installed("dap", { "Some functionality will be disabled", "https://github.com/mfussenegger/nvim-dap" },
+    false)
   ensure_nvim_dep_installed("telescope", "https://github.com/nvim-telescope/telescope.nvim")
   ensure_nvim_dep_installed("roslyn",
-    { "If you are using another LSP you can safely ignore this warning", "https://github.com/seblj/roslyn.nvim" })
+    { "This is not required for this plugin but is a nice addition to the .Net developer experience",
+      "If you are using another LSP you can safely ignore this warning", "https://github.com/seblj/roslyn.nvim" }, false)
+
+  vim.health.start("easy-dotnet dap configuration (optional)")
+  check_coreclr_configured()
 
   vim.health.start("easy-dotnet configuration")
   local config = require("easy-dotnet.options").options
