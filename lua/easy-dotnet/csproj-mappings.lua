@@ -5,26 +5,22 @@ local polyfills = require("easy-dotnet.polyfills")
 local csproj = require("easy-dotnet.parsers.csproj-parse")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local error_messages = require("easy-dotnet.error-messages")
+local cli = require("easy-dotnet.dotnet_cli")
 
 
-local function notInList(list, value)
-  for _, it in ipairs(list) do
-    if it == value then
-      return false
-    end
-  end
-  return true
+local function not_in_list(list, value)
+  return not polyfills.tbl_contains(list, value)
 end
 
 -- Gives a picker for adding a project reference to a csproject
-local function add_project_reference(curr_project_path)
+function M.add_project_reference(curr_project_path, cb)
   local this_project = csproj.get_project_from_project_file(curr_project_path)
   local references = csproj.get_project_references_from_projects(curr_project_path)
 
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
     vim.notify(error_messages.no_project_definition_found)
-    return
+    return false
   end
 
   local all_projects = sln_parse.get_projects_from_sln(solutionFilePath)
@@ -32,19 +28,23 @@ local function add_project_reference(curr_project_path)
   local projects = {}
   -- Ignore current project and already referenced projects
   for _, value in ipairs(all_projects) do
-    if value.name ~= this_project.name and notInList(references, value.name) then
+    if value.name ~= this_project.name and not_in_list(references, value.name) then
       table.insert(projects, value)
     end
   end
 
   if #projects == 0 then
     vim.notify(error_messages.no_projects_found)
-    return
+    return false
   end
 
   picker.picker(nil, projects, function(i)
-    vim.fn.jobstart(string.format("dotnet add %s reference %s ", curr_project_path, i.path), {
+    local command = cli.add_project(curr_project_path, i.path)
+    vim.fn.jobstart(command, {
       on_exit = function(_, code)
+        if cb then
+          cb()
+        end
         if code ~= 0 then
           vim.notify("Command failed")
         else
@@ -54,7 +54,6 @@ local function add_project_reference(curr_project_path)
     })
   end, "Add project reference")
 end
-
 
 local function attach_mappings()
   vim.api.nvim_create_autocmd({ "BufReadPost" }, {
@@ -84,10 +83,10 @@ M.package_completion_cmp = {
     local inside_version = before_cursor:match(version_completion_pattern)
     if inside_include then
       local search_term = inside_include:gsub('%Include="', "")
+      local command = cli.package_search(search_term, true, false, 5)
       vim.fn.jobstart(
-        string.format(
-          "dotnet package search %s --take 5 --format json | jq '.searchResult | .[] | .packages | .[] | .id'",
-          search_term), {
+        string.format("%s | jq '.searchResult | .[] | .packages | .[] | .id'", command),
+        {
           stdout_buffered = true,
           on_stdout = function(_, data)
             local items = polyfills.tbl_map(function(i)
@@ -98,9 +97,9 @@ M.package_completion_cmp = {
         })
     elseif inside_version then
       local package_name = current_line:match('Include="([^"]+)"')
+      local command = cli.package_search(package_name, true, true)
       vim.fn.jobstart(
-        string.format(
-          "dotnet package search %s --exact-match --format json | jq '.searchResult[].packages[].version'", package_name),
+        string.format("%s | jq '.searchResult[].packages[].version'", command),
         {
           stdout_buffered = true,
           on_stdout = function(_, data)
