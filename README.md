@@ -416,7 +416,7 @@ This functionality relies on dotnet-outdated-tool, install using `dotnet tool in
 
 ### Add package
 
-Adding nuget packages are available using the `:Dotnet add package` command
+Adding nuget packages are available using the `:Dotnet add package` command. This will allow you to browse for nuget packages.
 
 ![image](https://github.com/user-attachments/assets/00a9d38a-6afe-42ec-b971-04191fee1d59)
 
