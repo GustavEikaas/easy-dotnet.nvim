@@ -73,6 +73,23 @@ M.run = {
   }
 }
 
+M.project = {
+  subcommands = {
+    view = {
+      handle = function()
+        require("easy-dotnet.project-view").open_or_toggle()
+      end,
+      subcommands = {
+        default = {
+          handle = function()
+            require("easy-dotnet.project-view").open_or_toggle_default()
+          end
+        }
+      }
+    }
+  }
+}
+
 M.add = {
   subcommands = {
     package = {

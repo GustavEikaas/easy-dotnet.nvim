@@ -461,9 +461,17 @@ function M.toggle()
   end
 end
 
+local function window_destroy()
+  if M.win and vim.api.nvim_win_is_valid(M.win) then
+    vim.api.nvim_win_close(M.win, true)
+  end
+  M.win = nil
+end
+
 ---@param project DotnetProject
 ---@param sln_path string | nil
 M.render = function(project, sln_path)
+  window_destroy()
   M.project = project
   M.sln_path = sln_path
   local isVisible = M.toggle()
