@@ -60,6 +60,21 @@ local function check_coreclr_configured()
     { "https://github.com/GustavEikaas/easy-dotnet.nvim?tab=readme-ov-file#nvim-dap-configuration" })
 end
 
+
+local function check_cmp()
+  local success, cmp = pcall(function() return require("cmp") end)
+  if success then
+    for _, value in ipairs(cmp.get_registered_sources()) do
+      if value.name == "easy-dotnet" then
+        vim.health.ok("cmp source configured correctly")
+        return
+      end
+    end
+    vim.health.warn("cmp source not configured",
+      { "https://github.com/GustavEikaas/easy-dotnet.nvim?tab=readme-ov-file#package-autocomplete" })
+  end
+end
+
 M.check = function()
   vim.health.start("easy-dotnet CLI dependencies")
   ensure_dep_installed({ "dotnet", "-h" })
@@ -83,11 +98,11 @@ M.check = function()
   vim.health.start("easy-dotnet configuration")
   local config = require("easy-dotnet.options").options
   local sdk_path_time = measure_function(config.get_sdk_path)
-
   if sdk_path_time > 1 then
     vim.health.warn(string.format("options.get_sdk_path took %d seconds", sdk_path_time),
       "You should add get_sdk_path to your options for a performance improvement🚀. Check readme")
   end
+  check_cmp()
 end
 
 return M
