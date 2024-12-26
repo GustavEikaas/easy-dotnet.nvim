@@ -215,12 +215,10 @@ M.entity_framework = {
 
 M.is_dotnet_project = function()
   local project_files = require("easy-dotnet.parsers.sln-parse").get_solutions() or
-    require("easy-dotnet.parsers.csproj-parse").find_project_file()
+      require("easy-dotnet.parsers.csproj-parse").find_project_file()
   return project_files ~= nil
 end
 
 M.package_completion_source = require("easy-dotnet.csproj-mappings").package_completion_cmp
-
-require("easy-dotnet.project-view")
 
 return M

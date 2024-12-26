@@ -65,7 +65,7 @@ local function discover_project_references(project)
     end,
     on_stdout = function(_, data, _)
       local projects = extract_projects(data)
-      if vim.tbl_isempty(projects) then
+      if #projects == 0 then
         M.project_refs = nil
       else
         M.project_refs = projects
