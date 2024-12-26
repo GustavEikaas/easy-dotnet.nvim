@@ -236,6 +236,16 @@ local function remove_package_keymap(ref)
   }
 end
 
+local function add_package_keymap()
+  return {
+    key = "a",
+    handler = function()
+      require("easy-dotnet.nuget").search_nuget(M.project.path)
+      discover_package_references(M.project)
+    end
+  }
+end
+
 local function add_project_keymap()
   return {
     key = "a",
@@ -312,7 +322,7 @@ local function stringify_project_header()
   else
     for _, ref in ipairs(M.package_refs) do
       table.insert(args,
-        { string.format("  %s", ref), "Question", { remove_package_keymap(ref), open_package_browser_keymap(ref) } })
+        { string.format("  %s", ref), "Question", { add_package_keymap(), remove_package_keymap(ref), open_package_browser_keymap(ref) } })
     end
   end
 
@@ -354,7 +364,9 @@ local function print_lines()
             for _, keymap in ipairs(value.keymap) do
               --Ensure keymap is valid for current key
               if keymap.key == key then
-                keymap.handler()
+                coroutine.wrap(function()
+                  keymap.handler()
+                end)()
               end
             end
           end
