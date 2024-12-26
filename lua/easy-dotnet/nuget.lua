@@ -95,6 +95,7 @@ end
 
 ---@param project_path string | nil
 local function add_package(package, project_path)
+  print("Getting versions...")
   local versions = polyfills.tbl_map(function(v)
     return { value = v, display = v }
   end, get_all_versions(package))
