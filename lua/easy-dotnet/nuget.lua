@@ -18,7 +18,6 @@ local function reverse_list(list)
   return reversed
 end
 
----@param cb function
 local function telescope_nuget_search()
   local co = coroutine.running()
   local val
@@ -32,7 +31,7 @@ local function telescope_nuget_search()
       end,
       entry_maker = function(line)
         --HACK: ohgod.jpeg
-        if line:find("id") == nil then
+        if line:find('"id":') == nil then
           return { valid = false }
         end
         local value = line:gsub('"id": "%s*([^"]+)%s*"', "%1"):match("^%s*(.-)%s*$"):gsub(",", "")
@@ -83,7 +82,7 @@ local function get_all_versions(package)
   return reverse_list(versions)
 end
 
-local function on_package_selected(package)
+local function add_package(package)
   local versions = polyfills.tbl_map(function(v)
     return { value = v, display = v }
   end, get_all_versions(package))
@@ -96,12 +95,25 @@ local function on_package_selected(package)
   end
   local projects = sln_parse.get_projects_from_sln(sln_file_path)
   local selected_project = picker.pick_sync(nil, projects, "Select a project", true)
+  vim.notify("Adding package...")
   local command = string.format("dotnet add %s package %s --version %s", selected_project.path, package,
     selected_version.value)
   vim.fn.jobstart(command, {
-    on_exit = function(_, code)
-      if code == 0 then
-        vim.notify(string.format("Installed %s@%s in %s", package, selected_version.value, selected_project.display))
+    on_exit = function(_, ex_code)
+      if ex_code == 0 then
+        vim.notify("Restoring packages...")
+        vim.fn.jobstart(string.format("dotnet restore %s", selected_project.path), {
+          on_exit = function(_, code)
+            if code ~= 0 then
+              vim.notify("Dotnet restore failed...", vim.log.levels.ERROR)
+              --Retry usings users terminal, this will present the error for them. Not sure if this is the correct design choice
+              require("easy-dotnet.options").options.terminal(selected_project.path, "restore", "")
+            else
+              vim.notify(string.format("Installed %s@%s in %s", package, selected_version.value, selected_project
+                .display))
+            end
+          end
+        })
       else
         vim.notify(
           string.format("Failed to install %s@%s in %s", package, selected_version.value, selected_project.display),
@@ -114,7 +126,7 @@ end
 M.search_nuget = function()
   -- fzf_nuget_search(on_package_selected)
   local package = telescope_nuget_search()
-  on_package_selected(package)
+  add_package(package)
 end
 
 return M
