@@ -34,31 +34,34 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
    - [Debugging tests](#debugging-tests)
    - [Running tests from buffer](#running-tests-directly-from-buffer)
    - [Debugging tests from buffer](#debugging-tests-directly-from-buffer)
-8. [Outdated](#outdated)
+8. [Project view](#project-view)
+   - [Features](#features)
+   - [Keymaps](#keymaps)
+9. [Outdated](#outdated)
    - [Requirements](#requirements)
-9. [Add](#add)
+10. [Add](#add)
    - [Add package](#add-package)
-10. [Project mappings](#project-mappings)
+11. [Project mappings](#project-mappings)
     - [Add reference](#add-reference)
     - [Package autocomplete](#package-autocomplete)
-11. [New](#new)
+12. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
     - [Integrating with neo-tree](#integrating-with-neo-tree)
-12. [EntityFramework](#entityframework)
+13. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
-13. [Language injections](#language-injections)
+14. [Language injections](#language-injections)
     - [Showcase](#showcase)
     - [Requirements](#requirements-2)
     - [Support matrix](#support-matrix)
-14. [Nvim-dap configuration](#nvim-dap-configuration)
+15. [Nvim-dap configuration](#nvim-dap-configuration)
     - [Basic example](#basic-example)
     - [Advanced example](#advanced-example)
-15. [Advanced configurations](#advanced-configurations)
+16. [Advanced configurations](#advanced-configurations)
     - [Overseer](#overseer)
-16. [Troubleshooting](#troubleshooting)
+17. [Troubleshooting](#troubleshooting)
 
 ## Features
 
@@ -227,6 +230,9 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 | `dotnet.build_default()` | `dotnet build <TS Default> <DArgs>` |
 | `dotnet.build_default_quickfix()` | `dotnet build <TS Default> <DArgs>` and opens build errors in the quickfix list |
 ||
+| `dotnet.project_view()` | Opens the project view |
+| `dotnet.project_view_default()` | Opens the project view for your default project |
+||
 | `dotnet.test()` | `dotnet test <TS> <DArgs>` |
 | `dotnet.test_solution()` | `dotnet test <TS> <DArgs>` |
 | `dotnet.test_default()` | `dotnet test <TS Default> <DArgs>` |
@@ -289,6 +295,8 @@ dotnet.build_solution()
 dotnet.build_quickfix()                 
 dotnet.build_default()                 
 dotnet.build_default_quickfix()       
+dotnet.project_view()
+dotnet.project_view_default()
 dotnet.run()
 dotnet.run_profile_default()
 dotnet.run_default()
@@ -317,6 +325,8 @@ Dotnet build quickfix
 Dotnet build solution
 Dotnet build default
 Dotnet build default quickfix
+Dotnet project view
+Dotnet project view default
 Dotnet ef database update
 Dotnet ef database update pick
 Dotnet ef database drop
@@ -333,6 +343,7 @@ Dotnet solution add
 Dotnet solution remove
 Dotnet outdated
 Dotnet reset
+checkhealth easy-dotnet
 ```
 
 ## Testrunner
@@ -396,6 +407,33 @@ Gutter signs will appear indicating runnable tests
 
 ![image](https://github.com/user-attachments/assets/209aca03-397a-424f-973c-c53bae260031)
 
+## Project View
+
+Get a comprehensive overview of a project's dependencies, and easily manage NuGet packages and project references.
+
+![image](https://github.com/user-attachments/assets/39cf4968-2a6d-4b77-a950-bb2afd94eb69)
+
+### Features
+- **Project Details**: View project name, solution, language, and target version.
+- **Project References**:
+  - View project references.
+  - Add or remove project references.
+- **NuGet Packages**:
+  - View package references.
+  - Add or remove NuGet package references.
+
+### Keymaps
+
+Keymaps are region-specific and work based on context (e.g., when hovering over a project/package or its header):
+
+#### Project References:
+- `a`: Add project reference.
+- `r`: Remove project reference.
+
+#### Package References:
+- `a`: Add package reference.
+- `r`: Remove package reference.
+- `<C-b>`: View package in browser.
 
 ## Outdated
 

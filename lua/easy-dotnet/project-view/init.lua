@@ -16,6 +16,7 @@ local function select_project(solution_file_path, cb)
 
   local proj = picker.picker(nil, projects, function(i)
     cb(i)
+    default_manager.set_default_project(i, solution_file_path, "view")
   end, "Select a project")
   return proj
 end
@@ -45,7 +46,6 @@ M.open_or_toggle_default = function()
   end
 
   select_project(sln_path, function(i)
-    default_manager.set_default_project(i, sln_path, "view")
     window.render(i, sln_path)
   end)
 end
