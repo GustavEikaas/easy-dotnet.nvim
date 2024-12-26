@@ -1,6 +1,6 @@
 local M = {}
 
-local polyfills = require "easy-dotnet.polyfills"
+local polyfills = require("easy-dotnet.polyfills")
 local fzf = require('fzf-lua')
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local pickers = require('telescope.pickers')
