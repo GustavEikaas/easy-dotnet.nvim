@@ -131,7 +131,6 @@ local function get_package_refs(project_path)
   local command = string.format("dotnet list %s package --format json | jq '[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]'", project_path)
   local out = vim.fn.system(command)
   local packages = vim.fn.json_decode(out)
-  print(vim.inspect(packages))
   return packages
 end
 
