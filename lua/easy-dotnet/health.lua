@@ -6,8 +6,8 @@ local M = {}
 local function ensure_dep_installed(command, advice)
   local exec = type(command) == "string" and { command } or command
   advice = advice or ""
-  vim.fn.system(exec)
-  if vim.v.shell_error == 0 then
+  local success = pcall(function() vim.fn.system(exec) end)
+  if success and vim.v.shell_error == 0 then
     vim.health.ok(exec[1] .. " is installed")
   else
     print("" .. vim.v.shell_error)
@@ -80,15 +80,11 @@ M.check = function()
   ensure_nvim_dep_installed("plenary", "https://github.com/nvim-lua/plenary.nvim")
   ensure_nvim_dep_installed("dap", { "Some functionality will be disabled", "https://github.com/mfussenegger/nvim-dap" }, false)
   ensure_nvim_dep_installed("telescope", "https://github.com/nvim-telescope/telescope.nvim")
-  ensure_nvim_dep_installed(
-    "roslyn",
-    {
-      "This is not required for this plugin but is a nice addition to the .Net developer experience",
-      "If you are using another LSP you can safely ignore this warning",
-      "https://github.com/seblj/roslyn.nvim",
-    },
-    false
-  )
+  ensure_nvim_dep_installed("roslyn", {
+    "This is not required for this plugin but is a nice addition to the .Net developer experience",
+    "If you are using another LSP you can safely ignore this warning",
+    "https://github.com/seblj/roslyn.nvim",
+  }, false)
 
   vim.health.start("easy-dotnet dap configuration (optional)")
   check_coreclr_configured()
