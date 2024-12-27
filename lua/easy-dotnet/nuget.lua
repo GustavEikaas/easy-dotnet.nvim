@@ -127,4 +127,31 @@ M.search_nuget = function(project_path)
   add_package(package, project_path)
 end
 
+local function get_package_refs(project_path)
+  local command = string.format("dotnet list %s package --format json | jq '[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]'", project_path)
+  local out = vim.fn.system(command)
+  local packages = vim.fn.json_decode(out)
+  print(vim.inspect(packages))
+  return packages
+end
+
+M.remove_nuget = function()
+  local project_path = get_project()
+  local packages = get_package_refs(project_path)
+  if true then return end
+  local choices = polyfills.tbl_map(function()end,)
+  local package = picker.pick_sync(nil, packages, "Pick package to remove", false).value
+  vim.fn.jobstart(string.format("dotnet remove %s package %s ", project_path, package), {
+    on_exit = function(_, code)
+      if code ~= 0 then
+        vim.notify("Command failed", vim.log.levels.ERROR)
+      else
+        vim.notify("Package removed " .. package)
+        --TODO: dotnet restore F&F
+        -- dotnet_restore(M.project, function() discover_package_references(M.project) end)
+      end
+    end,
+  })
+end
+
 return M
