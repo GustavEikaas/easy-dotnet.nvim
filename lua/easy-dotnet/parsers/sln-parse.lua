@@ -94,11 +94,35 @@ function M.remove_project_from_solution(slnpath)
   })
 end
 
+function M.get_projects_from_slnx(solution_file_path)
+  local file_contents = vim.fn.readfile(solution_file_path)
+  local regexp = '<Project Path="([^"]+)"'
+
+  local projectLines = polyfills.tbl_filter(function(line)
+    local path = line:match(regexp)
+    if path and (path:match("%.csproj$") or path:match("%.fsproj$")) then return true end
+    return false
+  end, file_contents)
+
+  local projects = polyfills.tbl_map(function(line)
+    local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
+    local path = line:match(regexp)
+    local project_file_path = generate_relative_path_for_project(path, solution_file_path)
+    local project = csproj_parser.get_project_from_project_file(project_file_path)
+    return project
+  end, projectLines)
+
+  return projects
+end
+
 -- TODO: Investigate using dotnet sln list command
----@param solutionFilePath string
+---@param solution_file_path string
 ---@return DotnetProject[]
-M.get_projects_from_sln = function(solutionFilePath)
-  local file_contents = vim.fn.readfile(solutionFilePath)
+M.get_projects_from_sln = function(solution_file_path)
+  local extension = vim.fn.fnamemodify(solution_file_path, ":e")
+  if extension == "slnx" then return M.get_projects_from_slnx(solution_file_path) end
+
+  local file_contents = vim.fn.readfile(solution_file_path)
   local regexp = 'Project%("{(.-)}"%).*= "(.-)", "(.-)", "{.-}"'
 
   local projectLines = polyfills.tbl_filter(function(line)
@@ -110,7 +134,7 @@ M.get_projects_from_sln = function(solutionFilePath)
   local projects = polyfills.tbl_map(function(line)
     local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
     local _, _, path = line:match(regexp)
-    local project_file_path = generate_relative_path_for_project(path, solutionFilePath)
+    local project_file_path = generate_relative_path_for_project(path, solution_file_path)
     local project = csproj_parser.get_project_from_project_file(project_file_path)
     return project
   end, projectLines)
@@ -120,8 +144,17 @@ end
 
 ---@return table<string>
 function M.get_solutions()
-  local files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.sln$", depth = 5 })
-  return files
+  local sln_files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.sln$", depth = 5 })
+  local slnx_files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.slnx$", depth = 5 })
+
+  local normalized = {}
+  for _, value in ipairs(sln_files) do
+    table.insert(normalized, value)
+  end
+  for _, value in ipairs(slnx_files) do
+    table.insert(normalized, value)
+  end
+  return normalized
 end
 
 M.try_get_selected_solution_file = function()
