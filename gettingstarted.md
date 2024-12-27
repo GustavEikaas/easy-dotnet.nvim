@@ -13,6 +13,7 @@ We use chocolatey as the package manager. To get up and running we need a few to
 > choco install dotnet-8.0-sdk
 > choco install git
 > choco install fzf
+> choco install jq
 ```
 
 ## Starting neovim
