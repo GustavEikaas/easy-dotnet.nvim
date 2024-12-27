@@ -8,23 +8,16 @@ local polyfills = require("easy-dotnet.polyfills")
 
 local function csproj_fallback(on_select)
   local csproj_path = csproj_parse.find_project_file()
-  if (csproj_path == nil) then
-    vim.notify("No .sln file or .csproj file found")
-  end
-  picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } },
-    function(i) on_select(i.path, "test") end, "Run test")
+  if csproj_path == nil then vim.notify("No .sln file or .csproj file found") end
+  picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i) on_select(i.path, "test") end, "Run test")
 end
 
 local function select_project(solution_file_path, cb, use_default)
   local default_manager = require("easy-dotnet.default-manager")
   local default = default_manager.check_default_project(solution_file_path, "test")
-  if default ~= nil and use_default == true then
-    return cb(default)
-  end
+  if default ~= nil and use_default == true then return cb(default) end
 
-  local projects = polyfills.tbl_filter(function(i) return i.isTestProject == true end,
-    sln_parse.get_projects_from_sln(solution_file_path))
-
+  local projects = polyfills.tbl_filter(function(i) return i.isTestProject == true end, sln_parse.get_projects_from_sln(solution_file_path))
 
   if #projects == 0 then
     vim.notify(error_messages.no_test_projects_found)
@@ -32,7 +25,7 @@ local function select_project(solution_file_path, cb, use_default)
   end
 
   local choices = {
-    { path = solution_file_path, display = "Solution", name = "Solution" }
+    { path = solution_file_path, display = "Solution", name = "Solution" },
   }
 
   for _, project in ipairs(projects) do
@@ -44,7 +37,6 @@ local function select_project(solution_file_path, cb, use_default)
     default_manager.set_default_project(project, solution_file_path, "test")
   end, "Run test(s)")
 end
-
 
 ---@param use_default boolean
 ---@param args string|nil
@@ -59,9 +51,7 @@ M.run_test_picker = function(term, use_default, args)
     return
   end
 
-  select_project(solutionFilePath, function(project)
-    term(project.path, "test", args)
-  end, use_default)
+  select_project(solutionFilePath, function(project) term(project.path, "test", args) end, use_default)
 end
 
 M.test_solution = function(term, args)
@@ -75,16 +65,13 @@ M.test_solution = function(term, args)
   term(solutionFilePath, "test", args or "")
 end
 
-
 M.test_watcher = function(icons)
   local dn = require("easy-dotnet.parsers").sln_parser
   local slnPath = dn.find_solution_file()
   local projects = dn.get_projects_from_sln(slnPath)
   local testProjects = {}
   for _, value in pairs(projects) do
-    if value.isTestProject then
-      table.insert(testProjects, value)
-    end
+    if value.isTestProject then table.insert(testProjects, value) end
   end
   local header_test_message = icons.test .. " Testing..." .. "\n\n"
 
@@ -107,7 +94,6 @@ M.test_watcher = function(icons)
     for _, value in pairs(state) do
       local icon = spinner_frames[i % #spinner_frames + 1]
       if value.state == "pending" then
-
       elseif value.state == "failed" then
         icon = icons.failed
       elseif value.state == "success" then
@@ -125,13 +111,9 @@ M.test_watcher = function(icons)
       on_exit = function(_, b, _)
         local curr = nil
         for _, stateValue in pairs(state) do
-          if value.name == stateValue.name then
-            curr = stateValue
-          end
+          if value.name == stateValue.name then curr = stateValue end
         end
-        if curr == nil then
-          error("blaaa")
-        end
+        if curr == nil then error("blaaa") end
         if b == 0 then
           curr.state = "success"
         else
@@ -142,8 +124,7 @@ M.test_watcher = function(icons)
       on_stdout = function()
         i = i + 1
         update_message(i)
-      end
-
+      end,
     })
   end
 end

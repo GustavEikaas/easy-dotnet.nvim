@@ -34,31 +34,34 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
    - [Debugging tests](#debugging-tests)
    - [Running tests from buffer](#running-tests-directly-from-buffer)
    - [Debugging tests from buffer](#debugging-tests-directly-from-buffer)
-8. [Outdated](#outdated)
+8. [Project view](#project-view)
+   - [Features](#features)
+   - [Keymaps](#keymaps)
+9. [Outdated](#outdated)
    - [Requirements](#requirements)
-9. [Add](#add)
-   - [Add package](#add-package)
-10. [Project mappings](#project-mappings)
+10. [Add](#add)
+    - [Add package](#add-package)
+11. [Project mappings](#project-mappings)
     - [Add reference](#add-reference)
     - [Package autocomplete](#package-autocomplete)
-11. [New](#new)
+12. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
     - [Integrating with neo-tree](#integrating-with-neo-tree)
-12. [EntityFramework](#entityframework)
+13. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
-13. [Language injections](#language-injections)
+14. [Language injections](#language-injections)
     - [Showcase](#showcase)
     - [Requirements](#requirements-2)
     - [Support matrix](#support-matrix)
-14. [Nvim-dap configuration](#nvim-dap-configuration)
+15. [Nvim-dap configuration](#nvim-dap-configuration)
     - [Basic example](#basic-example)
     - [Advanced example](#advanced-example)
-15. [Advanced configurations](#advanced-configurations)
+16. [Advanced configurations](#advanced-configurations)
     - [Overseer](#overseer)
-16. [Troubleshooting](#troubleshooting)
+17. [Troubleshooting](#troubleshooting)
 
 ## Features
 
@@ -227,12 +230,18 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 | `dotnet.build_default()` | `dotnet build <TS Default> <DArgs>` |
 | `dotnet.build_default_quickfix()` | `dotnet build <TS Default> <DArgs>` and opens build errors in the quickfix list |
 ||
+| `dotnet.project_view()` | Opens the project view |
+| `dotnet.project_view_default()` | Opens the project view for your default project |
+||
 | `dotnet.test()` | `dotnet test <TS> <DArgs>` |
 | `dotnet.test_solution()` | `dotnet test <TS> <DArgs>` |
 | `dotnet.test_default()` | `dotnet test <TS Default> <DArgs>` |
 ||
 | `dotnet.restore()` | `dotnet restore <sln> <Dargs>` |
 | `dotnet.clean()`                              | `dotnet clean <sln> <DArgs>`                                                                          |
+||
+| `dotnet.remove_package()`                              | |
+| `dotnet.add_package()`                              | |
 ||
 | `dotnet.testrunner()`                         | Shows or hides the testrunner                                                                                            |
 | `dotnet.testrunner_refresh()`                 | Refreshes the testrunner                                                                                                          |
@@ -276,6 +285,8 @@ dotnet.testrunner_refresh()
 dotnet.testrunner_refresh_build()
 dotnet.new()
 dotnet.outdated()
+dotnet.add_package()
+dotnet.remove_package()
 dotnet.solution_select()
 dotnet.ef_migrations_remove()
 dotnet.ef_migrations_add(name: string)
@@ -289,6 +300,8 @@ dotnet.build_solution()
 dotnet.build_quickfix()                 
 dotnet.build_default()                 
 dotnet.build_default_quickfix()       
+dotnet.project_view()
+dotnet.project_view_default()
 dotnet.run()
 dotnet.run_profile_default()
 dotnet.run_default()
@@ -317,6 +330,10 @@ Dotnet build quickfix
 Dotnet build solution
 Dotnet build default
 Dotnet build default quickfix
+Dotnet add package
+Dotnet remove package
+Dotnet project view
+Dotnet project view default
 Dotnet ef database update
 Dotnet ef database update pick
 Dotnet ef database drop
@@ -333,6 +350,7 @@ Dotnet solution add
 Dotnet solution remove
 Dotnet outdated
 Dotnet reset
+checkhealth easy-dotnet
 ```
 
 ## Testrunner
@@ -366,7 +384,8 @@ If you are experiencing issues with any test adapter please let me know
 - `<leader>d` -> `[Experimental]` Debug test under cursor using nvim-dap
 - `<leader>R` -> Run all tests
 - `<leader>p` -> Peek stacktrace on failed test
-- `<leader>fe` -> Show only failed tests
+- `<leader>fe` -> Show only failed tests
+
 - `g` -> Go to file
 - `q` -> Close window
 - `<leader>gf` -> Go to file (inside stacktrace float)
@@ -396,6 +415,33 @@ Gutter signs will appear indicating runnable tests
 
 ![image](https://github.com/user-attachments/assets/209aca03-397a-424f-973c-c53bae260031)
 
+## Project view
+
+Get a comprehensive overview of a project's dependencies, and easily manage NuGet packages and project references.
+
+![image](https://github.com/user-attachments/assets/2e0e2e25-0a2b-4864-bc3b-64b4048967e5)
+
+### Features
+- **Project Details**: View project name, solution, language, and target version.
+- **Project References**:
+  - View project references.
+  - Add or remove project references.
+- **NuGet Packages**:
+  - View package references.
+  - Add or remove NuGet package references.
+
+### Keymaps
+
+Keymaps are region-specific and work based on context (e.g., when hovering over a project/package or its header):
+
+#### Project References:
+- `a`: Add project reference.
+- `r`: Remove project reference.
+
+#### Package References:
+- `a`: Add package reference.
+- `r`: Remove package reference.
+- `<C-b>`: View package in browser.
 
 ## Outdated
 

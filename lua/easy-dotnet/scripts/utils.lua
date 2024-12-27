@@ -1,4 +1,4 @@
-local polyfills = require "easy-dotnet.polyfills"
+local polyfills = require("easy-dotnet.polyfills")
 local M = {}
 
 ---@param file file*
@@ -9,9 +9,7 @@ local function check_and_upgrade_script(file, filepath, script_template, script_
   local new_v = script_template:match("//v(%d+)")
   if v ~= new_v then
     local overwrite_file = io.open(filepath, "w+")
-    if overwrite_file == nil then
-      error("Failed to create the file: " .. filepath)
-    end
+    if overwrite_file == nil then error("Failed to create the file: " .. filepath) end
     vim.notify("Updating " .. script_name, vim.log.levels.INFO)
     overwrite_file:write(script_template)
     overwrite_file:close()
@@ -27,9 +25,7 @@ M.ensure_and_get_fsx_path = function(script_template, script_name)
     check_and_upgrade_script(file, filepath, script_template, script_name)
   else
     file = io.open(filepath, "w")
-    if file == nil then
-      error("Failed to create the file: " .. filepath)
-    end
+    if file == nil then error("Failed to create the file: " .. filepath) end
     file:write(script_template)
 
     file:close()
