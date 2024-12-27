@@ -138,17 +138,24 @@ end
 M.remove_nuget = function()
   local project_path = get_project()
   local packages = get_package_refs(project_path)
-  if true then return end
-  local choices = polyfills.tbl_map(function()end,)
-  local package = picker.pick_sync(nil, packages, "Pick package to remove", false).value
+  local choices = polyfills.tbl_map(function(i) return { display = i.name .. "@" .. i.version, value = i.name } end, packages)
+  local package = picker.pick_sync(nil, choices, "Pick package to remove", false).value
   vim.fn.jobstart(string.format("dotnet remove %s package %s ", project_path, package), {
     on_exit = function(_, code)
       if code ~= 0 then
         vim.notify("Command failed", vim.log.levels.ERROR)
       else
         vim.notify("Package removed " .. package)
-        --TODO: dotnet restore F&F
-        -- dotnet_restore(M.project, function() discover_package_references(M.project) end)
+        vim.fn.jobstart(string.format("dotnet restore %s", project_path), {
+          on_exit = function(_, ex_code)
+            if ex_code ~= 0 then
+              vim.notify("Failed to restore packages")
+              require("easy-dotnet.options").options.terminal(project_path, "restore", "")
+            else
+              vim.notify("Packages restored...")
+            end
+          end,
+        })
       end
     end,
   })
