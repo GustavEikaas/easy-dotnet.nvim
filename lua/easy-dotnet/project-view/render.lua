@@ -99,6 +99,10 @@ local function discover_package_references(project)
       if code ~= 0 then return end
     end,
     on_stdout = function(_, data, _)
+      if data[1] == "" then
+        M.package_refs = nil
+        return
+      end
       local package_refs = {}
       local packages = vim.fn.json_decode(data)
       for _, v in ipairs(packages) do
