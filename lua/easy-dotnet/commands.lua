@@ -78,6 +78,14 @@ M.add = {
   },
 }
 
+M.remove = {
+  subcommands = {
+    package = {
+      handle = function() require("easy-dotnet.nuget").remove_nuget() end,
+    },
+  },
+}
+
 M.secrets = {
   handle = function(_, options)
     local secrets = require("easy-dotnet.secrets")

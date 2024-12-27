@@ -127,4 +127,38 @@ M.search_nuget = function(project_path)
   add_package(package, project_path)
 end
 
+local function get_package_refs(project_path)
+  local command = string.format("dotnet list %s package --format json | jq '[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]'", project_path)
+  local out = vim.fn.system(command)
+  if vim.v.shell_error then vim.notify("Failed to get packages for " .. project_path, vim.log.levels.ERROR) end
+  local packages = vim.fn.json_decode(out)
+  return packages
+end
+
+M.remove_nuget = function()
+  local project_path = get_project()
+  local packages = get_package_refs(project_path)
+  local choices = polyfills.tbl_map(function(i) return { display = i.name .. "@" .. i.version, value = i.name } end, packages)
+  local package = picker.pick_sync(nil, choices, "Pick package to remove", false).value
+  vim.fn.jobstart(string.format("dotnet remove %s package %s ", project_path, package), {
+    on_exit = function(_, code)
+      if code ~= 0 then
+        vim.notify("Command failed", vim.log.levels.ERROR)
+      else
+        vim.notify("Package removed " .. package)
+        vim.fn.jobstart(string.format("dotnet restore %s", project_path), {
+          on_exit = function(_, ex_code)
+            if ex_code ~= 0 then
+              vim.notify("Failed to restore packages")
+              require("easy-dotnet.options").options.terminal(project_path, "restore", "")
+            else
+              vim.notify("Packages restored...")
+            end
+          end,
+        })
+      end
+    end,
+  })
+end
+
 return M
