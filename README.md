@@ -240,6 +240,9 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 | `dotnet.restore()` | `dotnet restore <sln> <Dargs>` |
 | `dotnet.clean()`                              | `dotnet clean <sln> <DArgs>`                                                                          |
 ||
+| `dotnet.remove_package()`                              | |
+| `dotnet.add_package()`                              | |
+||
 | `dotnet.testrunner()`                         | Shows or hides the testrunner                                                                                            |
 | `dotnet.testrunner_refresh()`                 | Refreshes the testrunner                                                                                                          |
 | `dotnet.testrunner_refresh_build()`           | Builds the sln, then refreshes the testrunner                                                                                   |
@@ -282,6 +285,8 @@ dotnet.testrunner_refresh()
 dotnet.testrunner_refresh_build()
 dotnet.new()
 dotnet.outdated()
+dotnet.add_package()
+dotnet.remove_package()
 dotnet.solution_select()
 dotnet.ef_migrations_remove()
 dotnet.ef_migrations_add(name: string)
@@ -325,6 +330,8 @@ Dotnet build quickfix
 Dotnet build solution
 Dotnet build default
 Dotnet build default quickfix
+Dotnet add package
+Dotnet remove package
 Dotnet project view
 Dotnet project view default
 Dotnet ef database update
