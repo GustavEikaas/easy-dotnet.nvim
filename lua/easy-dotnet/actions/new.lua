@@ -66,7 +66,7 @@ local function create_config_file(type)
   })
 end
 
-local projects = {
+local templates = {
   {
     display = "Solution file",
     type = "config",
@@ -207,21 +207,20 @@ local projects = {
 
 M.new = function()
   local picker = require("easy-dotnet.picker")
-  picker.picker(nil, projects, function(i)
-    if i.type == "project" then
-      vim.cmd("startinsert")
-      vim.ui.input({ prompt = string.format("Enter name for %s", i.display) }, function(input)
-        if input == nil then
-          vim.notify("No name provided")
-          return
-        end
-        vim.cmd("stopinsert")
-        i.run(input)
-      end)
-    else
-      i.run()
-    end
-  end, "Select type")
+  local template = picker.pick_sync(nil, templates, "Select type")
+  if template.type == "project" then
+    vim.cmd("startinsert")
+    vim.ui.input({ prompt = string.format("Enter name for %s", template.display) }, function(input)
+      if input == nil then
+        vim.notify("No name provided")
+        return
+      end
+      vim.cmd("stopinsert")
+      coroutine.wrap(function() template.run(input) end)()
+    end)
+  else
+    template.run()
+  end
 end
 
 local function name_input_sync()
