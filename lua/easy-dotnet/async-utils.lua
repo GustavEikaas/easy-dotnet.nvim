@@ -5,7 +5,8 @@ local M = {}
 --- @param cmd string[] Command and its arguments.
 --- @param callback JobCallback The callback function invoked with stdout, stderr, and exit code.
 M.job_run_async = function(cmd, callback)
-  local stdout_data = {}
+  local stdout_data = 
+  {}
   local stderr_data = {}
 
   local function on_exit(_, exit_code) callback(stdout_data, stderr_data, exit_code) end
