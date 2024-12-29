@@ -65,7 +65,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 
 ## Features
 
-- Solution, csproj and fsproj support: Whether its a single project or a solution containing multiple projects easy-dotnet has you covered.
+- Solution, slnx, csproj and fsproj support: Whether its a single project or a solution containing multiple projects easy-dotnet has you covered.
 - Action Commands: Execute common tasks like building, running, testing, cleaning and restoring with ease.
 - User Secrets Management: Edit, create, and preview .NET user secrets directly within Neovim.
 - Debugging Helpers: While easy-dotnet.nvim doesn't set up DAP (Debugger Adapter Protocol) for you, it provides useful helper functions for debugging. These include resolving the DLL you are debugging and rebuilding before launching DAP, ensuring a smooth debugging experience.

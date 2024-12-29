@@ -15,8 +15,9 @@ local function get_dotnet_new_args(name)
   local sln_path = sln_parse.find_solution_file()
   if sln_path == nil then return nil end
 
-  local folder_path = sln_path:gsub("[\\/][^\\/]*%.sln$", "")
-  local project_name = sln_path:match("[^\\/]+%.sln$"):gsub("%.sln$", "") .. "." .. name
+  local folder_path = vim.fs.dirname(sln_path)
+  local solution_name = vim.fn.fnamemodify(sln_path, ":t:r")
+  local project_name = solution_name .. "." .. name
   local output = polyfills.fs.joinpath(folder_path, project_name)
   return {
     sln_path = sln_path,
@@ -51,7 +52,7 @@ local function create_config_file(type)
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
   local sln_path = sln_parse.find_solution_file()
 
-  local folder_path = sln_path ~= nil and sln_path:gsub("[\\/][^\\/]*%.sln$", "") or nil
+  local folder_path = sln_path ~= nil and vim.fs.dirname(sln_path) or nil
   local output_arg = folder_path ~= nil and string.format("-o %s", folder_path) or ""
   vim.fn.jobstart(string.format("dotnet new %s %s", type, output_arg), {
     stdout_buffered = true,
@@ -65,7 +66,7 @@ local function create_config_file(type)
   })
 end
 
-local projects = {
+local templates = {
   {
     display = "Solution file",
     type = "config",
@@ -206,21 +207,20 @@ local projects = {
 
 M.new = function()
   local picker = require("easy-dotnet.picker")
-  picker.picker(nil, projects, function(i)
-    if i.type == "project" then
-      vim.cmd("startinsert")
-      vim.ui.input({ prompt = string.format("Enter name for %s", i.display) }, function(input)
-        if input == nil then
-          vim.notify("No name provided")
-          return
-        end
-        vim.cmd("stopinsert")
-        i.run(input)
-      end)
-    else
-      i.run()
-    end
-  end, "Select type")
+  local template = picker.pick_sync(nil, templates, "Select type")
+  if template.type == "project" then
+    vim.cmd("startinsert")
+    vim.ui.input({ prompt = string.format("Enter name for %s", template.display) }, function(input)
+      if input == nil then
+        vim.notify("No name provided")
+        return
+      end
+      vim.cmd("stopinsert")
+      coroutine.wrap(function() template.run(input) end)()
+    end)
+  else
+    template.run()
+  end
 end
 
 local function name_input_sync()
