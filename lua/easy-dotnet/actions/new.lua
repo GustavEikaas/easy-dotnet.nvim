@@ -246,6 +246,7 @@ M.create_new_item = function(path, cb)
   path = path or "."
   local template = require("easy-dotnet.picker").pick_sync(nil, {
     { value = "buildprops", display = "MSBuild Directory.Build.props File", type = "MSBuild/props" },
+    { value = "packagesprops", display = "MSBuild Directory.Packages.props File", type = "MSBuild/props" },
     { value = "buildtargets", display = "MSBuild Directory.Build.targets File", type = "MSBuild/props" },
     { value = "apicontroller", display = "Api Controller", type = "Code" },
     { value = "interface", display = "Interface", type = "Code" },
