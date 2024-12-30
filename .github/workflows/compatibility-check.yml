@@ -1,0 +1,23 @@
+name: nvim compatibility check
+
+on:
+  pull_request:
+
+jobs:
+  nvim-compatibility-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Search for vim.iter
+        run: |
+          echo "Searching the repository for occurrences of 'vim.iter('"
+          grep -rnw ./lua -e 'vim.iter(' --exclude="search_results.txt" > search_results.txt
+          if [ -s search_results.txt ]; then
+            echo "Found occurrences of 'vim.iter(':"
+            echo "use easy-dotnet.polyfills for neovim >= 0.10.0 functionality"
+            cat search_results.txt
+            exit 1
+          fi
+
