@@ -9,6 +9,7 @@ local finders = require("telescope.finders")
 local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
 local conf = require("telescope.config").values
+local logger = require("easy-dotnet.logger")
 
 local function reverse_list(list)
   local reversed = {}
@@ -79,7 +80,7 @@ end
 local function get_project()
   local sln_file_path = sln_parse.find_solution_file()
   if not sln_file_path then
-    vim.notify("No solution file found", vim.log.levels.ERROR)
+    logger.error("No solution file found")
     error("No solution file found")
   end
   local projects = sln_parse.get_projects_from_sln(sln_file_path)
@@ -92,27 +93,27 @@ local function add_package(package, project_path)
   local versions = polyfills.tbl_map(function(v) return { value = v, display = v } end, get_all_versions(package))
 
   local selected_version = picker.pick_sync(nil, versions, "Select a version", true)
-  vim.notify("Adding package...")
+  logger.info("Adding package...")
   local selected_project = project_path or get_project()
   local command = string.format("dotnet add %s package %s --version %s", selected_project, package, selected_version.value)
   local co = coroutine.running()
   vim.fn.jobstart(command, {
     on_exit = function(_, ex_code)
       if ex_code == 0 then
-        vim.notify("Restoring packages...")
+        logger.info("Restoring packages...")
         vim.fn.jobstart(string.format("dotnet restore %s", selected_project), {
           on_exit = function(_, code)
             if code ~= 0 then
-              vim.notify("Dotnet restore failed...", vim.log.levels.ERROR)
+              logger.error("Dotnet restore failed...")
               --Retry usings users terminal, this will present the error for them. Not sure if this is the correct design choice
               require("easy-dotnet.options").options.terminal(selected_project, "restore", "")
             else
-              vim.notify(string.format("Installed %s@%s in %s", package, selected_version.value, vim.fs.basename(selected_project)))
+              logger.info(string.format("Installed %s@%s in %s", package, selected_version.value, vim.fs.basename(selected_project)))
             end
           end,
         })
       else
-        vim.notify(string.format("Failed to install %s@%s in %s", package, selected_version.value, vim.fs.basename(selected_project)), vim.log.levels.ERROR)
+        logger.error(string.format("Failed to install %s@%s in %s", package, selected_version.value, vim.fs.basename(selected_project)))
       end
       coroutine.resume(co)
     end,
@@ -130,7 +131,7 @@ end
 local function get_package_refs(project_path)
   local command = string.format("dotnet list %s package --format json | jq '[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]'", project_path)
   local out = vim.fn.system(command)
-  if vim.v.shell_error then vim.notify("Failed to get packages for " .. project_path, vim.log.levels.ERROR) end
+  if vim.v.shell_error then logger.error("Failed to get packages for " .. project_path) end
   local packages = vim.fn.json_decode(out)
   return packages
 end
@@ -143,16 +144,16 @@ M.remove_nuget = function()
   vim.fn.jobstart(string.format("dotnet remove %s package %s ", project_path, package), {
     on_exit = function(_, code)
       if code ~= 0 then
-        vim.notify("Command failed", vim.log.levels.ERROR)
+        logger.error("Command failed")
       else
-        vim.notify("Package removed " .. package)
+        logger.info("Package removed " .. package)
         vim.fn.jobstart(string.format("dotnet restore %s", project_path), {
           on_exit = function(_, ex_code)
             if ex_code ~= 0 then
-              vim.notify("Failed to restore packages")
+              logger.error("Failed to restore packages")
               require("easy-dotnet.options").options.terminal(project_path, "restore", "")
             else
-              vim.notify("Packages restored...")
+              logger.info("Packages restored...")
             end
           end,
         })

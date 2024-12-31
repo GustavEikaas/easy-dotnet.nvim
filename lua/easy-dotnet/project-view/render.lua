@@ -1,5 +1,6 @@
 local ns_id = require("easy-dotnet.constants").ns_id
 local polyfills = require("easy-dotnet.polyfills")
+local logger = require("easy-dotnet.logger")
 
 ---@class ProjectWindow
 ---@field jobs table
@@ -77,7 +78,7 @@ local function dotnet_restore(project, cb)
       M.refresh()
       cb()
       if code ~= 0 then
-        vim.notify("Dotnet restore failed", vim.log.levels.ERROR)
+        logger.error("Dotnet restore failed")
         return
       end
     end,
@@ -209,9 +210,9 @@ local function remove_package_keymap(ref)
         on_exit = function(_, code)
           cleanup()
           if code ~= 0 then
-            vim.notify("Command failed", vim.log.levels.ERROR)
+            logger.error("Command failed")
           else
-            vim.notify("Package removed " .. package_name)
+            logger.info("Package removed " .. package_name)
             dotnet_restore(M.project, function() discover_package_references(M.project) end)
           end
         end,
@@ -255,9 +256,9 @@ local function remove_project_keymap(ref)
         on_exit = function(_, code)
           cleanup()
           if code ~= 0 then
-            vim.notify("Command failed", vim.log.levels.ERROR)
+            logger.error("Command failed")
           else
-            vim.notify("Project removed " .. ref)
+            logger.info("Project removed " .. ref)
             discover_project_references(M.project)
           end
         end,

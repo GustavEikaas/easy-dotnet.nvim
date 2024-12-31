@@ -3,6 +3,7 @@ local debug = require("easy-dotnet.debugger")
 local constants = require("easy-dotnet.constants")
 local commands = require("easy-dotnet.commands")
 local polyfills = require("easy-dotnet.polyfills")
+local logger = require("easy-dotnet.logger")
 
 local M = {}
 local function wrap(callback)
@@ -54,7 +55,7 @@ local function present_command_picker()
     if selected then
       vim.cmd("Dotnet " .. selected)
     else
-      vim.notify("No command selected", vim.log.levels.INFO)
+      logger.info("No command selected")
     end
   end)
 end
