@@ -1,3 +1,4 @@
+local logger = require "easy-dotnet.logger"
 local M = {}
 
 local function find_csproj_for_cs_file(cs_file_path, maxdepth)
@@ -93,7 +94,7 @@ local function auto_bootstrap_namespace(bufnr, mode)
 
   local csproject_file_path = find_csproj_for_cs_file(curr_file, max_depth)
   if not csproject_file_path then
-    vim.notify("Failed to bootstrap namespace, csproject file not found", vim.log.levels.WARN)
+    logger.warn("Failed to bootstrap namespace, csproject file not found")
     return
   end
   local namespace = generate_csharp_namespace(curr_file, csproject_file_path, max_depth)

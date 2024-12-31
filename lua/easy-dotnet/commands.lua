@@ -1,3 +1,4 @@
+local logger = require "easy-dotnet.logger"
 ---@type table<string,Command>
 local M = {}
 
@@ -194,8 +195,9 @@ M.new = {
 M.reset = {
   handle = function()
     local dir = require("easy-dotnet.constants").get_data_directory()
+    --TODO: error handling?
     require("plenary.path"):new(dir):rm({ recursive = true })
-    vim.notify("Cached files deleted")
+    logger.info("Cached files deleted")
   end,
 }
 

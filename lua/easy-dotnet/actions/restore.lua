@@ -1,5 +1,6 @@
 local M = {}
 local parsers = require("easy-dotnet.parsers")
+local logger  = require("easy-dotnet.logger")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
@@ -10,7 +11,7 @@ M.restore = function(term, args)
   term = term or require("easy-dotnet.options").options.terminal
   local project = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if project == nil then
-    vim.notify(error_messages.no_project_definition_found)
+    logger.error(error_messages.no_project_definition_found)
     return
   end
 

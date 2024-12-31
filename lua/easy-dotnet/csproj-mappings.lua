@@ -6,6 +6,7 @@ local csproj = require("easy-dotnet.parsers.csproj-parse")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local error_messages = require("easy-dotnet.error-messages")
 local cli = require("easy-dotnet.dotnet_cli")
+local logger = require("easy-dotnet.logger")
 
 local function not_in_list(list, value) return not polyfills.tbl_contains(list, value) end
 
@@ -16,7 +17,7 @@ function M.add_project_reference(curr_project_path, cb)
 
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
-    vim.notify(error_messages.no_project_definition_found)
+    logger.error(error_messages.no_project_definition_found)
     return false
   end
 
@@ -29,7 +30,7 @@ function M.add_project_reference(curr_project_path, cb)
   end
 
   if #projects == 0 then
-    vim.notify(error_messages.no_projects_found)
+    logger.error(error_messages.no_projects_found)
     return false
   end
 
@@ -39,7 +40,7 @@ function M.add_project_reference(curr_project_path, cb)
       on_exit = function(_, code)
         if cb then cb() end
         if code ~= 0 then
-          vim.notify("Command failed")
+          logger.error("Command failed")
         else
           vim.cmd("checktime")
         end

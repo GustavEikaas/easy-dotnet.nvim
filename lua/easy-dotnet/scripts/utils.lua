@@ -1,4 +1,5 @@
 local polyfills = require("easy-dotnet.polyfills")
+local logger    = require("easy-dotnet.logger")
 local M = {}
 
 ---@param file file*
@@ -10,7 +11,7 @@ local function check_and_upgrade_script(file, filepath, script_template, script_
   if v ~= new_v then
     local overwrite_file = io.open(filepath, "w+")
     if overwrite_file == nil then error("Failed to create the file: " .. filepath) end
-    vim.notify("Updating " .. script_name, vim.log.levels.INFO)
+    logger.info("Updating " .. script_name)
     overwrite_file:write(script_template)
     overwrite_file:close()
   end

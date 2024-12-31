@@ -1,5 +1,6 @@
 local extensions = require("easy-dotnet.extensions")
 local polyfills = require("easy-dotnet.polyfills")
+local logger    = require("easy-dotnet.logger")
 local M = {}
 
 ---@class DotnetProject
@@ -51,7 +52,7 @@ M.get_project_references_from_projects = function(project_path)
 
   local exit_code = vim.v.shell_error
   if exit_code ~= 0 then
-    vim.notify("Command failed")
+    logger.error("Command failed")
     return {}
   end
   return projects

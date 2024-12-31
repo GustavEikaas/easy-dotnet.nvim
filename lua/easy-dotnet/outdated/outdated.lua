@@ -1,4 +1,5 @@
 local polyfills = require("easy-dotnet.polyfills")
+local logger    = require("easy-dotnet.logger")
 local M = {}
 
 local function readFile(filePath)
@@ -83,7 +84,7 @@ M.outdated = function()
           end
 
           if #deps == 0 then
-            vim.notify("All packages are up to date", vim.log.levels.INFO)
+            logger.info("All packages are up to date")
             return
           end
 
@@ -98,11 +99,11 @@ M.outdated = function()
                 priority = 200,
               })
             else
-              vim.notify("Failed to find package " .. value.Name, vim.log.levels.DEBUG)
+              logger.warn("Failed to find package " .. value.Name)
             end
           end
         else
-          vim.notify("Dotnet outdated tool not installed")
+          logger.error("Dotnet outdated tool not installed")
         end
       end,
     })
@@ -122,7 +123,7 @@ M.outdated = function()
           end
 
           if #deps == 0 then
-            vim.notify("All packages are up to date", vim.log.levels.INFO)
+            logger.info("All packages are up to date")
             return
           end
 
@@ -137,16 +138,16 @@ M.outdated = function()
                 priority = 200,
               })
             else
-              vim.notify("Failed to find package " .. value.Name, vim.log.levels.DEBUG)
+              logger.warn("Failed to find package " .. value.Name)
             end
           end
         else
-          vim.notify("Dotnet outdated tool not installed")
+          logger.info("Dotnet outdated tool not installed")
         end
       end,
     })
   else
-    vim.notify("Current buffer is not *.csproj, *.fsproj, directory.packages.props or packages.props", vim.log.levels.ERROR)
+    logger.error("Current buffer is not *.csproj, *.fsproj, directory.packages.props or packages.props")
   end
 end
 return M

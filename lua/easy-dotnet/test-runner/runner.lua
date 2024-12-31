@@ -1,4 +1,5 @@
 local polyfills = require("easy-dotnet.polyfills")
+local logger    = require("easy-dotnet.logger")
 local M = {}
 
 ---@class TestNode
@@ -150,7 +151,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
       on_job_finished()
       if code ~= 0 then
         --TODO: check if project was not built
-        vim.notify(string.format("Discovering tests for %s failed", project.name))
+        logger.error(string.format("Discovering tests for %s failed", project.name))
       else
         local file = io.open(outfile)
         if file == nil then error("Discovery script emitted no file for " .. project.name) end
@@ -201,20 +202,20 @@ end
 
 local function refresh_runner(options, win, solutionFilePath, sdk_path)
   if #win.jobs > 0 then
-    vim.notify("Cant refresh while waiting for pending jobs", vim.log.levels.WARN)
+    logger.warn("Cant refresh while waiting for pending jobs")
     return
   end
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
   local async = require("easy-dotnet.async-utils")
 
   if options.noRestore == false then
-    vim.notify("Restoring")
+    logger.info("Restoring")
     local _, restore_err, restore_code = async.await(async.job_run_async)({ "dotnet", "restore", solutionFilePath })
 
     if restore_code ~= 0 then error("Restore failed " .. vim.inspect(restore_err)) end
   end
   if options.noBuild == false then
-    vim.notify("Building")
+    logger.info("Building")
     local _, build_err, build_code = async.await(async.job_run_async)({ "dotnet", "build", solutionFilePath, "--no-restore" })
     if build_code ~= 0 then error("Build failed " .. vim.inspect(build_err)) end
   end
@@ -287,7 +288,7 @@ local function open_runner(options, sdk_path)
 
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if solutionFilePath == nil then
-    vim.notify(error_messages.no_project_definition_found)
+    logger.error(error_messages.no_project_definition_found)
     return
   end
 
@@ -311,7 +312,7 @@ M.refresh = function(options, sdk_path, args)
 
   local win = require("easy-dotnet.test-runner.render")
   if #win.jobs > 0 then
-    vim.notify("Cant refresh while waiting for pending jobs", vim.log.levels.WARN)
+    logger.warn("Cant refresh while waiting for pending jobs")
     return
   end
 
@@ -321,7 +322,7 @@ M.refresh = function(options, sdk_path, args)
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
 
   if solutionFilePath == nil then
-    vim.notify(error_messages.no_project_definition_found)
+    logger.error(error_messages.no_project_definition_found)
     return
   end
 
@@ -333,9 +334,9 @@ M.refresh = function(options, sdk_path, args)
       on_exit = function(_, b, _)
         coroutine.resume(co)
         if b == 0 then
-          vim.notify("Built successfully")
+          logger.info("Built successfully")
         else
-          vim.notify("Build failed", vim.log.levels.ERROR)
+          logger.error("Build failed")
         end
       end,
     })

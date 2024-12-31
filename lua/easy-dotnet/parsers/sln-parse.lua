@@ -1,4 +1,5 @@
 local polyfills = require("easy-dotnet.polyfills")
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 -- Generates a relative path from cwd to the project.csproj file
@@ -55,9 +56,9 @@ function M.add_project_to_solution(slnpath)
     stderr_buffered = true,
     on_exit = function(_, exit_code)
       if exit_code == 0 then
-        vim.schedule(function() vim.notify("Success") end)
+        vim.schedule(function() logger.info("Success") end)
       else
-        vim.schedule(function() vim.notify("Failed to add project to solution", vim.log.levels.ERROR) end)
+        vim.schedule(function() logger.error("Failed to add project to solution") end)
       end
     end,
   })
@@ -86,9 +87,9 @@ function M.remove_project_from_solution(slnpath)
     stderr_buffered = true,
     on_exit = function(_, exit_code)
       if exit_code == 0 then
-        vim.schedule(function() vim.notify("Success") end)
+        vim.schedule(function() logger.info("Success") end)
       else
-        vim.schedule(function() vim.notify("Failed to remove project from solution", vim.log.levels.ERROR) end)
+        vim.schedule(function() logger.error("Failed to remove project from solution") end)
       end
     end,
   })

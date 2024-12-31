@@ -1,9 +1,10 @@
+local logger = require "easy-dotnet.logger"
 local M = {}
 
 ---@param migration_name string
 M.add_migration = function(migration_name)
   if not migration_name then
-    vim.notify("Migration name required", vim.log.levels.ERROR)
+    logger.error("Migration name required")
     return
   end
   local selections = require("easy-dotnet.ef-core.utils").pick_projects()
@@ -50,8 +51,6 @@ M.list_migrations = function()
   local startup_project = selections.startup_project
 
   local cmd = string.format("dotnet ef migrations list --prefix-output --project %s --startup-project %s", project.path, startup_project.path)
-  vim.notify(cmd)
-
   local migrations = {}
   local spinner = require("easy-dotnet.ui-modules.spinner").new()
   spinner:start_spinner("Loading migrations")

@@ -1,11 +1,12 @@
 local polyfills = require("easy-dotnet.polyfills")
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 local function sln_add_project(sln_path, project)
   vim.fn.jobstart(string.format("dotnet sln %s add %s", sln_path, project), {
     stdout_buffered = true,
     on_exit = function(_, b)
-      if b ~= 0 then vim.notify("Failed to link project to solution") end
+      if b ~= 0 then logger.error("Failed to link project to solution") end
     end,
   })
 end
@@ -39,9 +40,9 @@ local function create_and_link_project(name, type)
     stdout_buffered = true,
     on_exit = function(_, code)
       if code ~= 0 then
-        vim.notify("Failed to create project", vim.log.levels.ERROR)
+        logger.error("Failed to create project")
       else
-        vim.notify("Project created")
+        logger.info("Project created")
         if args.sln_path ~= nil then sln_add_project(args.sln_path, args.output) end
       end
     end,
@@ -58,9 +59,9 @@ local function create_config_file(type)
     stdout_buffered = true,
     on_exit = function(_, code)
       if code ~= 0 then
-        vim.notify("Command failed")
+        logger.error("Command failed")
       else
-        vim.notify("Config file created")
+        logger.info("Config file created")
       end
     end,
   })
@@ -85,9 +86,9 @@ local templates = {
         stdout_buffered = true,
         on_exit = function(_, code)
           if code ~= 0 then
-            vim.notify("Command failed")
+            logger.error("Command failed")
           else
-            vim.notify(".gitignore file created")
+            logger.info(".gitignore file created")
           end
         end,
       })
@@ -210,9 +211,10 @@ M.new = function()
   local template = picker.pick_sync(nil, templates, "Select type")
   if template.type == "project" then
     vim.cmd("startinsert")
+    --TODO: telescope
     vim.ui.input({ prompt = string.format("Enter name for %s", template.display) }, function(input)
       if input == nil then
-        vim.notify("No name provided")
+        logger.error("No name provided")
         return
       end
       vim.cmd("stopinsert")
@@ -227,9 +229,10 @@ local function name_input_sync()
   local name = ""
   local co = coroutine.running()
   vim.cmd("startinsert")
+  --TODO: telescope
   vim.ui.input({ prompt = "Enter name" }, function(input)
     if input == nil then
-      vim.notify("No name provided")
+      logger.error("No name provided")
       return
     end
     vim.cmd("stopinsert")
@@ -287,13 +290,13 @@ M.create_new_item = function(path, cb)
   vim.fn.jobstart(cmd, {
     on_stderr = function(_, data)
       for _, value in ipairs(data) do
-        vim.notify(value, vim.log.levels.ERROR)
+        logger.error(value)
       end
     end,
     on_exit = function(_, code)
       if code == 0 then
       else
-        vim.notify("Command failed")
+        logger.error("Command failed")
       end
       if cb then cb() end
     end,

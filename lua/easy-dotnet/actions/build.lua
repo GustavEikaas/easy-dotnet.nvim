@@ -1,6 +1,8 @@
 local M = {
   pending = false,
 }
+
+local logger = require("easy-dotnet.logger")
 local picker = require("easy-dotnet.picker")
 local parsers = require("easy-dotnet.parsers")
 local messages = require("easy-dotnet.error-messages")
@@ -17,7 +19,7 @@ local function select_project(solution_file_path, cb, use_default)
   local projects = sln_parse.get_projects_from_sln(solution_file_path)
 
   if #projects == 0 then
-    vim.notify(error_messages.no_projects_found)
+    logger.error(error_messages.no_projects_found)
     return
   end
   local choices = {
@@ -37,7 +39,7 @@ end
 local function csproj_fallback(term)
   local csproj_path = csproj_parse.find_project_file()
   if csproj_path == nil then
-    vim.notify(error_messages.no_project_definition_found)
+    logger.error(error_messages.no_project_definition_found)
     return
   end
   picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i) term(i.path, "build", "") end, "Build project(s)")
@@ -101,7 +103,7 @@ M.build_project_quickfix = function(use_default, dotnet_args)
   dotnet_args = dotnet_args or ""
 
   if M.pending == true then
-    vim.notify("Build already pending...", vim.log.levels.ERROR)
+    logger.error("Build already pending...")
     return
   end
   local data_dir = require("easy-dotnet.constants").get_data_directory()
@@ -111,7 +113,7 @@ M.build_project_quickfix = function(use_default, dotnet_args)
   if solutionFilePath == nil then
     local csproj = csproj_parse.find_project_file()
     if csproj == nil then
-      vim.notify(messages.no_project_definition_found)
+      logger.error(messages.no_project_definition_found)
       return
     end
     local command = string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", csproj, logPath, dotnet_args or "")
@@ -120,9 +122,9 @@ M.build_project_quickfix = function(use_default, dotnet_args)
       on_exit = function(_, b, _)
         M.pending = false
         if b == 0 then
-          vim.notify("Built successfully")
+          logger.info("Built successfully")
         else
-          vim.notify("Build failed")
+          logger.info("Build failed")
           populate_quickfix_from_file(logPath)
         end
       end,
@@ -157,7 +159,7 @@ M.build_solution = function(term, args)
 
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if solutionFilePath == nil then
-    vim.notify(error_messages.no_project_definition_found)
+    logger.error(error_messages.no_project_definition_found)
     return
   end
   term(solutionFilePath, "build", args or "")
