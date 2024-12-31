@@ -3,7 +3,7 @@ local debug = require("easy-dotnet.debugger")
 local constants = require("easy-dotnet.constants")
 local commands = require("easy-dotnet.commands")
 local polyfills = require("easy-dotnet.polyfills")
-local logger    = require("easy-dotnet.logger")
+local logger = require("easy-dotnet.logger")
 
 local M = {}
 local function wrap(callback)

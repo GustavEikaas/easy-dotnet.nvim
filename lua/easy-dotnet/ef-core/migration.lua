@@ -1,4 +1,4 @@
-local logger = require "easy-dotnet.logger"
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 ---@param migration_name string

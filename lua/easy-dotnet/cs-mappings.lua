@@ -1,4 +1,4 @@
-local logger = require "easy-dotnet.logger"
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 local function find_csproj_for_cs_file(cs_file_path, maxdepth)

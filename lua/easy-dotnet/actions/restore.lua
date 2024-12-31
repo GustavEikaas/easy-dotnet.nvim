@@ -1,6 +1,6 @@
 local M = {}
 local parsers = require("easy-dotnet.parsers")
-local logger  = require("easy-dotnet.logger")
+local logger = require("easy-dotnet.logger")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")

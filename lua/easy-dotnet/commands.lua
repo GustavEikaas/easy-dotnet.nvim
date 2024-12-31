@@ -1,4 +1,4 @@
-local logger = require "easy-dotnet.logger"
+local logger = require("easy-dotnet.logger")
 ---@type table<string,Command>
 local M = {}
 

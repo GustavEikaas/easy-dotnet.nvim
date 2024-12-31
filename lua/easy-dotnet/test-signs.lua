@@ -1,5 +1,5 @@
 local polyfills = require("easy-dotnet.polyfills")
-local logger    = require("easy-dotnet.logger")
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 local function compare_paths(path1, path2) return vim.fs.normalize(path1):lower() == vim.fs.normalize(path2):lower() end

@@ -1,6 +1,6 @@
 local extensions = require("easy-dotnet.extensions")
 local polyfills = require("easy-dotnet.polyfills")
-local logger    = require("easy-dotnet.logger")
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 ---@class DotnetProject
