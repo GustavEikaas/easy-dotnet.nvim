@@ -1,5 +1,6 @@
 local M = {}
 local parsers = require("easy-dotnet.parsers")
+local logger = require("easy-dotnet.logger")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local picker = require("easy-dotnet.picker")
@@ -56,6 +57,7 @@ local init_secrets = function(project_file_path, get_secret_path)
     return guid
   end
 
+  --TODO: vim.fn.system
   local handler = io.popen("Dotnet user-secrets init --project " .. project_file_path)
   if handler == nil then error("Failed to create user-secrets for " .. project_file_path) end
   local value = handler:read("*a")
@@ -66,14 +68,14 @@ local init_secrets = function(project_file_path, get_secret_path)
   append_to_file(path, "{ }\n")
 
   handler:close()
-  vim.notify("User secrets created")
+  logger.info("User secrets created")
   return guid
 end
 
 local function csproj_fallback(get_secret_path)
   local csproj_path = csproj_parse.find_project_file()
   if csproj_path == nil then
-    vim.notify(error_messages.no_project_definition_found)
+    logger.error(error_messages.no_project_definition_found)
     return
   end
 
@@ -98,7 +100,7 @@ M.edit_secrets_picker = function(get_secret_path)
   local projectsWithSecrets = polyfills.tbl_filter(function(i) return i.path ~= nil and i.runnable == true end, sln_parse.get_projects_from_sln(solutionFilePath))
 
   if #projectsWithSecrets == 0 then
-    vim.notify(error_messages.no_runnable_projects_found)
+    logger.error(error_messages.no_runnable_projects_found)
     return
   end
 

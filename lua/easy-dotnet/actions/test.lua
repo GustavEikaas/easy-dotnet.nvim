@@ -2,13 +2,14 @@ local M = {}
 local picker = require("easy-dotnet.picker")
 local error_messages = require("easy-dotnet.error-messages")
 local parsers = require("easy-dotnet.parsers")
+local logger = require("easy-dotnet.logger")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local polyfills = require("easy-dotnet.polyfills")
 
 local function csproj_fallback(on_select)
   local csproj_path = csproj_parse.find_project_file()
-  if csproj_path == nil then vim.notify("No .sln file or .csproj file found") end
+  if csproj_path == nil then logger.error("No .sln file or .csproj file found") end
   picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i) on_select(i.path, "test") end, "Run test")
 end
 
@@ -20,7 +21,7 @@ local function select_project(solution_file_path, cb, use_default)
   local projects = polyfills.tbl_filter(function(i) return i.isTestProject == true end, sln_parse.get_projects_from_sln(solution_file_path))
 
   if #projects == 0 then
-    vim.notify(error_messages.no_test_projects_found)
+    logger.error(error_messages.no_test_projects_found)
     return
   end
 
@@ -59,7 +60,7 @@ M.test_solution = function(term, args)
   args = args or ""
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if solutionFilePath == nil then
-    vim.notify(error_messages.no_project_definition_found)
+    logger.error(error_messages.no_project_definition_found)
     return
   end
   term(solutionFilePath, "test", args or "")

@@ -1,5 +1,6 @@
 local window = require("easy-dotnet.test-runner.window")
 local polyfills = require("easy-dotnet.polyfills")
+local logger = require("easy-dotnet.logger")
 
 ---@param node TestNode
 ---@param options table
@@ -249,12 +250,12 @@ local keymaps = function()
     [keymap.refresh_testrunner.lhs] = function(_, win) vim.cmd("Dotnet testrunner refresh build") end,
     [keymap.debug_test.lhs] = function(node, win)
       if node.type ~= "test" and node.type ~= "test_group" then
-        vim.notify("Debugging is only supported for tests and test_groups")
+        logger.error("Debugging is only supported for tests and test_groups")
         return
       end
       local success, dap = pcall(function() return require("dap") end)
       if not success then
-        vim.notify("nvim-dap not installed", vim.log.levels.ERROR)
+        logger.error("nvim-dap not installed")
         return
       end
       win.hide()
@@ -284,7 +285,7 @@ local keymaps = function()
           vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
         end
       else
-        vim.notify("Cant go to " .. node.type)
+        logger.warn("Cant go to " .. node.type)
       end
     end,
     [keymap.expand_all.lhs] = function(_, win)
@@ -329,11 +330,11 @@ local keymaps = function()
       elseif node.type == "test_group" then
         run_test_group(node, win)
       elseif node.type == "subcase" then
-        vim.notify("Running specific subcases is not supported")
+        logger.error("Running specific subcases is not supported")
       elseif node.type == "test" then
         run_test(node, win)
       else
-        vim.notify("Unknown line type " .. node.type)
+        logger.warn("Unknown line type " .. node.type)
         return
       end
     end,

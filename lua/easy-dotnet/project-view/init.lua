@@ -5,12 +5,13 @@ local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local error_messages = require("easy-dotnet.error-messages")
 local picker = require("easy-dotnet.picker")
 local default_manager = require("easy-dotnet.default-manager")
+local logger = require("easy-dotnet.logger")
 
 local function select_project(solution_file_path, cb)
   local projects = sln_parse.get_projects_from_sln(solution_file_path)
 
   if #projects == 0 then
-    vim.notify(error_messages.no_projects_found)
+    logger.error(error_messages.no_projects_found)
     return
   end
 
@@ -33,7 +34,7 @@ M.open_or_toggle_default = function()
   end
   local sln_path = sln_parse.find_solution_file()
   if not sln_path then
-    vim.notify(error_messages.no_project_definition_found)
+    logger.error(error_messages.no_project_definition_found)
     return
   end
 

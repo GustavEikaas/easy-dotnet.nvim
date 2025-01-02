@@ -1,4 +1,5 @@
 local polyfills = require("easy-dotnet.polyfills")
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 local function compare_paths(path1, path2) return vim.fs.normalize(path1):lower() == vim.fs.normalize(path2):lower() end
@@ -29,7 +30,7 @@ end
 local function debug_test_from_buffer()
   local success, dap = pcall(function() return require("dap") end)
   if not success then
-    vim.notify("nvim-dap not installed", vim.log.levels.ERROR)
+    logger.error("nvim-dap not installed")
     return
   end
 

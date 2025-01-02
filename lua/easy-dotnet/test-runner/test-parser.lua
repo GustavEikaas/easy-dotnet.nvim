@@ -1,3 +1,4 @@
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 local file_template = [[
@@ -112,7 +113,7 @@ M.xml_to_json = function(xml_path, cb)
     on_stderr = function(_, data) stderr = data end,
     on_exit = function(_, code)
       if code ~= 0 then
-        vim.notify("Command failed with exit code: " .. code, vim.log.levels.ERROR)
+        logger.error("Command failed with exit code: " .. code)
         print(vim.inspect(stderr))
         return {}
       else

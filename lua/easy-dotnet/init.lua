@@ -3,6 +3,7 @@ local debug = require("easy-dotnet.debugger")
 local constants = require("easy-dotnet.constants")
 local commands = require("easy-dotnet.commands")
 local polyfills = require("easy-dotnet.polyfills")
+local logger = require("easy-dotnet.logger")
 
 local M = {}
 local function wrap(callback)
@@ -14,11 +15,15 @@ local function wrap(callback)
     else
       -- If not, create a new coroutine and resume it
       local co = coroutine.create(callback)
-      coroutine.resume(co, ...)
+      local s = ...
+      local handle = function()
+        local success, err = coroutine.resume(co, s)
+        if not success then print("Coroutine failed: " .. err) end
+      end
+      handle()
     end
   end
 end
-
 local function collect_commands_with_handles(parent, prefix)
   return polyfills.iter(parent):fold({}, function(command_handles, name, command)
     local full_command = prefix and (prefix .. "_" .. name) or name
@@ -50,7 +55,7 @@ local function present_command_picker()
     if selected then
       vim.cmd("Dotnet " .. selected)
     else
-      vim.notify("No command selected", vim.log.levels.INFO)
+      logger.info("No command selected")
     end
   end)
 end
