@@ -11,7 +11,7 @@ local logger = require("easy-dotnet.logger")
 local function not_in_list(list, value) return not polyfills.tbl_contains(list, value) end
 
 -- Gives a picker for adding a project reference to a fsproject
-local function add_project_reference(curr_project_path, cb)
+M.add_project_reference = function(curr_project_path, cb)
   local this_project = fsproj.get_project_from_project_file(curr_project_path)
   local references = fsproj.get_project_references_from_projects(curr_project_path)
 
@@ -57,7 +57,7 @@ local function attach_mappings()
       local curr_project_path = vim.api.nvim_buf_get_name(bufnr)
 
       -- adds a project reference
-      vim.keymap.set("n", "<leader>ar", function() add_project_reference(curr_project_path) end, { buffer = bufnr })
+      vim.keymap.set("n", "<leader>ar", function() M.add_project_reference(curr_project_path) end, { buffer = bufnr })
     end,
   })
 end
