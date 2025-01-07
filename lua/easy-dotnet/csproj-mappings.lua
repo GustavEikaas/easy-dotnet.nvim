@@ -57,7 +57,7 @@ local function attach_mappings()
       local curr_project_path = vim.api.nvim_buf_get_name(bufnr)
 
       -- adds a project reference
-      vim.keymap.set("n", "<leader>ar", function() require("easy-dotnet.csproj-mappings").add_project_reference(curr_project_path) end, { buffer = bufnr })
+      vim.keymap.set("n", "<leader>ar", function() M.add_project_reference(curr_project_path) end, { buffer = bufnr })
     end,
   })
 end
