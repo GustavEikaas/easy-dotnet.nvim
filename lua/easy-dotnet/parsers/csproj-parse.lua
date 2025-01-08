@@ -132,7 +132,7 @@ M.get_project_from_project_file = function(project_file_path)
 end
 
 M.extract_version = function(project_file_path)
-  local version = extract_from_project(project_file_path, "<TargetFramework>net(.-)</TargetFramework>")
+  local version = extract_from_project(project_file_path, "<TargetFramework>net(.-)</TargetFramework>") or extract_from_project(project_file_path, "<TargetFrameworkVersion>v(.-)</TargetFrameworkVersion>")
   if version == false then return nil end
   return version
 end
@@ -164,7 +164,13 @@ M.is_test_project = function(project_file_path)
   return false
 end
 
-M.is_web_project = function(project_file_path) return type(extract_from_project(project_file_path, '<Project%s+Sdk="Microsoft.NET.Sdk.Web"')) == "string" end
+M.is_web_project = function(project_file_path)
+  -- UseIISExpress
+  -- Use64BitIISExpress
+  -- <IISExpress....
+  return type(extract_from_project(project_file_path, '<Project%s+Sdk="Microsoft.NET.Sdk.Web"')) == "string"
+    or type(extract_from_project(project_file_path, "<ProjectTypeGuids>.*{fae04ec0-301f-11d3-bf4b-00c04f79efbc}.*</ProjectTypeGuids>")) == "string"
+end
 
 M.find_csproj_file = function()
   local file = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.csproj$", depth = 3 })
