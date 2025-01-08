@@ -50,14 +50,15 @@ end
 
 local function present_command_picker()
   local all_commands = collect_commands(commands)
+  local options = vim.tbl_map(function(i) return { display = i, value = i } end, all_commands)
 
-  vim.ui.select(all_commands, { prompt = "Select a Dotnet Command" }, function(selected)
-    if selected then
-      vim.cmd("Dotnet " .. selected)
+  require("easy-dotnet.picker").picker(nil, options, function(selected)
+    if selected and selected.value then
+      vim.cmd("Dotnet " .. selected.value)
     else
       logger.info("No command selected")
     end
-  end)
+  end, "Select command", false)
 end
 
 local function define_highlights_and_signs(merged_opts)
