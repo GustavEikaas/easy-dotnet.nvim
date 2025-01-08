@@ -165,9 +165,6 @@ M.is_test_project = function(project_file_path)
 end
 
 M.is_web_project = function(project_file_path)
-  -- UseIISExpress
-  -- Use64BitIISExpress
-  -- <IISExpress....
   return type(extract_from_project(project_file_path, '<Project%s+Sdk="Microsoft.NET.Sdk.Web"')) == "string"
     or type(extract_from_project(project_file_path, "<ProjectTypeGuids>.*{fae04ec0-301f-11d3-bf4b-00c04f79efbc}.*</ProjectTypeGuids>")) == "string"
 end
