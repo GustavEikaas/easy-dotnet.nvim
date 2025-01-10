@@ -15,6 +15,7 @@ local M = {}
 ---@field expanded boolean
 ---@field highlight string
 ---@field preIcon string
+---@field duration string | nil
 ---@field icon string
 ---@field expand table | nil
 ---@field children table<string, TestNode>
