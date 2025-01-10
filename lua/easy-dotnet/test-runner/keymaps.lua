@@ -25,7 +25,9 @@ local function aggregate_status(node, options)
   return worstStatus
 end
 
+
 local function parse_status(result, test_line, options)
+  if result.duration then test_line.duration = result.duration end
   --TODO: handle more cases like cancelled etc...
   if result.outcome == "Passed" then
     test_line.icon = options.icons.passed

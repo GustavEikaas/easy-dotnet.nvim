@@ -2,7 +2,7 @@ local logger = require("easy-dotnet.logger")
 local M = {}
 
 local file_template = [[
-//v5
+//v6
 #r "nuget: Newtonsoft.Json"
 open System
 open System.IO
@@ -21,6 +21,7 @@ let transformTestCase (testCase: JObject) : JProperty =
     let newTestCase = new JObject()
     newTestCase.["outcome"] <- testCase.["@outcome"]
     newTestCase.["id"] <- testCase.["@testId"]
+    newTestCase.["duration"] <- testCase.["@duration"]
 
     let errorInfo = testCase.SelectToken("$.Output.ErrorInfo")
     if errorInfo <> null && errorInfo.["StackTrace"] <> null then

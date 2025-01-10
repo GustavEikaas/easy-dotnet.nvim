@@ -157,6 +157,28 @@ local function calculate_highlight(node)
   return nil
 end
 
+local function convert_time(timeStr)
+  local hours, minutes, seconds, microseconds = timeStr:match("(%d+):(%d+):(%d+)%.(%d+)")
+  hours = tonumber(hours)
+  minutes = tonumber(minutes)
+  seconds = tonumber(seconds)
+  microseconds = tonumber(microseconds)
+
+  local totalSeconds = hours * 3600 + minutes * 60 + seconds + microseconds / 1000000
+
+  if totalSeconds >= 3600 then
+    return string.format("%.1f h", totalSeconds / 3600)
+  elseif totalSeconds >= 60 then
+    return string.format("%.1f m", totalSeconds / 60)
+  elseif totalSeconds >= 1 then
+    return string.format("%.1f s", totalSeconds)
+  elseif totalSeconds > 0 then
+    return string.format("< 1 ms")
+  else
+    return "< 1 ms"
+  end
+end
+
 local function node_to_string(node)
   local total_tests = 0
   ---@param i TestNode
@@ -165,12 +187,13 @@ local function node_to_string(node)
   end)
 
   local formatted = string.format(
-    "%s%s%s%s %s",
+    "%s%s%s%s %s %s",
     string.rep(" ", node.indent or 0),
     node.preIcon and (node.preIcon .. " ") or "",
     node.name,
     node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
-    node.type ~= "subcase" and node.type ~= "test" and string.format("(%s)", total_tests) or ""
+    node.type ~= "subcase" and node.type ~= "test" and string.format("(%s)", total_tests) or "",
+    node.duration and convert_time(node.duration) or ""
   )
 
   return formatted
