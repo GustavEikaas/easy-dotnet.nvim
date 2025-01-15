@@ -1,7 +1,7 @@
 local M = {}
 
 local polyfills = require("easy-dotnet.polyfills")
-local fzf = require("fzf-lua")
+-- local fzf = require("fzf-lua")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local pickers = require("telescope.pickers")
 local picker = require("easy-dotnet.picker")
@@ -57,18 +57,18 @@ local function telescope_nuget_search()
   return val
 end
 
----@param cb function
-local function fzf_nuget_search(cb)
-  fzf.fzf_live('dotnet package search <query> --format json | jq ".searchResult | .[] | .packages | .[] | .id"', {
-    fn_transform = function(line) return line:gsub('"', ""):gsub("\r", ""):gsub("\n", "") end,
-    actions = {
-      ["default"] = function(selected)
-        local package = selected[1]
-        cb(package)
-      end,
-    },
-  })
-end
+-- ---@param cb function
+-- local function fzf_nuget_search(cb)
+--   fzf.fzf_live('dotnet package search <query> --format json | jq ".searchResult | .[] | .packages | .[] | .id"', {
+--     fn_transform = function(line) return line:gsub('"', ""):gsub("\r", ""):gsub("\n", "") end,
+--     actions = {
+--       ["default"] = function(selected)
+--         local package = selected[1]
+--         cb(package)
+--       end,
+--     },
+--   })
+-- end
 
 local function get_all_versions(package)
   local command = string.format("dotnet package search %s --exact-match --format json | jq '.searchResult[].packages[].version'", package)
