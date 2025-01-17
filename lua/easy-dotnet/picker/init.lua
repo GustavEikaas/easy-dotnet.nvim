@@ -2,9 +2,9 @@ local has_fzf = pcall(require, "fzf-lua")
 local has_telescope = pcall(require, "telescope")
 
 if has_fzf then
-  return require("easy-dotnet.pickers._fzf")
+  return require("easy-dotnet.picker._fzf")
 elseif has_telescope then
-  return require("easy-dotnet.pickers._telescope")
+  return require("easy-dotnet.picker._telescope")
 else
   error("This plugin requires nvim-telescope/telescope.nvim or ibhagwan/fzf-lua")
 end

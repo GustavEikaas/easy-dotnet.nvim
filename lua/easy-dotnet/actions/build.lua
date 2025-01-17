@@ -3,7 +3,7 @@ local M = {
 }
 
 local logger = require("easy-dotnet.logger")
-local picker = require("easy-dotnet.pickers")
+local picker = require("easy-dotnet.picker")
 local parsers = require("easy-dotnet.parsers")
 local messages = require("easy-dotnet.error-messages")
 local csproj_parse = parsers.csproj_parser

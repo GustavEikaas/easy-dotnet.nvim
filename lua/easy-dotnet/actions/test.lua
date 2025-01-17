@@ -1,5 +1,5 @@
 local M = {}
-local picker = require("easy-dotnet.pickers")
+local picker = require("easy-dotnet.picker")
 local error_messages = require("easy-dotnet.error-messages")
 local parsers = require("easy-dotnet.parsers")
 local logger = require("easy-dotnet.logger")

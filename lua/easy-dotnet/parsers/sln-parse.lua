@@ -43,7 +43,7 @@ function M.add_project_to_solution(slnpath)
     return
   end
 
-  local value = require("easy-dotnet.pickers").pick_sync(nil, options, "Project to add to sln", false)
+  local value = require("easy-dotnet.picker").pick_sync(nil, options, "Project to add to sln", false)
   if not value then return end
   vim.fn.jobstart({
     "dotnet",
@@ -74,7 +74,7 @@ function M.remove_project_from_solution(slnpath)
     return
   end
 
-  local value = require("easy-dotnet.pickers").pick_sync(nil, projects, "Project to remove from sln", false)
+  local value = require("easy-dotnet.picker").pick_sync(nil, projects, "Project to remove from sln", false)
   if not value then return end
   vim.fn.jobstart({
     "dotnet",
@@ -179,7 +179,7 @@ M.find_solution_file = function(no_cache)
     table.insert(opts, { display = value, ordinal = value, value = value })
   end
   if #opts == 0 then return nil end
-  local selection = require("easy-dotnet.pickers").pick_sync(nil, opts, "Pick solution file")
+  local selection = require("easy-dotnet.picker").pick_sync(nil, opts, "Pick solution file")
   return selection and selection.value or nil
 end
 

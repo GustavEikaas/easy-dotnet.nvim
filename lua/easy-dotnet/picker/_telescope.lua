@@ -29,7 +29,7 @@ M.picker = function(bufnr, options, on_select_cb, title, autopick)
     on_select_cb(options[1])
     return
   end
-  local picker = require("telescope.pickers").new(bufnr, {
+  local picker = require("telescope.picker").new(bufnr, {
     prompt_title = title,
     finder = require("telescope.finders").new_table({
       results = options,
@@ -75,7 +75,7 @@ M.preview_picker = function(bufnr, options, on_select_cb, title, previewer)
   end
 
   local previewers = require("telescope.previewers")
-  local picker = require("telescope.pickers").new(bufnr, {
+  local picker = require("telescope.picker").new(bufnr, {
     prompt_title = title,
     finder = require("telescope.finders").new_table({
       results = options,

@@ -3,7 +3,7 @@ local M = {}
 local window = require("easy-dotnet.project-view.render")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local error_messages = require("easy-dotnet.error-messages")
-local picker = require("easy-dotnet.pickers")
+local picker = require("easy-dotnet.picker")
 local default_manager = require("easy-dotnet.default-manager")
 local logger = require("easy-dotnet.logger")
 

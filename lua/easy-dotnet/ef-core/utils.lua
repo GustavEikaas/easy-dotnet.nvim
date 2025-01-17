@@ -1,4 +1,4 @@
-local picker = require("easy-dotnet.pickers")
+local picker = require("easy-dotnet.picker")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 
 local M = {}

@@ -207,7 +207,7 @@ local templates = {
 }
 
 M.new = function()
-  local picker = require("easy-dotnet.pickers")
+  local picker = require("easy-dotnet.picker")
   local template = picker.pick_sync(nil, templates, "Select type")
   if template.type == "project" then
     vim.cmd("startinsert")
@@ -247,7 +247,7 @@ end
 ---@param cb function | nil
 M.create_new_item = function(path, cb)
   path = path or "."
-  local template = require("easy-dotnet.pickers").pick_sync(nil, {
+  local template = require("easy-dotnet.picker").pick_sync(nil, {
     { value = "buildprops", display = "MSBuild Directory.Build.props File", type = "MSBuild/props" },
     { value = "packagesprops", display = "MSBuild Directory.Packages.props File", type = "MSBuild/props" },
     { value = "buildtargets", display = "MSBuild Directory.Build.targets File", type = "MSBuild/props" },

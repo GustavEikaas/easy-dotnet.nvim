@@ -1,6 +1,6 @@
 local M = {}
 
-local picker = require("easy-dotnet.pickers")
+local picker = require("easy-dotnet.picker")
 local polyfills = require("easy-dotnet.polyfills")
 local csproj = require("easy-dotnet.parsers.csproj-parse")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
