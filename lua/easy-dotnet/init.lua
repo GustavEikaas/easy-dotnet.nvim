@@ -52,7 +52,7 @@ local function present_command_picker()
   local all_commands = collect_commands(commands)
   local options = vim.tbl_map(function(i) return { display = i, value = i } end, all_commands)
 
-  require("easy-dotnet.picker").picker(nil, options, function(selected)
+  require("easy-dotnet.pickers").picker(nil, options, function(selected)
     if selected and selected.value then
       vim.cmd("Dotnet " .. selected.value)
     else

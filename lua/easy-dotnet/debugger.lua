@@ -1,5 +1,5 @@
 local M = {}
-local picker = require("easy-dotnet.picker")
+local picker = require("easy-dotnet.pickers")
 local parsers = require("easy-dotnet.parsers")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser

@@ -23,7 +23,7 @@ M.database_update = function(mode)
       }) end
     end
 
-    local selected = require("easy-dotnet.picker").pick_sync(nil, migrations)
+    local selected = require("easy-dotnet.pickers").pick_sync(nil, migrations)
     assert(selected, "No migration selected")
     selected_migration = selected
   end
