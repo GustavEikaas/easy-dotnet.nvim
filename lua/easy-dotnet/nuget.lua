@@ -19,13 +19,15 @@ local function reverse_list(list)
   return reversed
 end
 
-local function telescope_nuget_search()
+---@param search_term string | nil
+local function telescope_nuget_search(search_term)
   local co = coroutine.running()
   local val
   local opts = {}
   pickers
     .new(opts, {
       prompt_title = "Nuget search",
+      default_text = search_term,
       finder = finders.new_async_job({
         --TODO: this part sucks I want to use JQ but it seems to be impossible to use it with telescope due to pipes and making OS independent
         command_generator = function(prompt) return { "dotnet", "package", "search", prompt or "", "--format", "json" } end,
@@ -122,9 +124,10 @@ local function add_package(package, project_path)
 end
 
 ---@param project_path string | nil
-M.search_nuget = function(project_path)
+---@param search_term string | nil
+M.search_nuget = function(project_path, search_term)
   -- fzf_nuget_search(on_package_selected)
-  local package = telescope_nuget_search()
+  local package = telescope_nuget_search(search_term)
   add_package(package, project_path)
 end
 

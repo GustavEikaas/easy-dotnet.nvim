@@ -74,7 +74,8 @@ M.project = {
 M.add = {
   subcommands = {
     package = {
-      handle = function() require("easy-dotnet.nuget").search_nuget() end,
+      handle = function(args) require("easy-dotnet.nuget").search_nuget(nil, stringify_args(args)) end,
+      passthrough = true,
     },
   },
 }
