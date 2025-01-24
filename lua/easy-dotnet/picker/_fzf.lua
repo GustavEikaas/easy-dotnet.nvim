@@ -67,7 +67,6 @@ M.preview_picker = function(bufnr, options, on_select_cb, title, get_secret_path
     return
   end
 
-  -- Validate and prepare entries
   local entries = {}
   local metadata = {}
   for _, option in ipairs(options) do
@@ -89,7 +88,6 @@ M.preview_picker = function(bufnr, options, on_select_cb, title, get_secret_path
     return secrets_preview(entry_data, get_secret_path, readFile)
   end
 
-  -- Use fzf-lua to create the picker with minimal configuration
   require("fzf-lua").fzf_exec(entries, {
     prompt = title .. "> ",
     preview = preview_fn,
