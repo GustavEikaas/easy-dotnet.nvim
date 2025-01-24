@@ -130,7 +130,7 @@ local M = {
       type = "block_scoped",
       enabled = true,
     },
-    picker = "telescope", -- "zfz" | "nil"
+    picker = "telescope", -- "fzf" | "nil"
   },
 }
 
