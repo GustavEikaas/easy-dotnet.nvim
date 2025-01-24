@@ -67,13 +67,8 @@ end
 
 ---@param project_path string | nil
 M.search_nuget = function(project_path)
-  local fzf = pcall(require, "fzf-lua")
-  if fzf then
-    picker.nuget_search(add_package)
-  else
-    local package = picker.nuget_search()
-    add_package(package, project_path)
-  end
+  local package = picker.search_nuget(add_package)
+  if package ~= nil then add_package(package, project_path) end
 end
 
 local function get_package_refs(project_path)

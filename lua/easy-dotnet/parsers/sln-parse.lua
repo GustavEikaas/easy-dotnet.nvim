@@ -22,7 +22,6 @@ M.find_project_files = function()
   return normalized
 end
 
----Dotnet solution add with telescope picker
 ---@param slnpath string
 function M.add_project_to_solution(slnpath)
   local sln_projects = M.get_projects_from_sln(slnpath)
@@ -64,7 +63,6 @@ function M.add_project_to_solution(slnpath)
   })
 end
 
----Dotnet solution remove with telescope picker
 ---@param slnpath string
 function M.remove_project_from_solution(slnpath)
   local projects = M.get_projects_from_sln(slnpath)

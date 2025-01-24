@@ -45,7 +45,6 @@ M.remove_migration = function()
 end
 
 M.list_migrations = function()
-  local conf = require("telescope.config").values
   local selections = require("easy-dotnet.ef-core.utils").pick_projects()
   local project = selections.project
   local startup_project = selections.startup_project

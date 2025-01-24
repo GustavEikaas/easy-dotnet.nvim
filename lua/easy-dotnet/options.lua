@@ -130,6 +130,7 @@ local M = {
       type = "block_scoped",
       enabled = true,
     },
+    picker = "telescope", -- "zfz" | "nil"
   },
 }
 
@@ -149,5 +150,7 @@ M.set_options = function(a)
   M.options = merge_tables(M.options, a)
   return M.options
 end
+
+M.get_option = function(key) return M.options[key] end
 
 return M

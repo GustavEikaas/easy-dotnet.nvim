@@ -103,7 +103,6 @@ M.edit_secrets_picker = function(get_secret_path)
     logger.error(error_messages.no_runnable_projects_found)
     return
   end
-
   picker.preview_picker(nil, projectsWithSecrets, function(item)
     if not item.secrets then
       local secret_id = init_secrets(item.path, get_secret_path)
@@ -111,7 +110,7 @@ M.edit_secrets_picker = function(get_secret_path)
     end
     local path = get_secret_path(item.secrets)
     vim.cmd("edit! " .. path)
-  end, "Secrets", function(self, entry) secrets_preview(self, entry, get_secret_path) end)
+  end, "Secrets", function(self, entry) secrets_preview(self, entry, get_secret_path) end, get_secret_path, readFile) --, readFile)
 end
 
 return M
