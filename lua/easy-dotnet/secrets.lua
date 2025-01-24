@@ -110,7 +110,7 @@ M.edit_secrets_picker = function(get_secret_path)
     end
     local path = get_secret_path(item.secrets)
     vim.cmd("edit! " .. path)
-  end, "Secrets", function(self, entry) secrets_preview(self, entry, get_secret_path) end, get_secret_path, readFile) --, readFile)
+  end, "Secrets", function(self, entry) secrets_preview(self, entry, get_secret_path) end, get_secret_path, readFile)
 end
 
 return M
