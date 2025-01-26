@@ -23,45 +23,46 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 2. [Simplifying .NET development in Neovim](#simplifying-.net-development-in-neovim)
 3. [Motivation](#motivation)
 4. [Features](#features)
-5. [Setup](#setup)
+5. [Requirements](#requirements)
+6. [Setup](#setup)
    - [Without options](#without-options)
    - [With options](#with-options)
-6. [Commands](#commands)
+7. [Commands](#commands)
    - [Lua functions](#lua-functions)
    - [Vim commands](#vim-commands)
-7. [Testrunner](#testrunner)
+8. [Testrunner](#testrunner)
    - [Keymaps](#keymaps)
    - [Debugging tests](#debugging-tests)
    - [Running tests from buffer](#running-tests-directly-from-buffer)
    - [Debugging tests from buffer](#debugging-tests-directly-from-buffer)
-8. [Project view](#project-view)
+9. [Project view](#project-view)
    - [Features](#features)
    - [Keymaps](#keymaps)
-9. [Outdated](#outdated)
+10. [Outdated](#outdated)
    - [Requirements](#requirements)
-10. [Add](#add)
+11. [Add](#add)
     - [Add package](#add-package)
-11. [Project mappings](#project-mappings)
+12. [Project mappings](#project-mappings)
     - [Add reference](#add-reference)
     - [Package autocomplete](#package-autocomplete)
-12. [New](#new)
+13. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
     - [Integrating with neo-tree](#integrating-with-neo-tree)
-13. [EntityFramework](#entityframework)
+14. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
-14. [Language injections](#language-injections)
+15. [Language injections](#language-injections)
     - [Showcase](#showcase)
     - [Requirements](#requirements-2)
     - [Support matrix](#support-matrix)
-15. [Nvim-dap configuration](#nvim-dap-configuration)
+16. [Nvim-dap configuration](#nvim-dap-configuration)
     - [Basic example](#basic-example)
     - [Advanced example](#advanced-example)
-16. [Advanced configurations](#advanced-configurations)
+17. [Advanced configurations](#advanced-configurations)
     - [Overseer](#overseer)
-17. [Troubleshooting](#troubleshooting)
+18. [Troubleshooting](#troubleshooting)
 
 ## Features
 
@@ -78,6 +79,15 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 - [Rider-like](https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments)
 syntax highlighting for injected languages (sql, json and xml) based on comments
 
+## Requirements
+
+- Neovim needs to be built with **LuaJIT**
+- `jq`
+
+Although not *required* by the plugin, it is highly recommended to install one of:
+- [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+- [fzf-lua](https://github.com/ibhagwan/fzf-lua)
+
 ## Setup
 
 
@@ -89,6 +99,8 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 -- lazy.nvim
 {
   "GustavEikaas/easy-dotnet.nvim",
+  -- 'nvim-telescope/telescope.nvim' or 'ibhagwan/fzf-lua'
+  -- are highly recommended for a better experience
   dependencies = { "nvim-lua/plenary.nvim", 'nvim-telescope/telescope.nvim', },
   config = function()
     require("easy-dotnet").setup()
@@ -192,6 +204,9 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
           type = "block_scoped",
           enabled = true
       },
+      -- choose which picker to use with the plugin
+      -- possible values are "telescope" | "fzf" | "basic"
+      picker = "telescope" 
     })
 
     -- Example command
@@ -1159,4 +1174,5 @@ return {
 <!-- sign-end -->
 
 </details>
+
 

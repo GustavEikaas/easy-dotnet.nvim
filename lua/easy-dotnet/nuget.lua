@@ -38,7 +38,6 @@ local function add_package(package, project_path)
   local selected_version = picker.pick_sync(nil, versions, "Select a version", true)
   logger.info("Adding package...")
   local selected_project = project_path or get_project()
-  vim.notify(selected_project)
   local command = string.format("dotnet add %s package %s --version %s", selected_project, package, selected_version.value)
   local co = coroutine.running()
   vim.fn.jobstart(command, {

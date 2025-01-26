@@ -130,7 +130,9 @@ local M = {
       type = "block_scoped",
       enabled = true,
     },
-    picker = "telescope", -- "fzf" | "nil"
+    -- choose which picker to use with the plugin
+    -- possible values are "telescope" | "fzf" | "basic"
+    picker = "telescope",
   },
 }
 
