@@ -99,8 +99,6 @@ Although not *required* by the plugin, it is highly recommended to install one o
 -- lazy.nvim
 {
   "GustavEikaas/easy-dotnet.nvim",
-  -- 'nvim-telescope/telescope.nvim' or 'ibhagwan/fzf-lua'
-  -- are highly recommended for a better experience
   dependencies = { "nvim-lua/plenary.nvim", 'nvim-telescope/telescope.nvim', },
   config = function()
     require("easy-dotnet").setup()
@@ -113,6 +111,8 @@ Although not *required* by the plugin, it is highly recommended to install one o
 -- lazy.nvim
 {
   "GustavEikaas/easy-dotnet.nvim",
+  -- 'nvim-telescope/telescope.nvim' or 'ibhagwan/fzf-lua'
+  -- are highly recommended for a better experience
   dependencies = { "nvim-lua/plenary.nvim", 'nvim-telescope/telescope.nvim', },
   config = function()
     local function get_secret_path(secret_guid)
