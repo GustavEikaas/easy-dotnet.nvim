@@ -124,9 +124,18 @@ local function traverse_subcommands(args, parent)
   end
 end
 
+local function check_picker_config(opts)
+  if opts.picker == "fzf" and not (pcall(require, "fzf-lua")) then
+    vim.notify("config.picker is set to fzf but fzf-lua is not installed. Using basic picker.")
+  elseif opts.picker == "telescope" and not (pcall(require, "telescope")) then
+    vim.notify("config.picker is set to telescope but telescope is not installed. Using basic picker.")
+  end
+end
+
 M.setup = function(opts)
   local merged_opts = require("easy-dotnet.options").set_options(opts)
   define_highlights_and_signs(merged_opts)
+  check_picker_config(merged_opts)
 
   vim.api.nvim_create_user_command("Dotnet", function(commandOpts)
     local args = split_by_whitespace(commandOpts.fargs[1])

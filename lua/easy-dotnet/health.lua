@@ -79,7 +79,12 @@ M.check = function()
   vim.health.start("easy-dotnet lua dependencies")
   ensure_nvim_dep_installed("plenary", "https://github.com/nvim-lua/plenary.nvim")
   ensure_nvim_dep_installed("dap", { "Some functionality will be disabled", "https://github.com/mfussenegger/nvim-dap" }, false)
-  ensure_nvim_dep_installed("telescope", "https://github.com/nvim-telescope/telescope.nvim")
+  local selected_picker = require("easy-dotnet.options").get_option("picker")
+  if selected_picker == "telescope" then
+    ensure_nvim_dep_installed("telescope", { "This is not needed for the plugin but is a nice addition to the experience", "https://github.com/nvim-telescope/telescope.nvim" }, false)
+  elseif selected_picker == "fzf" then
+    ensure_nvim_dep_installed("fzf-lua", { "This is not needed for the plugin but is a nice addition to the experience", "https://github.com/ibhagwan/fzf-lua" }, false)
+  end
   ensure_nvim_dep_installed("roslyn", {
     "This is not required for this plugin but is a nice addition to the .Net developer experience",
     "If you are using another LSP you can safely ignore this warning",

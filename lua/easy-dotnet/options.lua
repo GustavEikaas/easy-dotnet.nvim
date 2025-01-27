@@ -130,6 +130,9 @@ local M = {
       type = "block_scoped",
       enabled = true,
     },
+    -- choose which picker to use with the plugin
+    -- possible values are "telescope" | "fzf" | "basic"
+    picker = "telescope",
   },
 }
 
@@ -149,5 +152,7 @@ M.set_options = function(a)
   M.options = merge_tables(M.options, a)
   return M.options
 end
+
+M.get_option = function(key) return M.options[key] end
 
 return M

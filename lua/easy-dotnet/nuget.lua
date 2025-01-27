@@ -1,14 +1,8 @@
 local M = {}
 
 local polyfills = require("easy-dotnet.polyfills")
--- local fzf = require("fzf-lua")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
-local pickers = require("telescope.pickers")
 local picker = require("easy-dotnet.picker")
-local finders = require("telescope.finders")
-local actions = require("telescope.actions")
-local action_state = require("telescope.actions.state")
-local conf = require("telescope.config").values
 local logger = require("easy-dotnet.logger")
 
 local function reverse_list(list)
@@ -18,59 +12,6 @@ local function reverse_list(list)
   end
   return reversed
 end
-
----@param search_term string | nil
-local function telescope_nuget_search(search_term)
-  local co = coroutine.running()
-  local val
-  local opts = {}
-  pickers
-    .new(opts, {
-      prompt_title = "Nuget search",
-      default_text = search_term,
-      finder = finders.new_async_job({
-        --TODO: this part sucks I want to use JQ but it seems to be impossible to use it with telescope due to pipes and making OS independent
-        command_generator = function(prompt) return { "dotnet", "package", "search", prompt or "", "--format", "json" } end,
-        entry_maker = function(line)
-          --HACK: ohgod.jpeg
-          if line:find('"id":') == nil then return { valid = false } end
-          local value = line:gsub('"id": "%s*([^"]+)%s*"', "%1"):match("^%s*(.-)%s*$"):gsub(",", "")
-          return {
-            value = value,
-            ordinal = value,
-            display = value,
-          }
-        end,
-        cwd = vim.fn.getcwd(),
-      }),
-      sorter = conf.generic_sorter(opts),
-      attach_mappings = function()
-        actions.select_default:replace(function(prompt_bufnr)
-          local selection = action_state.get_selected_entry(prompt_bufnr)
-          actions.close(prompt_bufnr)
-          val = selection.value
-          coroutine.resume(co)
-        end)
-        return true
-      end,
-    })
-    :find()
-  coroutine.yield()
-  return val
-end
-
--- ---@param cb function
--- local function fzf_nuget_search(cb)
---   fzf.fzf_live('dotnet package search <query> --format json | jq ".searchResult | .[] | .packages | .[] | .id"', {
---     fn_transform = function(line) return line:gsub('"', ""):gsub("\r", ""):gsub("\n", "") end,
---     actions = {
---       ["default"] = function(selected)
---         local package = selected[1]
---         cb(package)
---       end,
---     },
---   })
--- end
 
 local function get_all_versions(package)
   local command = string.format("dotnet package search %s --exact-match --format json | jq '.searchResult[].packages[].version'", package)
@@ -124,11 +65,9 @@ local function add_package(package, project_path)
 end
 
 ---@param project_path string | nil
----@param search_term string | nil
-M.search_nuget = function(project_path, search_term)
-  -- fzf_nuget_search(on_package_selected)
-  local package = telescope_nuget_search(search_term)
-  add_package(package, project_path)
+M.search_nuget = function(project_path)
+  local package = picker.search_nuget(add_package)
+  if package ~= nil then add_package(package, project_path) end
 end
 
 local function get_package_refs(project_path)
