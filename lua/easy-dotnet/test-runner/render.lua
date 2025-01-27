@@ -108,7 +108,7 @@ function M.redraw_virtual_text()
 end
 
 local function setBufferOptions()
-  if M.options.viewmode ~= "buf" then vim.api.nvim_win_set_height(M.win, M.height) end
+  if M.options.viewmode ~= "buf" and M.options.viewmode ~= "vsplit" then vim.api.nvim_win_set_height(M.win, M.height) end
   vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
   vim.api.nvim_buf_set_name(M.buf, M.buf_name)
   vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
@@ -280,11 +280,11 @@ local function has_multiple_listed_buffers()
 end
 
 -- Toggle function to handle different window modes
----@param mode "float" | "split" | "buf"
+---@param mode "float" | "split" | "buf" | "vsplit"
 -- Function to hide the window or buffer based on the mode
 function M.hide(mode)
   if not mode then mode = M.options.viewmode end
-  if mode == "float" or mode == "split" then
+  if mode == "float" or mode == "split" or mode == "vsplit" then
     if M.win and vim.api.nvim_win_is_valid(M.win) then
       vim.api.nvim_win_close(M.win, false)
       M.win = nil
@@ -306,7 +306,7 @@ function M.close()
   end
 end
 
----@param mode "float" | "split" | "buf"
+---@param mode "float" | "split" | "buf" | "vsplit"
 function M.open(mode)
   if not mode then mode = M.options.viewmode end
 
@@ -316,9 +316,9 @@ function M.open(mode)
     M.win = vim.api.nvim_open_win(M.buf, true, win_opts)
     vim.api.nvim_buf_set_option(M.buf, "bufhidden", "hide")
     return true
-  elseif mode == "split" then
+  elseif mode == "split" or mode == "vsplit" then
     if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
-    vim.cmd("split")
+    vim.cmd(mode)
     M.win = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_buf(M.win, M.buf)
     return true
@@ -331,11 +331,11 @@ function M.open(mode)
   return false
 end
 
----@param mode "float" | "split" | "buf"
+---@param mode "float" | "split" | "buf" | "vsplit"
 function M.toggle(mode)
   if not mode then mode = M.options.viewmode end
 
-  if mode == "float" or mode == "split" then
+  if mode == "float" or mode == "split" or mode == "vsplit" then
     if M.win and vim.api.nvim_win_is_valid(M.win) then
       return not M.hide(mode)
     else
@@ -352,7 +352,7 @@ function M.toggle(mode)
 end
 
 --- Renders the buffer
----@param mode "float" | "split" | "buf"
+---@param mode "float" | "split" | "buf" | "vsplit"
 M.render = function(mode)
   local isVisible = M.toggle(mode)
   if not isVisible then return end
