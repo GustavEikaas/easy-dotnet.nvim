@@ -225,23 +225,7 @@ M.new = function()
   end
 end
 
-local function name_input_sync()
-  local name = ""
-  local co = coroutine.running()
-  vim.cmd("startinsert")
-  --TODO: telescope
-  vim.ui.input({ prompt = "Enter name" }, function(input)
-    if input == nil then
-      logger.error("No name provided")
-      return
-    end
-    vim.cmd("stopinsert")
-    name = input
-    coroutine.resume(co)
-  end)
-  coroutine.yield()
-  return name
-end
+local function name_input_sync() return vim.fn.input("Enter name:") end
 
 ---@param path string
 ---@param cb function | nil
