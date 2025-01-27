@@ -225,9 +225,7 @@ M.new = function()
   end
 end
 
-local function name_input_sync()
-  return vim.fn.input("Enter name")
-end
+local function name_input_sync() return vim.fn.input("Enter name:") end
 
 ---@param path string
 ---@param cb function | nil
