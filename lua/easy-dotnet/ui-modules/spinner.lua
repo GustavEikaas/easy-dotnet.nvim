@@ -1,3 +1,4 @@
+local has_snacks = pcall(require, "snacks.notifier")
 ---@class Spinner
 local M = {}
 M.__index = M
@@ -26,10 +27,17 @@ end
 ---@param pendingText string The text to display while the spinner is running.
 function M:update_spinner(pendingText)
   if self.spinner_timer then
+    if has_snacks then
+      vim.notify(pendingText .. " " .. self.spinner_symbols[self.spinner_index], vim.log.levels.INFO, {
+        title = "Progress",
+        id = "progress",
+    })
+    else
     self.notify_id = vim.notify(pendingText .. " " .. self.spinner_symbols[self.spinner_index], vim.log.levels.INFO, {
       title = "Progress",
       replace = self.notify_id,
     })
+    end
     self.spinner_index = (self.spinner_index % #self.spinner_symbols) + 1
   end
 end
@@ -59,10 +67,17 @@ function M:stop_spinner(finishText, level)
     self.spinner_timer:stop()
     self.spinner_timer:close()
     self.spinner_timer = nil
-    vim.notify(finishText, level, {
-      title = "Progress",
-      replace = self.notify_id,
-    })
+    if has_snacks then
+      vim.notify(finishText, level, {
+        title = "Progress",
+        id = "progress"
+      })
+    else
+      vim.notify(finishText, level, {
+        title = "Progress",
+        replace = self.notify_id,
+      })
+    end
     self.notify_id = nil
   end
 end
