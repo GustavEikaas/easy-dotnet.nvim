@@ -60,11 +60,11 @@ function M:stop_spinner(finishText, level)
     self.spinner_timer:stop()
     self.spinner_timer:close()
     self.spinner_timer = nil
-      vim.notify(finishText, level, {
-        title = "Progress",
+    vim.notify(finishText, level, {
+      title = "Progress",
       id = "progress",
-        replace = self.notify_id,
-      })
+      replace = self.notify_id,
+    })
     self.notify_id = nil
   end
 end
