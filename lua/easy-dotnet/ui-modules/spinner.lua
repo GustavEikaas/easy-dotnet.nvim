@@ -28,6 +28,7 @@ function M:update_spinner(pendingText)
   if self.spinner_timer then
     self.notify_id = vim.notify(pendingText .. " " .. self.spinner_symbols[self.spinner_index], vim.log.levels.INFO, {
       title = "Progress",
+      id = "progress",
       replace = self.notify_id,
     })
     self.spinner_index = (self.spinner_index % #self.spinner_symbols) + 1
@@ -61,6 +62,7 @@ function M:stop_spinner(finishText, level)
     self.spinner_timer = nil
     vim.notify(finishText, level, {
       title = "Progress",
+      id = "progress",
       replace = self.notify_id,
     })
     self.notify_id = nil
