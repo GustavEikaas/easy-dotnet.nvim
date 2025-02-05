@@ -92,15 +92,6 @@ end
 M.picker = function(bufnr, options, on_select_cb, title, autopick)
   if autopick == nil then autopick = true end
   if #options == 0 then error("No options provided, minimum 1 is required") end
-  M.migration_pick = function(opts, migration)
-    vim.ui.select(migration, {
-      prompt = "Migrations",
-      format_item = function(item) return opts.entry_maker(item).display end,
-    }, function(choice)
-      if choice then opts.on_select(choice) end
-    end)
-  end
-
   -- Auto pick if only one option present
   if #options == 1 and autopick == true then
     on_select_cb(options[1])
