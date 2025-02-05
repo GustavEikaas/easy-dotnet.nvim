@@ -23,6 +23,7 @@ M.migration_picker = function(opts, migration)
   if has_fzf() then
     return require("easy-dotnet.picker._fzf").migration_picker(opts, migration)
   elseif has_telescope() then
+    return require("easy-dotnet.picker._telescope").migration_picker(opts, migration)
   else
     return require("easy-dotnet.picker._base").migration_picker(opts, migration)
   end
