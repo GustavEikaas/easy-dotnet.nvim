@@ -228,6 +228,13 @@ local function printNodes()
   apply_highlights(highlights)
 end
 
+local function findDescForKey(mappings, lhs)
+  for _, mapping in pairs(mappings) do
+    if mapping.lhs == lhs then return mapping.desc end
+  end
+  return nil
+end
+
 local function setMappings()
   if M.keymap == nil then return end
   if M.buf == nil then return end
@@ -237,7 +244,7 @@ local function setMappings()
       local node = translateIndex(line_num, M.tree)
       if not node then error("Current line is not a node") end
       value(node, M)
-    end, { buffer = M.buf, noremap = true, silent = true })
+    end, { buffer = M.buf, desc = findDescForKey(M.options.mappings, key), noremap = true, silent = true })
   end
 end
 
