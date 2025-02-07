@@ -247,99 +247,123 @@ end
 local keymaps = function()
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   return {
-    [keymap.filter_failed_tests.lhs] = function(_, win) filter_failed_tests(win) end,
-    [keymap.refresh_testrunner.lhs] = function(_, win) vim.cmd("Dotnet testrunner refresh build") end,
-    [keymap.debug_test.lhs] = function(node, win)
-      if node.type ~= "test" and node.type ~= "test_group" then
-        logger.error("Debugging is only supported for tests and test_groups")
-        return
-      end
-      local success, dap = pcall(function() return require("dap") end)
-      if not success then
-        logger.error("nvim-dap not installed")
-        return
-      end
-      win.hide()
-      vim.cmd("edit " .. node.file_path)
-      vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
-      dap.toggle_breakpoint()
+    [keymap.filter_failed_tests.lhs] = { handle = function(_, win) filter_failed_tests(win) end, desc = keymap.filter_failed_tests.desc },
+    [keymap.refresh_testrunner.lhs] = { handle = function(_, win) vim.cmd("Dotnet testrunner refresh build") end, desc = keymap.refresh_testrunner.desc },
+    [keymap.debug_test.lhs] = {
+      handle = function(node, win)
+        if node.type ~= "test" and node.type ~= "test_group" then
+          logger.error("Debugging is only supported for tests and test_groups")
+          return
+        end
+        local success, dap = pcall(function() return require("dap") end)
+        if not success then
+          logger.error("nvim-dap not installed")
+          return
+        end
+        win.hide()
+        vim.cmd("edit " .. node.file_path)
+        vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
+        dap.toggle_breakpoint()
 
-      local dap_configuration = {
-        type = "coreclr",
-        name = node.name,
-        request = "attach",
-        processId = function()
-          local project_path = node.cs_project_path
-          local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
-          return res.process_id
-        end,
-      }
+        local dap_configuration = {
+          type = "coreclr",
+          name = node.name,
+          request = "attach",
+          processId = function()
+            local project_path = node.cs_project_path
+            local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
+            return res.process_id
+          end,
+        }
 
-      dap.run(dap_configuration)
-    end,
+        dap.run(dap_configuration)
+      end,
+      desc = keymap.debug_test.desc,
+    },
     ---@param node Test
-    [keymap.go_to_file.lhs] = function(node, win)
-      if node.type == "test" or node.type == "subcase" or node.type == "test_group" then
-        if node.file_path ~= nil then
-          win.hide()
-          vim.cmd("edit " .. node.file_path)
-          vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
+    [keymap.go_to_file.lhs] = {
+      handle = function(node, win)
+        if node.type == "test" or node.type == "subcase" or node.type == "test_group" then
+          if node.file_path ~= nil then
+            win.hide()
+            vim.cmd("edit " .. node.file_path)
+            vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
+          end
+        else
+          logger.warn("Cant go to " .. node.type)
         end
-      else
-        logger.warn("Cant go to " .. node.type)
-      end
-    end,
-    [keymap.expand_all.lhs] = function(_, win)
-      ---@param node TestNode
-      win.traverse(win.tree, function(node) node.expanded = true end)
+      end,
+      desc = keymap.go_to_file.desc,
+    },
+    [keymap.expand_all.lhs] = {
+      handle = function(_, win)
+        ---@param node TestNode
+        win.traverse(win.tree, function(node) node.expanded = true end)
 
-      win.refreshTree()
-    end,
-    [keymap.expand_node.lhs] = function(target_node, win)
-      ---@param node TestNode
-      win.traverse(target_node, function(node) node.expanded = true end)
+        win.refreshTree()
+      end,
+      desc = keymap.expand_all.desc,
+    },
+    [keymap.expand_node.lhs] = {
+      handle = function(target_node, win)
+        ---@param node TestNode
+        win.traverse(target_node, function(node) node.expanded = true end)
 
-      win.refreshTree()
-    end,
+        win.refreshTree()
+      end,
+      desc = keymap.expand_node.desc,
+    },
 
-    [keymap.collapse_all.lhs] = function(_, win)
-      ---@param node TestNode
-      win.traverse(win.tree, function(node) node.expanded = false end)
-      win.refreshTree()
-    end,
+    [keymap.collapse_all.lhs] = {
+      handle = function(_, win)
+        ---@param node TestNode
+        win.traverse(win.tree, function(node) node.expanded = false end)
+        win.refreshTree()
+      end,
+      desc = keymap.collapse_all.desc,
+    },
     ---@param node TestNode
-    [keymap.expand.lhs] = function(node, win)
-      node.expanded = node.expanded == false
-      win.refreshTree()
-    end,
-    [keymap.peek_stacktrace.lhs] = function(node) open_stack_trace(node) end,
-    [keymap.run_all.lhs] = function(_, win)
-      win.traverse(win.tree, function(node)
-        if node.type == "csproject" then run_csproject(win, node) end
-      end)
-    end,
+    [keymap.expand.lhs] = {
+      handle = function(node, win)
+        node.expanded = node.expanded == false
+        win.refreshTree()
+      end,
+      desc = keymap.expand.desc,
+    },
+    [keymap.peek_stacktrace.lhs] = { handle = function(node) open_stack_trace(node) end, desc = keymap.peek_stacktrace.desc },
+    [keymap.run_all.lhs] = {
+      handle = function(_, win)
+        win.traverse(win.tree, function(node)
+          if node.type == "csproject" then run_csproject(win, node) end
+        end)
+      end,
+      desc = keymap.run_all.desc,
+    },
     ---@param node TestNode
-    [keymap.run.lhs] = function(node, win)
-      if node.type == "sln" then
-        for _, value in pairs(node.children) do
-          run_csproject(win, value)
+    [keymap.run.lhs] = {
+      handle = function(node, win)
+        if node.type == "sln" then
+          for _, value in pairs(node.children) do
+            run_csproject(win, value)
+          end
+        elseif node.type == "csproject" then
+          run_csproject(win, node)
+        elseif node.type == "namespace" then
+          run_test_suite(node, win)
+        elseif node.type == "test_group" then
+          run_test_group(node, win)
+        elseif node.type == "subcase" then
+          logger.error("Running specific subcases is not supported")
+        elseif node.type == "test" then
+          run_test(node, win)
+        else
+          logger.warn("Unknown line type " .. node.type)
+          return
         end
-      elseif node.type == "csproject" then
-        run_csproject(win, node)
-      elseif node.type == "namespace" then
-        run_test_suite(node, win)
-      elseif node.type == "test_group" then
-        run_test_group(node, win)
-      elseif node.type == "subcase" then
-        logger.error("Running specific subcases is not supported")
-      elseif node.type == "test" then
-        run_test(node, win)
-      else
-        logger.warn("Unknown line type " .. node.type)
-        return
-      end
-    end,
-    [keymap.close.lhs] = function(_, win) win.hide() end,
+      end,
+      desc = keymap.run.desc,
+    },
+    [keymap.close.lhs] = { handle = function(_, win) win.hide() end, desc = keymap.close.desc },
   }
 end
 
