@@ -236,7 +236,7 @@ local function setMappings()
       local line_num = vim.api.nvim_win_get_cursor(0)[1]
       local node = translateIndex(line_num, M.tree)
       if not node then error("Current line is not a node") end
-      value(node, M)
+      value.handle(node, M)
     end, { buffer = M.buf, desc = value.desc, noremap = true, silent = true })
   end
 end
