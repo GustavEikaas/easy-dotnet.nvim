@@ -199,11 +199,6 @@ local templates = {
     type = "project",
     run = function(name) create_and_link_project(name, "blazorwasm") end,
   },
-  {
-    display = "Clean Architecture Template [Web Api]",
-    type = "project",
-    run = function(name) create_and_link_project(name, "cleanarch") end,
-  },
 }
 
 M.new = function()
