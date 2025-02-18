@@ -106,7 +106,7 @@ function M.tbl_contains(t, value, opts)
 
   local pred --- @type fun(v: any): boolean?
   if opts and opts.predicate then
-    M.validate({ value = { value, "c" } })
+    vim.validate({ value = { value, "c" } })
     pred = value
   else
     pred = function(v) return v == value end
