@@ -10,7 +10,7 @@ local polyfills = require("easy-dotnet.polyfills")
 local function csproj_fallback(on_select)
   local csproj_path = csproj_parse.find_project_file()
   if csproj_path == nil then logger.error("No .sln file or .csproj file found") end
-  picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i) on_select(i.path, "test", "") end, "Run test")
+  picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i) on_select(i.path, "test") end, "Run test")
 end
 
 local function select_project(solution_file_path, cb, use_default)

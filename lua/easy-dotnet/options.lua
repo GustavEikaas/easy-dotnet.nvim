@@ -74,6 +74,7 @@ local M = {
     ---@param action "test"|"restore"|"build"|"run"
     ---@param args string
     terminal = function(path, action, args)
+      args = args or ""
       local commands = {
         run = function() return string.format("dotnet run --project %s %s", path, args) end,
         test = function() return string.format("dotnet test %s %s", path, args) end,
