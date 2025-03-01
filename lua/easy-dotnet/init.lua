@@ -198,6 +198,5 @@ M.is_dotnet_project = function()
 end
 
 M.package_completion_source = require("easy-dotnet.csproj-mappings").package_completion_cmp
-M.package_completion_source_blink = require("easy-dotnet.csproj-mappings").package_completion_blink
 
 return M
