@@ -1,34 +1,19 @@
 local polyfills = require("easy-dotnet.polyfills")
 local cli = require("easy-dotnet.dotnet_cli")
 
-local R = {}
+local M = {}
 
-function R.new() return setmetatable({}, { __index = R }) end
+function M.new() return setmetatable({}, { __index = M }) end
 
-function R:get_trigger_characters() return { 'Include="', "Include='", "Version='", 'Version="' } end
+function M:get_trigger_characters() return { 'Include="', "Include='", "Version='", 'Version="' } end
 
-function R:enabled()
+function M:enabled()
   local filetypes = { "csproj", "fsproj", "xml" }
   local is_enabled = vim.tbl_contains(filetypes, vim.bo.filetype)
   return is_enabled
 end
 
-function R:get_completions(ctx, callback)
-  local cursor_col = ctx.cursor[2]
-  local line = ctx.line
-  local word_start = cursor_col + 1
-
-  local triggers = self:get_trigger_characters()
-  while word_start > 1 do
-    local char = line:sub(word_start - 1, word_start - 1)
-    if vim.tbl_contains(triggers, char) or char:match("%s") then break end
-    word_start = word_start - 1
-  end
-  -- Get text from word start to cursor
-  local input = line:sub(word_start, cursor_col)
-
-  if input ~= "" and input:match("[^0-9A-Za-z_]+") then input = "" end
-
+function M:get_completions(ctx, callback)
   local transformed_callback = function(items)
     callback({
       context = ctx,
@@ -88,4 +73,4 @@ function R:get_completions(ctx, callback)
   return function() end
 end
 
-return R
+return M
