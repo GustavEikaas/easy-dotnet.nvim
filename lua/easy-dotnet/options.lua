@@ -127,6 +127,7 @@ local M = {
     },
     csproj_mappings = true,
     fsproj_mappings = true,
+    enable_filetypes = true,
     auto_bootstrap_namespace = {
       type = "block_scoped",
       enabled = true,
