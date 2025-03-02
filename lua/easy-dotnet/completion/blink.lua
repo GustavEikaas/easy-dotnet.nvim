@@ -51,7 +51,11 @@ function M:get_completions(ctx, callback)
     vim.fn.jobstart(string.format("%s | jq '.searchResult[].packages[].version'", command), {
       stdout_buffered = true,
       on_stdout = function(_, data)
+        local index = 0
+        local latest = nil
+        local last_index = #data - 1
         local items = polyfills.tbl_map(function(i)
+          index = index + 1
           local label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', "")
           local cmp_item = {
             label = label,
@@ -60,8 +64,18 @@ function M:get_completions(ctx, callback)
             dup = 0,
             kind = 11,
           }
+          if index == last_index then latest = cmp_item.label end
           return cmp_item
         end, data)
+        if latest then
+          table.insert(items, {
+            label = "latest",
+            insertText = latest,
+            documentation = "Insert latest version available: " .. latest,
+            kind = 15,
+            preselect = true,
+          })
+        end
         transformed_callback(items)
       end,
     })
