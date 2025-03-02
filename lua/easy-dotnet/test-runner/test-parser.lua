@@ -1,7 +1,8 @@
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 local file_template = [[
-//v5
+//v6
 #r "nuget: Newtonsoft.Json"
 open System
 open System.IO
@@ -20,6 +21,7 @@ let transformTestCase (testCase: JObject) : JProperty =
     let newTestCase = new JObject()
     newTestCase.["outcome"] <- testCase.["@outcome"]
     newTestCase.["id"] <- testCase.["@testId"]
+    newTestCase.["duration"] <- testCase.["@duration"]
 
     let errorInfo = testCase.SelectToken("$.Output.ErrorInfo")
     if errorInfo <> null && errorInfo.["StackTrace"] <> null then
@@ -90,9 +92,7 @@ main fsi.CommandLineArgs.[1..]
 local script_name = "test_parser.fsx"
 
 ---@return string
-local ensure_and_get_fsx_path = function()
-  return require("easy-dotnet.scripts.utils").ensure_and_get_fsx_path(file_template, script_name)
-end
+local ensure_and_get_fsx_path = function() return require("easy-dotnet.scripts.utils").ensure_and_get_fsx_path(file_template, script_name) end
 
 --- @class TestCase
 --- @field id string
@@ -111,12 +111,10 @@ M.xml_to_json = function(xml_path, cb)
   vim.fn.jobstart(command, {
     stdout_buffered = true,
     stderr_buffered = true,
-    on_stderr = function(_, data)
-      stderr = data
-    end,
+    on_stderr = function(_, data) stderr = data end,
     on_exit = function(_, code)
       if code ~= 0 then
-        vim.notify("Command failed with exit code: " .. code, vim.log.levels.ERROR)
+        logger.error("Command failed with exit code: " .. code)
         print(vim.inspect(stderr))
         return {}
       else
@@ -128,31 +126,22 @@ M.xml_to_json = function(xml_path, cb)
         end
 
         for line in file:lines() do
-          local success, json_test = pcall(function()
-            return vim.fn.json_decode(line)
-          end)
+          local success, json_test = pcall(function() return vim.fn.json_decode(line) end)
 
           if success then
-            if #line ~= 2 then
-              table.insert(tests, json_test)
-            end
+            if #line ~= 2 then table.insert(tests, json_test) end
           else
             print("Malformed JSON: " .. line)
           end
         end
 
-        local success = pcall(function()
-          os.remove(outfile)
-        end)
+        local success = pcall(function() os.remove(outfile) end)
 
-        if not success then
-          print("Failed to delete tmp file " .. outfile)
-        end
+        if not success then print("Failed to delete tmp file " .. outfile) end
         cb(tests)
       end
-    end
+    end,
   })
 end
-
 
 return M

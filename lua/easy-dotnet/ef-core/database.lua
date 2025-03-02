@@ -7,8 +7,7 @@ M.database_update = function(mode)
   local startup_project = selections.startup_project
 
   if mode == "pick" then
-    local cmd = string.format("dotnet ef migrations list --prefix-output --project %s --startup-project %s", project
-      .path, startup_project.path)
+    local cmd = string.format("dotnet ef migrations list --prefix-output --project %s --startup-project %s", project.path, startup_project.path)
     local stdout = vim.fn.system(cmd)
     local migrations = {}
     local lines = {}
@@ -17,13 +16,11 @@ M.database_update = function(mode)
     end
     for _, value in ipairs(lines) do
       local migration = value:match("^data:%s*(%S+)")
-      if migration then
-        table.insert(migrations, {
-          display = migration,
-          value = migration,
-          ordinal = migration
-        })
-      end
+      if migration then table.insert(migrations, {
+        display = migration,
+        value = migration,
+        ordinal = migration,
+      }) end
     end
 
     local selected = require("easy-dotnet.picker").pick_sync(nil, migrations)
@@ -31,12 +28,8 @@ M.database_update = function(mode)
     selected_migration = selected
   end
 
-
   local spinner = require("easy-dotnet.ui-modules.spinner").new()
-  local cmd = string.format("dotnet ef database update %s --project %s --startup-project %s",
-    selected_migration.value,
-    project.path,
-    startup_project.path)
+  local cmd = string.format("dotnet ef database update %s --project %s --startup-project %s", selected_migration.value, project.path, startup_project.path)
 
   spinner:start_spinner("Applying migrations")
   vim.fn.jobstart(cmd, {
@@ -46,7 +39,7 @@ M.database_update = function(mode)
       else
         spinner:stop_spinner("Database update failed", vim.log.levels.ERROR)
       end
-    end
+    end,
   })
 end
 --
@@ -56,8 +49,7 @@ M.database_drop = function()
   local startup_project = selections.startup_project
 
   local spinner = require("easy-dotnet.ui-modules.spinner").new()
-  local cmd = string.format("dotnet ef database drop --project %s --startup-project %s -f", project.path,
-    startup_project.path)
+  local cmd = string.format("dotnet ef database drop --project %s --startup-project %s -f", project.path, startup_project.path)
   spinner:start_spinner("Dropping database")
   vim.fn.jobstart(cmd, {
     on_exit = function(_, code)
@@ -66,7 +58,7 @@ M.database_drop = function()
       else
         spinner:stop_spinner("Failed to drop database", vim.log.levels.ERROR)
       end
-    end
+    end,
   })
 end
 

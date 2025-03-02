@@ -1,4 +1,6 @@
-local extensions = require "easy-dotnet.extensions"
+local extensions = require("easy-dotnet.extensions")
+local polyfills = require("easy-dotnet.polyfills")
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 ---@class DotnetProject
@@ -19,19 +21,13 @@ local M = {}
 ---@param pattern string
 ---@return string | false
 local function extract_from_project(project_file_path, pattern)
-  if project_file_path == nil then
-    return false
-  end
+  if project_file_path == nil then return false end
 
   local file = io.open(project_file_path, "r")
-  if not file then
-    return false
-  end
-  local contains_pattern = vim.iter(file:lines()):find(function(line)
+  if not file then return false end
+  local contains_pattern = polyfills.iter(file:lines()):find(function(line)
     local value = line:match(pattern)
-    if value then
-      return true
-    end
+    if value then return true end
     return false
   end)
 
@@ -56,7 +52,7 @@ M.get_project_references_from_projects = function(project_path)
 
   local exit_code = vim.v.shell_error
   if exit_code ~= 0 then
-    vim.notify("Command failed")
+    logger.error("Command failed")
     return {}
   end
   return projects
@@ -67,12 +63,9 @@ end
 ---@return string
 local function extractProjectName(path)
   local filename = path:match("[^/\\]+%.%a+proj")
-  if filename == nil then
-    return "Unknown"
-  end
+  if filename == nil then return "Unknown" end
   return filename:gsub("%.csproj$", ""):gsub("%.fsproj$", "")
 end
-
 
 ---@type table<string, DotnetProject>
 local project_cache = {}
@@ -82,22 +75,17 @@ local project_cache = {}
 ---@return DotnetProject
 M.get_project_from_project_file = function(project_file_path)
   local maybeCacheObject = project_cache[project_file_path]
-  if maybeCacheObject then
-    return maybeCacheObject
-  end
+  if maybeCacheObject then return maybeCacheObject end
   local display = extractProjectName(project_file_path)
   local name = display
-  local language = project_file_path:match("%.csproj$") and "csharp" or project_file_path:match("%.fsproj$") and "fsharp" or
-      "unknown"
+  local language = project_file_path:match("%.csproj$") and "csharp" or project_file_path:match("%.fsproj$") and "fsharp" or "unknown"
   local isWebProject = M.is_web_project(project_file_path)
   local isConsoleProject = M.is_console_project(project_file_path)
   local isTestProject = M.is_test_project(project_file_path)
   local maybeSecretGuid = M.try_get_secret_id(project_file_path)
   local version = M.extract_version(project_file_path)
 
-  if version then
-    display = display .. "@" .. version
-  end
+  if version then display = display .. "@" .. version end
 
   if language == "csharp" then
     display = display .. " 󰙱"
@@ -105,19 +93,10 @@ M.get_project_from_project_file = function(project_file_path)
     display = display .. " 󰫳"
   end
 
-  if isTestProject then
-    display = display .. " 󰙨"
-  end
-  if maybeSecretGuid then
-    display = display .. " "
-  end
-  if isWebProject then
-    display = display .. " 󱂛"
-  end
-  if isConsoleProject then
-    display = display .. " 󰆍"
-  end
-
+  if isTestProject then display = display .. " 󰙨" end
+  if maybeSecretGuid then display = display .. " " end
+  if isWebProject then display = display .. " 󱂛" end
+  if isConsoleProject then display = display .. " 󰆍" end
 
   local project = {
     display = display,
@@ -129,16 +108,12 @@ M.get_project_from_project_file = function(project_file_path)
     secrets = maybeSecretGuid,
     get_dll_path = function()
       local c = project_cache[project_file_path]
-      if c and c.dll_path then
-        return c.dll_path
-      end
+      if c and c.dll_path then return c.dll_path end
       local value = vim.fn.json_decode(
-            vim.fn.system(string.format(
-              "dotnet msbuild %s -getProperty:OutputPath -getProperty:TargetExt -getProperty:AssemblyName -getProperty:TargetFramework",
-              project_file_path)))
-          .Properties
+        vim.fn.system(string.format("dotnet msbuild %s -getProperty:OutputPath -getProperty:TargetExt -getProperty:AssemblyName -getProperty:TargetFramework", project_file_path))
+      ).Properties
       local target = string.format("%s%s", value.AssemblyName, value.TargetExt)
-      local path = vim.fs.joinpath(vim.fs.dirname(project_file_path), value.OutputPath:gsub("\\", "/"), target)
+      local path = polyfills.fs.joinpath(vim.fs.dirname(project_file_path), value.OutputPath:gsub("\\", "/"), target)
       local msbuild_target_framework = value.TargetFramework:gsub("%net", "")
 
       c["version"] = msbuild_target_framework
@@ -147,66 +122,49 @@ M.get_project_from_project_file = function(project_file_path)
     end,
     isTestProject = isTestProject,
     isConsoleProject = isConsoleProject,
-    isWebProject = isWebProject
+    isWebProject = isWebProject,
   }
 
   project_cache[project_file_path] = project
-  if version then
-    project_cache[project_file_path].dll_path = vim.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug",
-      "net" .. version, name .. ".dll")
-  end
+  if version then project_cache[project_file_path].dll_path = polyfills.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug", "net" .. version, name .. ".dll") end
 
   return project
 end
 
 M.extract_version = function(project_file_path)
   local version = extract_from_project(project_file_path, "<TargetFramework>net(.-)</TargetFramework>")
-  if version == false then
-    return nil
-  end
+  if version == false then return nil end
   return version
 end
 
 M.try_get_secret_id = function(project_file_path)
   local secret = extract_from_project(project_file_path, "<UserSecretsId>([a-fA-F0-9%-]+)</UserSecretsId>")
-  if secret == false then
-    return nil
-  end
+  if secret == false then return nil end
   return secret
 end
 
-M.is_console_project = function(project_file_path)
-  return type(extract_from_project(project_file_path, "<OutputType>%s*Exe%s*</OutputType>")) ==
-      "string"
-end
+M.is_console_project = function(project_file_path) return type(extract_from_project(project_file_path, "<OutputType>%s*Exe%s*</OutputType>")) == "string" end
 
 M.is_test_project = function(project_file_path)
-  if type(extract_from_project(project_file_path, '<%s*IsTestProject%s*>%s*true%s*</%s*IsTestProject%s*>')) == "string" then
-    return true
-  end
+  if type(extract_from_project(project_file_path, "<%s*IsTestProject%s*>%s*true%s*</%s*IsTestProject%s*>")) == "string" then return true end
 
   -- Check for test-related package references
   local test_packages = {
-    'Microsoft%.NET%.Test%.Sdk',
-    'MSTest%.TestFramework',
-    'NUnit',
-    'xunit'
+    "Microsoft%.NET%.Test%.Sdk",
+    "MSTest%.TestFramework",
+    "NUnit",
+    "xunit",
   }
 
   for _, package in ipairs(test_packages) do
     local pattern = string.format('<PackageReference Include="%s"%%s*', package)
-    if type(extract_from_project(project_file_path, pattern)) == "string" then
-      return true
-    end
+    if type(extract_from_project(project_file_path, pattern)) == "string" then return true end
   end
 
   return false
 end
 
-M.is_web_project = function(project_file_path)
-  return type(extract_from_project(project_file_path, '<Project%s+Sdk="Microsoft.NET.Sdk.Web"')) == "string"
-end
-
+M.is_web_project = function(project_file_path) return type(extract_from_project(project_file_path, '<Project%s+Sdk="Microsoft.NET.Sdk.Web"')) == "string" end
 
 M.find_csproj_file = function()
   local file = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.csproj$", depth = 3 })
@@ -219,8 +177,6 @@ M.find_fsproj_file = function()
 end
 
 ---Tries to find a csproj or fsproj file
-M.find_project_file = function()
-  return M.find_csproj_file() or M.find_fsproj_file()
-end
+M.find_project_file = function() return M.find_csproj_file() or M.find_fsproj_file() end
 
 return M

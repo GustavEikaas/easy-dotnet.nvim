@@ -1,40 +1,36 @@
+local polyfills = require("easy-dotnet.polyfills")
+local logger = require("easy-dotnet.logger")
 local M = {}
 
-local function compare_paths(path1, path2)
-  return vim.fs.normalize(path1):lower() == vim.fs.normalize(path2):lower()
-end
-
+local function compare_paths(path1, path2) return vim.fs.normalize(path1):lower() == vim.fs.normalize(path2):lower() end
 
 local function run_test(name, namespace, cs_project_path, cb)
   local log_file_name = string.format("%s.xml", namespace:gsub("%b()", ""))
   local normalized_path = vim.fs.normalize(cs_project_path)
   local directory_path = vim.fs.dirname(normalized_path)
-  local relative_log_file_path = vim.fs.joinpath(directory_path, "TestResults", log_file_name)
+  local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
 
-  local command = string.format(
-    "dotnet test --filter='%s' --nologo %s --logger='trx;logFileName=%s'",
-    namespace:gsub("%b()", ""), cs_project_path, log_file_name)
+  local command = string.format("dotnet test --filter='%s' --nologo %s --logger='trx;logFileName=%s'", namespace:gsub("%b()", ""), cs_project_path, log_file_name)
 
-  vim.fn.jobstart(
-    command, {
-      on_exit = function()
-        require("easy-dotnet.test-runner.test-parser").xml_to_json(relative_log_file_path,
-          ---@param unit_test_results TestCase
-          function(unit_test_results)
-            local result = unit_test_results[1]
-            if result == nil then
-              error(string.format("Status of %s was not present in xml file", name))
-            end
-            cb(unit_test_results)
-          end)
-      end
-    })
+  vim.fn.jobstart(command, {
+    on_exit = function()
+      require("easy-dotnet.test-runner.test-parser").xml_to_json(
+        relative_log_file_path,
+        ---@param unit_test_results TestCase
+        function(unit_test_results)
+          local result = unit_test_results[1]
+          if result == nil then error(string.format("Status of %s was not present in xml file", name)) end
+          cb(unit_test_results)
+        end
+      )
+    end,
+  })
 end
 
 local function debug_test_from_buffer()
   local success, dap = pcall(function() return require("dap") end)
   if not success then
-    vim.notify("nvim-dap not installed", vim.log.levels.ERROR)
+    logger.error("nvim-dap not installed")
     return
   end
 
@@ -56,7 +52,7 @@ local function debug_test_from_buffer()
           local project_path = node.cs_project_path
           local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
           return res.process_id
-        end
+        end,
       }
       dap.run(dap_configuration)
       --return to avoid running multiple times in case of InlineData|ClassData
@@ -95,27 +91,22 @@ local function run_test_from_buffer()
           end
         end
 
-
         if worst_outcome == "Passed" then
           node.icon = options.icons.passed
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr,
-            { lnum = current_line, priority = 20 })
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr, { lnum = current_line, priority = 20 })
           spinner:stop_spinner("Passed")
         elseif worst_outcome == "Failed" then
           node.icon = options.icons.failed
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr,
-            { lnum = current_line, priority = 20 })
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr, { lnum = current_line, priority = 20 })
           spinner:stop_spinner("Failed", vim.log.levels.ERROR)
         elseif worst_outcome == "NotExecuted" then
           node.icon = options.icons.skipped
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr,
-            { lnum = current_line, priority = 20 })
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr, { lnum = current_line, priority = 20 })
           spinner:stop_spinner("Skipped", vim.log.levels.WARN)
         else
           node.icon = "??"
           spinner:stop_spinner("Test Result Errors", vim.log.levels.WARN)
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestError, bufnr,
-            { lnum = current_line, priority = 20 })
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestError, bufnr, { lnum = current_line, priority = 20 })
         end
         require("easy-dotnet.test-runner.render").refreshTree()
       end)
@@ -123,7 +114,6 @@ local function run_test_from_buffer()
     end
   end)
 end
-
 
 function M.add_gutter_test_signs()
   local options = require("easy-dotnet.test-runner.render").options
@@ -155,13 +145,9 @@ function M.add_gutter_test_signs()
 
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   if is_test_file == true then
-    vim.keymap.set("n", keymap.debug_test_from_buffer.lhs, function()
-      debug_test_from_buffer()
-    end, { silent = true, buffer = bufnr })
+    vim.keymap.set("n", keymap.debug_test_from_buffer.lhs, function() debug_test_from_buffer() end, { silent = true, buffer = bufnr })
 
-    vim.keymap.set("n", keymap.run_test_from_buffer.lhs, function()
-      run_test_from_buffer()
-    end, { silent = true, buffer = bufnr })
+    vim.keymap.set("n", keymap.run_test_from_buffer.lhs, function() run_test_from_buffer() end, { silent = true, buffer = bufnr })
   end
 end
 

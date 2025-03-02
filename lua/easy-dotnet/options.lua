@@ -1,3 +1,4 @@
+local polyfills = require("easy-dotnet.polyfills")
 ---@class TestRunnerIcons
 ---@field passed string
 ---@field skipped string
@@ -39,8 +40,8 @@
 ---@field additional_args table
 
 local function get_sdk_path()
-  local sdk_version = vim.trim(vim.system({ "dotnet", "--version" }):wait().stdout)
-  local sdk_list = vim.trim(vim.system({ "dotnet", "--list-sdks" }):wait().stdout)
+  local sdk_version = vim.trim(vim.fn.system("dotnet --version"))
+  local sdk_list = vim.trim(vim.fn.system("dotnet --list-sdks"))
   local base = nil
   for line in sdk_list:gmatch("[^\n]+") do
     if line:find(sdk_version, 1, true) then
@@ -48,16 +49,15 @@ local function get_sdk_path()
       break
     end
   end
-  local sdk_path = vim.fs.joinpath(base, sdk_version):gsub("Program Files", '"Program Files"')
+  local sdk_path = polyfills.fs.joinpath(base, sdk_version):gsub("Program Files", '"Program Files"')
   return sdk_path
 end
 
 local function get_secret_path(secret_guid)
   local path = ""
-  local home_dir = vim.fn.expand('~')
+  local home_dir = vim.fn.expand("~")
   if require("easy-dotnet.extensions").isWindows() then
-    local secret_path = home_dir ..
-        '\\AppData\\Roaming\\Microsoft\\UserSecrets\\' .. secret_guid .. "\\secrets.json"
+    local secret_path = home_dir .. "\\AppData\\Roaming\\Microsoft\\UserSecrets\\" .. secret_guid .. "\\secrets.json"
     path = secret_path
   else
     local secret_path = home_dir .. "/.microsoft/usersecrets/" .. secret_guid .. "/secrets.json"
@@ -65,7 +65,6 @@ local function get_secret_path(secret_guid)
   end
   return path
 end
-
 
 local M = {
   options = {
@@ -75,24 +74,15 @@ local M = {
     ---@param action "test"|"restore"|"build"|"run"
     ---@param args string
     terminal = function(path, action, args)
+      args = args or ""
       local commands = {
-        run = function()
-          return string.format("dotnet run --project %s %s", path, args)
-        end,
-        test = function()
-          return string.format("dotnet test %s %s", path, args)
-        end,
-        restore = function()
-          return string.format("dotnet restore %s %s", path, args)
-        end,
-        build = function()
-          return string.format("dotnet build %s %s", path, args)
-        end
+        run = function() return string.format("dotnet run --project %s %s", path, args) end,
+        test = function() return string.format("dotnet test %s %s", path, args) end,
+        restore = function() return string.format("dotnet restore %s %s", path, args) end,
+        build = function() return string.format("dotnet build %s %s", path, args) end,
       }
       local command = commands[action]()
-      if require("easy-dotnet.extensions").isWindows() == true then
-        command = command .. "\r"
-      end
+      if require("easy-dotnet.extensions").isWindows() == true then command = command .. "\r" end
       vim.cmd("vsplit")
       vim.cmd("term " .. command)
     end,
@@ -122,7 +112,7 @@ local M = {
         debug_test_from_buffer = { lhs = "<leader>d", desc = "run test from buffer" },
         filter_failed_tests = { lhs = "<leader>fe", desc = "filter failed tests" },
         debug_test = { lhs = "<leader>d", desc = "debug test" },
-        go_to_file = { lhs = "g", desc = "got to file" },
+        go_to_file = { lhs = "g", desc = "go to file" },
         run_all = { lhs = "<leader>R", desc = "run all tests" },
         run = { lhs = "<leader>r", desc = "run test" },
         peek_stacktrace = { lhs = "<leader>p", desc = "peek stacktrace of failed test" },
@@ -131,24 +121,40 @@ local M = {
         expand_all = { lhs = "-", desc = "expand all" },
         collapse_all = { lhs = "W", desc = "collapse all" },
         close = { lhs = "q", desc = "close testrunner" },
-        refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" }
+        refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" },
       },
       additional_args = {},
     },
     csproj_mappings = true,
     fsproj_mappings = true,
-    auto_bootstrap_namespace = true,
     enable_filetypes = true,
-  }
+    auto_bootstrap_namespace = {
+      type = "block_scoped",
+      enabled = true,
+    },
+    -- choose which picker to use with the plugin
+    -- possible values are "telescope" | "fzf" | "basic"
+    picker = "telescope",
+  },
 }
 
-local function merge_tables(default_options, user_options)
-  return vim.tbl_deep_extend("keep", user_options, default_options)
+local function merge_tables(default_options, user_options) return vim.tbl_deep_extend("keep", user_options, default_options) end
+
+--- Auto_bootstrap namespace can be either true or table with config
+local function handle_auto_bootstrap_namespace(a)
+  if type(a.auto_bootstrap_namespace) ~= "table" then a.auto_bootstrap_namespace = {
+    type = "block_scoped",
+    enabled = a.auto_bootstrap_namespace == true,
+  } end
 end
 
 M.set_options = function(a)
+  a = a or {}
+  handle_auto_bootstrap_namespace(a)
   M.options = merge_tables(M.options, a)
   return M.options
 end
+
+M.get_option = function(key) return M.options[key] end
 
 return M

@@ -8,17 +8,11 @@ M.job_run_async = function(cmd, callback)
   local stdout_data = {}
   local stderr_data = {}
 
-  local function on_exit(_, exit_code)
-    callback(stdout_data, stderr_data, exit_code)
-  end
+  local function on_exit(_, exit_code) callback(stdout_data, stderr_data, exit_code) end
 
-  local function on_stdout(_, data)
-    stdout_data = data
-  end
+  local function on_stdout(_, data) stdout_data = data end
 
-  local function on_stderr(_, data)
-    stderr_data = data
-  end
+  local function on_stderr(_, data) stderr_data = data end
 
   vim.fn.jobstart(cmd, {
     on_stdout = on_stdout,
@@ -39,9 +33,7 @@ M.await = function(async_function)
     local co = coroutine.running()
     assert(co, "await function must be called within a coroutine")
 
-    async_function(..., function(stdout, stderr, exit_code)
-      coroutine.resume(co, stdout, stderr, exit_code)
-    end)
+    async_function(..., function(stdout, stderr, exit_code) coroutine.resume(co, stdout, stderr, exit_code) end)
 
     return coroutine.yield()
   end

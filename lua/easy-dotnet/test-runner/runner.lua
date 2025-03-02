@@ -1,3 +1,5 @@
+local polyfills = require("easy-dotnet.polyfills")
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 ---@class TestNode
@@ -13,6 +15,7 @@ local M = {}
 ---@field expanded boolean
 ---@field highlight string
 ---@field preIcon string
+---@field duration string | nil
 ---@field icon string
 ---@field expand table | nil
 ---@field children table<string, TestNode>
@@ -73,10 +76,8 @@ local function ensure_path(root, path, has_arguments, test, options, offset_inde
         expand = nil,
         indent = (i * 2) - 1 + offset_indent,
         type = not is_full_path and "namespace" or has_arguments and "test_group" or "test",
-        highlight = not is_full_path and "EasyDotnetTestRunnerDir" or has_arguments and "EasyDotnetTestRunnerPackage" or
-            "EasyDotnetTestRunnerTest",
-        preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or
-            options.icons.test,
+        highlight = not is_full_path and "EasyDotnetTestRunnerDir" or has_arguments and "EasyDotnetTestRunnerPackage" or "EasyDotnetTestRunnerTest",
+        preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or options.icons.test,
         icon = "",
         children = {},
       }
@@ -131,14 +132,12 @@ end
 ---@param sdk_path string
 ---@param dotnet_project DotnetProject
 ---@param on_job_finished function
-local function discover_tests_for_project_and_update_lines(project, win, options, dotnet_project, sdk_path,
-                                                           on_job_finished)
-  local vstest_dll = vim.fs.joinpath(sdk_path, "vstest.console.dll")
-  local absolute_dll_path = vim.fs.normalize(vim.fs.joinpath(vim.fn.getcwd(), dotnet_project.get_dll_path()))
+local function discover_tests_for_project_and_update_lines(project, win, options, dotnet_project, sdk_path, on_job_finished)
+  local vstest_dll = polyfills.fs.joinpath(sdk_path, "vstest.console.dll")
+  local absolute_dll_path = vim.fs.normalize(polyfills.fs.joinpath(vim.fn.getcwd(), dotnet_project.get_dll_path()))
   local outfile = vim.fs.normalize(os.tmpname())
   local script_path = require("easy-dotnet.test-runner.discovery").get_script_path()
-  local command = string.format("dotnet fsi %s %s %s %s", script_path, vstest_dll,
-    absolute_dll_path, outfile)
+  local command = string.format("dotnet fsi %s %s %s %s", script_path, vstest_dll, absolute_dll_path, outfile)
 
   local tests = {}
   vim.fn.jobstart(command, {
@@ -153,34 +152,24 @@ local function discover_tests_for_project_and_update_lines(project, win, options
       on_job_finished()
       if code ~= 0 then
         --TODO: check if project was not built
-        vim.notify(string.format("Discovering tests for %s failed", project.name))
+        logger.error(string.format("Discovering tests for %s failed", project.name))
       else
         local file = io.open(outfile)
-        if file == nil then
-          error("Discovery script emitted no file for " .. project.name)
-        end
+        if file == nil then error("Discovery script emitted no file for " .. project.name) end
 
         for line in file:lines() do
-          local success, json_test = pcall(function()
-            return vim.fn.json_decode(line)
-          end)
+          local success, json_test = pcall(function() return vim.fn.json_decode(line) end)
 
           if success then
-            if #line ~= 2 then
-              table.insert(tests, json_test)
-            end
+            if #line ~= 2 then table.insert(tests, json_test) end
           else
             print("Malformed JSON: " .. line)
           end
         end
 
-        local success = pcall(function()
-          os.remove(outfile)
-        end)
+        local success = pcall(function() os.remove(outfile) end)
 
-        if not success then
-          print("Failed to delete tmp file " .. outfile)
-        end
+        if not success then print("Failed to delete tmp file " .. outfile) end
 
         ---@type Test[]
         local converted = {}
@@ -194,7 +183,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
             line_number = value.Linenumber,
             id = value.Id,
             cs_project_path = project.cs_project_path,
-            solution_file_path = project.solution_file_path
+            solution_file_path = project.solution_file_path,
           }
           table.insert(converted, test)
         end
@@ -208,35 +197,29 @@ local function discover_tests_for_project_and_update_lines(project, win, options
         end
         win.refreshTree()
       end
-    end
+    end,
   })
 end
 
 local function refresh_runner(options, win, solutionFilePath, sdk_path)
   if #win.jobs > 0 then
-    vim.notify("Cant refresh while waiting for pending jobs", vim.log.levels.WARN)
+    logger.warn("Cant refresh while waiting for pending jobs")
     return
   end
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
   local async = require("easy-dotnet.async-utils")
 
   if options.noRestore == false then
-    vim.notify("Restoring")
+    logger.info("Restoring")
     local _, restore_err, restore_code = async.await(async.job_run_async)({ "dotnet", "restore", solutionFilePath })
 
-    if restore_code ~= 0 then
-      error("Restore failed " .. vim.inspect(restore_err))
-    end
+    if restore_code ~= 0 then error("Restore failed " .. vim.inspect(restore_err)) end
   end
   if options.noBuild == false then
-    vim.notify("Building")
-    local _, build_err, build_code = async.await(async.job_run_async)({ "dotnet", "build", solutionFilePath,
-      "--no-restore" })
-    if build_code ~= 0 then
-      error("Build failed " .. vim.inspect(build_err))
-    end
+    logger.info("Building")
+    local _, build_err, build_code = async.await(async.job_run_async)({ "dotnet", "build", solutionFilePath, "--no-restore" })
+    if build_code ~= 0 then error("Build failed " .. vim.inspect(build_err)) end
   end
-
 
   ---@type TestNode
   win.tree = {
@@ -255,7 +238,7 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     expand = nil,
     highlight = "EasyDotnetTestRunnerSolution",
     expanded = true,
-    children = {}
+    children = {},
   }
 
   local projects = sln_parse.get_projects_from_sln(solutionFilePath)
@@ -279,16 +262,14 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
         preIcon = options.icons.project,
         icon = "",
         expand = {},
-        highlight = "EasyDotnetTestRunnerProject"
+        highlight = "EasyDotnetTestRunnerProject",
       }
       local on_job_finished = win.appendJob(value.name, "Discovery")
       win.tree.children[project.name] = project
       win.refreshTree()
       --Performance reasons
       if not value.version then
-        vim.schedule(function()
-          discover_tests_for_project_and_update_lines(project, win, options, value, sdk_path, on_job_finished)
-        end)
+        vim.schedule(function() discover_tests_for_project_and_update_lines(project, win, options, value, sdk_path, on_job_finished) end)
       else
         discover_tests_for_project_and_update_lines(project, win, options, value, sdk_path, on_job_finished)
       end
@@ -308,11 +289,11 @@ local function open_runner(options, sdk_path)
 
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if solutionFilePath == nil then
-    vim.notify(error_messages.no_project_definition_found)
+    logger.error(error_messages.no_project_definition_found)
     return
   end
 
-  local is_reused = win.buf ~= nil and M.tree and M.tree.solution_file_path == solutionFilePath
+  local is_reused = win.buf ~= nil and win.tree and win.tree.solution_file_path == solutionFilePath
 
   win.buf_name = "Test manager"
   win.filetype = "easy-dotnet"
@@ -320,9 +301,7 @@ local function open_runner(options, sdk_path)
   options.sdk_path = sdk_path
   win.setOptions(options).setKeymaps(require("easy-dotnet.test-runner.keymaps")).render(options.viewmode)
 
-  if is_reused then
-    return
-  end
+  if is_reused then return end
 
   refresh_runner(options, win, solutionFilePath, sdk_path)
 end
@@ -334,7 +313,7 @@ M.refresh = function(options, sdk_path, args)
 
   local win = require("easy-dotnet.test-runner.render")
   if #win.jobs > 0 then
-    vim.notify("Cant refresh while waiting for pending jobs", vim.log.levels.WARN)
+    logger.warn("Cant refresh while waiting for pending jobs")
     return
   end
 
@@ -344,7 +323,7 @@ M.refresh = function(options, sdk_path, args)
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
 
   if solutionFilePath == nil then
-    vim.notify(error_messages.no_project_definition_found)
+    logger.error(error_messages.no_project_definition_found)
     return
   end
 
@@ -356,9 +335,9 @@ M.refresh = function(options, sdk_path, args)
       on_exit = function(_, b, _)
         coroutine.resume(co)
         if b == 0 then
-          vim.notify("Built successfully")
+          logger.info("Built successfully")
         else
-          vim.notify("Build failed", vim.log.levels.ERROR)
+          logger.error("Build failed")
         end
       end,
     })
@@ -367,21 +346,14 @@ M.refresh = function(options, sdk_path, args)
   end
 
   local is_active = win.buf ~= nil
-  if not is_active then
-    error("Testrunner not initialized")
-  end
+  if not is_active then error("Testrunner not initialized") end
   refresh_runner(options, win, solutionFilePath, sdk_path)
 end
 
 M.runner = function(options, sdk_path)
   options = options or require("easy-dotnet.options").options.test_runner
   sdk_path = sdk_path or require("easy-dotnet.options").options.get_sdk_path()
-  coroutine.wrap(
-    function()
-      open_runner(options, sdk_path)
-    end
-  )()
+  coroutine.wrap(function() open_runner(options, sdk_path) end)()
 end
-
 
 return M

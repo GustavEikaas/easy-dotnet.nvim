@@ -1,4 +1,4 @@
-# Easy-dotnet.nvim
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&size=32&pause=1000&width=435&lines=easy-dotnet.nvim)](https://git.io/typing-svg)
 <a href="https://dotfyle.com/plugins/GustavEikaas/easy-dotnet.nvim">
 	<img src="https://dotfyle.com/plugins/GustavEikaas/easy-dotnet.nvim/shield?style=flat" />
 </a>
@@ -23,42 +23,50 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 2. [Simplifying .NET development in Neovim](#simplifying-.net-development-in-neovim)
 3. [Motivation](#motivation)
 4. [Features](#features)
-5. [Setup](#setup)
+5. [Requirements](#requirements)
+6. [Setup](#setup)
    - [Without options](#without-options)
    - [With options](#with-options)
-6. [Commands](#commands)
+7. [Commands](#commands)
    - [Lua functions](#lua-functions)
    - [Vim commands](#vim-commands)
-7. [Testrunner](#testrunner)
+8. [Testrunner](#testrunner)
    - [Keymaps](#keymaps)
    - [Debugging tests](#debugging-tests)
    - [Running tests from buffer](#running-tests-directly-from-buffer)
    - [Debugging tests from buffer](#debugging-tests-directly-from-buffer)
-8. [Outdated](#outdated)
+9. [Project view](#project-view)
+   - [Features](#features)
+   - [Keymaps](#keymaps)
+10. [Outdated](#outdated)
    - [Requirements](#requirements)
-9. [Project mappings](#project-mappings)
-   - [Add reference](#add-reference)
-   - [Package autocomplete](#package-autocomplete)
-10. [New](#new)
+11. [Add](#add)
+    - [Add package](#add-package)
+12. [Project mappings](#project-mappings)
+    - [Add reference](#add-reference)
+    - [Package autocomplete](#package-autocomplete)
+13. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
-11. [EntityFramework](#entityframework)
+    - [Integrating with neo-tree](#integrating-with-neo-tree)
+14. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
-12. [Language injections](#language-injections)
+15. [Language injections](#language-injections)
     - [Showcase](#showcase)
     - [Requirements](#requirements-2)
     - [Support matrix](#support-matrix)
-13. [Nvim-dap configuration](#nvim-dap-configuration)
+16. [Nvim-dap configuration](#nvim-dap-configuration)
     - [Basic example](#basic-example)
     - [Advanced example](#advanced-example)
-14. [Advanced configurations](#advanced-configurations)
+17. [Advanced configurations](#advanced-configurations)
     - [Overseer](#overseer)
+18. [Troubleshooting](#troubleshooting)
 
 ## Features
 
-- Solution, csproj and fsproj support: Whether its a single project or a solution containing multiple projects easy-dotnet has you covered.
+- Solution, slnx, csproj and fsproj support: Whether its a single project or a solution containing multiple projects easy-dotnet has you covered.
 - Action Commands: Execute common tasks like building, running, testing, cleaning and restoring with ease.
 - User Secrets Management: Edit, create, and preview .NET user secrets directly within Neovim.
 - Debugging Helpers: While easy-dotnet.nvim doesn't set up DAP (Debugger Adapter Protocol) for you, it provides useful helper functions for debugging. These include resolving the DLL you are debugging and rebuilding before launching DAP, ensuring a smooth debugging experience.
@@ -70,6 +78,15 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 - Package autocomplete inside .csproj and .fsproj files [Check it out](#package-autocomplete)
 - [Rider-like](https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments)
 syntax highlighting for injected languages (sql, json and xml) based on comments
+
+## Requirements
+
+- Neovim needs to be built with **LuaJIT**
+- `jq`
+
+Although not *required* by the plugin, it is highly recommended to install one of:
+- [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
+- [fzf-lua](https://github.com/ibhagwan/fzf-lua)
 
 ## Setup
 
@@ -94,6 +111,8 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 -- lazy.nvim
 {
   "GustavEikaas/easy-dotnet.nvim",
+  -- 'nvim-telescope/telescope.nvim' or 'ibhagwan/fzf-lua'
+  -- are highly recommended for a better experience
   dependencies = { "nvim-lua/plenary.nvim", 'nvim-telescope/telescope.nvim', },
   config = function()
     local function get_secret_path(secret_guid)
@@ -115,6 +134,7 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
     dotnet.setup({
       --Optional function to return the path for the dotnet sdk (e.g C:/ProgramFiles/dotnet/sdk/8.0.0)
       -- easy-dotnet will resolve the path automatically if this argument is omitted, for a performance improvement you can add a function that returns a hardcoded string
+      -- You should define this function to return a hardcoded path for a performance improvement 🚀
       get_sdk_path = get_sdk_path,
       ---@type TestRunnerOptions
       test_runner = {
@@ -179,7 +199,14 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
       },
       csproj_mappings = true,
       fsproj_mappings = true,
-      auto_bootstrap_namespace = true
+      auto_bootstrap_namespace = {
+          --block_scoped, file_scoped
+          type = "block_scoped",
+          enabled = true
+      },
+      -- choose which picker to use with the plugin
+      -- possible values are "telescope" | "fzf" | "basic"
+      picker = "telescope" 
     })
 
     -- Example command
@@ -218,12 +245,18 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 | `dotnet.build_default()` | `dotnet build <TS Default> <DArgs>` |
 | `dotnet.build_default_quickfix()` | `dotnet build <TS Default> <DArgs>` and opens build errors in the quickfix list |
 ||
+| `dotnet.project_view()` | Opens the project view |
+| `dotnet.project_view_default()` | Opens the project view for your default project |
+||
 | `dotnet.test()` | `dotnet test <TS> <DArgs>` |
 | `dotnet.test_solution()` | `dotnet test <TS> <DArgs>` |
 | `dotnet.test_default()` | `dotnet test <TS Default> <DArgs>` |
 ||
 | `dotnet.restore()` | `dotnet restore <sln> <Dargs>` |
 | `dotnet.clean()`                              | `dotnet clean <sln> <DArgs>`                                                                          |
+||
+| `dotnet.remove_package()`                              | |
+| `dotnet.add_package()`                              | |
 ||
 | `dotnet.testrunner()`                         | Shows or hides the testrunner                                                                                            |
 | `dotnet.testrunner_refresh()`                 | Refreshes the testrunner                                                                                                          |
@@ -267,6 +300,8 @@ dotnet.testrunner_refresh()
 dotnet.testrunner_refresh_build()
 dotnet.new()
 dotnet.outdated()
+dotnet.add_package()
+dotnet.remove_package()
 dotnet.solution_select()
 dotnet.ef_migrations_remove()
 dotnet.ef_migrations_add(name: string)
@@ -280,6 +315,8 @@ dotnet.build_solution()
 dotnet.build_quickfix()                 
 dotnet.build_default()                 
 dotnet.build_default_quickfix()       
+dotnet.project_view()
+dotnet.project_view_default()
 dotnet.run()
 dotnet.run_profile_default()
 dotnet.run_default()
@@ -308,6 +345,10 @@ Dotnet build quickfix
 Dotnet build solution
 Dotnet build default
 Dotnet build default quickfix
+Dotnet add package
+Dotnet remove package
+Dotnet project view
+Dotnet project view default
 Dotnet ef database update
 Dotnet ef database update pick
 Dotnet ef database drop
@@ -324,6 +365,7 @@ Dotnet solution add
 Dotnet solution remove
 Dotnet outdated
 Dotnet reset
+checkhealth easy-dotnet
 ```
 
 ## Testrunner
@@ -357,7 +399,8 @@ If you are experiencing issues with any test adapter please let me know
 - `<leader>d` -> `[Experimental]` Debug test under cursor using nvim-dap
 - `<leader>R` -> Run all tests
 - `<leader>p` -> Peek stacktrace on failed test
-- `<leader>fe` -> Show only failed tests
+- `<leader>fe` -> Show only failed tests
+
 - `g` -> Go to file
 - `q` -> Close window
 - `<leader>gf` -> Go to file (inside stacktrace float)
@@ -387,6 +430,33 @@ Gutter signs will appear indicating runnable tests
 
 ![image](https://github.com/user-attachments/assets/209aca03-397a-424f-973c-c53bae260031)
 
+## Project view
+
+Get a comprehensive overview of a project's dependencies, and easily manage NuGet packages and project references.
+
+![image](https://github.com/user-attachments/assets/2e0e2e25-0a2b-4864-bc3b-64b4048967e5)
+
+### Features
+- **Project Details**: View project name, solution, language, and target version.
+- **Project References**:
+  - View project references.
+  - Add or remove project references.
+- **NuGet Packages**:
+  - View package references.
+  - Add or remove NuGet package references.
+
+### Keymaps
+
+Keymaps are region-specific and work based on context (e.g., when hovering over a project/package or its header):
+
+#### Project References:
+- `a`: Add project reference.
+- `r`: Remove project reference.
+
+#### Package References:
+- `a`: Add package reference.
+- `r`: Remove package reference.
+- `<C-b>`: View package in browser.
 
 ## Outdated
 
@@ -405,6 +475,18 @@ Supports the following filetypes
 ### Requirements
 This functionality relies on dotnet-outdated-tool, install using `dotnet tool install -g dotnet-outdated-tool`
 
+## Add
+
+### Add package
+
+Adding nuget packages are available using the `:Dotnet add package` command. This will allow you to browse for nuget packages.
+
+![image](https://github.com/user-attachments/assets/00a9d38a-6afe-42ec-b971-04191fee1d59)
+
+### Requirements
+This functionality relies on `jq` so ensure that is installed on your system.
+
+
 ## Project mappings
 
 Key mappings are available automatically within `.csproj` and `.fsproj` files
@@ -419,7 +501,7 @@ When editing package references inside a .csproject file it is possible to enabl
 This will trigger autocomplete for `<PackageReference Include="<cmp-trigger>" Version="<cmp-trigger>" />`
 This functionality relies on `jq` so ensure that is installed on your system.
 
-Using nvim-cmp
+#### Using nvim-cmp
 ```lua
     cmp.register_source("easy-dotnet", require("easy-dotnet").package_completion_source)
     ...
@@ -430,6 +512,33 @@ Using nvim-cmp
     }),
     ...
 ```
+
+#### Using Blink.cmp
+```lua
+return {
+  "saghen/blink.cmp",
+  version = "*",
+  config = function()
+    require("blink.cmp").setup {
+      fuzzy = { implementation = "prefer_rust_with_warning" },
+      sources = {
+        default = { "lsp", "easy-dotnet", "path" },
+        providers = {
+          ["easy-dotnet"] = {
+            name = "easy-dotnet",
+            enabled = true,
+            module = "easy-dotnet.completion.blink",
+            score_offset = 10000,
+            async = true,
+          },
+        },
+      },
+    }
+  end,
+}
+```
+
+
 ![image](https://github.com/user-attachments/assets/81809aa8-704b-4481-9445-3985ddef6c98)
 
 >[!NOTE]
@@ -469,6 +578,32 @@ Adding the following configuration to your nvim-tree will allow for creating fil
         end, opts('Create file from dotnet template'))
       end
     })
+```
+
+### Integrating with neo-tree
+Adding the following configuration to your neo-tree will allow for creating files using dotnet templates
+
+```lua
+      require("neo-tree").setup({
+      ---...other options
+        filesystem = {
+          window = {
+            mappings = {
+              -- Make the mapping anything you want
+              ["R"] = "easy",
+            },
+          },
+          commands = {
+            ["easy"] = function(state)
+              local node = state.tree:get_node()
+              local path = node.type == "directory" and node.path or vim.fs.dirname(node.path)
+              require("easy-dotnet").create_new_item(path, function()
+                require("neo-tree.sources.manager").refresh(state.name)
+              end)
+            end
+          }
+        },
+      })
 ```
 
 ## EntityFramework
@@ -1014,6 +1149,11 @@ return {
 
 ```
 
+## Troubleshooting
+
+- Update the plugin to latest version
+- Run `:checkhealth easy-dotnet`
+
 ## Highlight groups
 
 <details>
@@ -1061,4 +1201,5 @@ return {
 <!-- sign-end -->
 
 </details>
+
 

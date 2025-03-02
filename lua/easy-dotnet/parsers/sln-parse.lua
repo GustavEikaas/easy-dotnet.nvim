@@ -1,10 +1,11 @@
-local extensions = require "easy-dotnet.extensions"
+local polyfills = require("easy-dotnet.polyfills")
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 -- Generates a relative path from cwd to the project.csproj file
 local function generate_relative_path_for_project(path, slnpath)
   local dir = vim.fs.dirname(slnpath)
-  local res = vim.fs.joinpath(dir, path):gsub("\\", "/")
+  local res = polyfills.fs.joinpath(dir, path):gsub("\\", "/")
   return res
 end
 
@@ -21,7 +22,6 @@ M.find_project_files = function()
   return normalized
 end
 
----Dotnet solution add with telescope picker
 ---@param slnpath string
 function M.add_project_to_solution(slnpath)
   local sln_projects = M.get_projects_from_sln(slnpath)
@@ -29,11 +29,11 @@ function M.add_project_to_solution(slnpath)
 
   local options = {}
   for _, value in ipairs(projects) do
-    if not vim.tbl_contains(sln_projects, function(a) return vim.fs.normalize(a.path) == value end, { predicate = true }) then
+    if not polyfills.tbl_contains(sln_projects, function(a) return vim.fs.normalize(a.path) == value end, { predicate = true }) then
       table.insert(options, {
         display = value,
         ordinal = value,
-        value = value
+        value = value,
       })
     end
   end
@@ -43,24 +43,26 @@ function M.add_project_to_solution(slnpath)
   end
 
   local value = require("easy-dotnet.picker").pick_sync(nil, options, "Project to add to sln", false)
-  if not value then
-    return
-  end
-  local res = vim.system({
+  if not value then return end
+  vim.fn.jobstart({
     "dotnet",
     "sln",
     slnpath,
     "add",
-    value.value
-  }):wait()
-  if res.code == 0 then
-    vim.notify("Success")
-  else
-    vim.notify("Failed to add project to solution", vim.log.levels.ERROR)
-  end
+    value.value,
+  }, {
+    stdout_buffered = true,
+    stderr_buffered = true,
+    on_exit = function(_, exit_code)
+      if exit_code == 0 then
+        vim.schedule(function() logger.info("Success") end)
+      else
+        vim.schedule(function() logger.error("Failed to add project to solution") end)
+      end
+    end,
+  })
 end
 
----Dotnet solution remove with telescope picker
 ---@param slnpath string
 function M.remove_project_from_solution(slnpath)
   local projects = M.get_projects_from_sln(slnpath)
@@ -71,43 +73,68 @@ function M.remove_project_from_solution(slnpath)
   end
 
   local value = require("easy-dotnet.picker").pick_sync(nil, projects, "Project to remove from sln", false)
-  if not value then
-    return
-  end
-  local res = vim.system({
+  if not value then return end
+  vim.fn.jobstart({
     "dotnet",
     "sln",
     slnpath,
     "remove",
-    value.path
-  }):wait()
-  if res.code == 0 then
-    vim.notify("Success")
-  else
-    vim.notify("Failed to remove project from solution", vim.log.levels.ERROR)
-  end
+    value.path,
+  }, {
+    stdout_buffered = true,
+    stderr_buffered = true,
+    on_exit = function(_, exit_code)
+      if exit_code == 0 then
+        vim.schedule(function() logger.info("Success") end)
+      else
+        vim.schedule(function() logger.error("Failed to remove project from solution") end)
+      end
+    end,
+  })
 end
 
--- TODO: Investigate using dotnet sln list command
----@param solutionFilePath string
----@return DotnetProject[]
-M.get_projects_from_sln = function(solutionFilePath)
-  local file_contents = vim.fn.readfile(solutionFilePath)
-  local regexp = 'Project%("{(.-)}"%).*= "(.-)", "(.-)", "{.-}"'
+function M.get_projects_from_slnx(solution_file_path)
+  local file_contents = vim.fn.readfile(solution_file_path)
+  local regexp = '<Project Path="([^"]+)"'
 
-  local projectLines = vim.tbl_filter(function(line)
-    local id, name, path = line:match(regexp)
-    if id and name and path and (path:match("%.csproj$") or path:match("%.fsproj$")) then
-      return true
-    end
+  local projectLines = polyfills.tbl_filter(function(line)
+    local path = line:match(regexp)
+    if path and (path:match("%.csproj$") or path:match("%.fsproj$")) then return true end
     return false
   end, file_contents)
 
-  local projects = vim.tbl_map(function(line)
-    local csproj_parser     = require("easy-dotnet.parsers.csproj-parse")
-    local _, _, path        = line:match(regexp)
-    local project_file_path = generate_relative_path_for_project(path, solutionFilePath)
-    local project           = csproj_parser.get_project_from_project_file(project_file_path)
+  local projects = polyfills.tbl_map(function(line)
+    local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
+    local path = line:match(regexp)
+    local project_file_path = generate_relative_path_for_project(path, solution_file_path)
+    local project = csproj_parser.get_project_from_project_file(project_file_path)
+    return project
+  end, projectLines)
+
+  return projects
+end
+
+-- TODO: Investigate using dotnet sln list command
+---@param solution_file_path string
+---@return DotnetProject[]
+M.get_projects_from_sln = function(solution_file_path)
+  local extension = vim.fn.fnamemodify(solution_file_path, ":e")
+  if extension == "slnx" then return M.get_projects_from_slnx(solution_file_path) end
+
+  local file_contents = vim.fn.readfile(solution_file_path)
+  local regexp = 'Project%("{(.-)}"%).*= "(.-)", "(.-)", "{.-}"'
+
+  local projectLines = polyfills.tbl_filter(function(line)
+    local id, name, path = line:match(regexp)
+    if id and name and path and (path:match("%.csproj$") or path:match("%.fsproj$")) then return true end
+    return false
+  end, file_contents)
+
+  local projects = polyfills.tbl_map(function(line)
+    local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
+    local _, _, path = line:match(regexp)
+    local project_file_path = generate_relative_path_for_project(path, solution_file_path)
+    local project = csproj_parser.get_project_from_project_file(project_file_path)
     return project
   end, projectLines)
 
@@ -116,17 +143,24 @@ end
 
 ---@return table<string>
 function M.get_solutions()
-  local files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.sln$", depth = 5 })
-  return files
+  local sln_files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.sln$", depth = 5 })
+  local slnx_files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.slnx$", depth = 5 })
+
+  local normalized = {}
+  for _, value in ipairs(sln_files) do
+    table.insert(normalized, value)
+  end
+  for _, value in ipairs(slnx_files) do
+    table.insert(normalized, value)
+  end
+  return normalized
 end
 
 M.try_get_selected_solution_file = function()
   local files = M.get_solutions()
   for _, value in ipairs(files) do
     local file = require("easy-dotnet.default-manager").try_get_cache_file(value)
-    if file then
-      return value
-    end
+    if file then return value end
   end
 end
 
@@ -142,9 +176,7 @@ M.find_solution_file = function(no_cache)
     end
     table.insert(opts, { display = value, ordinal = value, value = value })
   end
-  if #opts == 0 then
-    return nil
-  end
+  if #opts == 0 then return nil end
   local selection = require("easy-dotnet.picker").pick_sync(nil, opts, "Pick solution file")
   return selection and selection.value or nil
 end

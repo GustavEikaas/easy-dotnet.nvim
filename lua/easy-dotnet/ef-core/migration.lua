@@ -1,18 +1,17 @@
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 ---@param migration_name string
 M.add_migration = function(migration_name)
   if not migration_name then
-    vim.notify("Migration name required", vim.log.levels.ERROR)
+    logger.error("Migration name required")
     return
   end
   local selections = require("easy-dotnet.ef-core.utils").pick_projects()
   local project = selections.project
   local startup_project = selections.startup_project
 
-  local cmd = string.format("dotnet ef migrations add %s --project %s --startup-project %s", migration_name, project
-    .path,
-    startup_project.path)
+  local cmd = string.format("dotnet ef migrations add %s --project %s --startup-project %s", migration_name, project.path, startup_project.path)
   local spinner = require("easy-dotnet.ui-modules.spinner").new()
   spinner:start_spinner("Adding migration")
   vim.fn.jobstart(cmd, {
@@ -22,7 +21,7 @@ M.add_migration = function(migration_name)
       else
         spinner:stop_spinner("Failed to add migration", vim.log.levels.ERROR)
       end
-    end
+    end,
   })
 end
 
@@ -32,8 +31,7 @@ M.remove_migration = function()
   local startup_project = selections.startup_project
 
   local spinner = require("easy-dotnet.ui-modules.spinner").new()
-  local cmd = string.format("dotnet ef migrations remove --project %s --startup-project %s", project.path,
-    startup_project.path)
+  local cmd = string.format("dotnet ef migrations remove --project %s --startup-project %s", project.path, startup_project.path)
   spinner:start_spinner("Removing migration")
   vim.fn.jobstart(cmd, {
     on_exit = function(_, code)
@@ -42,21 +40,16 @@ M.remove_migration = function()
       else
         spinner:stop_spinner("Failed to remove migration", vim.log.levels.ERROR)
       end
-    end
+    end,
   })
 end
 
-
 M.list_migrations = function()
-  local conf = require('telescope.config').values
   local selections = require("easy-dotnet.ef-core.utils").pick_projects()
   local project = selections.project
   local startup_project = selections.startup_project
 
-  local cmd = string.format("dotnet ef migrations list --prefix-output --project %s --startup-project %s", project.path,
-    startup_project.path)
-  vim.notify(cmd)
-
+  local cmd = string.format("dotnet ef migrations list --prefix-output --project %s --startup-project %s", project.path, startup_project.path)
   local migrations = {}
   local spinner = require("easy-dotnet.ui-modules.spinner").new()
   spinner:start_spinner("Loading migrations")
@@ -83,24 +76,15 @@ M.list_migrations = function()
               display = entry,
               ordinal = entry,
               path = string.format("%s/Migrations/%s.cs", vim.fs.dirname(selections.project.path), entry),
-              value = entry
+              value = entry,
             }
-          end
+          end,
         }
-        local picker = require('telescope.pickers').new(opts, {
-          prompt_title = "Migrations",
-          finder = require('telescope.finders').new_table {
-            results = migrations,
-            entry_maker = opts.entry_maker,
-          },
-          sorter = require('telescope.config').values.generic_sorter({}),
-          previewer = conf.grep_previewer(opts)
-        })
-        picker:find()
+        require("easy-dotnet.picker").migration_picker(opts, migrations)
       else
         spinner:stop_spinner("Failed to load migrations", vim.log.levels.ERROR)
       end
-    end
+    end,
   })
 end
 
