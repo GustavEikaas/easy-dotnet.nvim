@@ -71,7 +71,7 @@ function M:get_completions(ctx, callback)
           table.insert(items, {
             label = "latest",
             insertText = latest,
-            documentation = "auto insert the latest version available",
+            documentation = "Insert latest version available: " .. latest,
             kind = 15,
             preselect = true,
           })
