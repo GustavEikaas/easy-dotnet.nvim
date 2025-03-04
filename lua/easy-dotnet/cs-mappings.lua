@@ -50,11 +50,11 @@ local function generate_csharp_namespace(cs_file_path, csproj_path, maxdepth)
 end
 
 local function is_buffer_empty(buf)
-  local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-
-  for _, line in ipairs(lines) do
-    if line ~= "" then return false end
+  for i = 1, vim.api.nvim_buf_line_count(buf), 1 do
+    local line = vim.api.nvim_buf_get_lines(buf, i, i + 1, false)[1]
+    if line ~= "" and line ~= nil then return false end
   end
+
   return true
 end
 
@@ -121,7 +121,7 @@ M.auto_bootstrap_namespace = function(mode)
 end
 
 M.add_test_signs = function()
-  vim.api.nvim_create_autocmd({ "BufEnter" }, {
+  vim.api.nvim_create_autocmd({ "BufReadPost" }, {
     pattern = "*.cs",
     callback = function() require("easy-dotnet.test-signs").add_gutter_test_signs() end,
   })
