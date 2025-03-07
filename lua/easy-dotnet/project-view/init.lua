@@ -2,6 +2,7 @@ local M = {}
 
 local window = require("easy-dotnet.project-view.render")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
+local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
 local error_messages = require("easy-dotnet.error-messages")
 local picker = require("easy-dotnet.picker")
 local default_manager = require("easy-dotnet.default-manager")
@@ -24,6 +25,16 @@ end
 
 M.open_or_toggle = function()
   local sln_path = sln_parse.find_solution_file()
+  if not sln_path then
+    local project_file = csproj_parser.find_project_file()
+    if not project_file then
+      logger.error(error_messages.no_project_definition_found)
+      return
+    end
+    local project = csproj_parser.get_project_from_project_file(project_file)
+    window.render(project, nil)
+    return
+  end
   select_project(sln_path, function(i) window.render(i, sln_path) end)
 end
 
