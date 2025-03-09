@@ -203,21 +203,21 @@ local templates = {
 
 M.new = function()
   local picker = require("easy-dotnet.picker")
-  local template = picker.pick_sync(nil, templates, "Select type")
-  if template.type == "project" then
-    vim.cmd("startinsert")
-    --TODO: telescope
-    vim.ui.input({ prompt = string.format("Enter name for %s", template.display) }, function(input)
-      if input == nil then
-        logger.error("No name provided")
-        return
-      end
-      vim.cmd("stopinsert")
-      coroutine.wrap(function() template.run(input) end)()
-    end)
-  else
-    template.run()
-  end
+  picker.picker(nil, templates, function(template)
+    if template.type == "project" then
+      vim.cmd("startinsert")
+      vim.ui.input({ prompt = string.format("Enter name for %s", template.display) }, function(input)
+        if input == nil then
+          logger.error("No name provided")
+          return
+        end
+        vim.cmd("stopinsert")
+        coroutine.wrap(function() template.run(input) end)()
+      end)
+    else
+      template.run()
+    end
+  end, "Select type")
 end
 
 local function name_input_sync() return vim.fn.input("Enter name:") end
