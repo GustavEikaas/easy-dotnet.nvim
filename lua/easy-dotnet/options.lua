@@ -39,7 +39,7 @@ local polyfills = require("easy-dotnet.polyfills")
 ---@field mappings TestRunnerMappings
 ---@field additional_args table
 
----@alias PickerType "" | "telescope" | "fzf" | "basic"
+---@alias PickerType nil | "telescope" | "fzf" | "basic"
 
 local function get_sdk_path()
   local sdk_version = vim.trim(vim.fn.system("dotnet --version"))
@@ -136,9 +136,9 @@ local M = {
     },
     -- choose which picker to use with the plugin
     -- possible values are "telescope" | "fzf" | "basic"
-    -- if empty string, will auto-detect available pickers in order: telescope -> fzf -> basic
+    -- if nil, will auto-detect available pickers in order: telescope -> fzf -> basic
     ---@type PickerType
-    picker = "",
+    picker = nil,
   },
 }
 

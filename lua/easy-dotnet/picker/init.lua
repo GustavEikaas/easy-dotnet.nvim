@@ -5,13 +5,13 @@ local function get_active_picker()
   ---@type PickerType
   local selected_picker = require("easy-dotnet.options").get_option("picker")
 
-  if selected_picker ~= "" and selected_picker ~= "telescope" and selected_picker ~= "fzf" and selected_picker ~= "basic" then
+  if selected_picker ~= nil and selected_picker ~= "telescope" and selected_picker ~= "fzf" and selected_picker ~= "basic" then
     vim.notify(string.format("Invalid picker type: '%s'. Using auto-detection instead.", selected_picker), vim.log.levels.WARN)
-    selected_picker = ""
+    selected_picker = nil
   end
 
   -- if picker is specified, check if it's available
-  if selected_picker ~= "" then
+  if selected_picker ~= nil then
     -- check each known picker in order
     if selected_picker == "telescope" and pcall(require, "telescope") then
       return "telescope"
