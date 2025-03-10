@@ -206,6 +206,9 @@ Although not *required* by the plugin, it is highly recommended to install one o
       },
       -- choose which picker to use with the plugin
       -- possible values are "telescope" | "fzf" | "basic"
+      -- if no picker is specified, the plugin will determine
+      -- the available one automatically with this priority:
+      -- telescope -> fzf -> basic
       picker = "telescope" 
     })
 
@@ -264,7 +267,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
 ||
 | `dotnet.is_dotnet_project()`                  | Returns `true` if a `.csproj` or `.sln` file is present in the current working directory or subfolders       |
 | `dotnet.try_get_selected_solution()`          | If a solution is selected, returns `{ basename: string, path: string }`, otherwise `nil`                    |
-| `dotnet.new()`                                | Telescope picker for creating a new template based on `Dotnet new`                                                                                                            |
+| `dotnet.new()`                                | Picker for creating a new template based on `Dotnet new`                                                                                                            |
 | `dotnet.outdated()`                           | Runs `Dotnet outdated` in supported file types (`.csproj`, `.fsproj`, `Directory.Packages.props`, `Packages.props`) and displays virtual text with the latest package versions. |
 ||
 | `dotnet.solution_select()`                    | Select the solution file for easy-dotnet.nvim to use, useful when multiple .sln files are present in the project.     |
@@ -276,14 +279,13 @@ Although not *required* by the plugin, it is highly recommended to install one o
 | `dotnet.ef_migrations_list()`                 |  Lists all applied Entity Framework migrations.                                                                                                           |
 | `dotnet.ef_database_drop()`                   |  Drops the database for the selected project.                                                                                                           |
 | `dotnet.ef_database_update()`                 |  Updates the database to the latest migration.                                                                                                          |
-| `dotnet.ef_database_update_pick()`            |  Opens a Telescope picker to update the database to a selected migration.                                                                                                          |
+| `dotnet.ef_database_update_pick()`            |  Opens a picker to update the database to a selected migration.                                                                                                          |
 ||
-| `dotnet.createfile(path)`                     | Spawns a Telescope picker for creating a new file based on a `.NET new` template                            |
-| `dotnet.secrets()`                            | Opens Telescope picker for `.NET user-secrets`                                                              |
+| `dotnet.createfile(path)`                     | Spawns a picker for creating a new file based on a `.NET new` template                            |
+| `dotnet.secrets()`                            | Opens a picker for `.NET user-secrets`                                                              |
 | `dotnet.get_debug_dll()`                      | Returns the DLL from the `bin/debug` folder                                                                 |
 | `dotnet.get_environment_variables(project_name, project_path)` | Returns the environment variables from the `launchSetting.json` file                                         |
 | `dotnet.reset()`                              | Deletes all files persisted by `easy-dotnet.nvim`. Use this if unable to pick a different solution or project |
-
 
 ```lua
 local dotnet = require("easy-dotnet")
@@ -484,24 +486,27 @@ Adding nuget packages are available using the `:Dotnet add package` command. Thi
 ![image](https://github.com/user-attachments/assets/00a9d38a-6afe-42ec-b971-04191fee1d59)
 
 ### Requirements
-This functionality relies on `jq` so ensure that is installed on your system.
 
+This functionality relies on `jq` so ensure that is installed on your system.
 
 ## Project mappings
 
 Key mappings are available automatically within `.csproj` and `.fsproj` files
 
 ### Add reference
-`<leader>ar` -> Opens a telescope picker for selecting which project reference to add
+
+`<leader>ar` -> Opens a picker for selecting which project reference to add
 
 ![image](https://github.com/user-attachments/assets/dec096be-8a87-4dd8-aaec-8c22849d1640)
 
 ### Package autocomplete
+
 When editing package references inside a .csproject file it is possible to enable autocomplete.
 This will trigger autocomplete for `<PackageReference Include="<cmp-trigger>" Version="<cmp-trigger>" />`
 This functionality relies on `jq` so ensure that is installed on your system.
 
 #### Using nvim-cmp
+
 ```lua
     cmp.register_source("easy-dotnet", require("easy-dotnet").package_completion_source)
     ...
