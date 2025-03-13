@@ -1,36 +1,52 @@
 local M = {}
 
+local function find_nuget_packages(opts, ctx)
+  local args = {
+    "package",
+    "search",
+    ctx.filter.search or "",
+    "--format",
+    "json",
+  }
+  return require("snacks.picker.source.proc").proc({
+    opts,
+    {
+      cmd = "dotnet",
+      args = args,
+      ---@param item snacks.picker.finder.Item
+      transform = function(item)
+        if item.text:match('"id":') then
+          return { text = item.text:match('"id":%s*"([^"]+)"') }
+        else
+          return false
+        end
+      end,
+    },
+  }, ctx)
+end
+
 M.nuget_search = function()
-  local co = coroutine.running()
   local selected = nil
+  local co = coroutine.running()
 
   require("snacks").picker.pick(nil, {
     title = "NuGet Search",
     live = true,
     layout = "select",
     format = "text",
-    finder = function(_, ctx)
-      local command = string.format('dotnet package search %s --format json | jq ".searchResult | .[] | .packages | .[] | .id"', ctx.filter.search)
-      local command_result = vim.fn.system(command)
-
-      local items = {}
-      for single_package in command_result:gmatch("[^\n]+") do
-          table.insert(items, { text = single_package:gsub('"', '') })
-      end
-
-      return items;
-    end,
+    finder = find_nuget_packages,
     confirm = function(picker, item)
       picker:close()
       selected = item.text
       if coroutine.status(co) ~= "running" then coroutine.resume(co) end
-    end
+    end,
   })
 
   if not selected then coroutine.yield() end
-
   return selected
 end
+
+
 
 M.migration_picker = function(opts, migrations)
   local picker_items = {}
