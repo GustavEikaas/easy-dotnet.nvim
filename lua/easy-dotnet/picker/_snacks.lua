@@ -46,14 +46,12 @@ M.nuget_search = function()
   return selected
 end
 
-
-
 M.migration_picker = function(opts, migrations)
   local picker_items = {}
   for _, migration in ipairs(migrations) do
     table.insert(picker_items, {
       text = migration,
-      file = opts.entry_maker(migration).path
+      file = opts.entry_maker(migration).path,
     })
   end
 
@@ -61,12 +59,12 @@ M.migration_picker = function(opts, migrations)
     items = picker_items,
     format = "text",
     preview = "file",
-    title = "Migrations"
+    title = "Migrations",
   })
 end
 
 local function get_preview_text(option, get_secret_path, read_file)
-  if not option or not option.secrets then return  "Secrets file does not exist\n<CR> to create" end
+  if not option or not option.secrets then return "Secrets file does not exist\n<CR> to create" end
   local content = read_file(get_secret_path(option.secrets))
   if content ~= nil then
     return table.concat(content, "\n")
@@ -98,8 +96,8 @@ M.preview_picker = function(bufnr, options, on_select_cb, title, get_secret_path
       option = option,
       preview = {
         text = get_preview_text(option, get_secret_path, read_content),
-        ft = "json"
-      }
+        ft = "json",
+      },
     })
   end
 
@@ -109,8 +107,8 @@ M.preview_picker = function(bufnr, options, on_select_cb, title, get_secret_path
     preview = "preview",
     title = title,
     confirm = function(picker, item)
-        picker:close()
-        on_select_cb(item.option)
+      picker:close()
+      on_select_cb(item.option)
     end,
   })
 end
@@ -133,7 +131,7 @@ M.picker = function(bufnr, options, on_select_cb, title, autopick)
 
   local picker_items = {}
   for _, option in ipairs(options) do
-    table.insert(picker_items, { text = option.display, option = option})
+    table.insert(picker_items, { text = option.display, option = option })
   end
 
   require("snacks").picker.pick(nil, {
@@ -142,8 +140,8 @@ M.picker = function(bufnr, options, on_select_cb, title, autopick)
     title = title,
     layout = "select",
     confirm = function(picker, item)
-        picker:close()
-        on_select_cb(item.option)
+      picker:close()
+      on_select_cb(item.option)
     end,
   })
 end
@@ -154,7 +152,6 @@ end
 ---@param title string | nil
 ---@return T
 M.pick_sync = function(bufnr, options, title, autopick)
-
   local co = coroutine.running()
   local selected = nil
 
