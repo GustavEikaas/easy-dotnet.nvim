@@ -87,6 +87,7 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 Although not *required* by the plugin, it is highly recommended to install one of:
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
 - [fzf-lua](https://github.com/ibhagwan/fzf-lua)
+- [snacks.nvim](https://github.com/folke/snacks.nvim)
 
 ## Setup
 
@@ -111,7 +112,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
 -- lazy.nvim
 {
   "GustavEikaas/easy-dotnet.nvim",
-  -- 'nvim-telescope/telescope.nvim' or 'ibhagwan/fzf-lua'
+  -- 'nvim-telescope/telescope.nvim' or 'ibhagwan/fzf-lua' or 'folke/snacks.nvim'
   -- are highly recommended for a better experience
   dependencies = { "nvim-lua/plenary.nvim", 'nvim-telescope/telescope.nvim', },
   config = function()
@@ -205,10 +206,10 @@ Although not *required* by the plugin, it is highly recommended to install one o
           enabled = true
       },
       -- choose which picker to use with the plugin
-      -- possible values are "telescope" | "fzf" | "basic"
+      -- possible values are "telescope" | "fzf" | "snacks" | "basic"
       -- if no picker is specified, the plugin will determine
       -- the available one automatically with this priority:
-      -- telescope -> fzf -> basic
+      -- telescope -> fzf -> snacks ->  basic
       picker = "telescope" 
     })
 
