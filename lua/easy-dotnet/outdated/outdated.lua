@@ -1,5 +1,10 @@
 local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
+
+-- Define constants for pattern types
+local PATTERN_TYPE_REFERENCE = "reference"
+local PATTERN_TYPE_VERSION = "version"
+
 local M = {}
 
 local function readFile(filePath)
@@ -50,10 +55,19 @@ local function readSolutionPackagesInfo(path)
   return deps
 end
 
-local function find_package_reference_in_buffer(package_name)
+local function find_package_in_buffer(package_name, pattern_type)
   local buf = vim.api.nvim_get_current_buf()
 
-  local pattern = '<PackageReference Include="' .. package_name:gsub("%.", "%%.") .. '"'
+  -- Define the pattern based on the type
+  local pattern
+  if pattern_type == PATTERN_TYPE_REFERENCE then
+    pattern = '<PackageReference Include="' .. package_name:gsub("%.", "%%.") .. '"'
+  elseif pattern_type == PATTERN_TYPE_VERSION then
+    pattern = '<PackageVersion Include="' .. package_name:gsub("%.", "%%.") .. '"'
+  else
+    error("Invalid pattern_type: " .. tostring(pattern_type))
+    return nil
+  end
 
   local num_lines = vim.api.nvim_buf_line_count(buf)
 
@@ -91,7 +105,7 @@ M.outdated = function()
           local bnr = vim.fn.bufnr("%")
           local ns_id = require("easy-dotnet.constants").ns_id
           for _, value in ipairs(deps) do
-            local line = find_package_reference_in_buffer(value.Name)
+            local line = find_package_in_buffer(value.Name, PATTERN_TYPE_REFERENCE)
             if line ~= nil then
               vim.api.nvim_buf_set_extmark(bnr, ns_id, line - 1, 0, {
                 virt_text = { { string.format("%s -> %s", value.ResolvedVersion, value.LatestVersion), "EasyDotnetPackage" } },
@@ -130,7 +144,7 @@ M.outdated = function()
           local bnr = vim.fn.bufnr("%")
           local ns_id = require("easy-dotnet.constants").ns_id
           for _, value in ipairs(deps) do
-            local line = find_package_reference_in_buffer(value.Name)
+            local line = find_package_in_buffer(value.Name, PATTERN_TYPE_VERSION)
             if line ~= nil then
               vim.api.nvim_buf_set_extmark(bnr, ns_id, line - 1, 0, {
                 virt_text = { { string.format("%s -> %s", value.ResolvedVersion, value.LatestVersion), "EasyDotnetPackage" } },
