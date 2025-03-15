@@ -1,11 +1,11 @@
 local M = {}
 
----@return "telescope"|"fzf"|"basic" active_picker
+---@return "telescope"|"fzf"|"snacks"|"basic" active_picker
 local function get_active_picker()
   ---@type PickerType
   local selected_picker = require("easy-dotnet.options").get_option("picker")
 
-  if selected_picker ~= nil and selected_picker ~= "telescope" and selected_picker ~= "fzf" and selected_picker ~= "basic" then
+  if selected_picker ~= nil and selected_picker ~= "telescope" and selected_picker ~= "fzf" and selected_picker ~= "snacks" and selected_picker ~= "basic" then
     vim.notify(string.format("Invalid picker type: '%s'. Using auto-detection instead.", selected_picker), vim.log.levels.WARN)
     selected_picker = nil
   end
@@ -17,6 +17,8 @@ local function get_active_picker()
       return "telescope"
     elseif selected_picker == "fzf" and pcall(require, "fzf-lua") then
       return "fzf"
+    elseif selected_picker == "snacks" and pcall(require, "snacks") then
+      return "snacks"
     elseif selected_picker == "basic" then
       return "basic"
     end
@@ -28,6 +30,8 @@ local function get_active_picker()
     return "telescope"
   elseif pcall(require, "fzf-lua") then
     return "fzf"
+  elseif pcall(require, "snacks") then
+    return "snacks"
   else
     return "basic"
   end
@@ -41,6 +45,8 @@ M.search_nuget = function(cb)
     return require("easy-dotnet.picker._fzf").nuget_search(cb)
   elseif active_picker == "telescope" then
     return require("easy-dotnet.picker._telescope").nuget_search()
+  elseif active_picker == "snacks" then
+    return require("easy-dotnet.picker._snacks").nuget_search()
   else
     return require("easy-dotnet.picker._base").nuget_search()
   end
@@ -53,6 +59,8 @@ M.migration_picker = function(opts, migration)
     return require("easy-dotnet.picker._fzf").migration_picker(opts, migration)
   elseif active_picker == "telescope" then
     return require("easy-dotnet.picker._telescope").migration_picker(opts, migration)
+  elseif active_picker == "snacks" then
+    return require("easy-dotnet.picker._snacks").migration_picker(opts, migration)
   else
     return require("easy-dotnet.picker._base").migration_picker(opts, migration)
   end
@@ -65,6 +73,8 @@ M.preview_picker = function(bufnr, options, on_select_cb, title, previewer, get_
     return require("easy-dotnet.picker._fzf").preview_picker(bufnr, options, on_select_cb, title, get_secret_path, readFile)
   elseif active_picker == "telescope" then
     return require("easy-dotnet.picker._telescope").preview_picker(bufnr, options, on_select_cb, title, previewer)
+  elseif active_picker == "snacks" then
+    return require("easy-dotnet.picker._snacks").preview_picker(bufnr, options, on_select_cb, title, get_secret_path, readFile)
   else
     return require("easy-dotnet.picker._base").preview_picker(bufnr, options, on_select_cb, title, previewer)
   end
@@ -77,6 +87,8 @@ M.picker = function(bufnr, options, on_select_cb, title, autopick)
     return require("easy-dotnet.picker._fzf").picker(bufnr, options, on_select_cb, title, autopick)
   elseif active_picker == "telescope" then
     return require("easy-dotnet.picker._telescope").picker(bufnr, options, on_select_cb, title, autopick)
+  elseif active_picker == "snacks" then
+    return require("easy-dotnet.picker._snacks").picker(bufnr, options, on_select_cb, title, autopick)
   else
     return require("easy-dotnet.picker._base").picker(bufnr, options, on_select_cb, title, autopick)
   end
@@ -89,6 +101,8 @@ M.pick_sync = function(bufnr, options, title, autopick)
     return require("easy-dotnet.picker._fzf").pick_sync(bufnr, options, title, autopick)
   elseif active_picker == "telescope" then
     return require("easy-dotnet.picker._telescope").pick_sync(bufnr, options, title, autopick)
+  elseif active_picker == "snacks" then
+    return require("easy-dotnet.picker._snacks").pick_sync(bufnr, options, title, autopick)
   else
     return require("easy-dotnet.picker._base").pick_sync(bufnr, options, title, autopick)
   end
