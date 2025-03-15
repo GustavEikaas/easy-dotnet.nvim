@@ -2,6 +2,7 @@ local actions = require("easy-dotnet.actions")
 local debug = require("easy-dotnet.debugger")
 local constants = require("easy-dotnet.constants")
 local commands = require("easy-dotnet.commands")
+
 local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
 
@@ -13,10 +14,10 @@ local function wrap(callback)
       -- If already in a coroutine, call the callback directly
       callback(...)
     else
-      -- If not, create a new coroutine and resume it
       local co = coroutine.create(callback)
       local s = ...
       local handle = function()
+        --TODO: fix
         local success, err = coroutine.resume(co, s)
         if not success then print("Coroutine failed: " .. err) end
       end
