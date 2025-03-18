@@ -79,12 +79,6 @@ M.check = function()
   vim.health.start("easy-dotnet lua dependencies")
   ensure_nvim_dep_installed("plenary", "https://github.com/nvim-lua/plenary.nvim")
   ensure_nvim_dep_installed("dap", { "Some functionality will be disabled", "https://github.com/mfussenegger/nvim-dap" }, false)
-  local selected_picker = require("easy-dotnet.options").get_option("picker")
-  if selected_picker == "telescope" then
-    ensure_nvim_dep_installed("telescope", { "This is not needed for the plugin but is a nice addition to the experience", "https://github.com/nvim-telescope/telescope.nvim" }, false)
-  elseif selected_picker == "fzf" then
-    ensure_nvim_dep_installed("fzf-lua", { "This is not needed for the plugin but is a nice addition to the experience", "https://github.com/ibhagwan/fzf-lua" }, false)
-  end
   ensure_nvim_dep_installed("roslyn", {
     "This is not required for this plugin but is a nice addition to the .Net developer experience",
     "If you are using another LSP you can safely ignore this warning",
@@ -96,6 +90,15 @@ M.check = function()
 
   vim.health.start("easy-dotnet configuration")
   local config = require("easy-dotnet.options").options
+  local selected_picker = require("easy-dotnet.options").get_option("picker")
+  if selected_picker == "telescope" then
+    ensure_nvim_dep_installed("telescope", { "This is selected in your config but is not installed", "A fallback will be used instead", "https://github.com/nvim-telescope/telescope.nvim" }, true)
+  elseif selected_picker == "fzf" then
+    ensure_nvim_dep_installed("fzf-lua", { "This is selected in your config but is not installed", "A fallback will be used instead", "https://github.com/ibhagwan/fzf-lua" }, true)
+  elseif selected_picker == "snacks" then
+    ensure_nvim_dep_installed("snacks", { "This is selected in your config but is not installed", "A fallback will be used instead", "https://github.com/folke/snacks.nvim" }, true)
+  end
+
   local sdk_path_time = measure_function(config.get_sdk_path)
   if sdk_path_time > 1 then
     vim.health.warn(string.format("options.get_sdk_path took %d seconds", sdk_path_time), "You should add get_sdk_path to your options for a performance improvement🚀. Check readme")
