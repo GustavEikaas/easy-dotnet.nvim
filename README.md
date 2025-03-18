@@ -39,7 +39,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
    - [Features](#features)
    - [Keymaps](#keymaps)
 10. [Outdated](#outdated)
-   - [Requirements](#requirements)
+    - [Requirements](#requirements)
 11. [Add](#add)
     - [Add package](#add-package)
 12. [Project mappings](#project-mappings)
