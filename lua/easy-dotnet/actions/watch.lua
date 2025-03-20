@@ -49,5 +49,4 @@ M.run_project_picker = function(term, use_default, args)
   end, "Run project")
 end
 
-
 return M
