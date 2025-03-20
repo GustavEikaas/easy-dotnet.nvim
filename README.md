@@ -189,6 +189,9 @@ Although not *required* by the plugin, it is highly recommended to install one o
           build = function()
             return string.format("dotnet build %s %s", path, args)
           end
+          watch = function ()
+            return string.format("dotnet watch --project %s %s", path, args)
+          end
         }
 
         local command = commands[action]() .. "\r"
@@ -255,6 +258,9 @@ Although not *required* by the plugin, it is highly recommended to install one o
 | `dotnet.test()` | `dotnet test <TS> <DArgs>` |
 | `dotnet.test_solution()` | `dotnet test <TS> <DArgs>` |
 | `dotnet.test_default()` | `dotnet test <TS Default> <DArgs>` |
+||
+| `dotnet.watch()` | `dotnet watch --project <TS> <DArgs>`                                                                                                             |
+| `dotnet.watch_default()` | `dotnet watch --project <TS Default> <DArgs>` |
 ||
 | `dotnet.restore()` | `dotnet restore <sln> <Dargs>` |
 | `dotnet.clean()`                              | `dotnet clean <sln> <DArgs>`                                                                          |
@@ -323,6 +329,8 @@ dotnet.project_view_default()
 dotnet.run()
 dotnet.run_profile_default()
 dotnet.run_default()
+dotnet.watch()
+dotnet.watch_default()
 dotnet.secrets()                                                          
 dotnet.clean()                                                           
 dotnet.restore()                   
@@ -340,6 +348,8 @@ Dotnet run
 Dotnet run default
 Dotnet run profile
 Dotnet run profile default
+Dotnet watch
+Dotnet watch default
 Dotnet test
 Dotnet test default
 Dotnet test solution
