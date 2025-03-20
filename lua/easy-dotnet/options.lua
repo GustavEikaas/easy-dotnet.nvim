@@ -82,7 +82,7 @@ local M = {
         test = function() return string.format("dotnet test %s %s", path, args) end,
         restore = function() return string.format("dotnet restore %s %s", path, args) end,
         build = function() return string.format("dotnet build %s %s", path, args) end,
-        watch = function ()return string.format("dotnet watch --project %s %s", path, args) end
+        watch = function() return string.format("dotnet watch --project %s %s", path, args) end,
       }
       local command = commands[action]()
       if require("easy-dotnet.extensions").isWindows() == true then command = command .. "\r" end
