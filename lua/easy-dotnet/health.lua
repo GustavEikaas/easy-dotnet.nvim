@@ -58,14 +58,22 @@ end
 local function check_cmp()
   local success, cmp = pcall(function() return require("cmp") end)
   if success then
-    for _, value in ipairs(cmp.get_registered_sources()) do
-      if value.name == "easy-dotnet" then
+    if type(cmp.get_registered_sources) == "function" then
+      for _, value in ipairs(cmp.get_registered_sources()) do
+        if value.name == "easy-dotnet" then
+          vim.health.ok("cmp source configured correctly")
+          return
+        end
+      end
+    else
+      local value = cmp.config.get_source_config("easy-dotnet")
+      if value ~= nil and value.name == "easy-dotnet" then
         vim.health.ok("cmp source configured correctly")
         return
       end
     end
-    vim.health.warn("cmp source not configured", { "https://github.com/GustavEikaas/easy-dotnet.nvim?tab=readme-ov-file#package-autocomplete" })
   end
+  vim.health.warn("cmp source not configured", { "https://github.com/GustavEikaas/easy-dotnet.nvim?tab=readme-ov-file#package-autocomplete" })
 end
 
 M.check = function()
