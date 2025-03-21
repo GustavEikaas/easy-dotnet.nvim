@@ -23,7 +23,6 @@ end
 local function readPackageInfo(path, project_name)
   local contents = readFile(path)
   if contents == nil then
-    print(path)
     error("Failed to read file " .. vim.fs.basename(path))
     return
   end
@@ -39,7 +38,6 @@ local function readSolutionPackagesInfo(path)
   local seen = {}
   local contents = readFile(path)
   if contents == nil then
-    print(path)
     error("Failed to read file " .. vim.fs.basename(path))
     return
   end
@@ -82,15 +80,27 @@ end
 M.outdated = function()
   local path = vim.fs.normalize(vim.fn.expand("%"))
   local filename = vim.fs.basename(path):lower()
+  local bnr = vim.fn.bufnr("%")
+  local ns_id = require("easy-dotnet.constants").ns_id
+
+  local data_dir = require("easy-dotnet.constants").get_data_directory()
+  local outPath = polyfills.fs.joinpath(data_dir, "package.json")
+
+  os.remove(outPath) -- Delete the package.json file if it exists
+
+  vim.api.nvim_buf_clear_namespace(bnr, ns_id, 0, -1)
 
   if path:match("[^/\\]+%.%a+proj") then
     local project_name = vim.fs.basename(path:gsub("%.csproj$", ""):gsub("%.fsproj$", ""))
-    local data_dir = require("easy-dotnet.constants").get_data_directory()
-    local outPath = polyfills.fs.joinpath(data_dir, "package.json")
     local cmd = string.format("dotnet-outdated %s --output %s", path, outPath)
+
     vim.fn.jobstart(cmd, {
       on_exit = function(_, b)
         if b == 0 then
+          local file = io.open(outPath, "r")
+          if not file then return end
+          file:close()
+
           local deps = readPackageInfo(outPath, project_name)
           if deps == nil then
             error("Parsing outdated packages failed")
@@ -102,8 +112,6 @@ M.outdated = function()
             return
           end
 
-          local bnr = vim.fn.bufnr("%")
-          local ns_id = require("easy-dotnet.constants").ns_id
           for _, value in ipairs(deps) do
             local line = find_package_in_buffer(value.Name, PATTERN_TYPE_REFERENCE)
             if line ~= nil then
@@ -124,12 +132,15 @@ M.outdated = function()
   elseif filename == "directory.packages.props" or filename == "packages.props" then
     local sln_parse = require("easy-dotnet.parsers.sln-parse")
     local solutionFilePath = sln_parse.find_solution_file()
-    local data_dir = require("easy-dotnet.constants").get_data_directory()
-    local outPath = polyfills.fs.joinpath(data_dir, "package.json")
     local cmd = string.format("dotnet-outdated %s --output %s", solutionFilePath, outPath)
+
     vim.fn.jobstart(cmd, {
       on_exit = function(_, b)
         if b == 0 then
+          local file = io.open(outPath, "r")
+          if not file then return end
+          file:close()
+
           local deps = readSolutionPackagesInfo(outPath)
           if deps == nil then
             error("Parsing outdated packages failed")
@@ -141,8 +152,6 @@ M.outdated = function()
             return
           end
 
-          local bnr = vim.fn.bufnr("%")
-          local ns_id = require("easy-dotnet.constants").ns_id
           for _, value in ipairs(deps) do
             local line = find_package_in_buffer(value.Name, PATTERN_TYPE_VERSION)
             if line ~= nil then
