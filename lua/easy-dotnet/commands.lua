@@ -58,6 +58,17 @@ M.run = {
   },
 }
 
+M.watch = {
+  handle = function(args, options) actions.watch(options.terminal, false, passthrough_dotnet_cli_args_handler(args)) end,
+  passthrough = true,
+  subcommands = {
+    default = {
+      handle = function(args, options) actions.watch(options.terminal, true, passthrough_dotnet_cli_args_handler(args)) end,
+      passthrough = true,
+    },
+  },
+}
+
 M.project = {
   subcommands = {
     view = {
