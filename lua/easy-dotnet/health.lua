@@ -57,8 +57,8 @@ end
 
 local function check_cmp()
   -- nvim-cmp
-  local success, cmp = pcall(require, "cmp")
-  if success then
+  if pcall(require, "cmp") then
+    local cmp = require("cmp")
     if type(cmp.get_registered_sources) == "function" then
       for _, value in ipairs(cmp.get_registered_sources()) do
         if value.name == "easy-dotnet" then
@@ -67,14 +67,13 @@ local function check_cmp()
         end
       end
     end
-  else
-    -- blink.cmp
-    local blink_success, blink_cmp = pcall(require, "blink.cmp.config")
-    if blink_success then
-      if blink_cmp.sources.providers["easy-dotnet"] then
-        vim.health.ok("cmp source configured correctly")
-        return
-      end
+  end
+  -- blink.cmp
+  if pcall(require, "blink.cmp.config") then
+    local blink_config = require("blink.cmp.config")
+    if blink_config.sources.providers["easy-dotnet"] then
+      vim.health.ok("cmp source configured correctly")
+      return
     end
   end
 
