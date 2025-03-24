@@ -56,16 +56,28 @@ local function check_coreclr_configured()
 end
 
 local function check_cmp()
-  local success, cmp = pcall(function() return require("cmp") end)
-  if success then
-    for _, value in ipairs(cmp.get_registered_sources()) do
-      if value.name == "easy-dotnet" then
-        vim.health.ok("cmp source configured correctly")
-        return
+  -- nvim-cmp
+  if pcall(require, "cmp") then
+    local cmp = require("cmp")
+    if type(cmp.get_registered_sources) == "function" then
+      for _, value in ipairs(cmp.get_registered_sources()) do
+        if value.name == "easy-dotnet" then
+          vim.health.ok("cmp source configured correctly")
+          return
+        end
       end
     end
-    vim.health.warn("cmp source not configured", { "https://github.com/GustavEikaas/easy-dotnet.nvim?tab=readme-ov-file#package-autocomplete" })
   end
+  -- blink.cmp
+  if pcall(require, "blink.cmp.config") then
+    local blink_config = require("blink.cmp.config")
+    if blink_config.sources.providers["easy-dotnet"] then
+      vim.health.ok("cmp source configured correctly")
+      return
+    end
+  end
+
+  vim.health.warn("cmp source not configured", { "https://github.com/GustavEikaas/easy-dotnet.nvim?tab=readme-ov-file#package-autocomplete" })
 end
 
 M.check = function()
