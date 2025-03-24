@@ -56,22 +56,15 @@ local function check_coreclr_configured()
 end
 
 local function check_cmp()
+  -- nvim-cmp
   local success, cmp = pcall(require, "cmp")
   if success then
-    -- nvim-cmp
     if type(cmp.get_registered_sources) == "function" then
       for _, value in ipairs(cmp.get_registered_sources()) do
         if value.name == "easy-dotnet" then
           vim.health.ok("cmp source configured correctly")
           return
         end
-      end
-    else
-      -- blink.compat
-      local value = cmp.config.get_source_config("easy-dotnet")
-      if value ~= nil and value.name == "easy-dotnet" then
-        vim.health.ok("cmp source configured correctly")
-        return
       end
     end
   else
