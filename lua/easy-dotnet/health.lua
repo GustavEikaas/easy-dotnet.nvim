@@ -76,9 +76,9 @@ local function check_cmp()
     end
   else
     -- blink.cmp
-    success, cmp = pcall(require, "blink.cmp.config")
-    if success then
-      if cmp.sources.providers["easy-dotnet"] then
+    local blink_success, blink_cmp = pcall(require, "blink.cmp.config")
+    if blink_success then
+      if blink_cmp.sources.providers["easy-dotnet"] then
         vim.health.ok("cmp source configured correctly")
         return
       end
