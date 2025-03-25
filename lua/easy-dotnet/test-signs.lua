@@ -145,9 +145,9 @@ function M.add_gutter_test_signs()
 
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   if is_test_file == true then
-    vim.keymap.set("n", keymap.debug_test_from_buffer.lhs, function() debug_test_from_buffer() end, { silent = true, buffer = bufnr })
+    vim.keymap.set("n", keymap.debug_test_from_buffer.lhs, function() debug_test_from_buffer() end, { silent = true, buffer = bufnr, desc = keymap.debug_test_from_buffer.desc })
 
-    vim.keymap.set("n", keymap.run_test_from_buffer.lhs, function() run_test_from_buffer() end, { silent = true, buffer = bufnr })
+    vim.keymap.set("n", keymap.run_test_from_buffer.lhs, function() run_test_from_buffer() end, { silent = true, buffer = bufnr, desc = keymap.run_test_from_buffer.desc })
   end
 end
 
