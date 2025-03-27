@@ -272,9 +272,7 @@ M.create_new_item = function(path, cb)
       end
     end,
     on_exit = function(_, code)
-      if code ~= 0 then
-        logger.error("Command failed")
-      end
+      if code ~= 0 then logger.error("Command failed") end
       if cb then cb() end
     end,
   })
