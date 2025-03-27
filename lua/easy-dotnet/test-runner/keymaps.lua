@@ -100,7 +100,7 @@ local function run_csproject(win, node)
 
   win.refreshTree()
   vim.fn.jobstart(string.format('dotnet test --nologo %s %s --logger="trx;logFileName=%s"', get_dotnet_args(win.options), node.cs_project_path, log_file_name), {
-    on_exit = function(_, code) parse_log_file(relative_log_file_path, win, node, on_job_finished) end,
+    on_exit = function(_) parse_log_file(relative_log_file_path, win, node, on_job_finished) end,
   })
 end
 
@@ -145,18 +145,6 @@ local function run_test_suite(line, win)
   vim.fn.jobstart(string.format('dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"', suite_name, get_dotnet_args(win.options), line.cs_project_path, log_file_name), {
     on_exit = function() parse_log_file(relative_log_file_path, win, line, on_job_finished) end,
   })
-end
-
-local function isAnyErr(lines, options)
-  local err = false
-  for _, value in ipairs(lines) do
-    if value.icon == options.icons.failed then
-      err = true
-      return err
-    end
-  end
-
-  return err
 end
 
 local function filter_failed_tests(win)
@@ -248,7 +236,7 @@ local keymaps = function()
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   return {
     [keymap.filter_failed_tests.lhs] = { handle = function(_, win) filter_failed_tests(win) end, desc = keymap.filter_failed_tests.desc },
-    [keymap.refresh_testrunner.lhs] = { handle = function(_, win) vim.cmd("Dotnet testrunner refresh build") end, desc = keymap.refresh_testrunner.desc },
+    [keymap.refresh_testrunner.lhs] = { handle = function(_) vim.cmd("Dotnet testrunner refresh build") end, desc = keymap.refresh_testrunner.desc },
     [keymap.debug_test.lhs] = {
       handle = function(node, win)
         if node.type ~= "test" and node.type ~= "test_group" then

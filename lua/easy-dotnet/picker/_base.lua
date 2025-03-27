@@ -63,7 +63,7 @@ M.migration_pick = function(opts, migration)
   end)
 end
 
-M.preview_picker = function(bufnr, options, on_select_cb, title, previewer)
+M.preview_picker = function(_, options, on_select_cb, title, _)
   if #options == 0 then error("No options provided, minimum 1 is required") end
 
   -- Auto pick if only one option present
@@ -89,7 +89,7 @@ M.preview_picker = function(bufnr, options, on_select_cb, title, previewer)
   end)
 end
 
-M.picker = function(bufnr, options, on_select_cb, title, autopick)
+M.picker = function(_, options, on_select_cb, title, autopick)
   if autopick == nil then autopick = true end
   if #options == 0 then error("No options provided, minimum 1 is required") end
   -- Auto pick if only one option present

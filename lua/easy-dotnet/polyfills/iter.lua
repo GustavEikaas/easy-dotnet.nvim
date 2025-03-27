@@ -493,7 +493,7 @@ end
 --- ```
 ---
 ---@return any
-function Iter:next()
+function Iter.next()
   -- This function is provided by the source iterator in Iter.new. This definition exists only for
   -- the docstring
 end
@@ -521,7 +521,7 @@ end
 --- ```
 ---
 ---@return Iter
-function Iter:rev() error("rev() requires an array-like table") end
+function Iter.rev() error("rev() requires an array-like table") end
 
 ---@private
 function ArrayIter:rev()
@@ -547,7 +547,7 @@ end
 --- ```
 ---
 ---@return any
-function Iter:peek() error("peek() requires an array-like table") end
+function Iter.peek() error("peek() requires an array-like table") end
 
 ---@private
 function ArrayIter:peek()
@@ -693,7 +693,7 @@ end
 --- ```
 ---
 ---@return any
-function Iter:pop() error("pop() requires an array-like table") end
+function Iter.pop() error("pop() requires an array-like table") end
 
 --- @nodoc
 function ArrayIter:pop()
@@ -721,7 +721,7 @@ end
 ---@see Iter.last
 ---
 ---@return any
-function Iter:rpeek() error("rpeek() requires an array-like table") end
+function Iter.rpeek() error("rpeek() requires an array-like table") end
 
 ---@nodoc
 function ArrayIter:rpeek()

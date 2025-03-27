@@ -256,7 +256,6 @@ M.create_new_item = function(path, cb)
   if template.type == "Code" then
     local name = name_input_sync()
     args = string.format("-n %s", name)
-  elseif template.type == "MSBuild/props" then
   elseif template.type == "Config" then
     local name = name_input_sync()
     args = string.format("-n %s", name)
@@ -273,8 +272,7 @@ M.create_new_item = function(path, cb)
       end
     end,
     on_exit = function(_, code)
-      if code == 0 then
-      else
+      if code ~= 0 then
         logger.error("Command failed")
       end
       if cb then cb() end

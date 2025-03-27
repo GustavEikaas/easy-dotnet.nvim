@@ -37,14 +37,14 @@ local function collect_commands_with_handles(parent, prefix)
 end
 
 local function collect_commands(parent, prefix)
-  return polyfills.iter(parent):fold({}, function(commands, name, command)
+  return polyfills.iter(parent):fold({}, function(cmds, name, command)
     local full_command = prefix and (prefix .. " " .. name) or name
 
-    if command.handle then table.insert(commands, full_command) end
+    if command.handle then table.insert(cmds, full_command) end
 
-    if command.subcommands then polyfills.iter(collect_commands(command.subcommands, full_command)):each(function(sub) table.insert(commands, sub) end) end
+    if command.subcommands then polyfills.iter(collect_commands(command.subcommands, full_command)):each(function(sub) table.insert(cmds, sub) end) end
 
-    return commands
+    return cmds
   end)
 end
 

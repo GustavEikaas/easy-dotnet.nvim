@@ -33,9 +33,7 @@ M.ensure_json_file_exists = function(filepath)
 end
 
 M.overwrite_file = function(filepath, content)
-  local file = io.open(filepath, "r")
-  -- File doesn't exist, create it
-  file = io.open(filepath, "w")
+  local file = io.open(filepath, "w")
   if file == nil then
     print("Failed to create the file: " .. filepath)
     return

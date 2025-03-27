@@ -60,7 +60,7 @@ local function secrets_preview(entry, get_secret_path, readFile)
   end
 end
 
-M.preview_picker = function(bufnr, options, on_select_cb, title, get_secret_path, readFile)
+M.preview_picker = function(_, options, on_select_cb, title, get_secret_path, readFile)
   -- Auto pick if only one option present
   if #options == 1 then
     on_select_cb(options[1])
@@ -101,7 +101,7 @@ M.preview_picker = function(bufnr, options, on_select_cb, title, get_secret_path
   })
 end
 
-M.picker = function(bufnr, options, on_select_cb, title, autopick)
+M.picker = function(_, options, on_select_cb, title, autopick)
   if autopick == nil then autopick = true end
   if #options == 0 then error("No options provided, minimum 1 is required") end
 
