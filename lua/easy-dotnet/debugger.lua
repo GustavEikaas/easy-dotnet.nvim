@@ -26,7 +26,6 @@ local function run_job_sync(cmd)
   vim.fn.jobstart(cmd, {
     stdout_buffered = false,
     on_stdout = function(_, data, _)
-      -- print(vim.inspect(data))
       for _, line in ipairs(data) do
         local match = string.match(line, "Process Id: (%d+)")
         if match then
@@ -35,12 +34,6 @@ local function run_job_sync(cmd)
           return
         end
       end
-    end,
-    on_stderr = function(_, data)
-      -- print(vim.inspect(data))
-    end,
-    on_exit = function(_, code)
-      --TODO: could catch and update testrestult here
     end,
   })
 

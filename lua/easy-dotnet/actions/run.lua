@@ -89,8 +89,8 @@ local function pick_profile(project)
     return nil
   end
 
-  local success, json = pcall(vim.fn.json_decode, content)
-  if not success then error("Failed to decode json in launchSettings.json") end
+  local decodeSuccess, json = pcall(vim.fn.json_decode, content)
+  if not decodeSuccess then error("Failed to decode json in launchSettings.json") end
 
   local options = {}
   for key, value in pairs(json.profiles) do

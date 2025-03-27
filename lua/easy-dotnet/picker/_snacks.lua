@@ -80,7 +80,7 @@ end
 ---@param title string | nil
 ---@param get_secret_path function
 ---@param read_content function
-M.preview_picker = function(bufnr, options, on_select_cb, title, get_secret_path, read_content)
+M.preview_picker = function(_, options, on_select_cb, title, get_secret_path, read_content)
   if #options == 0 then error("No options provided, minimum 1 is required") end
 
   -- Auto pick if only one option present
@@ -119,7 +119,7 @@ end
 ---@param on_select_cb function
 ---@param title string | nil
 ---@param autopick boolean | nil
-M.picker = function(bufnr, options, on_select_cb, title, autopick)
+M.picker = function(_, options, on_select_cb, title, autopick)
   if autopick == nil then autopick = true end
   if #options == 0 then error("No options provided, minimum 1 is required") end
 

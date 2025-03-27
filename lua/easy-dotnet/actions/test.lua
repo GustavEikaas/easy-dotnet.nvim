@@ -94,8 +94,7 @@ M.test_watcher = function(icons)
     local message = header_test_message
     for _, value in pairs(state) do
       local icon = spinner_frames[i % #spinner_frames + 1]
-      if value.state == "pending" then
-      elseif value.state == "failed" then
+      if value.state == "failed" then
         icon = icons.failed
       elseif value.state == "success" then
         icon = icons.success
