@@ -338,7 +338,7 @@ local function print_lines()
             end
           end
         end
-      end, { silent = true, noremap = true })
+      end, { silent = true, noremap = true, buffer = M.buf })
     end
   end
 
