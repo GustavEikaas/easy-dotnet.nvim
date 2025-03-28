@@ -111,7 +111,7 @@ end
 
 ---@param mode BootstrapNamespaceMode
 M.auto_bootstrap_namespace = function(mode)
-  vim.api.nvim_create_autocmd({ "BufReadPost" }, {
+  vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
     pattern = "*.cs",
     callback = function()
       local bufnr = vim.api.nvim_get_current_buf()
