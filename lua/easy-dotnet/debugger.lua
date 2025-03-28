@@ -1,13 +1,45 @@
 local M = {}
 local picker = require("easy-dotnet.picker")
+local error_messages = require("easy-dotnet.error-messages")
+local logger = require("easy-dotnet.logger")
 local parsers = require("easy-dotnet.parsers")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local polyfills = require("easy-dotnet.polyfills")
 
-M.get_debug_dll = function()
+---@param use_default boolean
+---@return DotnetProject, string | nil
+local function pick_project(use_default)
+  local default_manager = require("easy-dotnet.default-manager")
+  local solution_file_path = sln_parse.find_solution_file()
+  if solution_file_path == nil then
+    local csproject_path = csproj_parse.find_project_file()
+    if not csproject_path then logger.error(error_messages.no_runnable_projects_found) end
+    local project = csproj_parse.get_project_from_project_file(csproject_path)
+    return project, nil
+  end
+
+  local default = default_manager.check_default_project(solution_file_path, "debug")
+  if default ~= nil and use_default == true then return default, solution_file_path end
+
+  local projects = polyfills.tbl_filter(function(i) return i.runnable == true end, sln_parse.get_projects_from_sln(solution_file_path))
+
+  if #projects == 0 then
+    logger.error(error_messages.no_runnable_projects_found)
+    return
+  end
+  local project = picker.pick_sync(nil, projects, "Debug project")
+  if not project then
+    logger.error("No project selected")
+    return
+  end
+  default_manager.set_default_project(project, solution_file_path, "debug")
+  return project, solution_file_path
+end
+
+M.get_debug_dll = function(default)
   local sln_file = sln_parse.find_solution_file()
-  local result = sln_file ~= nil and M.get_dll_for_solution_project(sln_file) or M.get_dll_for_project()
+  local result = sln_file ~= nil and M.get_dll_for_solution_project(default) or M.get_dll_for_project()
   local relative_dll_path = polyfills.fs.joinpath(vim.fn.getcwd(), result.dll)
   local relative_project_path = polyfills.fs.joinpath(vim.fn.getcwd(), result.project)
   return {
@@ -83,22 +115,9 @@ M.get_environment_variables = function(project_name, relative_project_path)
   return launchProfile.environmentVariables
 end
 
-M.get_dll_for_solution_project = function(sln_file)
-  local projects = sln_parse.get_projects_from_sln(sln_file)
-  ---@type DotnetProject[]
-  local runnable_projects = polyfills.tbl_filter(function(i) return i.runnable == true end, projects)
-
-  ---@type DotnetProject
-  local project
-  if #runnable_projects == 0 then
-    error("No runnable projects found")
-  elseif #runnable_projects > 1 then
-    project = picker.pick_sync(nil, runnable_projects, "Select project to debug")
-  end
-
-  project = project or runnable_projects[1]
-
-  if project == nil then error("No project selected") end
+M.get_dll_for_solution_project = function(default)
+  if default == nil then default = false end
+  local project = pick_project(default)
 
   local path = vim.fs.dirname(project.path)
   return {
