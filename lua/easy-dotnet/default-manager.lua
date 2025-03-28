@@ -7,17 +7,20 @@ local polyfills = require("easy-dotnet.polyfills")
 ---@field default_build_project string
 ---@field default_test_project string
 ---@field default_run_project string
+---@field default_debug_project string
 ---@field default_profile DefaultProfile
 
 local M = {}
 
----@alias TaskType "build" | "test" | "run" | "launch-profile" | "view" | "watch"
+---@alias TaskType "build" | "test" | "run" | "launch-profile" | "view" | "watch" | "debug"
 
 ---Gets the property name for the given type.
 ---@param type TaskType
 ---@return string
 local function get_property(type)
-  if not (type == "build" or type == "test" or type == "run" or type == "launch-profile" or type == "view" or type == "watch") then error("Expected build, test or run received " .. type) end
+  if not (type == "build" or type == "test" or type == "run" or type == "launch-profile" or type == "view" or type == "watch" or type == "debug") then
+    error("Expected build, test or run received " .. type)
+  end
   if type == "launch-profile" then return "default_profile" end
   return string.format("default_%s_project", type)
 end
