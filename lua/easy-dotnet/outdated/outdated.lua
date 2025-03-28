@@ -92,7 +92,7 @@ M.outdated = function()
 
   if path:match("[^/\\]+%.%a+proj") then
     local project_name = vim.fs.basename(path:gsub("%.csproj$", ""):gsub("%.fsproj$", ""))
-    local cmd = string.format("dotnet-outdated %s --output %s", path, outPath)
+    local cmd = string.format("dotnet outdated %s --output %s", path, outPath)
 
     vim.fn.jobstart(cmd, {
       on_exit = function(_, b)
@@ -132,7 +132,7 @@ M.outdated = function()
   elseif filename == "directory.packages.props" or filename == "packages.props" then
     local sln_parse = require("easy-dotnet.parsers.sln-parse")
     local solutionFilePath = sln_parse.find_solution_file()
-    local cmd = string.format("dotnet-outdated %s --output %s", solutionFilePath, outPath)
+    local cmd = string.format("dotnet outdated %s --output %s", solutionFilePath, outPath)
 
     vim.fn.jobstart(cmd, {
       on_exit = function(_, b)
