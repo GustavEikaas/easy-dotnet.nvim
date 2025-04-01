@@ -276,7 +276,10 @@ local function stringify_project_header()
     { string.format("Project: %s", project.name), "Character" },
     { string.format("Version: %s", project.version), "Question" },
     { string.format("Language: %s", project.language == "csharp" and "C#" or project.language == "fsharp" and "F#" or "Unknown"), "Question" },
-    { string.format("Type: %s", project.isWebProject and "Web" or project.isConsoleProject and "Console" or project.isTestProject and "Test" or "Unknown"), "Question" },
+    {
+      string.format("Type: %s", project.isWebProject and "Web" or project.isConsoleProject and "Console" or project.isTestProject and "Test" or project.isWorkerProject and "Worker" or "Unknown"),
+      "Question",
+    },
     sln_path and { string.format("Solution: %s", vim.fn.fnamemodify(sln_path, ":t")), "Question" } or { "" },
     sep,
     { "Project References: (a)dd (r)emove", "Character", { add_project_keymap() } },
