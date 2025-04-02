@@ -1,17 +1,18 @@
 --checkhealth easy-dotnet
 local M = {}
 
----@param command  string | table<string>
+---@param command  table<string>
 ---@param advice  string | nil
 local function ensure_dep_installed(command, advice)
-  local exec = type(command) == "string" and { command } or command
+  local exec = command
   advice = advice or ""
   local success = pcall(function() vim.fn.system(exec) end)
+  local cmd_name = table.concat(vim.tbl_filter(function(item) return type(item) == "string" and not item:match("^%-") end, exec), " ")
   if success and vim.v.shell_error == 0 then
-    vim.health.ok(exec[1] .. " is installed")
+    vim.health.ok(cmd_name .. " is installed")
   else
     print("" .. vim.v.shell_error)
-    vim.health.error(exec[1] .. " is not installed", { advice })
+    vim.health.error(cmd_name .. " is not installed", { advice })
   end
 end
 
@@ -83,9 +84,9 @@ end
 M.check = function()
   vim.health.start("easy-dotnet CLI dependencies")
   ensure_dep_installed({ "dotnet", "-h" })
-  ensure_dep_installed("jq")
-  ensure_dep_installed({ "dotnet outdated", "-h" }, "dotnet tool install --global dotnet-outdated-tool")
-  ensure_dep_installed("dotnet ef", "dotnet tool install --global dotnet-ef")
+  ensure_dep_installed({ "jq" })
+  ensure_dep_installed({ "dotnet", "outdated", "-h" }, "dotnet tool install --global dotnet-outdated-tool")
+  ensure_dep_installed({ "dotnet", "ef" }, "dotnet tool install --global dotnet-ef")
   ensure_dep_installed({ "netcoredbg", "--version" }, "https://github.com/samsung/netcoredbg")
 
   vim.health.start("easy-dotnet lua dependencies")
