@@ -5,15 +5,15 @@ local M = {}
 
 function M.new() return setmetatable({}, { __index = M }) end
 
-function M.get_trigger_characters() return { 'Include="', "Include='", "Version='", 'Version="' } end
+function M:get_trigger_characters() return { 'Include="', "Include='", "Version='", 'Version="' } end
 
-function M.enabled()
+function M:enabled()
   local filetypes = { "csproj", "fsproj", "xml" }
   local is_enabled = vim.tbl_contains(filetypes, vim.bo.filetype)
   return is_enabled
 end
 
-function M.get_completions(ctx, callback)
+function M:get_completions(ctx, callback)
   local transformed_callback = function(items)
     callback({
       context = ctx,
