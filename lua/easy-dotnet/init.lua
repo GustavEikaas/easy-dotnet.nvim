@@ -132,6 +132,31 @@ local function check_picker_config(opts)
   end
 end
 
+---@param arg_lead string
+---@param cmdline string
+---@return string[]
+local function complete_command(arg_lead, cmdline)
+  local all_commands = collect_commands(commands)
+  local args = cmdline:match(".*Dotnet[!]*%s+(.*)")
+  if not args then return all_commands end
+  -- Everything before arg_lead
+  local pre_arg_lead = args:match("^(.*)" .. arg_lead .. "$")
+
+  local matches = vim
+    .iter(all_commands)
+    :map(function(command)
+      if pre_arg_lead ~= "" then
+        local truncated_command = command:match("^" .. pre_arg_lead .. "(.*)")
+        if truncated_command == nil then return nil end
+        command = truncated_command
+      end
+      return command:find(arg_lead) ~= nil and command or nil
+    end)
+    :totable()
+
+  return matches
+end
+
 M.setup = function(opts)
   local merged_opts = require("easy-dotnet.options").set_options(opts)
   define_highlights_and_signs(merged_opts)
@@ -150,7 +175,7 @@ M.setup = function(opts)
     else
       print("Invalid subcommand:", command)
     end
-  end, { nargs = "?" })
+  end, { nargs = "?", complete = complete_command })
 
   if merged_opts.csproj_mappings == true then require("easy-dotnet.csproj-mappings").attach_mappings() end
 
