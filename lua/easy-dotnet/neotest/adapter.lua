@@ -5,7 +5,9 @@ local Path = require("plenary.path")
 
 ---@class neotest.Adapter
 ---@field name string
-neotest.Adapter = {}
+neotest.Adapter = {
+  name = "neotest-easy-dotnet",
+}
 
 ---Find the project root directory given a current directory to work from.
 ---Should no root be found, the adapter can still be used in a non-project context if a test file matches.
@@ -13,7 +15,7 @@ neotest.Adapter = {}
 ---@param dir string @Directory to treat as cwd
 ---@return string | nil @Absolute root dir of test suite
 function neotest.Adapter.root(dir)
-  local solution_path = test_runner.tree.solution_file_path -- e.g. "./src/NeovimDebugProject.sln"
+  local solution_path = "/home/gustav/repo/NeovimDebugProject/src/NeovimDebugProject.sln" or test_runner.tree.solution_file_path -- e.g. "./src/NeovimDebugProject.sln"
 
   if not solution_path then
     return nil -- No solution file path available
@@ -30,10 +32,7 @@ end
 ---@param rel_path string Path to directory, relative to root
 ---@param root string Root directory of project
 ---@return boolean
-function neotest.Adapter.filter_dir(name, rel_path, root)
-  print("filter called")
-  return true
-end
+function neotest.Adapter.filter_dir(name, rel_path, root) return name ~= "bin" and name ~= "obj" end
 
 ---@async
 ---@param file_path string
@@ -54,27 +53,48 @@ end
 function neotest.Adapter.discover_positions(file_path)
   print("Discover positions in file: " .. file_path)
 
-  local items = {}
+  local result = {
+    {
+      type = "file",
+      id = file_path,
+      name = vim.fn.fnamemodify(file_path, ":t"),
+      path = file_path,
+      range = { 0, -1, 0, -1 },
+    },
+  }
 
   test_runner.traverse(nil, function(i)
-    if i and i.file_path == file_path then
-      table.insert(items, {
-        name = i.name or "UnnamedTest",
-        path = file_path,
-        row = i.line_number or 0, -- line_number is expected to be 0-indexed
-        type = "test", -- required by neotest
+    if i.file_path == file_path and i.type == "test" then
+      table.insert(result, {
+        {
+          type = "namespace",
+          id = "/home/gustav/repo/NeovimDebugProject/src/NeovimDebugProject.Specs/UnitTest1.cs::UnitTest1",
+          name = "UnitTest1",
+          path = "/home/gustav/repo/NeovimDebugProject/src/NeovimDebugProject.Specs/UnitTest1.cs",
+          range = { 2, 0, 9, 1 },
+        },
+        {
+          type = i.type,
+          id = file_path .. "::UnitTest1::Test1",
+          name = i.name,
+          path = file_path,
+          --TODO: can get end range from F#
+          range = { i.line_number - 2, i.line_number, 0, 1 },
+          running_id = file_path .. "::UnitTest1::Test1",
+        },
       })
     end
   end)
 
-  if #items == 0 then
+  if #result == 1 then
     print("No tests found in file: " .. file_path)
     return nil
   end
 
-  return require("neotest.lib.treesitter.tree").from_list(items, function(i)
-    return i.name
-  end)
+  print(file_path .. " " .. #result)
+
+  local trees = require("neotest.types.tree").from_list(result, function(item) return item.name end)
+  return trees
 end
 
 ---@param args neotest.RunArgs
@@ -126,21 +146,10 @@ function neotest.Adapter.results(spec, result, tree)
   local results = {}
 
   for _, node in tree:iter_nodes() do
-    print(vim.inspect(node:data()))
-    if node:data().type == "file" then
-      local t = node:data()
-      t.status = 'failed'
-      results[node:data().id] = t
-    
-      -- {
-      --   status = "passed",
-      --   short = "Test passed",
-      --   output = "",
-      -- }
-    end
+    if node:data().type == "test" then results[node:data().id] = {
+      status = "passed",
+    } end
   end
-   
-  print(vim.inspect(results))
 
   return results
 end
