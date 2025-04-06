@@ -93,20 +93,16 @@ local function run_test_from_buffer()
 
         if worst_outcome == "Passed" then
           node.icon = options.icons.passed
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr, { lnum = current_line, priority = 20 })
           spinner:stop_spinner("Passed")
         elseif worst_outcome == "Failed" then
           node.icon = options.icons.failed
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr, { lnum = current_line, priority = 20 })
           spinner:stop_spinner("Failed", vim.log.levels.ERROR)
         elseif worst_outcome == "NotExecuted" then
           node.icon = options.icons.skipped
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr, { lnum = current_line, priority = 20 })
           spinner:stop_spinner("Skipped", vim.log.levels.WARN)
         else
           node.icon = "??"
           spinner:stop_spinner("Test Result Errors", vim.log.levels.WARN)
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestError, bufnr, { lnum = current_line, priority = 20 })
         end
         require("easy-dotnet.test-runner.render").refreshTree()
       end)
@@ -129,15 +125,11 @@ function M.add_gutter_test_signs()
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then
       is_test_file = true
       local line = node.line_number
-      vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSign, bufnr, { lnum = line - 1, priority = 20 })
 
       if node.icon then
         if node.icon == options.icons.failed then
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr, { lnum = line - 1, priority = 20 })
         elseif node.icon == options.icons.skipped then
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr, { lnum = line - 1, priority = 20 })
         elseif node.icon == options.icons.passed then
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr, { lnum = line - 1, priority = 20 })
         end
       end
     end
