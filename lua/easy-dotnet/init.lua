@@ -142,7 +142,7 @@ local function complete_command(arg_lead, cmdline)
   -- Everything before arg_lead
   local pre_arg_lead = args:match("^(.*)" .. arg_lead .. "$")
 
-  local matches = vim
+  local matches = polyfills
     .iter(all_commands)
     :map(function(command)
       if pre_arg_lead ~= "" then
