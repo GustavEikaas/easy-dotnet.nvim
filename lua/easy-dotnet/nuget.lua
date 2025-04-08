@@ -66,7 +66,7 @@ end
 
 ---@param project_path string | nil
 M.search_nuget = function(project_path)
-  local package = picker.search_nuget(add_package)
+  local package = picker.search_nuget()
   if package ~= nil then add_package(package, project_path) end
 end
 

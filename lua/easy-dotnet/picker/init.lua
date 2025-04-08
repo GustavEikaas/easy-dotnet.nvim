@@ -37,12 +37,11 @@ local function get_active_picker()
   end
 end
 
----@param cb function|nil
-M.search_nuget = function(cb)
+M.search_nuget = function()
   local active_picker = get_active_picker()
 
   if active_picker == "fzf" then
-    return require("easy-dotnet.picker._fzf").nuget_search(cb)
+    return require("easy-dotnet.picker._fzf").nuget_search()
   elseif active_picker == "telescope" then
     return require("easy-dotnet.picker._telescope").nuget_search()
   elseif active_picker == "snacks" then
