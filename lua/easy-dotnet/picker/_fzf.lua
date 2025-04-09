@@ -1,15 +1,19 @@
 local M = {}
 
-M.nuget_search = function(cb)
+M.nuget_search = function()
+  local co = coroutine.running()
+  local package
   require("fzf-lua").fzf_live('dotnet package search <query> --format json | jq ".searchResult | .[] | .packages | .[] | .id"', {
     fn_transform = function(line) return line:gsub('"', ""):gsub("\r", ""):gsub("\n", "") end,
     actions = {
       ["default"] = function(selected)
-        local package = selected[1]
-        cb(package)
+        package = selected[1]
+        coroutine.resume(co)
       end,
     },
   })
+  coroutine.yield()
+  return package
 end
 
 M.migration_picker = function(opts, migration)
