@@ -153,7 +153,10 @@ local function handle_auto_bootstrap_namespace(a)
   } end
 end
 
+M.orig_config = nil
+
 M.set_options = function(a)
+  M.orig_config = a
   a = a or {}
   handle_auto_bootstrap_namespace(a)
   M.options = merge_tables(M.options, a)
