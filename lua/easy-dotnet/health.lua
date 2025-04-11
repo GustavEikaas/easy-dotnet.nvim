@@ -121,10 +121,16 @@ local function print_nvim_version()
   vim.health.info(version_str)
 end
 
+local function get_shell_info()
+  local shell = vim.o.shell
+  vim.health.info("Shell: " .. shell)
+end
+
 M.check = function()
   vim.health.start("General information")
   os_info()
   print_nvim_version()
+  get_shell_info()
   vim.health.start("Dotnet information")
   print_dotnet_info()
   vim.health.start("easy-dotnet CLI dependencies")
