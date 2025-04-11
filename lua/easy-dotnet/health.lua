@@ -81,15 +81,12 @@ local function check_cmp()
   vim.health.warn("cmp source not configured", { "https://github.com/GustavEikaas/easy-dotnet.nvim?tab=readme-ov-file#package-autocomplete" })
 end
 
-
 local function os_info()
   local platform = vim.loop.os_uname()
   local sysname = platform.sysname
   local release = platform.release
 
-  if release:lower():match("arch") then
-    release = release .. " btw"
-  end
+  if release:lower():match("arch") then release = release .. " btw" end
 
   vim.health.info(string.format("%s (%s)", sysname, release))
 end
@@ -164,13 +161,13 @@ M.check = function()
   end
 
   local sdk_path_time, path = measure_function(config.get_sdk_path)
-  vim.health.ok('sdk_path: '..path)
+  vim.health.ok("sdk_path: " .. path)
   if sdk_path_time > 1 then
     vim.health.warn(string.format("options.get_sdk_path took %d seconds", sdk_path_time), "You should add get_sdk_path to your options for a performance improvement🚀. Check readme")
   end
   check_cmp()
   vim.health.start("User config")
-  vim.health.info(vim.inspect(require('easy-dotnet.options').orig_config))
+  vim.health.info(vim.inspect(require("easy-dotnet.options").orig_config))
 end
 
 return M
