@@ -48,9 +48,7 @@ local function get_sdk_path()
   for line in sdk_list:gmatch("[^\n]+") do
     if line:find(sdk_version, 1, true) then
       local path = line:match("%[(.-)%]")
-      if not path then
-        error('no sdk path found calling dotnet --list-sdks ' .. (path or 'empty'))
-      end
+      if not path then error("no sdk path found calling dotnet --list-sdks " .. (path or "empty")) end
       base = vim.fs.normalize(path)
       break
     end
