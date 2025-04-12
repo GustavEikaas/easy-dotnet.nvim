@@ -125,8 +125,8 @@ end
 local function get_commit_info()
   local source = debug.getinfo(1, "S").source:sub(2)
   local dir = vim.fn.fnamemodify(source, ":h")
-  local sha = vim.fn.system({'git', '-C', dir, 'rev-parse', 'HEAD'})
-  vim.health.info("Commit: " .. vim.trim(sha or ''))
+  local sha = vim.fn.system({ "git", "-C", dir, "rev-parse", "HEAD" })
+  vim.health.info("Commit: " .. vim.trim(sha or ""))
 end
 
 M.check = function()
