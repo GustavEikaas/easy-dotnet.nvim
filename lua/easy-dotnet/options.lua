@@ -134,8 +134,8 @@ local M = {
     fsproj_mappings = true,
     new = {
       project = {
-        prefix = "sln" -- "sln" | "none"
-      }
+        prefix = "sln", -- "sln" | "none"
+      },
     },
     enable_filetypes = true,
     auto_bootstrap_namespace = {
