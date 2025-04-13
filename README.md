@@ -174,6 +174,11 @@ Although not *required* by the plugin, it is highly recommended to install one o
         --- Optional table of extra args e.g "--blame crash"
         additional_args = {}
       },
+      new = {
+        project = {
+          prefix = "sln" -- "sln" | "none"
+        }
+      },
       ---@param action "test" | "restore" | "build" | "run"
       terminal = function(path, action, args)
         local commands = {

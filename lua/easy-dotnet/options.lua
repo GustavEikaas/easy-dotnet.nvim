@@ -132,6 +132,11 @@ local M = {
     },
     csproj_mappings = true,
     fsproj_mappings = true,
+    new = {
+      project = {
+        prefix = "sln" -- "sln" | "none"
+      }
+    },
     enable_filetypes = true,
     auto_bootstrap_namespace = {
       type = "block_scoped",
