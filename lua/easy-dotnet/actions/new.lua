@@ -13,7 +13,7 @@ local function sln_add_project(sln_path, project)
 end
 
 local make_project_name = function(name, sln_name)
-  if options.get_option("new").prefix == "sln" then return sln_name .. "." .. name end
+  if options.get_option("new").project.prefix == "sln" then return sln_name .. "." .. name end
   return name
 end
 

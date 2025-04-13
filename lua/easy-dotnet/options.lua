@@ -1,4 +1,13 @@
 local polyfills = require("easy-dotnet.polyfills")
+---@class Options
+---@field get_sdk_path fun(): string
+---@field test_runner TestRunnerOptions
+---@field csproj_mappings boolean
+---@field fsproj_mappings boolean
+---@field new { project: {prefix: "sln" | "none"} }
+---@field enable_filetypes boolean
+---@field picker PickerType
+
 ---@class TestRunnerIcons
 ---@field passed string
 ---@field skipped string
@@ -71,6 +80,7 @@ local function get_secret_path(secret_guid)
 end
 
 local M = {
+  ---@type Options
   options = {
     ---@type function | string
     get_sdk_path = get_sdk_path,
@@ -134,7 +144,7 @@ local M = {
     fsproj_mappings = true,
     new = {
       project = {
-        prefix = "sln", -- "sln" | "none"
+        prefix = "sln",
       },
     },
     enable_filetypes = true,
@@ -170,6 +180,6 @@ M.set_options = function(a)
   return M.options
 end
 
-M.get_option = function(key) return M.options[key] end
+function M.get_option(key) return M.options[key] end
 
 return M
