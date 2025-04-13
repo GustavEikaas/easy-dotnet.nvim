@@ -122,12 +122,19 @@ local function get_shell_info()
   local shell = vim.o.shell
   vim.health.info("Shell: " .. shell)
 end
+local function get_commit_info()
+  local source = debug.getinfo(1, "S").source:sub(2)
+  local dir = vim.fn.fnamemodify(source, ":h")
+  local sha = vim.fn.system({ "git", "-C", dir, "rev-parse", "HEAD" })
+  vim.health.info("Commit: " .. vim.trim(sha or ""))
+end
 
 M.check = function()
   vim.health.start("General information")
   os_info()
   print_nvim_version()
   get_shell_info()
+  pcall(get_commit_info)
   vim.health.start("Dotnet information")
   print_dotnet_info()
   vim.health.start("easy-dotnet CLI dependencies")
