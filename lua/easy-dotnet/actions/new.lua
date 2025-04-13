@@ -1,5 +1,6 @@
 local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
+local options = require("easy-dotnet.options")
 local M = {}
 
 local function sln_add_project(sln_path, project)
@@ -11,6 +12,11 @@ local function sln_add_project(sln_path, project)
   })
 end
 
+local make_project_name = function(name, sln_name)
+  if options.get_option("new").project.prefix == "sln" then return sln_name .. "." .. name end
+  return name
+end
+
 local function get_dotnet_new_args(name)
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
   local sln_path = sln_parse.find_solution_file()
@@ -18,7 +24,7 @@ local function get_dotnet_new_args(name)
 
   local folder_path = vim.fs.dirname(sln_path)
   local solution_name = vim.fn.fnamemodify(sln_path, ":t:r")
-  local project_name = solution_name .. "." .. name
+  local project_name = make_project_name(name, solution_name)
   local output = polyfills.fs.joinpath(folder_path, project_name)
   return {
     sln_path = sln_path,
