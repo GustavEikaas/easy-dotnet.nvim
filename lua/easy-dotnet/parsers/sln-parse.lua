@@ -114,29 +114,25 @@ function M.get_projects_from_slnx(solution_file_path)
   return projects
 end
 
--- TODO: Investigate using dotnet sln list command
 ---@param solution_file_path string
 ---@return DotnetProject[]
 M.get_projects_from_sln = function(solution_file_path)
-  local extension = vim.fn.fnamemodify(solution_file_path, ":e")
-  if extension == "slnx" then return M.get_projects_from_slnx(solution_file_path) end
+  local cmd = require("easy-dotnet.dotnet_cli").list_packages(solution_file_path)
+  local data = vim.fn.systemlist(cmd)
 
-  local file_contents = vim.fn.readfile(solution_file_path)
-  local regexp = 'Project%("{(.-)}"%).*= "(.-)", "(.-)", "{.-}"'
+  local function trim(s) return s:match("^%s*(.-)%s*$") end
+  local project_lines = {}
+  for _, line in ipairs(data) do
+    local t = trim(line)
+    if t:match("%.csproj$") or t:match("%.fsproj$") then table.insert(project_lines, t) end
+  end
 
-  local projectLines = polyfills.tbl_filter(function(line)
-    local id, name, path = line:match(regexp)
-    if id and name and path and (path:match("%.csproj$") or path:match("%.fsproj$")) then return true end
-    return false
-  end, file_contents)
-
-  local projects = polyfills.tbl_map(function(line)
+  local projects = vim.tbl_map(function(proj_path)
     local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
-    local _, _, path = line:match(regexp)
-    local project_file_path = generate_relative_path_for_project(path, solution_file_path)
+    local project_file_path = generate_relative_path_for_project(proj_path, solution_file_path)
     local project = csproj_parser.get_project_from_project_file(project_file_path)
     return project
-  end, projectLines)
+  end, project_lines)
 
   return projects
 end
