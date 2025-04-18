@@ -18,4 +18,6 @@ function M.package_search(query, is_json, exact, take)
   return string.format("dotnet package search %s %s %s %s", query, take_query, json_query, exact_query)
 end
 
+function M.list_packages(sln_file_path) return string.format("dotnet solution %s list", sln_file_path) end
+
 return M
