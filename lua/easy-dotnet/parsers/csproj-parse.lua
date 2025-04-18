@@ -15,7 +15,6 @@ local M = {}
 ---@field isConsoleProject boolean
 ---@field isWebProject boolean
 ---@field isWorkerProject boolean
----@field isWinProject boolean
 
 --- Extracts a pattern from a file
 ---@param project_file_path string
@@ -84,7 +83,6 @@ M.get_project_from_project_file = function(project_file_path)
   local isWorkerProject = M.is_worker_project(project_file_path)
   local isConsoleProject = M.is_console_project(project_file_path)
   local isTestProject = M.is_test_project(project_file_path)
-  local isWinProject = M.is_win_project(project_file_path)
   local maybeSecretGuid = M.try_get_secret_id(project_file_path)
   local version = M.extract_version(project_file_path)
 
@@ -101,7 +99,6 @@ M.get_project_from_project_file = function(project_file_path)
   if isWebProject then display = display .. " 󱂛" end
   if isConsoleProject then display = display .. " 󰆍" end
   if isWorkerProject then display = display .. " " end
-  if isWinProject then display = display .. " " end
 
   local project = {
     display = display,
@@ -109,7 +106,7 @@ M.get_project_from_project_file = function(project_file_path)
     language = language,
     name = name,
     version = version,
-    runnable = isWebProject or isWorkerProject or isConsoleProject or isWinProject,
+    runnable = isWebProject or isWorkerProject or isConsoleProject,
     secrets = maybeSecretGuid,
     get_dll_path = function()
       local c = project_cache[project_file_path]
@@ -129,7 +126,6 @@ M.get_project_from_project_file = function(project_file_path)
     isConsoleProject = isConsoleProject,
     isWorkerProject = isWorkerProject,
     isWebProject = isWebProject,
-    isWinProject = isWinProject,
   }
 
   project_cache[project_file_path] = project
@@ -174,8 +170,6 @@ end
 M.is_web_project = function(project_file_path) return type(extract_from_project(project_file_path, '<Project%s+Sdk="Microsoft.NET.Sdk.Web"')) == "string" end
 
 M.is_worker_project = function(project_file_path) return type(extract_from_project(project_file_path, '<Project%s+Sdk="Microsoft.NET.Sdk.Worker"')) == "string" end
-
-M.is_win_project = function(project_file_path) return type(extract_from_project(project_file_path, "<OutputType>WinExe</OutputType>")) == "string" end
 
 M.find_csproj_file = function()
   local file = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.csproj$", depth = 3 })
