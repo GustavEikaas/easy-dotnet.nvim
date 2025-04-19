@@ -68,7 +68,7 @@ local init_secrets = function(project_file_path, get_secret_path)
   local path = get_secret_path(guid)
   local parentDir = vim.fs.dirname(path)
   create_directory(parentDir)
-  append_to_file(path, { "{ }\n" })
+  append_to_file(path, { "{ }" })
 
   logger.info("User secrets created")
   return guid
