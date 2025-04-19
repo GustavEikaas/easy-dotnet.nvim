@@ -88,6 +88,8 @@ local function csproj_fallback(get_secret_path)
   end
   picker.picker(nil, { csproj }, function(i)
     local path = get_secret_path(i.secrets)
+    local parentDir = vim.fs.dirname(path)
+    create_directory(parentDir)
     vim.cmd("edit! " .. path)
   end, "Secrets")
 end
@@ -111,6 +113,8 @@ M.edit_secrets_picker = function(get_secret_path)
       item.secrets = secret_id
     end
     local path = get_secret_path(item.secrets)
+    local parentDir = vim.fs.dirname(path)
+    create_directory(parentDir)
     vim.cmd("edit! " .. path)
   end, "Secrets", function(self, entry) secrets_preview(self, entry, get_secret_path) end, get_secret_path, readFile)
 end
