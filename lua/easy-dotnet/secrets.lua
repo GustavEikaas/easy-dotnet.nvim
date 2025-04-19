@@ -79,7 +79,7 @@ local function csproj_fallback(get_secret_path)
     return
   end
 
-  local csproj = csproj_parse.get_project_from_csproj(csproj_path)
+  local csproj = csproj_parse.get_project_from_project_file(csproj_path)
   if not csproj.secrets then
     local secret_id = init_secrets(csproj.path, get_secret_path)
     csproj.secrets = secret_id
