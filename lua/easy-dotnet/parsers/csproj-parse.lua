@@ -153,14 +153,25 @@ end
 M.is_console_project = function(project_file_path) return type(extract_from_project(project_file_path, "<OutputType>%s*Exe%s*</OutputType>")) == "string" end
 
 M.is_test_project = function(project_file_path)
-  if type(extract_from_project(project_file_path, "<%s*IsTestProject%s*>%s*true%s*</%s*IsTestProject%s*>")) == "string" then return true end
+  local patterns = {
+    "<%s*IsTestProject%s*>%s*true%s*</%s*IsTestProject%s*>",
+    "<%s*TestingPlatformDotnetTestSupport%s*>%s*true%s*</%s*TestingPlatformDotnetTestSupport%s*>",
+    "<%s*UseMicrosoftTestingPlatformRunner%s*>%s*true%s*</%s*UseMicrosoftTestingPlatformRunner%s*>",
+  }
+  for _, pattern in ipairs(patterns) do
+    if type(extract_from_project(project_file_path, pattern)) == "string" then return true end
+  end
 
   -- Check for test-related package references
   local test_packages = {
     "Microsoft%.NET%.Test%.Sdk",
     "MSTest%.TestFramework",
+    "Microsoft.Testing.Platform.MSBuild",
     "NUnit",
     "xunit",
+    "xunit.v3",
+    "TUnit.Assertions",
+    "TUnit",
   }
 
   for _, package in ipairs(test_packages) do
