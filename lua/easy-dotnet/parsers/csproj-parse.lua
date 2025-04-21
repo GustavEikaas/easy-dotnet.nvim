@@ -12,6 +12,7 @@ local M = {}
 ---@field secrets string
 ---@field get_dll_path function
 ---@field isTestProject boolean
+---@field isTestPlatformProject boolean
 ---@field isConsoleProject boolean
 ---@field isWebProject boolean
 ---@field isWorkerProject boolean
@@ -75,17 +76,18 @@ local project_cache = {}
 ---@param project_file_path string
 ---@return DotnetProject
 M.get_project_from_project_file = function(project_file_path)
-  local maybeCacheObject = project_cache[project_file_path]
-  if maybeCacheObject then return maybeCacheObject end
+  local maybe_cache_object = project_cache[project_file_path]
+  if maybe_cache_object then return maybe_cache_object end
   local display = extractProjectName(project_file_path)
   local name = display
   local language = project_file_path:match("%.csproj$") and "csharp" or project_file_path:match("%.fsproj$") and "fsharp" or "unknown"
-  local isWebProject = M.is_web_project(project_file_path)
-  local isWorkerProject = M.is_worker_project(project_file_path)
-  local isConsoleProject = M.is_console_project(project_file_path)
-  local isTestProject = M.is_test_project(project_file_path)
-  local isWinProject = M.is_win_project(project_file_path)
-  local maybeSecretGuid = M.try_get_secret_id(project_file_path)
+  local is_web_project = M.is_web_project(project_file_path)
+  local is_worker_project = M.is_worker_project(project_file_path)
+  local is_console_project = M.is_console_project(project_file_path)
+  local is_test_project = M.is_test_project(project_file_path)
+  local is_test_platform_project = M.is_test_platform_project(project_file_path)
+  local is_win_project = M.is_win_project(project_file_path)
+  local maybe_secret_guid = M.try_get_secret_id(project_file_path)
   local version = M.extract_version(project_file_path)
 
   if version then display = display .. "@" .. version end
@@ -96,12 +98,12 @@ M.get_project_from_project_file = function(project_file_path)
     display = display .. " 󰫳"
   end
 
-  if isTestProject then display = display .. " 󰙨" end
-  if maybeSecretGuid then display = display .. " " end
-  if isWebProject then display = display .. " 󱂛" end
-  if isConsoleProject then display = display .. " 󰆍" end
-  if isWorkerProject then display = display .. " " end
-  if isWinProject then display = display .. " " end
+  if is_test_project then display = display .. " 󰙨" end
+  if maybe_secret_guid then display = display .. " " end
+  if is_web_project then display = display .. " 󱂛" end
+  if is_console_project then display = display .. " 󰆍" end
+  if is_worker_project then display = display .. " " end
+  if is_win_project then display = display .. " " end
 
   local project = {
     display = display,
@@ -109,8 +111,8 @@ M.get_project_from_project_file = function(project_file_path)
     language = language,
     name = name,
     version = version,
-    runnable = isWebProject or isWorkerProject or isConsoleProject or isWinProject,
-    secrets = maybeSecretGuid,
+    runnable = is_web_project or is_worker_project or is_console_project or is_win_project,
+    secrets = maybe_secret_guid,
     get_dll_path = function()
       local c = project_cache[project_file_path]
       if c and c.dll_path then return c.dll_path end
@@ -125,11 +127,12 @@ M.get_project_from_project_file = function(project_file_path)
       c["dll_path"] = path
       return path
     end,
-    isTestProject = isTestProject,
-    isConsoleProject = isConsoleProject,
-    isWorkerProject = isWorkerProject,
-    isWebProject = isWebProject,
-    isWinProject = isWinProject,
+    isTestProject = is_test_project,
+    isTestPlatformProject = is_test_platform_project,
+    isConsoleProject = is_console_project,
+    isWorkerProject = is_worker_project,
+    isWebProject = is_web_project,
+    isWinProject = is_win_project,
   }
 
   project_cache[project_file_path] = project
@@ -151,6 +154,11 @@ M.try_get_secret_id = function(project_file_path)
 end
 
 M.is_console_project = function(project_file_path) return type(extract_from_project(project_file_path, "<OutputType>%s*Exe%s*</OutputType>")) == "string" end
+
+M.is_test_platform_project = function(project_file_path)
+  if type(extract_from_project(project_file_path, "<%s*TestingPlatformDotnetTestSupport%s*>%s*true%s*</%s*TestingPlatformDotnetTestSupport%s*>")) == "string" then return true end
+  return false
+end
 
 M.is_test_project = function(project_file_path)
   local patterns = {
