@@ -2,6 +2,69 @@ local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
 local M = {}
 
+---@class MsbuildProperties
+---@field outputPath string | nil Path to the build output directory (e.g., "bin\\Debug\\net9.0\\")
+---@field outputType string | nil Type of output, typically "Exe" or "Library"
+---@field targetExt string | nil File extension of the built output (e.g., ".dll")
+---@field assemblyName string | nil The name of the resulting assembly
+---@field targetFramework string | nil The target framework moniker (e.g., "net9.0")
+---@field isTestProject boolean Whether the project is a test project ("true"/"false")
+---@field userSecretsId string | nil The GUID used for User Secrets configuration
+---@field testingPlatformDotnetTestSupport boolean Custom property, likely used by test tooling
+---@field targetPath string Full path to the built output artifact
+---@field version string | nil TargetVersion without net (e.g '8.0')
+
+local msbuild_properties = {
+  "OutputPath",
+  "OutputType",
+  "TargetExt",
+  "AssemblyName",
+  "TargetFramework",
+  "IsTestProject",
+  "UserSecretsId",
+  "ProjectSdk",
+  "TestingPlatformDotnetTestSupport",
+  "TargetPath",
+}
+
+local function build_msbuild_command(project_path)
+  local cmd = { "dotnet", "msbuild" }
+  for _, prop in ipairs(msbuild_properties) do
+    table.insert(cmd, ("-getProperty:%s"):format(prop))
+  end
+  table.insert(cmd, project_path)
+
+  return cmd
+end
+
+---@param val string
+---@return string | nil
+local function empty_string_to_nil(val) return val ~= "" and val or nil end
+
+local function string_to_boolean(val) return val == "true" and true or false end
+
+---@return MsbuildProperties
+local parse_msbuild_properties = function(output)
+  local ok, result = pcall(vim.fn.json_decode, output)
+  if not ok or not result or not result.Properties then error("Failed to parse msbuild output: " .. tostring(output)) end
+
+  local raw = result.Properties
+
+  ---@type MsbuildProperties
+  return {
+    outputPath = empty_string_to_nil(raw.OutputPath),
+    outputType = empty_string_to_nil(raw.OutputType),
+    userSecretsId = empty_string_to_nil(raw.UserSecretsId),
+    assemblyName = empty_string_to_nil(raw.AssemblyName),
+    targetPath = raw.TargetPath,
+    isTestProject = string_to_boolean(raw.IsTestProject),
+    testingPlatformDotnetTestSupport = string_to_boolean(raw.TestingPlatformDotnetTestSupport),
+    version = raw.TargetFramework:gsub("%net", ""),
+    targetExt = empty_string_to_nil(raw.TargetExt),
+    targetFramework = empty_string_to_nil(raw.TargetFramework),
+  }
+end
+
 ---@class DotnetProject
 ---@field language "csharp" | "fsharp"
 ---@field display string
@@ -71,11 +134,75 @@ end
 
 ---@type table<string, DotnetProject>
 local project_cache = {}
+---@type table<string, MsbuildProperties | integer>
+local msbuild_cache = {}
+
+--- Build and cache MSBuild properties for a project file
+---@param project_file_path string
+---@param on_finished fun(props: MsbuildProperties)? optional callback
+function M.preload_msbuild_properties(project_file_path, on_finished)
+  local maybe_cached = msbuild_cache[project_file_path]
+  if maybe_cached ~= nil then
+    if on_finished and type(maybe_cached) ~= "number" then
+      ---@cast maybe_cached MsbuildProperties
+      on_finished(maybe_cached)
+    end
+    return
+  end
+
+  local command = build_msbuild_command(project_file_path)
+  local stdout = ""
+
+  local job_id = vim.fn.jobstart(command, {
+    stdout_buffered = true,
+    on_stdout = function(_, data)
+      if data then stdout = table.concat(data, "\n") end
+    end,
+    on_exit = function()
+      local properties = parse_msbuild_properties(stdout)
+      msbuild_cache[project_file_path] = properties
+      if on_finished then on_finished(properties) end
+    end,
+  })
+
+  if job_id > 0 then
+    msbuild_cache[project_file_path] = job_id
+  else
+    logger.error("Failed to start msbuild job")
+  end
+end
+
+local function get_or_wait_or_set_cached_value(project_file_path)
+  local cached = msbuild_cache[project_file_path]
+
+  if type(cached) == "table" then
+    -- print("Returning cached value for " .. project_file_path)
+    return cached
+  end
+
+  if type(cached) == "number" then
+    -- print("Awaiting cached value for " .. project_file_path)
+    vim.fn.jobwait({ cached })
+    return msbuild_cache[project_file_path]
+  end
+
+  if not cached or type(cached) ~= "table" then
+    local command = build_msbuild_command(project_file_path)
+    -- print("Forcing value for " .. project_file_path)
+    local output = vim.fn.system(command)
+    cached = parse_msbuild_properties(output)
+    msbuild_cache[project_file_path] = cached
+    return cached
+  end
+end
 
 -- Get the project definition from a csproj/fsproj file
 ---@param project_file_path string
 ---@return DotnetProject
 M.get_project_from_project_file = function(project_file_path)
+  local msbuild_props = get_or_wait_or_set_cached_value(project_file_path)
+  if type(msbuild_props) ~= "table" then vim.print("debug", msbuild_props) end
+
   local maybe_cache_object = project_cache[project_file_path]
   if maybe_cache_object then return maybe_cache_object end
   local display = extractProjectName(project_file_path)
@@ -85,10 +212,10 @@ M.get_project_from_project_file = function(project_file_path)
   local is_worker_project = M.is_worker_project(project_file_path)
   local is_console_project = M.is_console_project(project_file_path)
   local is_test_project = M.is_test_project(project_file_path)
-  local is_test_platform_project = M.is_test_platform_project(project_file_path)
-  local is_win_project = M.is_win_project(project_file_path)
-  local maybe_secret_guid = M.try_get_secret_id(project_file_path)
-  local version = M.extract_version(project_file_path)
+  local is_test_platform_project = M.is_test_platform_project(msbuild_props)
+  local is_win_project = M.is_win_project(msbuild_props)
+  local maybe_secret_guid = M.try_get_secret_id(msbuild_props)
+  local version = msbuild_props.version
 
   if version then display = display .. "@" .. version end
 
@@ -114,19 +241,21 @@ M.get_project_from_project_file = function(project_file_path)
     runnable = is_web_project or is_worker_project or is_console_project or is_win_project,
     secrets = maybe_secret_guid,
     get_dll_path = function()
-      local c = project_cache[project_file_path]
-      if c and c.dll_path then return c.dll_path end
-      local value = vim.fn.json_decode(
-        vim.fn.system(string.format("dotnet msbuild %s -getProperty:OutputPath -getProperty:TargetExt -getProperty:AssemblyName -getProperty:TargetFramework", project_file_path))
-      ).Properties
-      local target = string.format("%s%s", value.AssemblyName, value.TargetExt)
-      local path = polyfills.fs.joinpath(vim.fs.dirname(project_file_path), value.OutputPath:gsub("\\", "/"), target)
-      local msbuild_target_framework = value.TargetFramework:gsub("%net", "")
-
-      c["version"] = msbuild_target_framework
-      c["dll_path"] = path
-      return path
+      return msbuild_props.targetPath
+      -- local c = project_cache[project_file_path]
+      -- if c and c.dll_path then return c.dll_path end
+      -- local value = vim.fn.json_decode(
+      --   vim.fn.system(string.format("dotnet msbuild %s -getProperty:OutputPath -getProperty:TargetExt -getProperty:AssemblyName -getProperty:TargetFramework", project_file_path))
+      -- ).Properties
+      -- local target = string.format("%s%s", value.AssemblyName, value.TargetExt)
+      -- local path = polyfills.fs.joinpath(vim.fs.dirname(project_file_path), value.OutputPath:gsub("\\", "/"), target)
+      -- local msbuild_target_framework = value.TargetFramework:gsub("%net", "")
+      --
+      -- c["version"] = msbuild_target_framework
+      -- c["dll_path"] = path
+      -- return path
     end,
+    dll_path = msbuild_props.targetPath,
     isTestProject = is_test_project,
     isTestPlatformProject = is_test_platform_project,
     isConsoleProject = is_console_project,
@@ -136,31 +265,26 @@ M.get_project_from_project_file = function(project_file_path)
   }
 
   project_cache[project_file_path] = project
-  if version then project_cache[project_file_path].dll_path = polyfills.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug", "net" .. version, name .. ".dll") end
-
+  -- if version then project_cache[project_file_path].dll_path = polyfills.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug", "net" .. version, name .. ".dll") end
   return project
 end
 
-M.extract_version = function(project_file_path)
-  local version = extract_from_project(project_file_path, "<TargetFramework>net(.-)</TargetFramework>")
-  if version == false then return nil end
-  return version
-end
+---@param props MsbuildProperties
+---@return string | nil
+M.try_get_secret_id = function(props) return props.userSecretsId end
 
-M.try_get_secret_id = function(project_file_path)
-  local secret = extract_from_project(project_file_path, "<UserSecretsId>([a-fA-F0-9%-]+)</UserSecretsId>")
-  if secret == false then return nil end
-  return secret
-end
-
+---@param project_file_path string
+---@return boolean
 M.is_console_project = function(project_file_path) return type(extract_from_project(project_file_path, "<OutputType>%s*Exe%s*</OutputType>")) == "string" end
 
-M.is_test_platform_project = function(project_file_path)
-  if type(extract_from_project(project_file_path, "<%s*TestingPlatformDotnetTestSupport%s*>%s*true%s*</%s*TestingPlatformDotnetTestSupport%s*>")) == "string" then return true end
-  return false
-end
+---@param props MsbuildProperties
+---@return boolean
+M.is_test_platform_project = function(props) return props.testingPlatformDotnetTestSupport end
 
+---@param project_file_path string
+---@return boolean
 M.is_test_project = function(project_file_path)
+  --TODO: this should check both msbuild properties and dotnet package list
   local patterns = {
     "<%s*IsTestProject%s*>%s*true%s*</%s*IsTestProject%s*>",
     "<%s*TestingPlatformDotnetTestSupport%s*>%s*true%s*</%s*TestingPlatformDotnetTestSupport%s*>",
@@ -190,11 +314,17 @@ M.is_test_project = function(project_file_path)
   return false
 end
 
+---@param project_file_path string
+---@return boolean
 M.is_web_project = function(project_file_path) return type(extract_from_project(project_file_path, '<Project%s+Sdk="Microsoft.NET.Sdk.Web"')) == "string" end
 
+---@param project_file_path string
+---@return boolean
 M.is_worker_project = function(project_file_path) return type(extract_from_project(project_file_path, '<Project%s+Sdk="Microsoft.NET.Sdk.Worker"')) == "string" end
 
-M.is_win_project = function(project_file_path) return type(extract_from_project(project_file_path, "<OutputType>WinExe</OutputType>")) == "string" end
+---@param props MsbuildProperties
+---@return boolean
+M.is_win_project = function(props) return props.outputType == "WinExe" end
 
 M.find_csproj_file = function()
   local file = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.csproj$", depth = 3 })
