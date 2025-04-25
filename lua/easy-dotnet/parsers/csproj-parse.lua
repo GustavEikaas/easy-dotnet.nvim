@@ -201,7 +201,6 @@ end
 ---@return DotnetProject
 M.get_project_from_project_file = function(project_file_path)
   local msbuild_props = get_or_wait_or_set_cached_value(project_file_path)
-  if type(msbuild_props) ~= "table" then vim.print("debug", msbuild_props) end
 
   local maybe_cache_object = project_cache[project_file_path]
   if maybe_cache_object then return maybe_cache_object end
