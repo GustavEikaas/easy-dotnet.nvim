@@ -37,6 +37,8 @@ local function build_msbuild_command(project_path)
   return cmd
 end
 
+local function normalized_path_or_nil(val) return val and vim.fs.normalize(val) or val end
+
 ---@param val string
 ---@return string | nil
 local function empty_string_to_nil(val) return val ~= "" and val or nil end
@@ -52,11 +54,11 @@ local parse_msbuild_properties = function(output)
 
   ---@type MsbuildProperties
   return {
-    outputPath = empty_string_to_nil(raw.OutputPath),
+    outputPath = normalized_path_or_nil(empty_string_to_nil(raw.OutputPath)),
     outputType = empty_string_to_nil(raw.OutputType),
     userSecretsId = empty_string_to_nil(raw.UserSecretsId),
     assemblyName = empty_string_to_nil(raw.AssemblyName),
-    targetPath = raw.TargetPath,
+    targetPath = normalized_path_or_nil(empty_string_to_nil(raw.TargetPath)),
     isTestProject = string_to_boolean(raw.IsTestProject),
     testingPlatformDotnetTestSupport = string_to_boolean(raw.TestingPlatformDotnetTestSupport),
     version = raw.TargetFramework:gsub("%net", ""),

@@ -37,17 +37,30 @@ local function pick_project(use_default)
   return project, solution_file_path
 end
 
+local function strip_single_starting_dot(str)
+    if str:sub(1,2) == ".." then
+        return str
+    elseif str:sub(1,1) == "." then
+        return str:sub(2)
+    else
+        return str
+    end
+end
+
+
 M.get_debug_dll = function(default)
   local sln_file = sln_parse.find_solution_file()
   local result = sln_file ~= nil and M.get_dll_for_solution_project(default) or M.get_dll_for_project()
   local relative_dll_path = result.dll
-  local relative_project_path = polyfills.fs.joinpath(vim.fn.getcwd(), result.project)
+  local relative_project_path = polyfills.fs.joinpath(vim.fs.normalize(vim.fn.getcwd()), strip_single_starting_dot(result.project))
   return {
     dll_path = result.dll,
     project_path = result.project,
     project_name = result.projectName,
     relative_dll_path = relative_dll_path,
     relative_project_path = relative_project_path,
+    absolute_project_path = relative_project_path,
+    target_path = result.dll
   }
 end
 

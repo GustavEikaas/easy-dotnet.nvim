@@ -737,20 +737,19 @@ M.register_net_dap = function()
         env = function()
           local dll = ensure_dll()
           --Last flag is set to false when you want to select the launch profile to use
-          local vars = dotnet.get_environment_variables(dll.project_name, dll.relative_project_path, false)
+          local vars = dotnet.get_environment_variables(dll.project_name, dll.absolute_project_path, false)
           return vars or nil
         end,
         program = function()
           local dll = ensure_dll()
           local co = coroutine.running()
           rebuild_project(co, dll.project_path)
-          return dll.relative_dll_path
+          return dll.target_path
         end,
         cwd = function()
           local dll = ensure_dll()
-          return dll.relative_project_path
+          return dll.absolute_project_path
         end,
-
       }
     }
   end
@@ -918,17 +917,17 @@ return {
             env = function()
               local dll = ensure_dll()
               --Last flag is set to false when you want to select the launch profile to use
-              local vars = dotnet.get_environment_variables(dll.project_name, dll.relative_project_path, false)
+              local vars = dotnet.get_environment_variables(dll.project_name, dll.absolute_project_path, false)
               return vars or nil
             end,
             program = function()
               require("overseer").enable_dap()
               local dll = ensure_dll()
-              return dll.relative_dll_path
+              return dll.target_path
             end,
             cwd = function()
               local dll = ensure_dll()
-              return dll.relative_project_path
+              return dll.absolute_project_path
             end,
             preLaunchTask = "Build .NET App With Spinner",
           },
