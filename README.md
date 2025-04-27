@@ -296,12 +296,12 @@ Although not *required* by the plugin, it is highly recommended to install one o
 | `dotnet.createfile(path)`                     | Spawns a picker for creating a new file based on a `.NET new` template                            |
 | `dotnet.secrets()`                            | Opens a picker for `.NET user-secrets`                                                              |
 | `dotnet.get_debug_dll()`                      | Returns the DLL from the `bin/debug` folder                                                                 |
-| `dotnet.get_environment_variables(project_name, project_path)` | Returns the environment variables from the `launchSetting.json` file                                         |
+| `dotnet.get_environment_variables(project_name, project_path, use_default_launch_profile: boolean)` | Returns the environment variables from the `launchSetting.json` file                                         |
 | `dotnet.reset()`                              | Deletes all files persisted by `easy-dotnet.nvim`. Use this if unable to pick a different solution or project |
 
 ```lua
 local dotnet = require("easy-dotnet")
-dotnet.get_environment_variables(project_name, project_path)
+dotnet.get_environment_variables(project_name, project_path, use_default_launch_profile: boolean)
 dotnet.is_dotnet_project()                                 
 dotnet.try_get_selected_solution()                         
 dotnet.get_debug_dll()                                     
@@ -736,7 +736,8 @@ M.register_net_dap = function()
         request = "launch",
         env = function()
           local dll = ensure_dll()
-          local vars = dotnet.get_environment_variables(dll.project_name, dll.relative_project_path)
+          --Last flag is set to false when you want to select the launch profile to use
+          local vars = dotnet.get_environment_variables(dll.project_name, dll.relative_project_path, false)
           return vars or nil
         end,
         program = function()
@@ -916,7 +917,8 @@ return {
             request = "launch",
             env = function()
               local dll = ensure_dll()
-              local vars = dotnet.get_environment_variables(dll.project_name, dll.relative_project_path)
+              --Last flag is set to false when you want to select the launch profile to use
+              local vars = dotnet.get_environment_variables(dll.project_name, dll.relative_project_path, false)
               return vars or nil
             end,
             program = function()
