@@ -51,16 +51,18 @@ end
 M.get_debug_dll = function(default)
   local sln_file = sln_parse.find_solution_file()
   local result = sln_file ~= nil and M.get_dll_for_solution_project(default) or M.get_dll_for_project()
-  local relative_dll_path = result.dll
-  local relative_project_path = polyfills.fs.joinpath(vim.fs.normalize(vim.fn.getcwd()), strip_single_starting_dot(result.project))
+  local target_path = result.dll
+  local absolute_project_path = polyfills.fs.joinpath(vim.fs.normalize(vim.fn.getcwd()), strip_single_starting_dot(result.project))
+
   return {
-    dll_path = result.dll,
+    target_path = target_path,
+    absolute_project_path = absolute_project_path,
+    --OBSOLETE kept for backwards compat
+    dll_path = target_path,
     project_path = result.project,
     project_name = result.projectName,
-    relative_dll_path = relative_dll_path,
-    relative_project_path = relative_project_path,
-    absolute_project_path = relative_project_path,
-    target_path = result.dll
+    relative_dll_path = target_path,
+    relative_project_path = absolute_project_path,
   }
 end
 
