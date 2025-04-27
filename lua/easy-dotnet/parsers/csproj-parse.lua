@@ -236,6 +236,9 @@ M.get_project_from_project_file = function(project_file_path)
     version = version,
     runnable = is_web_project or is_worker_project or is_console_project or is_win_project,
     secrets = maybe_secret_guid,
+    get_dll_path = function ()
+      return msbuild_props.targetPath
+    end,
     dll_path = msbuild_props.targetPath,
     isTestProject = is_test_project,
     isTestPlatformProject = is_test_platform_project,
