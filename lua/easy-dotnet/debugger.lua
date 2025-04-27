@@ -38,15 +38,14 @@ local function pick_project(use_default)
 end
 
 local function strip_single_starting_dot(str)
-    if str:sub(1,2) == ".." then
-        return str
-    elseif str:sub(1,1) == "." then
-        return str:sub(2)
-    else
-        return str
-    end
+  if str:sub(1, 2) == ".." then
+    return str
+  elseif str:sub(1, 1) == "." then
+    return str:sub(2)
+  else
+    return str
+  end
 end
-
 
 M.get_debug_dll = function(default)
   local sln_file = sln_parse.find_solution_file()
