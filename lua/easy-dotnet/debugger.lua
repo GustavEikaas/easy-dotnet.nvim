@@ -97,7 +97,13 @@ M.start_debugging_test_project = function(project_path)
   }
 end
 
-M.get_environment_variables = function(project_name, relative_project_path)
+local function select_profile(profiles, result)
+  local profile_name = picker.pick_sync(nil, polyfills.tbl_map(function(i) return { display = i, value = i } end, profiles), "Pick launch profile", true)
+  return result.profiles[profile_name.value]
+end
+
+M.get_environment_variables = function(project_name, relative_project_path, autoselect)
+  if autoselect == nil then autoselect = true end
   local launchSettings = polyfills.fs.joinpath(relative_project_path, "Properties", "launchSettings.json")
 
   local stat = vim.loop.fs_stat(launchSettings)
@@ -106,7 +112,9 @@ M.get_environment_variables = function(project_name, relative_project_path)
   local success, result = pcall(vim.fn.json_decode, vim.fn.readfile(launchSettings, ""))
   if not success then return nil, "Error parsing JSON: " .. result end
 
-  local launchProfile = result.profiles[project_name]
+  local profiles = polyfills.tbl_keys(result.profiles)
+
+  local launchProfile = (not autoselect and #profiles > 0) and select_profile(profiles, result) or result.profiles[project_name]
 
   if launchProfile == nil then return nil end
 
