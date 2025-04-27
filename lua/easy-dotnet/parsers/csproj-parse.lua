@@ -177,20 +177,15 @@ end
 local function get_or_wait_or_set_cached_value(project_file_path)
   local cached = msbuild_cache[project_file_path]
 
-  if type(cached) == "table" then
-    -- print("Returning cached value for " .. project_file_path)
-    return cached
-  end
+  if type(cached) == "table" then return cached end
 
   if type(cached) == "number" then
-    -- print("Awaiting cached value for " .. project_file_path)
     vim.fn.jobwait({ cached })
     return msbuild_cache[project_file_path]
   end
 
   if not cached or type(cached) ~= "table" then
     local command = build_msbuild_command(project_file_path)
-    -- print("Forcing value for " .. project_file_path)
     local output = vim.fn.system(command)
     cached = parse_msbuild_properties(output)
     msbuild_cache[project_file_path] = cached
@@ -241,21 +236,6 @@ M.get_project_from_project_file = function(project_file_path)
     version = version,
     runnable = is_web_project or is_worker_project or is_console_project or is_win_project,
     secrets = maybe_secret_guid,
-    get_dll_path = function()
-      return msbuild_props.targetPath
-      -- local c = project_cache[project_file_path]
-      -- if c and c.dll_path then return c.dll_path end
-      -- local value = vim.fn.json_decode(
-      --   vim.fn.system(string.format("dotnet msbuild %s -getProperty:OutputPath -getProperty:TargetExt -getProperty:AssemblyName -getProperty:TargetFramework", project_file_path))
-      -- ).Properties
-      -- local target = string.format("%s%s", value.AssemblyName, value.TargetExt)
-      -- local path = polyfills.fs.joinpath(vim.fs.dirname(project_file_path), value.OutputPath:gsub("\\", "/"), target)
-      -- local msbuild_target_framework = value.TargetFramework:gsub("%net", "")
-      --
-      -- c["version"] = msbuild_target_framework
-      -- c["dll_path"] = path
-      -- return path
-    end,
     dll_path = msbuild_props.targetPath,
     isTestProject = is_test_project,
     isTestPlatformProject = is_test_platform_project,
