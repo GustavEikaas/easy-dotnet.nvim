@@ -206,7 +206,7 @@ M.get_project_from_project_file = function(project_file_path)
   local is_web_project = M.is_web_project(project_file_path)
   local is_worker_project = M.is_worker_project(project_file_path)
   local is_console_project = string.lower(msbuild_props.outputType) == "exe"
-  local is_test_project = msbuild_props.isTestProject or M.is_test_project(project_file_path)
+  local is_test_project = msbuild_props.isTestProject or M.is_directly_referencing_test_packages(project_file_path)
   local is_test_platform_project = msbuild_props.testingPlatformDotnetTestSupport
   local is_win_project = string.lower(msbuild_props.outputType) == "winexe"
   local maybe_secret_guid = msbuild_props.userSecretsId
@@ -252,18 +252,7 @@ end
 
 ---@param project_file_path string
 ---@return boolean
-M.is_test_project = function(project_file_path)
-  --TODO: this should check both msbuild properties and dotnet package list
-  local patterns = {
-    "<%s*IsTestProject%s*>%s*true%s*</%s*IsTestProject%s*>",
-    "<%s*TestingPlatformDotnetTestSupport%s*>%s*true%s*</%s*TestingPlatformDotnetTestSupport%s*>",
-    "<%s*UseMicrosoftTestingPlatformRunner%s*>%s*true%s*</%s*UseMicrosoftTestingPlatformRunner%s*>",
-  }
-  for _, pattern in ipairs(patterns) do
-    if type(extract_from_project(project_file_path, pattern)) == "string" then return true end
-  end
-
-  -- Check for test-related package references
+M.is_directly_referencing_test_packages = function(project_file_path)
   local test_packages = {
     "Microsoft%.NET%.Test%.Sdk",
     "MSTest%.TestFramework",
