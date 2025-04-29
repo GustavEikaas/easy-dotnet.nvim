@@ -219,6 +219,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
       -- the available one automatically with this priority:
       -- telescope -> fzf -> snacks ->  basic
       picker = "telescope" 
+      background_scanning = true
     })
 
     -- Example command

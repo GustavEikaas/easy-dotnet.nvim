@@ -96,7 +96,7 @@ end
 ---@param solution_file_path string
 ---@return DotnetProject[]
 M.get_projects_from_sln = function(solution_file_path)
-  local cmd = require("easy-dotnet.dotnet_cli").list_packages(solution_file_path)
+  local cmd = require("easy-dotnet.dotnet_cli").list_projects(solution_file_path)
   local data = vim.fn.systemlist(cmd)
 
   local function trim(s) return s:match("^%s*(.-)%s*$") end
@@ -115,7 +115,6 @@ M.get_projects_from_sln = function(solution_file_path)
   local projects = polyfills.tbl_map(function(proj_path)
     local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
     local project_file_path = generate_relative_path_for_project(proj_path, solution_file_path)
-    -- print("Getting project from " .. proj_path)
     local project = csproj_parser.get_project_from_project_file(project_file_path)
     return project
   end, project_lines)

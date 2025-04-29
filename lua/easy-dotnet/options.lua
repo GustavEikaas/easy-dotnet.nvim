@@ -157,6 +157,8 @@ local M = {
     -- if nil, will auto-detect available pickers in order: telescope -> fzf -> basic
     ---@type PickerType
     picker = nil,
+    --For performance reasons this will query msbuild properties as soon as vim starts
+    background_scanning = true
   },
 }
 
