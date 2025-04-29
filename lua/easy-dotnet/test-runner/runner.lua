@@ -208,6 +208,33 @@ local function discover_tests_for_project_and_update_lines(project, win, options
   })
 end
 
+---@param value DotnetProject
+local function start_discovery_for_project(value, win, options, sdk_path, solution_file_path)
+  ---@type TestNode
+  local project = {
+    id = "",
+    children = {},
+    cs_project_path = value.path,
+    solution_file_path = solution_file_path,
+    namespace = "",
+    type = "csproject",
+    expanded = false,
+    name = value.name,
+    file_path = value.path,
+    line_number = nil,
+    full_name = value.name,
+    indent = 2,
+    preIcon = options.icons.project,
+    icon = "",
+    expand = {},
+    highlight = "EasyDotnetTestRunnerProject",
+  }
+  local on_job_finished = win.appendJob(value.name, "Discovery")
+  win.tree.children[project.name] = project
+  win.refreshTree()
+  discover_tests_for_project_and_update_lines(project, win, options, value, sdk_path, on_job_finished)
+end
+
 local function refresh_runner(options, win, solutionFilePath, sdk_path)
   if #win.jobs > 0 then
     logger.warn("Cant refresh while waiting for pending jobs")
@@ -252,33 +279,13 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
 
   for _, value in ipairs(projects) do
     if value.isTestProject == true then
-      ---@type TestNode
-      local project = {
-        id = "",
-        children = {},
-        cs_project_path = value.path,
-        solution_file_path = solutionFilePath,
-        namespace = "",
-        type = "csproject",
-        expanded = false,
-        name = value.name,
-        file_path = value.path,
-        line_number = nil,
-        full_name = value.name,
-        indent = 2,
-        preIcon = options.icons.project,
-        icon = "",
-        expand = {},
-        highlight = "EasyDotnetTestRunnerProject",
-      }
-      local on_job_finished = win.appendJob(value.name, "Discovery")
-      win.tree.children[project.name] = project
-      win.refreshTree()
-      --Performance reasons
-      if not value.version then
-        vim.schedule(function() discover_tests_for_project_and_update_lines(project, win, options, value, sdk_path, on_job_finished) end)
+      if value.msbuild_props.isMultiTarget then
+        for _, runtime_project in ipairs(value.get_all_runtime_definitions()) do
+          runtime_project.name = runtime_project.name .. "@" .. runtime_project.version
+          start_discovery_for_project(runtime_project, win, options, sdk_path, solutionFilePath)
+        end
       else
-        discover_tests_for_project_and_update_lines(project, win, options, value, sdk_path, on_job_finished)
+        start_discovery_for_project(value, win, options, sdk_path, solutionFilePath)
       end
     end
   end
