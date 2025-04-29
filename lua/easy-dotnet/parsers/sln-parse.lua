@@ -106,7 +106,6 @@ M.get_projects_from_sln = function(solution_file_path)
     if t:match("%.csproj$") or t:match("%.fsproj$") then table.insert(project_lines, t) end
   end
 
-  --TODO: Call this when starting vim?
   polyfills.iter(project_lines):each(function(proj_path)
     local project_file_path = generate_relative_path_for_project(proj_path, solution_file_path)
     require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path)
