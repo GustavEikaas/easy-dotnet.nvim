@@ -158,7 +158,7 @@ local M = {
     ---@type PickerType
     picker = nil,
     --For performance reasons this will query msbuild properties as soon as vim starts
-    background_scanning = true
+    background_scanning = true,
   },
 }
 
