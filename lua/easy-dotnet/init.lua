@@ -157,7 +157,7 @@ local function complete_command(arg_lead, cmdline)
   return matches
 end
 
-local function generate_relative_path_for_project(path, slnpath)
+local function generate_absolute_path_for_project(path, slnpath)
   local dir = vim.fs.normalize(vim.fs.dirname(slnpath))
   local res = vim.fs.normalize(polyfills.fs.joinpath(dir, vim.fs.normalize(path)))
   return res
@@ -226,7 +226,7 @@ M.setup = function(opts)
           end
 
           polyfills.iter(project_lines):each(function(proj_path)
-            local project_file_path = generate_relative_path_for_project(proj_path, path)
+            local project_file_path = generate_absolute_path_for_project(proj_path, path)
             require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path)
           end)
         else
