@@ -44,25 +44,26 @@ local function empty_string_to_nil(val) return val ~= "" and val or nil end
 local function string_to_boolean(val) return val == "true" and true or false end
 
 ---@return MsbuildProperties
-local parse_msbuild_properties = function(output)
-  local ok, result = pcall(vim.fn.json_decode, output)
-  if not ok or not result or not result.Properties then error("Failed to parse msbuild output: " .. tostring(output)) end
+local parse_msbuild_properties = function(output, project_name)
+  vim.print(output)
+  local result = vim.fn.json_decode(output)
 
-  local raw = result.Properties
+  local raw = result[string.lower(project_name)]
 
   ---@type MsbuildProperties
-  return {
-    outputPath = empty_string_to_nil(raw.OutputPath),
-    outputType = empty_string_to_nil(raw.OutputType),
-    userSecretsId = empty_string_to_nil(raw.UserSecretsId),
-    assemblyName = empty_string_to_nil(raw.AssemblyName),
-    targetPath = raw.TargetPath,
-    isTestProject = string_to_boolean(raw.IsTestProject),
-    testingPlatformDotnetTestSupport = string_to_boolean(raw.TestingPlatformDotnetTestSupport),
-    version = raw.TargetFramework:gsub("%net", ""),
-    targetExt = empty_string_to_nil(raw.TargetExt),
-    targetFramework = empty_string_to_nil(raw.TargetFramework),
-  }
+  return raw
+  -- return {
+  --   outputPath = empty_string_to_nil(raw.OutputPath),
+  --   outputType = empty_string_to_nil(raw.OutputType),
+  --   userSecretsId = empty_string_to_nil(raw.UserSecretsId),
+  --   assemblyName = empty_string_to_nil(raw.AssemblyName),
+  --   targetPath = raw.TargetPath,
+  --   isTestProject = string_to_boolean(raw.IsTestProject),
+  --   testingPlatformDotnetTestSupport = string_to_boolean(raw.TestingPlatformDotnetTestSupport),
+  --   version = raw.TargetFramework:gsub("%net", ""),
+  --   targetExt = empty_string_to_nil(raw.TargetExt),
+  --   targetFramework = empty_string_to_nil(raw.TargetFramework),
+  -- }
 end
 
 ---@class DotnetProject
@@ -150,7 +151,18 @@ function M.preload_msbuild_properties(project_file_path, on_finished)
     return
   end
 
-  local command = build_msbuild_command(project_file_path)
+  local fullPath = vim.fs.joinpath(vim.fs.normalize(vim.fn.getcwd()), project_file_path)
+  print(fullPath)
+  local command = {
+    'dotnet',
+    'run',
+    '--project',
+    'C:/Users/Gustav/repo/msbuild-scanner/src/msbuild-scanner.MsbuildScanner/msbuild-scanner.MsbuildScanner.fsproj',
+    '--framework',
+    'net8.0',
+    fullPath
+  }
+  -- local command = build_msbuild_command(project_file_path)
   local stdout = ""
 
   local job_id = vim.fn.jobstart(command, {
@@ -159,7 +171,7 @@ function M.preload_msbuild_properties(project_file_path, on_finished)
       if data then stdout = table.concat(data, "\n") end
     end,
     on_exit = function()
-      local properties = parse_msbuild_properties(stdout)
+      local properties = parse_msbuild_properties(stdout, vim.fs.basename(project_file_path))
       msbuild_cache[project_file_path] = properties
       if on_finished then on_finished(properties) end
     end,
@@ -190,7 +202,7 @@ local function get_or_wait_or_set_cached_value(project_file_path)
     local command = build_msbuild_command(project_file_path)
     -- print("Forcing value for " .. project_file_path)
     local output = vim.fn.system(command)
-    cached = parse_msbuild_properties(output)
+    cached = parse_msbuild_properties(output, vim.fs.basename(project_file_path))
     msbuild_cache[project_file_path] = cached
     return cached
   end
