@@ -3,7 +3,7 @@ local logger = require("easy-dotnet.logger")
 local M = {}
 
 ---@class MsbuildProperties
----@field outputPath string | nil Path to the build output directory (e.g., "bin\\Debug\\net9.0\\")
+---@field outputPath string | nil Normalized path to the build output directory (e.g., "bin/Debug/net9.0/")
 ---@field outputType string | nil Type of output, typically "Exe" or "Library"
 ---@field targetExt string | nil File extension of the built output (e.g., ".dll")
 ---@field assemblyName string | nil The name of the resulting assembly
