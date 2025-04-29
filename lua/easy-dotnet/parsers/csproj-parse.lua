@@ -11,7 +11,7 @@ local M = {}
 ---@field isTestProject boolean Whether the project is a test project ("true"/"false")
 ---@field userSecretsId string | nil The GUID used for User Secrets configuration
 ---@field testingPlatformDotnetTestSupport boolean Custom property, likely used by test tooling
----@field targetPath string Full path to the built output artifact
+---@field targetPath string | nil Full path to the built output artifact
 ---@field version string | nil TargetVersion without net (e.g '8.0')
 
 local msbuild_properties = {
@@ -198,7 +198,6 @@ end
 ---@return DotnetProject
 M.get_project_from_project_file = function(project_file_path)
   local msbuild_props = get_or_wait_or_set_cached_value(project_file_path)
-
   local maybe_cache_object = project_cache[project_file_path]
   if maybe_cache_object then return maybe_cache_object end
   local display = extractProjectName(project_file_path)
@@ -206,11 +205,11 @@ M.get_project_from_project_file = function(project_file_path)
   local language = project_file_path:match("%.csproj$") and "csharp" or project_file_path:match("%.fsproj$") and "fsharp" or "unknown"
   local is_web_project = M.is_web_project(project_file_path)
   local is_worker_project = M.is_worker_project(project_file_path)
-  local is_console_project = M.is_console_project(project_file_path)
+  local is_console_project = string.lower(msbuild_props.outputType) == "exe"
   local is_test_project = msbuild_props.isTestProject or M.is_test_project(project_file_path)
-  local is_test_platform_project = M.is_test_platform_project(msbuild_props)
-  local is_win_project = M.is_win_project(msbuild_props)
-  local maybe_secret_guid = M.try_get_secret_id(msbuild_props)
+  local is_test_platform_project = msbuild_props.testingPlatformDotnetTestSupport
+  local is_win_project = string.lower(msbuild_props.outputType) == "winexe"
+  local maybe_secret_guid = msbuild_props.userSecretsId
   local version = msbuild_props.version
 
   if version then display = display .. "@" .. version end
@@ -236,6 +235,7 @@ M.get_project_from_project_file = function(project_file_path)
     version = version,
     runnable = is_web_project or is_worker_project or is_console_project or is_win_project,
     secrets = maybe_secret_guid,
+    --TODO: consolidate method and property, support multi target frameworks where targetPath would be nil
     get_dll_path = function() return msbuild_props.targetPath end,
     dll_path = msbuild_props.targetPath,
     isTestProject = is_test_project,
@@ -247,21 +247,8 @@ M.get_project_from_project_file = function(project_file_path)
   }
 
   project_cache[project_file_path] = project
-  -- if version then project_cache[project_file_path].dll_path = polyfills.fs.joinpath(vim.fs.dirname(project_file_path), "bin", "Debug", "net" .. version, name .. ".dll") end
   return project
 end
-
----@param props MsbuildProperties
----@return string | nil
-M.try_get_secret_id = function(props) return props.userSecretsId end
-
----@param project_file_path string
----@return boolean
-M.is_console_project = function(project_file_path) return type(extract_from_project(project_file_path, "<OutputType>%s*Exe%s*</OutputType>")) == "string" end
-
----@param props MsbuildProperties
----@return boolean
-M.is_test_platform_project = function(props) return props.testingPlatformDotnetTestSupport end
 
 ---@param project_file_path string
 ---@return boolean
@@ -303,10 +290,6 @@ M.is_web_project = function(project_file_path) return type(extract_from_project(
 ---@param project_file_path string
 ---@return boolean
 M.is_worker_project = function(project_file_path) return type(extract_from_project(project_file_path, '<Project%s+Sdk="Microsoft.NET.Sdk.Worker"')) == "string" end
-
----@param props MsbuildProperties
----@return boolean
-M.is_win_project = function(props) return props.outputType == "WinExe" end
 
 M.find_csproj_file = function()
   local file = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.csproj$", depth = 3 })
