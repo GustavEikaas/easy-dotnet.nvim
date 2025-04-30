@@ -7,23 +7,6 @@ local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
 local polyfills = require("easy-dotnet.polyfills")
 
-
----@param projects DotnetProject[]
-local function flatten_project_frameworks(projects)
-  local project_frameworks = {}
-
-  for _, project in ipairs(projects) do
-    local defs = project.get_all_runtime_definitions()
-    if defs then
-      for _, def in ipairs(defs) do
-        table.insert(project_frameworks, def)
-      end
-    end
-  end
-  
-  return project_frameworks
-end
-
 ---@param use_default boolean
 ---@return DotnetProject, string | nil, string | nil
 local function pick_project_and_framework(use_default)
@@ -50,17 +33,14 @@ local function pick_project_and_framework(use_default)
     end
   end
 
-  local projects = polyfills.tbl_filter(function(i) return i.runnable == true end, sln_parse.get_projects_from_sln(solution_file_path))
+  local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(i) return i.runnable == true end)
 
   if #projects == 0 then
     logger.error(error_messages.no_runnable_projects_found)
     return
   end
-
-  local project_frameworks = flatten_project_frameworks(projects)
-
   ---@type DotnetProject
-  local project_framework = picker.pick_sync(nil, project_frameworks, "Run project")
+  local project_framework = picker.pick_sync(nil, projects, "Run project")
   if not project_framework then
     logger.error("No project selected")
     return
@@ -79,7 +59,9 @@ local function csproj_fallback(term, args)
   local project = csproj_parse.get_project_from_project_file(csproj_path)
   local options = vim.tbl_map(function(i) return { display = i.name .. "@" .. i.version, path = csproj_path, framework = i.msbuild_props.targetFramework } end, project.get_all_runtime_definitions())
   picker.picker(nil, options, function(i)
-    args = args .. " --framework " .. i.framework
+    if i.type == 'project_framework'then
+      args = args .. " --framework " .. i.framework
+    end
     term(i.path, "run", args)
   end, "Run project")
 end
@@ -111,18 +93,14 @@ M.run_project_picker = function(term, use_default, args)
     return
   end
 
-  local projects = sln_parse.get_projects_from_sln(solution_file_path)
+  local project_frameworks = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(i) return i.runnable == true end)
 
-  local projects_frameworks = flatten_project_frameworks(projects)
-
-  local project_framework = polyfills.tbl_filter(function(i) return i.runnable == true end, projects_frameworks)
-
-  if #project_framework == 0 then
+  if #project_frameworks == 0 then
     logger.error(error_messages.no_runnable_projects_found)
     return
   end
-  picker.picker(nil, project_framework, function(i)
-    if i.msbuild_props.isMultiTarget then args = args .. " --framework " .. i.msbuild_props.targetFramework end
+  picker.picker(nil, project_frameworks, function(i)
+    if i.type == 'project_framework' then args = args .. " --framework " .. i.msbuild_props.targetFramework end
     term(i.path, "run", args)
     default_manager.set_default_project({ project = i.name, target_framework = i.msbuild_props.targetFramework }, solution_file_path, "run")
   end, "Run project")
