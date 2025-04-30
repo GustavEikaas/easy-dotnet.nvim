@@ -59,9 +59,7 @@ local function csproj_fallback(term, args)
   local project = csproj_parse.get_project_from_project_file(csproj_path)
   local options = vim.tbl_map(function(i) return { display = i.name .. "@" .. i.version, path = csproj_path, framework = i.msbuild_props.targetFramework } end, project.get_all_runtime_definitions())
   picker.picker(nil, options, function(i)
-    if i.type == 'project_framework'then
-      args = args .. " --framework " .. i.framework
-    end
+    if i.type == "project_framework" then args = args .. " --framework " .. i.framework end
     term(i.path, "run", args)
   end, "Run project")
 end
@@ -100,7 +98,7 @@ M.run_project_picker = function(term, use_default, args)
     return
   end
   picker.picker(nil, project_frameworks, function(i)
-    if i.type == 'project_framework' then args = args .. " --framework " .. i.msbuild_props.targetFramework end
+    if i.type == "project_framework" then args = args .. " --framework " .. i.msbuild_props.targetFramework end
     term(i.path, "run", args)
     default_manager.set_default_project({ project = i.name, target_framework = i.msbuild_props.targetFramework }, solution_file_path, "run")
   end, "Run project")
