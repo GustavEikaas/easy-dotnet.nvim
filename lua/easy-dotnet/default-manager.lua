@@ -73,27 +73,52 @@ M.set_default_solution = function(old_solution_file, solution_file_path)
   get_or_create_cache_file(solution_file_path)
 end
 
+---@class PersistedDefinition
+---@field project string
+---@field target_framework string | nil
+
+---@param project string | PersistedDefinition | nil
+---@return PersistedDefinition | nil
+local function backwards_compatible(project)
+  if not project then return nil end
+  if type(project) == "string" then return {
+    project = project,
+  } end
+  return project
+end
+
 ---Checks for the default project in the solution file.
 ---@param solution_file_path string Path to the solution file.
 ---@param type TaskType
----@return DotnetProject|nil
+---@return DotnetProject|nil, string | nil
 M.check_default_project = function(solution_file_path, type)
   local file = get_or_create_cache_file(solution_file_path)
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
 
-  local project = file.decoded[get_property(type)]
-  if project ~= nil then
+  local persisted_definition = backwards_compatible(file.decoded[get_property(type)])
+
+  if persisted_definition ~= nil then
     local projects = sln_parse.get_projects_from_sln(solution_file_path)
     table.insert(projects, { path = solution_file_path, display = "Solution", name = "Solution" })
 
     for _, value in ipairs(projects) do
-      if value.name == project then return value end
+      if value.name == persisted_definition.project then
+        if value.msbuild_props.isMultiTarget then
+          if vim.tbl_contains(value.msbuild_props.targetFrameworks, persisted_definition.target_framework) then
+            return value, persisted_definition.target_framework
+          else
+            return value, nil
+          end
+        else
+          return value, nil
+        end
+      end
     end
   end
 end
 
 ---Sets the default project in the solution file.
----@param project DotnetProject The project to set as default.
+---@param project PersistedDefinition The project to set as default.
 ---@param solution_file_path string Path to the solution file.
 ---@param type TaskType
 M.set_default_project = function(project, solution_file_path, type)
@@ -101,7 +126,7 @@ M.set_default_project = function(project, solution_file_path, type)
 
   if file.decoded == nil then file.decoded = {} end
 
-  file.decoded[get_property(type)] = project.name
+  file.decoded[get_property(type)] = project
   local file_utils = require("easy-dotnet.file-utils")
   file_utils.overwrite_file(file.file, vim.fn.json_encode(file.decoded))
 end

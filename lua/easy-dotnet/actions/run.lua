@@ -7,20 +7,48 @@ local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
 local polyfills = require("easy-dotnet.polyfills")
 
+
+---@param projects DotnetProject[]
+local function flatten_project_frameworks(projects)
+  local project_frameworks = {}
+
+  for _, project in ipairs(projects) do
+    local defs = project.get_all_runtime_definitions()
+    if defs then
+      for _, def in ipairs(defs) do
+        table.insert(project_frameworks, def)
+      end
+    end
+  end
+  
+  return project_frameworks
+end
+
 ---@param use_default boolean
----@return DotnetProject, string | nil
-local function pick_project(use_default)
+---@return DotnetProject, string | nil, string | nil
+local function pick_project_and_framework(use_default)
   local default_manager = require("easy-dotnet.default-manager")
   local solution_file_path = sln_parse.find_solution_file()
   if solution_file_path == nil then
     local csproject_path = csproj_parse.find_project_file()
     if not csproject_path then logger.error(error_messages.no_runnable_projects_found) end
     local project = csproj_parse.get_project_from_project_file(csproject_path)
-    return project, nil
+    local project_framework = picker.pick_sync(nil, project.get_all_runtime_definitions(), "Run project")
+    return project_framework, nil, project_framework.msbuild_props.targetFramework
   end
 
-  local default = default_manager.check_default_project(solution_file_path, "run")
-  if default ~= nil and use_default == true then return default, solution_file_path end
+  local default, framework = default_manager.check_default_project(solution_file_path, "run")
+
+  if default ~= nil and use_default == true then
+    if default.msbuild_props.isMultiTarget and not framework then
+      local opts = vim.tbl_map(function(i) return { display = i.msbuild_props.targetFramework } end, default.get_all_runtime_definitions())
+      if #opts == 0 then error("Failed to get project definitions for " .. default.name) end
+      local selected_framework = picker.pick_sync(nil, opts, "pick target framework", true)
+      return default, solution_file_path, selected_framework.msbuild_props.targetFramework
+    else
+      return default, solution_file_path, framework
+    end
+  end
 
   local projects = polyfills.tbl_filter(function(i) return i.runnable == true end, sln_parse.get_projects_from_sln(solution_file_path))
 
@@ -28,13 +56,17 @@ local function pick_project(use_default)
     logger.error(error_messages.no_runnable_projects_found)
     return
   end
-  local project = picker.pick_sync(nil, projects, "Run project")
-  if not project then
+
+  local project_frameworks = flatten_project_frameworks(projects)
+
+  ---@type DotnetProject
+  local project_framework = picker.pick_sync(nil, project_frameworks, "Run project")
+  if not project_framework then
     logger.error("No project selected")
     return
   end
-  default_manager.set_default_project(project, solution_file_path, "run")
-  return project, solution_file_path
+  default_manager.set_default_project({ project = project_framework.name, target_framework = project_framework.msbuild_props.targetFramework }, solution_file_path, "run")
+  return project_framework, solution_file_path, project_framework.msbuild_props.targetFramework
 end
 
 ---@param term function
@@ -44,7 +76,12 @@ local function csproj_fallback(term, args)
     logger.error(error_messages.no_project_definition_found)
     return
   end
-  picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i) term(i.path, "run", args) end, "Run project")
+  local project = csproj_parse.get_project_from_project_file(csproj_path)
+  local options = vim.tbl_map(function(i) return { display = i.name .. "@" .. i.version, path = csproj_path, framework = i.msbuild_props.targetFramework } end, project.get_all_runtime_definitions())
+  picker.picker(nil, options, function(i)
+    args = args .. " --framework " .. i.framework
+    term(i.path, "run", args)
+  end, "Run project")
 end
 
 ---@param term function | nil
@@ -61,21 +98,33 @@ M.run_project_picker = function(term, use_default, args)
     return
   end
 
-  local default = default_manager.check_default_project(solution_file_path, "run")
+  local default, target_framework = default_manager.check_default_project(solution_file_path, "run")
   if default ~= nil and use_default == true then
-    term(default.path, "run", args)
+    if default.msbuild_props.isMultiTarget and not target_framework then
+      local opts = vim.tbl_map(function(i) return { display = i.msbuild_props.targetFramework } end, default.get_all_runtime_definitions())
+      local selected_framework = picker.pick_sync(nil, opts, "Pick target framework", true)
+      args = args .. " --framework " .. selected_framework
+      term(default.path, "run", args)
+    else
+      term(default.path, "run", args)
+    end
     return
   end
 
-  local projects = polyfills.tbl_filter(function(i) return i.runnable == true end, sln_parse.get_projects_from_sln(solution_file_path))
+  local projects = sln_parse.get_projects_from_sln(solution_file_path)
 
-  if #projects == 0 then
+  local projects_frameworks = flatten_project_frameworks(projects)
+
+  local project_framework = polyfills.tbl_filter(function(i) return i.runnable == true end, projects_frameworks)
+
+  if #project_framework == 0 then
     logger.error(error_messages.no_runnable_projects_found)
     return
   end
-  picker.picker(nil, projects, function(i)
+  picker.picker(nil, project_framework, function(i)
+    if i.msbuild_props.isMultiTarget then args = args .. " --framework " .. i.msbuild_props.targetFramework end
     term(i.path, "run", args)
-    default_manager.set_default_project(i, solution_file_path, "run")
+    default_manager.set_default_project({ project = i.name, target_framework = i.msbuild_props.targetFramework }, solution_file_path, "run")
   end, "Run project")
 end
 
@@ -123,10 +172,12 @@ M.run_project_with_profile = function(term, use_default, args)
   term = term or require("easy-dotnet.options").options.terminal
   use_default = use_default or false
   args = args or ""
-  local project, solution_file_path = pick_project(use_default)
+  local project, solution_file_path, target_framework = pick_project_and_framework(use_default)
+  print(target_framework)
   if not project then error("Failed to select project") end
   local profile = get_or_pick_profile(use_default, project, solution_file_path)
   local arg = profile and string.format("--launch-profile '%s'", profile) or ""
+  if target_framework then arg = arg .. " --framework " .. target_framework end
   term(project.path, "run", arg .. " " .. args)
 end
 
