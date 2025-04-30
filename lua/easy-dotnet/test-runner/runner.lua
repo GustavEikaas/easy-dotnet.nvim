@@ -224,7 +224,7 @@ local function start_discovery_for_project(value, win, options, sdk_path, soluti
     namespace = "",
     type = "csproject",
     expanded = false,
-    name = value.name,
+    name = value.name .. '@' .. value.version,
     file_path = value.path,
     line_number = nil,
     full_name = value.name,
@@ -235,7 +235,7 @@ local function start_discovery_for_project(value, win, options, sdk_path, soluti
     highlight = "EasyDotnetTestRunnerProject",
     framework = value.msbuild_props.targetFramework,
   }
-  local on_job_finished = win.appendJob(value.name, "Discovery")
+  local on_job_finished = win.appendJob(project.name, "Discovery")
   win.tree.children[project.name] = project
   win.refreshTree()
   discover_tests_for_project_and_update_lines(project, win, options, value, sdk_path, on_job_finished)
@@ -287,7 +287,6 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
   for _, value in ipairs(projects) do
     if value.isTestProject == true then
       for _, runtime_project in ipairs(value.get_all_runtime_definitions()) do
-        runtime_project.name = runtime_project.name .. "@" .. runtime_project.version
         start_discovery_for_project(runtime_project, win, options, sdk_path, solutionFilePath)
       end
     end

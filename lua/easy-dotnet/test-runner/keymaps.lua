@@ -81,7 +81,7 @@ end
 
 ---@param node TestNode
 local function run_csproject(win, node)
-  local log_file_name = string.format("%s.xml", node.cs_project_path:match("([^/\\]+)$"))
+  local log_file_name = string.format("%s_%s.xml", vim.fs.basename(node.cs_project_path), node.framework)
   local normalized_path = vim.fs.normalize(node.cs_project_path)
   local directory_path = vim.fs.dirname(normalized_path)
   local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
@@ -98,7 +98,8 @@ local function run_csproject(win, node)
   local on_job_finished = win.appendJob(node.cs_project_path, "Run", testcount)
 
   win.refreshTree()
-  vim.fn.jobstart(string.format('dotnet test --nologo %s %s --framework %s --logger="trx;logFileName=%s"', get_dotnet_args(win.options), node.cs_project_path, node.framework, log_file_name), {
+  local cmd = string.format('dotnet test --nologo %s %s --framework %s --logger="trx;logFileName=%s"', get_dotnet_args(win.options), node.cs_project_path, node.framework, log_file_name)
+  vim.fn.jobstart(cmd, {
     on_exit = function(_) parse_log_file(relative_log_file_path, win, node, on_job_finished) end,
   })
 end
@@ -120,9 +121,12 @@ local function run_test_group(line, win)
 
   local on_job_finished = win.appendJob(line.name, "Run", testcount)
   win.refreshTree()
-  vim.fn.jobstart(string.format('dotnet test --filter=%s --nologo %s %s --framework %s --logger="trx;logFileName=%s"', suite_name, get_dotnet_args(win.options), line.cs_project_path, line.framework, log_file_name), {
-    on_exit = function() parse_log_file(relative_log_file_path, win, line, on_job_finished) end,
-  })
+  vim.fn.jobstart(
+    string.format('dotnet test --filter=%s --nologo %s %s --framework %s --logger="trx;logFileName=%s"', suite_name, get_dotnet_args(win.options), line.cs_project_path, line.framework, log_file_name),
+    {
+      on_exit = function() parse_log_file(relative_log_file_path, win, line, on_job_finished) end,
+    }
+  )
 end
 
 ---@param line TestNode
@@ -141,9 +145,12 @@ local function run_test_suite(line, win)
   win.refreshTree()
 
   local on_job_finished = win.appendJob(line.namespace, "Run", testcount)
-  vim.fn.jobstart(string.format('dotnet test --filter=%s --nologo %s %s --framework %s --logger="trx;logFileName=%s"', suite_name, get_dotnet_args(win.options), line.cs_project_path, line.framework, log_file_name), {
-    on_exit = function() parse_log_file(relative_log_file_path, win, line, on_job_finished) end,
-  })
+  vim.fn.jobstart(
+    string.format('dotnet test --filter=%s --nologo %s %s --framework %s --logger="trx;logFileName=%s"', suite_name, get_dotnet_args(win.options), line.cs_project_path, line.framework, log_file_name),
+    {
+      on_exit = function() parse_log_file(relative_log_file_path, win, line, on_job_finished) end,
+    }
+  )
 end
 
 local function filter_failed_tests(win)
@@ -178,8 +185,14 @@ local function run_test(node, win)
   local directory_path = vim.fs.dirname(normalized_path)
   local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
 
-  local command =
-    string.format('dotnet test --filter=%s --nologo %s %s --framework %s --logger="trx;logFileName=%s"', node.namespace:gsub("%b()", ""), get_dotnet_args(win.options), node.cs_project_path, node.framework, log_file_name)
+  local command = string.format(
+    'dotnet test --filter=%s --nologo %s %s --framework %s --logger="trx;logFileName=%s"',
+    node.namespace:gsub("%b()", ""),
+    get_dotnet_args(win.options),
+    node.cs_project_path,
+    node.framework,
+    log_file_name
+  )
 
   local on_job_finished = win.appendJob(node.name, "Run")
 
