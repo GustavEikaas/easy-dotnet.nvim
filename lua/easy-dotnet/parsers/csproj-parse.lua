@@ -93,6 +93,14 @@ end
 ---@field msbuild_props MsbuildProperties
 ---@field get_specific_runtime_definition fun(target_framework: string): DotnetProject
 ---@field get_all_runtime_definitions fun(): DotnetProject[]
+---@field type 'project' | 'project_framework'
+
+---@class DotnetProjectFramework
+---@field display string
+---@field version string
+---@field type 'project_framework'
+---@field msbuild_props MsbuildProperties
+---@field get_dll_path function
 
 --- Extracts a pattern from a file
 ---@param project_file_path string
@@ -250,6 +258,7 @@ M.get_project_from_project_file = function(project_file_path)
   if is_worker_project then display = display .. " " end
   if is_win_project then display = display .. " " end
 
+  ---@type DotnetProject
   local project = {
     display = display,
     path = project_file_path,
@@ -268,22 +277,30 @@ M.get_project_from_project_file = function(project_file_path)
     isWebProject = is_web_project,
     isWinProject = is_win_project,
     msbuild_props = msbuild_props,
+    type = "project",
+    get_all_runtime_definitions = nil,
+    get_specific_runtime_definition = nil,
   }
 
   ---@param target_framework string specified as e.g net8.0
+  ---@return DotnetProject
   project.get_specific_runtime_definition = function(target_framework)
+    --TODO: validate that arg is a valid targetFramework on the project
     local msbuild_target_framework_props = get_or_wait_or_set_cached_value(project_file_path, target_framework)
     local runtime_version = target_framework:gsub("%net", "")
-    display = display .. "@" .. runtime_version
-    return vim.tbl_deep_extend("keep", {
+    ---@type DotnetProjectFramework
+    local project_framework = {
+      display = project.display .. "@" .. runtime_version,
       get_dll_path = function() return msbuild_target_framework_props.targetPath end,
       version = msbuild_target_framework_props.version,
       dll_path = msbuild_target_framework_props.targetPath,
+      type = "project_framework",
       ---@type MsbuildProperties
       msbuild_props = {
         targetFramework = target_framework,
       },
-    }, project)
+    }
+    return vim.tbl_deep_extend("keep", project_framework, project)
   end
 
   project.get_all_runtime_definitions = function()
