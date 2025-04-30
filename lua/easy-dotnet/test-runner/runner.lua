@@ -282,14 +282,9 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     framework = "",
   }
 
-  local projects = sln_parse.get_projects_from_sln(solutionFilePath)
-
-  for _, value in ipairs(projects) do
-    if value.isTestProject == true then
-      for _, runtime_project in ipairs(value.get_all_runtime_definitions()) do
-        start_discovery_for_project(runtime_project, win, options, sdk_path, solutionFilePath)
-      end
-    end
+  local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solutionFilePath, function(project) return project.isTestProject end)
+  for _, value in ipairs(test_projects) do
+    start_discovery_for_project(value, win, options, sdk_path, solutionFilePath)
   end
 
   win.refreshTree()
