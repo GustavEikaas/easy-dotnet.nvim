@@ -277,9 +277,9 @@ M.get_project_from_project_file = function(project_file_path)
     isWebProject = is_web_project,
     isWinProject = is_win_project,
     msbuild_props = msbuild_props,
-    type = 'project',
+    type = "project",
     get_all_runtime_definitions = nil,
-    get_specific_runtime_definition = nil
+    get_specific_runtime_definition = nil,
   }
 
   ---@param target_framework string specified as e.g net8.0
@@ -290,11 +290,11 @@ M.get_project_from_project_file = function(project_file_path)
     local runtime_version = target_framework:gsub("%net", "")
     ---@type DotnetProjectFramework
     local project_framework = {
-      display = project.display .. '@' .. runtime_version,
+      display = project.display .. "@" .. runtime_version,
       get_dll_path = function() return msbuild_target_framework_props.targetPath end,
       version = msbuild_target_framework_props.version,
       dll_path = msbuild_target_framework_props.targetPath,
-      type = 'project_framework',
+      type = "project_framework",
       ---@type MsbuildProperties
       msbuild_props = {
         targetFramework = target_framework,
