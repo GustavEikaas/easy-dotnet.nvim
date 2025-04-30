@@ -151,7 +151,6 @@ M.run_project_with_profile = function(term, use_default, args)
   use_default = use_default or false
   args = args or ""
   local project, solution_file_path, target_framework = pick_project_and_framework(use_default)
-  print(target_framework)
   if not project then error("Failed to select project") end
   local profile = get_or_pick_profile(use_default, project, solution_file_path)
   local arg = profile and string.format("--launch-profile '%s'", profile) or ""
