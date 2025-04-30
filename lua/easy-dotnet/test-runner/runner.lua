@@ -18,6 +18,7 @@ local M = {}
 ---@field duration string | nil
 ---@field icon string
 ---@field expand table | nil
+---@field framework string
 ---@field children table<string, TestNode>
 
 ---@class Highlight
@@ -32,6 +33,7 @@ local M = {}
 ---@field namespace string
 ---@field file_path string | nil
 ---@field line_number number | nil
+---@field runtime string | nil
 
 ---@param value string
 ---@return string
@@ -80,6 +82,7 @@ local function ensure_path(root, path, has_arguments, test, options, offset_inde
         preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or options.icons.test,
         icon = "",
         children = {},
+        framework = root.framework,
       }
     end
     current = current[part].children
@@ -120,6 +123,7 @@ local function generate_tree(tests, options, project)
         type = "subcase",
         highlight = "EasyDotnetTestRunnerSubcase",
         preIcon = options.icons.test,
+        framework = project.framework,
       }
     end
   end
@@ -191,6 +195,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
             id = value.Id,
             cs_project_path = project.cs_project_path,
             solution_file_path = project.solution_file_path,
+            runtime = project.framework,
           }
           table.insert(converted, test)
         end
@@ -206,6 +211,34 @@ local function discover_tests_for_project_and_update_lines(project, win, options
       end
     end,
   })
+end
+
+---@param value DotnetProject
+local function start_discovery_for_project(value, win, options, sdk_path, solution_file_path)
+  ---@type TestNode
+  local project = {
+    id = "",
+    children = {},
+    cs_project_path = value.path,
+    solution_file_path = solution_file_path,
+    namespace = "",
+    type = "csproject",
+    expanded = false,
+    name = value.name .. "@" .. value.version,
+    file_path = value.path,
+    line_number = nil,
+    full_name = value.name,
+    indent = 2,
+    preIcon = options.icons.project,
+    icon = "",
+    expand = {},
+    highlight = "EasyDotnetTestRunnerProject",
+    framework = value.msbuild_props.targetFramework,
+  }
+  local on_job_finished = win.appendJob(project.name, "Discovery")
+  win.tree.children[project.name] = project
+  win.refreshTree()
+  discover_tests_for_project_and_update_lines(project, win, options, value, sdk_path, on_job_finished)
 end
 
 local function refresh_runner(options, win, solutionFilePath, sdk_path)
@@ -246,41 +279,12 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     highlight = "EasyDotnetTestRunnerSolution",
     expanded = true,
     children = {},
+    framework = "",
   }
 
-  local projects = sln_parse.get_projects_from_sln(solutionFilePath)
-
-  for _, value in ipairs(projects) do
-    if value.isTestProject == true then
-      ---@type TestNode
-      local project = {
-        id = "",
-        children = {},
-        cs_project_path = value.path,
-        solution_file_path = solutionFilePath,
-        namespace = "",
-        type = "csproject",
-        expanded = false,
-        name = value.name,
-        file_path = value.path,
-        line_number = nil,
-        full_name = value.name,
-        indent = 2,
-        preIcon = options.icons.project,
-        icon = "",
-        expand = {},
-        highlight = "EasyDotnetTestRunnerProject",
-      }
-      local on_job_finished = win.appendJob(value.name, "Discovery")
-      win.tree.children[project.name] = project
-      win.refreshTree()
-      --Performance reasons
-      if not value.version then
-        vim.schedule(function() discover_tests_for_project_and_update_lines(project, win, options, value, sdk_path, on_job_finished) end)
-      else
-        discover_tests_for_project_and_update_lines(project, win, options, value, sdk_path, on_job_finished)
-      end
-    end
+  local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solutionFilePath, function(project) return project.isTestProject end)
+  for _, value in ipairs(test_projects) do
+    start_discovery_for_project(value, win, options, sdk_path, solutionFilePath)
   end
 
   win.refreshTree()
