@@ -18,6 +18,7 @@ local M = {}
 ---@field duration string | nil
 ---@field icon string
 ---@field expand table | nil
+---@field framework string
 ---@field children table<string, TestNode>
 
 ---@class Highlight
@@ -32,6 +33,7 @@ local M = {}
 ---@field namespace string
 ---@field file_path string | nil
 ---@field line_number number | nil
+---@field runtime string | nil
 
 ---@param value string
 ---@return string
@@ -80,6 +82,7 @@ local function ensure_path(root, path, has_arguments, test, options, offset_inde
         preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or options.icons.test,
         icon = "",
         children = {},
+        framework = root.framework
       }
     end
     current = current[part].children
@@ -120,6 +123,7 @@ local function generate_tree(tests, options, project)
         type = "subcase",
         highlight = "EasyDotnetTestRunnerSubcase",
         preIcon = options.icons.test,
+        framework = project.framework
       }
     end
   end
@@ -191,6 +195,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
             id = value.Id,
             cs_project_path = project.cs_project_path,
             solution_file_path = project.solution_file_path,
+            runtime = project.framework
           }
           table.insert(converted, test)
         end
@@ -228,6 +233,7 @@ local function start_discovery_for_project(value, win, options, sdk_path, soluti
     icon = "",
     expand = {},
     highlight = "EasyDotnetTestRunnerProject",
+    framework = value.msbuild_props.targetFramework
   }
   local on_job_finished = win.appendJob(value.name, "Discovery")
   win.tree.children[project.name] = project
@@ -273,19 +279,16 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     highlight = "EasyDotnetTestRunnerSolution",
     expanded = true,
     children = {},
+    framework = ''
   }
 
   local projects = sln_parse.get_projects_from_sln(solutionFilePath)
 
   for _, value in ipairs(projects) do
     if value.isTestProject == true then
-      if value.msbuild_props.isMultiTarget then
-        for _, runtime_project in ipairs(value.get_all_runtime_definitions()) do
-          runtime_project.name = runtime_project.name .. "@" .. runtime_project.version
-          start_discovery_for_project(runtime_project, win, options, sdk_path, solutionFilePath)
-        end
-      else
-        start_discovery_for_project(value, win, options, sdk_path, solutionFilePath)
+      for _, runtime_project in ipairs(value.get_all_runtime_definitions()) do
+        runtime_project.name = runtime_project.name .. "@" .. runtime_project.version
+        start_discovery_for_project(runtime_project, win, options, sdk_path, solutionFilePath)
       end
     end
   end

@@ -152,9 +152,7 @@ local msbuild_cache = {}
 
 ---@param project_file_path string
 ---@param target_framework string | nil which target framework to query for e.g 'net9.0'
-local function build_cache_key(project_file_path, target_framework)
-  return target_framework and string.format("%s@%s", project_file_path, target_framework) or project_file_path
-end
+local function build_cache_key(project_file_path, target_framework) return target_framework and string.format("%s@%s", project_file_path, target_framework) or project_file_path end
 
 --- Build and cache MSBuild properties for a project file
 ---@param project_file_path string
@@ -181,7 +179,6 @@ function M.preload_msbuild_properties(project_file_path, on_finished, target_fra
     end,
     on_exit = function()
       local properties = parse_msbuild_properties(stdout)
-      if target_framework then vim.print(properties) end
       msbuild_cache[cache_key] = properties
       if not target_framework and properties.isMultiTarget and #properties.targetFrameworks > 1 then
         for _, tr in ipairs(properties.targetFrameworks) do
@@ -282,13 +279,16 @@ M.get_project_from_project_file = function(project_file_path)
       get_dll_path = function() return msbuild_target_framework_props.targetPath end,
       version = msbuild_target_framework_props.version,
       dll_path = msbuild_target_framework_props.targetPath,
+      ---@type MsbuildProperties
+      msbuild_props = {
+        targetFramework = target_framework
+      }
     }, project)
   end
 
-  project.get_all_runtime_definitions = function ()
-    return vim.tbl_map(function (target)
-      return project.get_specific_runtime_definition(target)
-    end, project.msbuild_props.targetFrameworks)
+  project.get_all_runtime_definitions = function()
+    if not project.msbuild_props.isMultiTarget then return { project } end
+    return vim.tbl_map(function(target) return project.get_specific_runtime_definition(target) end, project.msbuild_props.targetFrameworks)
   end
 
   project_cache[project_file_path] = project
