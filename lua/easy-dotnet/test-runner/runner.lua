@@ -82,7 +82,7 @@ local function ensure_path(root, path, has_arguments, test, options, offset_inde
         preIcon = is_full_path == false and options.icons.dir or has_arguments and options.icons.package or options.icons.test,
         icon = "",
         children = {},
-        framework = root.framework
+        framework = root.framework,
       }
     end
     current = current[part].children
@@ -123,7 +123,7 @@ local function generate_tree(tests, options, project)
         type = "subcase",
         highlight = "EasyDotnetTestRunnerSubcase",
         preIcon = options.icons.test,
-        framework = project.framework
+        framework = project.framework,
       }
     end
   end
@@ -195,7 +195,7 @@ local function discover_tests_for_project_and_update_lines(project, win, options
             id = value.Id,
             cs_project_path = project.cs_project_path,
             solution_file_path = project.solution_file_path,
-            runtime = project.framework
+            runtime = project.framework,
           }
           table.insert(converted, test)
         end
@@ -233,7 +233,7 @@ local function start_discovery_for_project(value, win, options, sdk_path, soluti
     icon = "",
     expand = {},
     highlight = "EasyDotnetTestRunnerProject",
-    framework = value.msbuild_props.targetFramework
+    framework = value.msbuild_props.targetFramework,
   }
   local on_job_finished = win.appendJob(value.name, "Discovery")
   win.tree.children[project.name] = project
@@ -279,7 +279,7 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     highlight = "EasyDotnetTestRunnerSolution",
     expanded = true,
     children = {},
-    framework = ''
+    framework = "",
   }
 
   local projects = sln_parse.get_projects_from_sln(solutionFilePath)

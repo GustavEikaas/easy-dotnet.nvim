@@ -281,8 +281,8 @@ M.get_project_from_project_file = function(project_file_path)
       dll_path = msbuild_target_framework_props.targetPath,
       ---@type MsbuildProperties
       msbuild_props = {
-        targetFramework = target_framework
-      }
+        targetFramework = target_framework,
+      },
     }, project)
   end
 
