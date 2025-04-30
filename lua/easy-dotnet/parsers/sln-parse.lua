@@ -93,9 +93,39 @@ function M.remove_project_from_solution(slnpath)
   })
 end
 
----@param solution_file_path string
----@return DotnetProject[]
-M.get_projects_from_sln = function(solution_file_path)
+---Parses a .sln file and returns a flattened list of DotnetProject objects,
+---where each project is duplicated per target framework it supports.
+---
+---Each returned DotnetProject will have properties like `version` and `msbuild_props.targetFramework`
+---updated to reflect that specific target framework. This is useful when you want to iterate
+---over each project-framework combination individually.
+---
+---@param solution_file_path string: The path to the .sln solution file.
+---@param filter_fn? fun(project: DotnetProject): boolean Optional predicate to filter projects.
+---@return DotnetProject[]: A list of DotnetProject objects, duplicated and updated for each target framework.
+M.get_projects_and_frameworks_flattened_from_sln = function(solution_file_path, filter_fn)
+  local projects = M.get_projects_from_sln(solution_file_path, filter_fn)
+  local project_frameworks = {}
+
+  for _, project in ipairs(projects) do
+    local defs = project.get_all_runtime_definitions()
+    if defs then
+      for _, def in ipairs(defs) do
+        table.insert(project_frameworks, def)
+      end
+    end
+  end
+
+  return project_frameworks
+end
+
+---Parses a .sln file and returns a list of DotnetProject objects.
+---If a callback is provided, only projects for which the callback returns true will be included.
+---
+---@param solution_file_path string: The path to the .sln solution file.
+---@param filter_fn? fun(project: DotnetProject): boolean Optional predicate to filter projects.
+---@return DotnetProject[]: A list of DotnetProject objects from the solution, optionally filtered.
+function M.get_projects_from_sln(solution_file_path, filter_fn)
   local cmd = require("easy-dotnet.dotnet_cli").list_projects(solution_file_path)
   local data = vim.fn.systemlist(cmd)
 
@@ -117,6 +147,8 @@ M.get_projects_from_sln = function(solution_file_path)
     local project = csproj_parser.get_project_from_project_file(project_file_path)
     return project
   end, project_lines)
+
+  if filter_fn then return vim.tbl_filter(filter_fn, projects) end
 
   return projects
 end
