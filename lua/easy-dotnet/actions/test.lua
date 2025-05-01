@@ -5,38 +5,83 @@ local parsers = require("easy-dotnet.parsers")
 local logger = require("easy-dotnet.logger")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
-local polyfills = require("easy-dotnet.polyfills")
 
-local function csproj_fallback(on_select)
-  local csproj_path = csproj_parse.find_project_file()
-  if csproj_path == nil then logger.error("No .sln file or .csproj file found") end
-  picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i) on_select(i.path, "test") end, "Run test")
+local pick_project_without_solution = function()
+  local csproject_path = csproj_parse.find_project_file()
+  if not csproject_path then logger.error(error_messages.no_projects_found) end
+  local project = csproj_parse.get_project_from_project_file(csproject_path)
+  local project_framework = picker.pick_sync(nil, project.get_all_runtime_definitions(), "Run project")
+  return project_framework
 end
-
-local function select_project(solution_file_path, cb, use_default)
+---Prompts the user to select a testable DotnetProject (with framework),
+---optionally using a default if configured and allowed.
+---
+---This function looks for a solution file, checks if a default testable project
+---is defined, and if so, uses it (if `use_default` is `true`). Otherwise, it
+---presents the user with a picker of all testable projects and their frameworks.
+---If no solution file is found, falls back to picking a project without one.
+---
+---If a project is selected, the default is updated for future invocations.
+---
+---@param use_default boolean: If true, allows using the stored default project if available.
+---@return DotnetProject | nil: The selected or default DotnetProject.
+---@return string|nil: The path to the solution file, or nil if no solution is used.
+local function pick_project_framework_or_solution(use_default)
   local default_manager = require("easy-dotnet.default-manager")
+  local solution_file_path = sln_parse.find_solution_file()
+  if solution_file_path == nil then return pick_project_without_solution(), nil end
+
   local default = default_manager.check_default_project(solution_file_path, "test")
-  if default ~= nil and use_default == true then return cb(default) end
 
-  local projects = polyfills.tbl_filter(function(i) return i.isTestProject == true end, sln_parse.get_projects_from_sln(solution_file_path))
+  if default ~= nil and use_default == true then
+    if default.type == "solution" then return nil, solution_file_path end
+    return default.project, solution_file_path
+  end
 
-  if #projects == 0 then
-    logger.error(error_messages.no_test_projects_found)
+  local projects_with_sln = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(i) return i.isTestProject == true end)
+  table.insert(projects_with_sln, { display = "Solution" })
+
+  if #projects_with_sln == 0 then error(error_messages.no_test_projects_found) end
+  ---@type DotnetProject
+  local project_framework = picker.pick_sync(nil, projects_with_sln, "Test project")
+  if not project_framework then
+    logger.error("No project selected")
     return
   end
 
-  local choices = {
-    { path = solution_file_path, display = "Solution", name = "Solution" },
-  }
-
-  for _, project in ipairs(projects) do
-    table.insert(choices, project)
+  if project_framework.display:lower() == "solution" then
+    ---@diagnostic disable-next-line: missing-fields
+    default_manager.set_default_project({ name = "Solution" }, solution_file_path, "test")
+    return nil, solution_file_path
   end
 
-  picker.picker(nil, choices, function(project)
-    cb(project)
-    default_manager.set_default_project(project, solution_file_path, "test")
-  end, "Run test(s)")
+  default_manager.set_default_project(project_framework, solution_file_path, "test")
+  return project_framework, solution_file_path
+end
+
+---Tests a dotnet project with the given arguments using the terminal runner.
+---
+---This is a wrapper around `term(path, "test", args)`.
+---
+---@param project DotnetProject: The full path to the Dotnet project.
+---@param args string: Additional arguments to pass to `dotnet test`.
+---@param term function: terminal callback
+local function test_project(project, args, term)
+  args = args or ""
+  if project.name:lower() == "solution" then
+    term(project.path, "test", args)
+    return
+  end
+
+  local arg = ""
+  if project.type == "project_framework" then arg = arg .. " --framework " .. project.msbuild_props.targetFramework end
+  term(project.path, "test", arg .. " " .. args)
+end
+
+---@param term function
+local function csproj_fallback_test(term, args)
+  local project = pick_project_without_solution()
+  test_project(project, args, term)
 end
 
 ---@param use_default boolean
@@ -48,11 +93,17 @@ M.run_test_picker = function(term, use_default, args)
 
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
-    csproj_fallback(term)
+    csproj_fallback_test(term, args)
     return
   end
 
-  select_project(solutionFilePath, function(project) term(project.path, "test", args) end, use_default)
+  local project, sln = pick_project_framework_or_solution(use_default)
+  if project == nil and sln ~= nil then
+    ---@diagnostic disable-next-line: missing-fields
+    test_project({ name = "Solution", path = solutionFilePath }, args, term)
+  elseif project ~= nil then
+    test_project(project, args, term)
+  end
 end
 
 M.test_solution = function(term, args)
