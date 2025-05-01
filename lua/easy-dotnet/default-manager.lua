@@ -172,7 +172,7 @@ local function project_to_persist(project)
 end
 
 ---Sets the default project in the solution file.
----@param project PersistedDefinition The project to set as default.
+---@param project DotnetProject The project to set as default.
 ---@param solution_file_path string Path to the solution file.
 ---@param type TaskType
 M.set_default_project = function(project, solution_file_path, type)
