@@ -16,13 +16,14 @@ local function pick_project(use_default)
     local csproject_path = csproj_parse.find_project_file()
     if not csproject_path then logger.error(error_messages.no_runnable_projects_found) end
     local project = csproj_parse.get_project_from_project_file(csproject_path)
-    return project, nil
+    local selected = picker.pick_sync(nil, project.get_all_runtime_definitions(), "Select TargetFramework", true)
+    return selected, nil
   end
 
   local default = default_manager.check_default_project(solution_file_path, "debug")
   if default ~= nil and use_default == true then return default, solution_file_path end
 
-  local projects = polyfills.tbl_filter(function(i) return i.runnable == true end, sln_parse.get_projects_from_sln(solution_file_path))
+  local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(project) return project.runnable end)
 
   if #projects == 0 then
     logger.error(error_messages.no_runnable_projects_found)
@@ -99,8 +100,7 @@ end
 M.start_debugging_test_project = function(project_path)
   local sln_file = sln_parse.find_solution_file()
   assert(sln_file, "Failed to find a solution file")
-  local projects = sln_parse.get_projects_from_sln(sln_file)
-  local test_projects = polyfills.tbl_filter(function(i) return i.isTestProject end, projects)
+  local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(sln_file, function(i) return i.isTestProject end)
   local test_project = project_path and project_path or picker.pick_sync(nil, test_projects, "Pick test project").path
   assert(test_project, "No project selected")
 
@@ -153,11 +153,11 @@ M.get_dll_for_project = function()
   local project_file_path = csproj_parse.find_project_file()
   if project_file_path == nil then error("No project or solution file found") end
   local project = csproj_parse.get_project_from_project_file(project_file_path)
-  local path = vim.fs.dirname(project.path)
+  local selected = picker.pick_sync(nil, project.get_all_runtime_definitions(), "Select TargetFramework", true)
   return {
-    projectName = project.name,
-    dll = project.get_dll_path(),
-    project = path,
+    projectName = selected.name,
+    dll = selected.get_dll_path(),
+    project = vim.fs.dirname(selected.path),
   }
 end
 

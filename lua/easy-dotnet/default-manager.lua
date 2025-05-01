@@ -10,6 +10,10 @@ local polyfills = require("easy-dotnet.polyfills")
 ---@field default_debug_project string
 ---@field default_profile DefaultProfile
 
+---@class PersistedDefinition
+---@field project string
+---@field target_framework string | nil
+
 local M = {}
 
 ---@alias TaskType "build" | "test" | "run" | "launch-profile" | "view" | "watch" | "debug"
@@ -73,6 +77,16 @@ M.set_default_solution = function(old_solution_file, solution_file_path)
   get_or_create_cache_file(solution_file_path)
 end
 
+---@param project string | PersistedDefinition | nil
+---@return PersistedDefinition | nil
+local function backwards_compatible(project)
+  if not project then return nil end
+  if type(project) == "string" then return {
+    project = project,
+  } end
+  return project
+end
+
 ---Checks for the default project in the solution file.
 ---@param solution_file_path string Path to the solution file.
 ---@param type TaskType
@@ -81,15 +95,35 @@ M.check_default_project = function(solution_file_path, type)
   local file = get_or_create_cache_file(solution_file_path)
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
 
-  local project = file.decoded[get_property(type)]
-  if project ~= nil then
-    local projects = sln_parse.get_projects_from_sln(solution_file_path)
+  local default = backwards_compatible(file.decoded[get_property(type)])
+  if default ~= nil then
+    local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path)
     table.insert(projects, { path = solution_file_path, display = "Solution", name = "Solution" })
 
-    for _, value in ipairs(projects) do
-      if value.name == project then return value end
+    ---@type DotnetProject[]
+    local matches = vim.tbl_filter(function(value) return value.name == default.project end, projects)
+
+    if #matches == 0 then return nil end
+
+    for _, value in ipairs(matches) do
+      if value.msbuild_props.isMultiTarget and value.msbuild_props.targetFramework == default.target_framework then
+        return value
+      else
+        return value
+      end
     end
+
+    return matches[1]
   end
+end
+
+---@param project DotnetProject The project to set as default.
+---@return PersistedDefinition
+local function project_to_persist(project)
+  return {
+    project = project.name,
+    target_framework = project.msbuild_props.isMultiTarget and project.msbuild_props.targetFramework or nil,
+  }
 end
 
 ---Sets the default project in the solution file.
@@ -101,7 +135,7 @@ M.set_default_project = function(project, solution_file_path, type)
 
   if file.decoded == nil then file.decoded = {} end
 
-  file.decoded[get_property(type)] = project.name
+  file.decoded[get_property(type)] = project_to_persist(project)
   local file_utils = require("easy-dotnet.file-utils")
   file_utils.overwrite_file(file.file, vim.fn.json_encode(file.decoded))
 end
