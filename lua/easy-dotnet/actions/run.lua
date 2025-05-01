@@ -7,6 +7,20 @@ local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
 local polyfills = require("easy-dotnet.polyfills")
 
+---Runs a dotnet project with the given arguments using the terminal runner.
+---
+---This is a wrapper around `term(path, "run", args)`.
+---
+---@param project DotnetProject: The full path to the Dotnet project.
+---@param args string: Additional arguments to pass to `dotnet run`.
+---@param term function: terminal callback
+local function run_project(project, args, term)
+  args = args or ""
+  local arg = ""
+  if project.type == "project_framework" then arg = arg .. " --framework " .. project.msbuild_props.targetFramework end
+  term(project.path, "run", arg .. " " .. args)
+end
+
 local pick_project_without_solution = function()
   local csproject_path = csproj_parse.find_project_file()
   if not csproject_path then logger.error(error_messages.no_runnable_projects_found) end
@@ -18,8 +32,7 @@ end
 ---@param term function
 local function csproj_fallback_run(term, args)
   local project = pick_project_without_solution()
-  if project.type == "project_framework" then args = args .. " --framework " .. project.msbuild_props.targetFramework end
-  term(project.path, "run", args)
+  run_project(project, args, term)
 end
 
 ---Prompts the user to select a runnable DotnetProject (with framework),
@@ -75,8 +88,7 @@ M.run_project_picker = function(term, use_default, args)
   end
 
   local project = pick_project_framework(use_default)
-  if project.msbuild_props.isMultiTarget then args = args .. " --framework " .. project.msbuild_props.targetFramework end
-  term(project.path, "run", args)
+  run_project(project, args, term)
 
   if not use_default then default_manager.set_default_project(project, solution_file_path, "run") end
 end
@@ -129,8 +141,7 @@ M.run_project_with_profile = function(term, use_default, args)
   if not project then error("Failed to select project") end
   local profile = get_or_pick_profile(use_default, project, solution_file_path)
   local arg = profile and string.format("--launch-profile '%s'", profile) or ""
-  if project.msbuild_props.isMultiTarget then arg = arg .. " --framework " .. project.msbuild_props.targetFramework end
-  term(project.path, "run", arg .. " " .. args)
+  run_project(project, arg .. " " .. args, term)
 end
 
 return M
