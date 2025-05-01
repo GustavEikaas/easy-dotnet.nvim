@@ -21,7 +21,7 @@ local function pick_project(use_default)
   end
 
   local default = default_manager.check_default_project(solution_file_path, "debug")
-  if default ~= nil and use_default == true then return default, solution_file_path end
+  if default ~= nil and use_default == true then return default.project, solution_file_path end
 
   local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(project) return project.runnable end)
 
