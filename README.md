@@ -383,8 +383,11 @@ Dotnet solution select
 Dotnet solution add
 Dotnet solution remove
 Dotnet outdated
-Dotnet reset
 checkhealth easy-dotnet
+
+-- Internal 
+Dotnet reset -- Deletes all persisted files
+Dotnet _cached_files -- Preview picker for persisted files
 ```
 
 ## Testrunner
