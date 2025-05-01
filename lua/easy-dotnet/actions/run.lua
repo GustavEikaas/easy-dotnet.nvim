@@ -7,44 +7,70 @@ local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
 local polyfills = require("easy-dotnet.polyfills")
 
----@param use_default boolean
----@return DotnetProject, string | nil
-local function pick_project(use_default)
-  local default_manager = require("easy-dotnet.default-manager")
-  local solution_file_path = sln_parse.find_solution_file()
-  if solution_file_path == nil then
-    local csproject_path = csproj_parse.find_project_file()
-    if not csproject_path then logger.error(error_messages.no_runnable_projects_found) end
-    local project = csproj_parse.get_project_from_project_file(csproject_path)
-    return project, nil
-  end
+---Runs a dotnet project with the given arguments using the terminal runner.
+---
+---This is a wrapper around `term(path, "run", args)`.
+---
+---@param project DotnetProject: The full path to the Dotnet project.
+---@param args string: Additional arguments to pass to `dotnet run`.
+---@param term function: terminal callback
+local function run_project(project, args, term)
+  args = args or ""
+  local arg = ""
+  if project.type == "project_framework" then arg = arg .. " --framework " .. project.msbuild_props.targetFramework end
+  term(project.path, "run", arg .. " " .. args)
+end
 
-  local default = default_manager.check_default_project(solution_file_path, "run")
-  if default ~= nil and use_default == true then return default, solution_file_path end
-
-  local projects = polyfills.tbl_filter(function(i) return i.runnable == true end, sln_parse.get_projects_from_sln(solution_file_path))
-
-  if #projects == 0 then
-    logger.error(error_messages.no_runnable_projects_found)
-    return
-  end
-  local project = picker.pick_sync(nil, projects, "Run project")
-  if not project then
-    logger.error("No project selected")
-    return
-  end
-  default_manager.set_default_project(project, solution_file_path, "run")
-  return project, solution_file_path
+local pick_project_without_solution = function()
+  local csproject_path = csproj_parse.find_project_file()
+  if not csproject_path then logger.error(error_messages.no_runnable_projects_found) end
+  local project = csproj_parse.get_project_from_project_file(csproject_path)
+  local project_framework = picker.pick_sync(nil, project.get_all_runtime_definitions(), "Run project")
+  return project_framework
 end
 
 ---@param term function
-local function csproj_fallback(term, args)
-  local csproj_path = csproj_parse.find_project_file()
-  if csproj_path == nil then
-    logger.error(error_messages.no_project_definition_found)
+local function csproj_fallback_run(term, args)
+  local project = pick_project_without_solution()
+  run_project(project, args, term)
+end
+
+---Prompts the user to select a runnable DotnetProject (with framework),
+---optionally using a default if configured and allowed.
+---
+---This function looks for a solution file, checks if a default runnable project
+---is defined, and if so, uses it (if `use_default` is `true`). Otherwise, it
+---presents the user with a picker of all runnable projects and their frameworks.
+---If no solution file is found, falls back to picking a project without one.
+---
+---If a project is selected, the default is updated for future invocations.
+---
+---@param use_default boolean: If true, allows using the stored default project if available.
+---@return DotnetProject: The selected or default DotnetProject.
+---@return string|nil: The path to the solution file, or nil if no solution is used.
+local function pick_project_framework(use_default)
+  local default_manager = require("easy-dotnet.default-manager")
+  local solution_file_path = sln_parse.find_solution_file()
+  if solution_file_path == nil then return pick_project_without_solution(), nil end
+
+  local default = default_manager.check_default_project(solution_file_path, "run")
+
+  if default ~= nil and use_default == true then
+    if default.type == "solution" then error("Type solution is not supported for dotnet run") end
+    return default.project, solution_file_path
+  end
+
+  local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(i) return i.runnable == true end)
+
+  if #projects == 0 then error(error_messages.no_runnable_projects_found) end
+  ---@type DotnetProject
+  local project_framework = picker.pick_sync(nil, projects, "Run project")
+  if not project_framework then
+    logger.error("No project selected")
     return
   end
-  picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i) term(i.path, "run", args) end, "Run project")
+  default_manager.set_default_project(project_framework, solution_file_path, "run")
+  return project_framework, solution_file_path
 end
 
 ---@param term function | nil
@@ -57,26 +83,14 @@ M.run_project_picker = function(term, use_default, args)
   local default_manager = require("easy-dotnet.default-manager")
   local solution_file_path = sln_parse.find_solution_file()
   if solution_file_path == nil then
-    csproj_fallback(term, args)
+    csproj_fallback_run(term, args)
     return
   end
 
-  local default = default_manager.check_default_project(solution_file_path, "run")
-  if default ~= nil and use_default == true then
-    term(default.path, "run", args)
-    return
-  end
+  local project = pick_project_framework(use_default)
+  run_project(project, args, term)
 
-  local projects = polyfills.tbl_filter(function(i) return i.runnable == true end, sln_parse.get_projects_from_sln(solution_file_path))
-
-  if #projects == 0 then
-    logger.error(error_messages.no_runnable_projects_found)
-    return
-  end
-  picker.picker(nil, projects, function(i)
-    term(i.path, "run", args)
-    default_manager.set_default_project(i, solution_file_path, "run")
-  end, "Run project")
+  if not use_default then default_manager.set_default_project(project, solution_file_path, "run") end
 end
 
 ---@param project DotnetProject
@@ -123,11 +137,11 @@ M.run_project_with_profile = function(term, use_default, args)
   term = term or require("easy-dotnet.options").options.terminal
   use_default = use_default or false
   args = args or ""
-  local project, solution_file_path = pick_project(use_default)
+  local project, solution_file_path = pick_project_framework(use_default)
   if not project then error("Failed to select project") end
   local profile = get_or_pick_profile(use_default, project, solution_file_path)
   local arg = profile and string.format("--launch-profile '%s'", profile) or ""
-  term(project.path, "run", arg .. " " .. args)
+  run_project(project, arg .. " " .. args, term)
 end
 
 return M
