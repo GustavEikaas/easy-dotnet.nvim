@@ -106,14 +106,18 @@ M.check_default_project = function(solution_file_path, type)
     if #matches == 0 then return nil end
 
     for _, value in ipairs(matches) do
-      if value.msbuild_props.isMultiTarget and value.msbuild_props.targetFramework == default.target_framework then
-        return value
+      if value.msbuild_props.isMultiTarget then
+        if value.msbuild_props.targetFramework == default.target_framework then return value end
       else
         return value
       end
     end
 
-    return matches[1]
+    --Project changed from being single target to multi target
+    local fallback = matches[1]
+    if not fallback then return nil end
+    M.set_default_project(fallback, solution_file_path, type)
+    return fallback
   end
 end
 
