@@ -81,9 +81,7 @@ end
 
 ---@param node TestNode
 local function run_csproject(win, node)
-  if(node.is_MTP) then
-    return
-  end
+  if node.is_MTP then return end
   local log_file_name = string.format("%s_%s.xml", vim.fs.basename(node.cs_project_path), node.framework)
   local normalized_path = vim.fs.normalize(node.cs_project_path)
   local directory_path = vim.fs.dirname(normalized_path)
@@ -109,9 +107,7 @@ end
 
 ---@param node TestNode
 local function run_test_group(node, win)
-  if(node.is_MTP) then
-    return
-  end
+  if node.is_MTP then return end
   local log_file_name = string.format("%s.xml", node.name)
   local normalized_path = vim.fs.normalize(node.cs_project_path)
   local directory_path = vim.fs.dirname(normalized_path)
@@ -137,9 +133,7 @@ end
 
 ---@param node TestNode
 local function run_test_suite(node, win)
-  if(node.is_MTP) then
-    return
-  end
+  if node.is_MTP then return end
   local log_file_name = string.format("%s.xml", node.namespace)
   local normalized_path = vim.fs.normalize(node.cs_project_path)
   local directory_path = vim.fs.dirname(normalized_path)
@@ -189,9 +183,7 @@ end
 
 ---@param node TestNode
 local function run_test(node, win)
-  if(node.is_MTP) then
-    return
-  end
+  if node.is_MTP then return end
   local log_file_name = string.format("%s.xml", node.name)
   local normalized_path = vim.fs.normalize(node.cs_project_path)
   local directory_path = vim.fs.dirname(normalized_path)
