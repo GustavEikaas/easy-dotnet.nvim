@@ -186,7 +186,6 @@ local function node_to_string(node)
     if i.type == "subcase" or i.type == "test" then total_tests = total_tests + 1 end
   end)
 
-
   local formatted = string.format(
     "%s%s%s%s %s %s",
     string.rep(" ", node.indent or 0),
@@ -194,7 +193,7 @@ local function node_to_string(node)
     node.name,
     node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
     node.type ~= "subcase" and node.type ~= "test" and string.format("(%s)", total_tests) or "",
-    type(node.duration) == 'string' and convert_time(node.duration) or ""
+    type(node.duration) == "string" and convert_time(node.duration) or ""
   )
 
   return formatted
