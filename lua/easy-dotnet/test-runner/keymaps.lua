@@ -221,6 +221,7 @@ local function run_test(node, win)
 end
 
 local function open_stack_trace(line)
+  --TODO: Warn if no filepath
   if line.expand == nil then return end
 
   local path = get_path_from_stack_trace(line.expand)

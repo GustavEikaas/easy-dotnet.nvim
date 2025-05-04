@@ -19,6 +19,7 @@ local function run_test(name, namespace, cs_project_path, cb)
   local directory_path = vim.fs.dirname(normalized_path)
   local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
 
+  --TODO: invoke custom MTP runner and parse json from file
   local command = string.format("dotnet test --filter='%s' --nologo %s --logger='trx;logFileName=%s'", namespace:gsub("%b()", ""), cs_project_path, log_file_name)
 
   vim.fn.jobstart(command, {
