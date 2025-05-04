@@ -84,7 +84,7 @@ local function ensure_path(root, path, has_arguments, test, options, offset_inde
         icon = "",
         children = {},
         framework = root.framework,
-        is_MTP = root.is_MTP
+        is_MTP = root.is_MTP,
       }
     end
     current = current[part].children
@@ -126,7 +126,7 @@ local function generate_tree(tests, options, project)
         highlight = "EasyDotnetTestRunnerSubcase",
         preIcon = options.icons.test,
         framework = project.framework,
-        is_MTP = project.is_MTP
+        is_MTP = project.is_MTP,
       }
     end
   end
