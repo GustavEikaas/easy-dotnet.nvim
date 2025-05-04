@@ -3,12 +3,8 @@ local logger = require("easy-dotnet.logger")
 local M = {}
 
 local function compare_paths(path1, path2)
-  if not path1 or type(path1) == 'userdata' then
-    return false
-  end
-  if not path2 or type(path2) == 'userdata' then
-    return false
-  end
+  if not path1 or type(path1) == "userdata" then return false end
+  if not path2 or type(path2) == "userdata" then return false end
 
   return vim.fs.normalize(path1):lower() == vim.fs.normalize(path2):lower()
 end
