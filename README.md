@@ -58,10 +58,9 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
     - [Requirements](#requirements-2)
     - [Support matrix](#support-matrix)
 16. [Nvim-dap configuration](#nvim-dap-configuration)
-    - [Basic example](#basic-example)
-    - [Advanced example](#advanced-example)
-17. [Advanced configurations](#advanced-configurations)
-    - [Overseer](#overseer)
+    - [Debugging](#debugging)
+    - [Nvim-dap setup](#nvim-dap-setup)
+    - [Debugging with launch profiles](#debugging-with-launch-profiles)
 18. [Troubleshooting](#troubleshooting)
 
 ## Features
@@ -694,23 +693,31 @@ and parsers for `sql`, `json` and `xml`, so make sure you have these parsers ins
 
 While its out of the scope of this plugin to setup dap, we do provide a few helpful functions to make it easier.
 
-### Basic example
+### Debugging
+To start debugging do the following. Ensure you have configured the code below
+
+Dont start the project before doing this, debugger has to start it for you
+
+1. Open any `.cs` file in the project
+2. Set a breakpoint with `<leader>b`
+3. Press `<F5>`
+4. Select the project you want to debug (if your breakpoint is in a library you have to select the entry point project)
+5. Wait for breakpoint to be hit
+6. You can now `<F10>` step over, `<F11>` step into, `<F5>` continue and more (see code)
+
+### Nvim-dap setup
 
 ```lua
-local M = {}
-
---- Rebuilds the project before starting the debug session
----@param co thread
 local function rebuild_project(co, path)
   local spinner = require("easy-dotnet.ui-modules.spinner").new()
-  spinner:start_spinner("Building")
+  spinner:start_spinner "Building"
   vim.fn.jobstart(string.format("dotnet build %s", path), {
     on_exit = function(_, return_code)
       if return_code == 0 then
-        spinner:stop_spinner("Built successfully")
+        spinner:stop_spinner "Built successfully"
       else
         spinner:stop_spinner("Build failed with exit code " .. return_code, vim.log.levels.ERROR)
-        error("Build failed")
+        error "Build failed"
       end
       coroutine.resume(co)
     end,
@@ -718,62 +725,116 @@ local function rebuild_project(co, path)
   coroutine.yield()
 end
 
-M.register_net_dap = function()
-  local dap = require("dap")
-  local dotnet = require("easy-dotnet")
-  local debug_dll = nil
+return {
+  "mfussenegger/nvim-dap",
+  enabled = true,
+  config = function()
+    local dap = require "dap"
+    local dotnet = require "easy-dotnet"
+    local dapui = require "dapui"
+    dap.set_log_level "TRACE"
 
-  local function ensure_dll()
-    if debug_dll ~= nil then
-      return debug_dll
+    dap.listeners.before.attach.dapui_config = function()
+      dapui.open()
     end
-    local dll = dotnet.get_debug_dll()
-    debug_dll = dll
-    return dll
-  end
+    dap.listeners.before.launch.dapui_config = function()
+      dapui.open()
+    end
+    dap.listeners.before.event_terminated.dapui_config = function()
+      dapui.close()
+    end
+    dap.listeners.before.event_exited.dapui_config = function()
+      dapui.close()
+    end
 
-  for _, value in ipairs({ "cs", "fsharp" }) do
-    dap.configurations[value] = {
-      {
-        type = "coreclr",
-        name = "launch - netcoredbg",
-        request = "launch",
-        env = function()
-          local dll = ensure_dll()
-          --Last flag is set to false when you want to select the launch profile to use
-          local vars = dotnet.get_environment_variables(dll.project_name, dll.absolute_project_path, false)
-          return vars or nil
-        end,
-        program = function()
-          local dll = ensure_dll()
-          local co = coroutine.running()
-          rebuild_project(co, dll.project_path)
-          return dll.target_path
-        end,
-        cwd = function()
-          local dll = ensure_dll()
-          return dll.absolute_project_path
-        end,
+
+    vim.keymap.set("n", "q", function()
+      dap.close()
+      dapui.close()
+    end, {})
+
+    vim.keymap.set("n", "<F5>", dap.continue, {})
+    vim.keymap.set("n", "<F10>", dap.step_over, {})
+    vim.keymap.set("n", "<leader>dO", dap.step_over, {})
+    vim.keymap.set("n", "<leader>dC", dap.run_to_cursor, {})
+    vim.keymap.set("n", "<leader>dr", dap.repl.toggle, {})
+    vim.keymap.set("n", "<leader>dj", dap.down, {})
+    vim.keymap.set("n", "<leader>dk", dap.up, {})
+    vim.keymap.set("n", "<F11>", dap.step_into, {})
+    vim.keymap.set("n", "<F12>", dap.step_out, {})
+    vim.keymap.set("n", "<leader>b", dap.toggle_breakpoint, {})
+    vim.keymap.set("n", "<F2>", require("dap.ui.widgets").hover, {})
+
+    local function file_exists(path)
+      local stat = vim.loop.fs_stat(path)
+      return stat and stat.type == "file"
+    end
+
+    local debug_dll = nil
+
+    local function ensure_dll()
+      if debug_dll ~= nil then
+        return debug_dll
+      end
+local dll = dotnet.get_debug_dll()
+      debug_dll = dll
+      return dll
+    end
+
+    for _, value in ipairs { "cs", "fsharp" } do
+      dap.configurations[value] = {
+        {
+          type = "coreclr",
+          name = "Program",
+          request = "launch",
+          env = function()
+            local dll = ensure_dll()
+            local vars = dotnet.get_environment_variables(dll.project_name, dll.absolute_project_path)
+            return vars or nil
+          end,
+          program = function()
+            local dll = ensure_dll()
+            local co = coroutine.running()
+            rebuild_project(co, dll.project_path)
+            if not file_exists(dll.target_path) then
+              error("Project has not been built, path: " .. dll.target_path)
+            end
+            return dll.target_path
+          end,
+          cwd = function()
+            local dll = ensure_dll()
+            return dll.absolute_project_path
+          end,
+        },
       }
-    }
-  end
 
-  dap.listeners.before['event_terminated']['easy-dotnet'] = function()
-    debug_dll = nil
-  end
+      dap.listeners.before["event_terminated"]["easy-dotnet"] = function()
+        debug_dll = nil
+      end
 
-  dap.adapters.coreclr = {
-    type = "executable",
-    command = "netcoredbg",
-    args = { "--interpreter=vscode" },
-  }
-end
-
-return M
+      dap.adapters.coreclr = {
+        type = "executable",
+        command = "netcoredbg",
+        args = { "--interpreter=vscode" },
+      }
+    end
+  end,
+  dependencies = {
+    { "nvim-neotest/nvim-nio", },
+    {
+      "rcarriga/nvim-dap-ui",
+      config = function()
+        require("dapui").setup()
+      end,
+    },
+  },
+}
 ```
+### Debugging with launch-profiles
 
-For profiles to be read it must contain a profile with the name of your csproject
+The default profile being chosen must be named the same as your project.
 The file is expected to be in the Properties/launchsettings.json relative to your .csproject file
+If you want to be prompted to select a profile, remember to pass false as the last flag to `get_environment_variables`
 ```json
 {
   "profiles": {
@@ -788,391 +849,6 @@ The file is expected to be in the Properties/launchsettings.json relative to you
       "applicationUrl": "https://localhost:7073;http://localhost:7071"
     }
 }
-```
-
-### Advanced example
-
-Dependencies:
-- which-key
-- overseer
-- netcoredbg
-- dap
-- easy-dotnet
-
-**Overseer template:**
-
-```lua
-local tmpl = {
-  name = "Build .NET App With Spinner",
-  builder = function(params)
-    local logPath = vim.fn.stdpath("data") .. "/easy-dotnet/build.log"
-    function filter_warnings(line)
-      if not line:find("warning") then
-        return line:match("^(.+)%((%d+),(%d+)%)%: (.+)$")
-      end
-    end
-    return {
-      name = "build",
-      cmd = "dotnet build /flp:v=q /flp:logfile=" .. logPath,
-      components = {
-        { "on_complete_dispose", timeout = 30 },
-        "default",
-        "show_spinner",
-        { "unique", replace = true },
-        {
-          "on_output_parse",
-          parser = {
-            diagnostics = {
-              { "extract", filter_warnings, "filename", "lnum", "col", "text" },
-            },
-          },
-        },
-        {
-          "on_result_diagnostics_quickfix",
-          open = true,
-          close = true,
-        },
-      },
-      cwd = require("easy-dotnet").get_debug_dll().relative_project_path,
-    }
-  end,
-}
-return tmpl
-
-```
-
-**Overseer component**
-```lua
-return {
-  desc = "Show Spinner",
-  -- Define parameters that can be passed in to the component
-  -- The params passed in will match the params defined above
-  constructor = function(params)
-    local num = 0
-    local spinner_frames = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" }
-
-    local notification = vim.notify(spinner_frames[1] .. " Building", "info", {
-      timeout = false,
-    })
-
-    local timer = vim.loop.new_timer()
-
-    return {
-      on_init = function(self, task)
-        timer:start(
-          100,
-          100,
-          vim.schedule_wrap(function()
-            num = num + 1
-            local new_spinner = num % #spinner_frames
-            notification =
-              vim.notify(spinner_frames[new_spinner + 1] .. " Building", "info", { replace = notification })
-          end)
-        )
-      end,
-      on_complete = function(self, task, code)
-        vim.notify("", "info", { replace = notification, timeout = 1 })
-        timer:stop()
-        return code
-      end,
-    }
-  end,
-}
-
-```
-
-**Dap Config**
-
-```lua
-return {
-  {
-    "mfussenegger/nvim-dap",
-    opts = function(_, opts)
-      local dap = require("dap")
-      if not dap.adapters["netcoredbg"] then
-        require("dap").adapters["netcoredbg"] = {
-          type = "executable",
-          command = vim.fn.exepath("netcoredbg"),
-          args = { "--interpreter=vscode" },
-          -- console = "internalConsole",
-        }
-      end
-
-      local dotnet = require("easy-dotnet")
-      local debug_dll = nil
-      local function ensure_dll()
-        if debug_dll ~= nil then
-          return debug_dll
-        end
-        local dll = dotnet.get_debug_dll()
-        debug_dll = dll
-        return dll
-      end
-
-      for _, lang in ipairs({ "cs", "fsharp", "vb" }) do
-        dap.configurations[lang] = {
-          {
-            log_level = "DEBUG",
-            type = "netcoredbg",
-            justMyCode = false,
-            stopAtEntry = false,
-            name = "Default",
-            request = "launch",
-            env = function()
-              local dll = ensure_dll()
-              --Last flag is set to false when you want to select the launch profile to use
-              local vars = dotnet.get_environment_variables(dll.project_name, dll.absolute_project_path, false)
-              return vars or nil
-            end,
-            program = function()
-              require("overseer").enable_dap()
-              local dll = ensure_dll()
-              return dll.target_path
-            end,
-            cwd = function()
-              local dll = ensure_dll()
-              return dll.absolute_project_path
-            end,
-            preLaunchTask = "Build .NET App With Spinner",
-          },
-        }
-
-        dap.listeners.before["event_terminated"]["easy-dotnet"] = function()
-          debug_dll = nil
-        end
-      end
-    end,
-    keys = {
-      { "<leader>d", "", desc = "+debug", mode = { "n", "v" } },
-      -- HYDRA MODE
-      -- NOTE: the delay is set to prevent the which-key hints to appear
-      {
-        "<leader>d<space>",
-        function()
-          require("which-key").show({ delay = 1000000000, keys = "<leader>d", loop = true })
-        end,
-        desc = "DAP Hydra Mode (which-key)",
-      },
-      {
-        "<leader>dR",
-        function()
-          local dap = require("dap")
-          local extension = vim.fn.expand("%:e")
-          dap.run(dap.configurations[extension][1])
-        end,
-        desc = "Run default configuration",
-      },
-      {
-        "<leader>dB",
-        function()
-          require("dap").set_breakpoint(vim.fn.input("Breakpoint condition: "))
-        end,
-        desc = "Breakpoint Condition",
-      },
-      {
-        "<leader>db",
-        function()
-          require("dap").toggle_breakpoint()
-        end,
-        desc = "Toggle Breakpoint",
-      },
-      {
-        "<leader>dc",
-        function()
-          require("dap").continue()
-        end,
-        desc = "Continue",
-      },
-      {
-        "<leader>da",
-        function()
-          require("dap").continue({ before = get_args })
-        end,
-        desc = "Run with Args",
-      },
-      {
-        "<leader>dC",
-        function()
-          require("dap").run_to_cursor()
-        end,
-        desc = "Run to Cursor",
-      },
-      {
-        "<leader>dg",
-        function()
-          require("dap").goto_()
-        end,
-        desc = "Go to Line (No Execute)",
-      },
-      {
-        "<leader>di",
-        function()
-          require("dap").step_into()
-        end,
-        desc = "Step Into",
-      },
-      {
-        "<leader>dj",
-        function()
-          require("dap").down()
-        end,
-        desc = "Down",
-      },
-      {
-        "<leader>dk",
-        function()
-          require("dap").up()
-        end,
-        desc = "Up",
-      },
-      {
-        "<leader>dl",
-        function()
-          require("dap").run_last()
-        end,
-        desc = "Run Last",
-      },
-      {
-        "<leader>do",
-        function()
-          require("dap").step_out()
-        end,
-        desc = "Step Out",
-      },
-      {
-        "<leader>dO",
-        function()
-          require("dap").step_over()
-        end,
-        desc = "Step Over",
-      },
-      {
-        "<leader>dp",
-        function()
-          require("dap").pause()
-        end,
-        desc = "Pause",
-      },
-      {
-        "<leader>dr",
-        function()
-          require("dap").repl.toggle()
-        end,
-        desc = "Toggle REPL",
-      },
-      {
-        "<leader>ds",
-        function()
-          require("dap").session()
-        end,
-        desc = "Session",
-      },
-      {
-        "<leader>dt",
-        function()
-          require("dap").terminate()
-        end,
-        desc = "Terminate",
-      },
-      {
-        "<leader>dw",
-        function()
-          require("dap.ui.widgets").hover()
-        end,
-        desc = "Widgets",
-      },
-    },
-  },
-}
-
-```
-
-
-## Advanced configurations
-
-### Overseer
-Thanks to [franroa](https://github.com/franroa) for sharing his configuration with the community
-
-- It watches the run and test commands
-- It creates a list of tasks to have a history
-- other things that can be configured with overseer, like running those tasks in the order you want
-- If used with resession, the tasks are run automatically on opening the project (this is specially interesting if you have errors in your build and have to leave the coding session. It will pop up the quickfix list in the next day)
-
-```lua
-return {
-  {
-    "GustavEikaas/easy-dotnet.nvim",
-    dependencies = { "nvim-lua/plenary.nvim", "nvim-telescope/telescope.nvim" },
-    config = function()
-      local logPath = vim.fn.stdpath("data") .. "/easy-dotnet/build.log"
-      local dotnet = require("easy-dotnet")
-
-      dotnet.setup({
-        terminal = function(path, action)
-          local commands = {
-            run = function()
-              return "dotnet run --project " .. path
-            end,
-            test = function()
-              return "dotnet test " .. path
-            end,
-            restore = function()
-              return "dotnet restore --configfile " .. os.getenv("NUGET_CONFIG") .. " " .. path
-            end,
-            build = function()
-              return "dotnet build  " .. path .. " /flp:v=q /flp:logfile=" .. logPath
-            end,
-          }
-
-          local function filter_warnings(line)
-            if not line:find("warning") then
-              return line:match("^(.+)%((%d+),(%d+)%)%: (.+)$")
-            end
-          end
-
-          local overseer_components = {
-            { "on_complete_dispose", timeout = 30 },
-            "default",
-            { "unique", replace = true },
-            {
-              "on_output_parse",
-              parser = {
-                diagnostics = {
-                  { "extract", filter_warnings, "filename", "lnum", "col", "text" },
-                },
-              },
-            },
-            {
-              "on_result_diagnostics_quickfix",
-              open = true,
-              close = true,
-            },
-          }
-
-          if action == "run" or action == "test" then
-            table.insert(overseer_components, { "restart_on_save", paths = { LazyVim.root.git() } })
-          end
-
-          local command = commands[action]()
-          local task = require("overseer").new_task({
-            strategy = {
-              "toggleterm",
-              use_shell = false,
-              direction = "horizontal",
-              open_on_start = false,
-            },
-            name = action,
-            cmd = command,
-            cwd = LazyVim.root.git(),
-            components = overseer_components,
-          })
-          task:start()
-        end
-      })
-    end,
-  },
-}
-
 ```
 
 ## Troubleshooting
