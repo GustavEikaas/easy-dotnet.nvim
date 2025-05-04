@@ -145,13 +145,18 @@ local function discover_tests_for_project_and_update_lines(project, win, options
   local outfile = vim.fs.normalize(os.tmpname())
   local script_path = require("easy-dotnet.test-runner.discovery").get_script_path()
   local command = string.format("dotnet fsi %s %s %s %s", script_path, vstest_dll, absolute_dll_path, outfile)
-
-  if dotnet_project.isTestPlatformProject then
-    project.icon = "(MTP NOT SUPPORTED GH:#320)"
-    project.highlight = "SpecialKey"
-    on_job_finished()
-    return
+  
+  if project.is_MTP then
+    local exe = absolute_dll_path:gsub("%.dll", "%.exe")
+    command = string.format("dotnet run --project 'C:/Users/Gustav/repo/TestPlatform.Playground/MTP.Runner/MTP.Runner.csproj' --request discover --test-path  '%s' --out-file '%s'", exe, outfile)
   end
+
+  -- if dotnet_project.isTestPlatformProject then
+  --   project.icon = "(MTP NOT SUPPORTED GH:#320)"
+  --   project.highlight = "SpecialKey"
+  --   on_job_finished()
+  --   return
+  -- end
 
   local tests = {}
   vim.fn.jobstart(command, {
