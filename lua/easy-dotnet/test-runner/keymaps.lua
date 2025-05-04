@@ -81,6 +81,7 @@ end
 
 ---@param node TestNode
 local function run_csproject(win, node)
+  if node.is_MTP then return end
   local log_file_name = string.format("%s_%s.xml", vim.fs.basename(node.cs_project_path), node.framework)
   local normalized_path = vim.fs.normalize(node.cs_project_path)
   local directory_path = vim.fs.dirname(normalized_path)
@@ -104,51 +105,53 @@ local function run_csproject(win, node)
   })
 end
 
----@param line TestNode
-local function run_test_group(line, win)
-  local log_file_name = string.format("%s.xml", line.name)
-  local normalized_path = vim.fs.normalize(line.cs_project_path)
+---@param node TestNode
+local function run_test_group(node, win)
+  if node.is_MTP then return end
+  local log_file_name = string.format("%s.xml", node.name)
+  local normalized_path = vim.fs.normalize(node.cs_project_path)
   local directory_path = vim.fs.dirname(normalized_path)
   local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
 
-  local suite_name = line.namespace
+  local suite_name = node.namespace
   local testcount = 0
   ---@param child TestNode
-  win.traverse(line, function(child)
+  win.traverse(node, function(child)
     child.icon = "<Running>"
     if child.type == "test" or child.type == "subcase" then testcount = testcount + 1 end
   end)
 
-  local on_job_finished = win.appendJob(line.name, "Run", testcount)
+  local on_job_finished = win.appendJob(node.name, "Run", testcount)
   win.refreshTree()
   vim.fn.jobstart(
-    string.format('dotnet test --filter=%s --nologo %s %s --framework %s --logger="trx;logFileName=%s"', suite_name, get_dotnet_args(win.options), line.cs_project_path, line.framework, log_file_name),
+    string.format('dotnet test --filter=%s --nologo %s %s --framework %s --logger="trx;logFileName=%s"', suite_name, get_dotnet_args(win.options), node.cs_project_path, node.framework, log_file_name),
     {
-      on_exit = function() parse_log_file(relative_log_file_path, win, line, on_job_finished) end,
+      on_exit = function() parse_log_file(relative_log_file_path, win, node, on_job_finished) end,
     }
   )
 end
 
----@param line TestNode
-local function run_test_suite(line, win)
-  local log_file_name = string.format("%s.xml", line.namespace)
-  local normalized_path = vim.fs.normalize(line.cs_project_path)
+---@param node TestNode
+local function run_test_suite(node, win)
+  if node.is_MTP then return end
+  local log_file_name = string.format("%s.xml", node.namespace)
+  local normalized_path = vim.fs.normalize(node.cs_project_path)
   local directory_path = vim.fs.dirname(normalized_path)
   local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
 
   local testcount = 0
-  local suite_name = line.namespace
-  win.traverse(line, function(child)
+  local suite_name = node.namespace
+  win.traverse(node, function(child)
     child.icon = "<Running>"
     if child.type == "test" or child.type == "subcase" then testcount = testcount + 1 end
   end)
   win.refreshTree()
 
-  local on_job_finished = win.appendJob(line.namespace, "Run", testcount)
+  local on_job_finished = win.appendJob(node.namespace, "Run", testcount)
   vim.fn.jobstart(
-    string.format('dotnet test --filter=%s --nologo %s %s --framework %s --logger="trx;logFileName=%s"', suite_name, get_dotnet_args(win.options), line.cs_project_path, line.framework, log_file_name),
+    string.format('dotnet test --filter=%s --nologo %s %s --framework %s --logger="trx;logFileName=%s"', suite_name, get_dotnet_args(win.options), node.cs_project_path, node.framework, log_file_name),
     {
-      on_exit = function() parse_log_file(relative_log_file_path, win, line, on_job_finished) end,
+      on_exit = function() parse_log_file(relative_log_file_path, win, node, on_job_finished) end,
     }
   )
 end
@@ -180,6 +183,7 @@ end
 
 ---@param node TestNode
 local function run_test(node, win)
+  if node.is_MTP then return end
   local log_file_name = string.format("%s.xml", node.name)
   local normalized_path = vim.fs.normalize(node.cs_project_path)
   local directory_path = vim.fs.dirname(normalized_path)
