@@ -255,6 +255,7 @@ local keymaps = function()
     [keymap.refresh_testrunner.lhs] = { handle = function(_) vim.cmd("Dotnet testrunner refresh build") end, desc = keymap.refresh_testrunner.desc },
     [keymap.debug_test.lhs] = {
       handle = function(node, win)
+        --TODO: Warn if no filepath
         if node.type ~= "test" and node.type ~= "test_group" then
           logger.error("Debugging is only supported for tests and test_groups")
           return
@@ -287,6 +288,7 @@ local keymaps = function()
     ---@param node Test
     [keymap.go_to_file.lhs] = {
       handle = function(node, win)
+        --TODO: Warn if no filepath
         if node.type == "test" or node.type == "subcase" or node.type == "test_group" then
           if node.file_path ~= nil then
             win.hide()
