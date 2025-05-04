@@ -157,8 +157,8 @@ local function calculate_highlight(node)
   return nil
 end
 
-local function convert_time(timeStr)
-  local hours, minutes, seconds, microseconds = timeStr:match("(%d+):(%d+):(%d+)%.(%d+)")
+local function convert_time(time_str)
+  local hours, minutes, seconds, microseconds = time_str:match("(%d+):(%d+):(%d+)%.(%d+)")
   hours = tonumber(hours)
   minutes = tonumber(minutes)
   seconds = tonumber(seconds)
@@ -186,6 +186,7 @@ local function node_to_string(node)
     if i.type == "subcase" or i.type == "test" then total_tests = total_tests + 1 end
   end)
 
+
   local formatted = string.format(
     "%s%s%s%s %s %s",
     string.rep(" ", node.indent or 0),
@@ -193,7 +194,7 @@ local function node_to_string(node)
     node.name,
     node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
     node.type ~= "subcase" and node.type ~= "test" and string.format("(%s)", total_tests) or "",
-    node.duration and convert_time(node.duration) or ""
+    type(node.duration) == 'string' and convert_time(node.duration) or ""
   )
 
   return formatted
