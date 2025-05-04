@@ -19,6 +19,7 @@ local M = {}
 ---@field icon string
 ---@field expand table | nil
 ---@field framework string
+---@field is_MTP boolean
 ---@field children table<string, TestNode>
 
 ---@class Highlight
@@ -83,6 +84,7 @@ local function ensure_path(root, path, has_arguments, test, options, offset_inde
         icon = "",
         children = {},
         framework = root.framework,
+        is_MTP = root.is_MTP
       }
     end
     current = current[part].children
@@ -124,6 +126,7 @@ local function generate_tree(tests, options, project)
         highlight = "EasyDotnetTestRunnerSubcase",
         preIcon = options.icons.test,
         framework = project.framework,
+        is_MTP = project.is_MTP
       }
     end
   end
@@ -234,6 +237,7 @@ local function start_discovery_for_project(value, win, options, sdk_path, soluti
     expand = {},
     highlight = "EasyDotnetTestRunnerProject",
     framework = value.msbuild_props.targetFramework,
+    is_MTP = value.isTestPlatformProject,
   }
   local on_job_finished = win.appendJob(project.name, "Discovery")
   win.tree.children[project.name] = project
