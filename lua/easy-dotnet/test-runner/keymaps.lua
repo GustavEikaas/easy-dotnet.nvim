@@ -27,13 +27,15 @@ end
 
 local function parse_status(result, test_line, options)
   if result.duration then test_line.duration = result.duration end
+  --TODO: fix all places where it can be uppercase
+  local res = result.outcome:lower()
   --TODO: handle more cases like cancelled etc...
-  if result.outcome == "Passed" then
+  if res == "passed" then
     test_line.icon = options.icons.passed
-  elseif result.outcome == "Failed" then
+  elseif res == "failed" or res == "error" then
     test_line.icon = options.icons.failed
     if result.message or result.stackTrace then test_line.expand = vim.split((result.message or "") .. "\n" .. (result.stackTrace or ""):gsub("^%s+", ""):gsub("\n%s+", "\n"), "\n") end
-  elseif result.outcome == "NotExecuted" then
+  elseif res == "notexecuted" or result.outcome == "skipped" then
     test_line.icon = options.icons.skipped
   else
     test_line.icon = "??"
@@ -183,7 +185,6 @@ end
 
 ---@param node TestNode
 local function run_test(node, win)
-  if node.is_MTP then return end
   local log_file_name = string.format("%s.xml", node.name)
   local normalized_path = vim.fs.normalize(node.cs_project_path)
   local directory_path = vim.fs.dirname(normalized_path)
@@ -199,23 +200,46 @@ local function run_test(node, win)
   )
 
   local on_job_finished = win.appendJob(node.name, "Run")
-
   node.icon = "<Running>"
-  vim.fn.jobstart(command, {
-    on_exit = function()
-      require("easy-dotnet.test-runner.test-parser").xml_to_json(
-        relative_log_file_path,
-        ---@param unit_test_results TestCase
-        function(unit_test_results)
-          local result = unit_test_results[1]
-          if result == nil then error(string.format("Status of %s was not present in xml file", node.name)) end
+
+  if node.is_MTP then
+    local mtpLogFile = vim.fs.normalize(os.tmpname())
+    --TODO: pass proj exe reference and used packed exe
+    local mtp = string.format(
+      "dotnet run --project 'C:/Users/Gustav/repo/TestPlatform.Playground/MTP.Runner/MTP.Runner.csproj' --request run --test-path  '%s' --out-file '%s'",
+      "C:/Users/Gustav/repo/EasyTUnit/tests/UnitTests/bin/Debug/net9.0/UnitTests.exe",
+      mtpLogFile
+    )
+    vim.fn.jobstart(mtp, {
+      on_exit = function()
+        local s = vim.fn.readfile(mtpLogFile)
+        for _, value in ipairs(s) do
+          ---@type TestCase
+          local result = vim.fn.json_decode(value)
+          if result == nil then error(string.format("Status of %s was not present in MTP outfile", node.name)) end
           parse_status(result, node, win.options)
           on_job_finished()
           win.refreshTree()
         end
-      )
-    end,
-  })
+      end,
+    })
+  else
+    vim.fn.jobstart(command, {
+      on_exit = function()
+        require("easy-dotnet.test-runner.test-parser").xml_to_json(
+          relative_log_file_path,
+          ---@param unit_test_results TestCase
+          function(unit_test_results)
+            local result = unit_test_results[1]
+            if result == nil then error(string.format("Status of %s was not present in xml file", node.name)) end
+            parse_status(result, node, win.options)
+            on_job_finished()
+            win.refreshTree()
+          end
+        )
+      end,
+    })
+  end
 
   win.refreshTree()
 end
