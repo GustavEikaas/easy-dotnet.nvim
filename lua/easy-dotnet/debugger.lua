@@ -29,7 +29,7 @@ local function pick_project(use_default)
     logger.error(error_messages.no_runnable_projects_found)
     return
   end
-  local project = picker.pick_sync(nil, projects, "Debug project")
+  local project = picker.pick_sync(nil, projects, "Debug project", false, true)
   if not project then
     logger.error("No project selected")
     return
