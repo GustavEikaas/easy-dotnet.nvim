@@ -105,7 +105,7 @@ M.preview_picker = function(_, options, on_select_cb, title, get_secret_path, re
   })
 end
 
-M.picker = function(_, options, on_select_cb, title, autopick)
+M.picker = function(_, options, on_select_cb, title, autopick, apply_numeration)
   if autopick == nil then autopick = true end
   if #options == 0 then error("No options provided, minimum 1 is required") end
 
@@ -115,8 +115,10 @@ M.picker = function(_, options, on_select_cb, title, autopick)
   end
 
   local fzf_options = {}
-  for _, option in ipairs(options) do
-    table.insert(fzf_options, option.display)
+  for index, option in ipairs(options) do
+    local display_text = option.display
+    if apply_numeration then display_text = index .. ". " .. option.display end
+    table.insert(fzf_options, display_text)
   end
 
   require("fzf-lua").fzf_exec(fzf_options, {
@@ -142,13 +144,13 @@ end
 ---@param options table<T>
 ---@param title string | nil
 ---@return T
-M.pick_sync = function(bufnr, options, title, autopick)
+M.pick_sync = function(bufnr, options, title, autopick, apply_numeration)
   local co = coroutine.running()
   local selected = nil
   M.picker(bufnr, options, function(i)
     selected = i
     if coroutine.status(co) ~= "running" then coroutine.resume(co) end
-  end, title or "", autopick)
+  end, title or "", autopick, apply_numeration)
   if not selected then coroutine.yield() end
   return selected
 end
