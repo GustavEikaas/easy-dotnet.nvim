@@ -1,6 +1,12 @@
-local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
 local M = {}
+
+---@class RPC_DiscoveredTest
+---@field id string
+---@field namespace? string
+---@field name string
+---@field filePath string
+---@field lineNumber? integer
 
 ---@class TestNode
 ---@field id string
@@ -140,80 +146,66 @@ end
 ---@param dotnet_project DotnetProject
 ---@param on_job_finished function
 local function discover_tests_for_project_and_update_lines(project, win, options, dotnet_project, sdk_path, on_job_finished)
-  local vstest_dll = polyfills.fs.joinpath(sdk_path, "vstest.console.dll")
-  local absolute_dll_path = dotnet_project.get_dll_path()
-  local outfile = vim.fs.normalize(os.tmpname())
-  local script_path = require("easy-dotnet.test-runner.discovery").get_script_path()
-  local command = string.format("dotnet fsi %s %s %s %s", script_path, vstest_dll, absolute_dll_path, outfile)
+  local client = require("easy-dotnet.test-runner.rpc")()
 
-  if dotnet_project.isTestPlatformProject then
-    project.icon = "(MTP NOT SUPPORTED GH:#320)"
-    project.highlight = "SpecialKey"
+  local function handle_rpc_response(response)
+    if response.error then
+      --TODO: proper error handling
+      vim.schedule(function() vim.notify(string.format("[%s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
+      on_job_finished()
+      return
+    end
+
+    ---@type RPC_DiscoveredTest[]
+    local tests = vim.tbl_map(function(line) return vim.fn.json_decode(line) end, vim.fn.readfile(response.result))
+
+    -- print(response.result)
+    -- print(string.format("%s discovered: %d tests", project.name, #tests))
+    ---@type Test[]
+    local converted = {}
+    for _, value in ipairs(tests) do
+      --HACK: This is necessary for MSTest cases where name is not a namespace.classname but rather classname
+      --TODO: Will not work with TUnit
+      local name = value.name:find("%.") and value.name or value.namespace
+      ---@type Test
+      local test = {
+        namespace = name,
+        file_path = value.filePath,
+        line_number = value.lineNumber,
+        id = value.id,
+        cs_project_path = project.cs_project_path,
+        solution_file_path = project.solution_file_path,
+        runtime = project.framework,
+      }
+      table.insert(converted, test)
+    end
+    local project_tree = generate_tree(converted, options, project)
+    local hasChildren = next(project_tree.children) ~= nil
+
+    if hasChildren then
+      win.tree.children[project.name] = project_tree
+    else
+      win.tree.children[project.name] = nil
+    end
+    win.refreshTree()
+    --report stuff
     on_job_finished()
-    return
   end
 
-  local tests = {}
-  vim.fn.jobstart(command, {
-    on_stderr = function(_, data)
-      if #data > 0 and #trim(data[1]) > 0 then
-        print(vim.inspect(data))
-        error("Failed")
-      end
-    end,
-    ---@param code number
-    on_exit = function(_, code)
-      on_job_finished()
-      if code ~= 0 then
-        --TODO: check if project was not built
-        logger.error(string.format("Discovering tests for %s failed", project.name))
-      else
-        local file = io.open(outfile)
-        if file == nil then error("Discovery script emitted no file for " .. project.name) end
+  local out_file = vim.fs.normalize(os.tmpname())
+  local absolute_dll_path = dotnet_project.get_dll_path()
+  -- print("DLL_PATH: " .. absolute_dll_path)
 
-        for line in file:lines() do
-          local success, json_test = pcall(function() return vim.fn.json_decode(line) end)
-
-          if success then
-            if #line ~= 2 then table.insert(tests, json_test) end
-          else
-            print("Malformed JSON: " .. line)
-          end
-        end
-
-        local success = pcall(function() os.remove(outfile) end)
-
-        if not success then print("Failed to delete tmp file " .. outfile) end
-
-        ---@type Test[]
-        local converted = {}
-        for _, value in ipairs(tests) do
-          --HACK: This is necessary for MSTest cases where name is not a namespace.classname but rather classname
-          local name = value.Name:find("%.") and value.Name or value.Namespace
-          ---@type Test
-          local test = {
-            namespace = name,
-            file_path = value.FilePath,
-            line_number = value.Linenumber,
-            id = value.Id,
-            cs_project_path = project.cs_project_path,
-            solution_file_path = project.solution_file_path,
-            runtime = project.framework,
-          }
-          table.insert(converted, test)
-        end
-        local project_tree = generate_tree(converted, options, project)
-        local hasChildren = next(project_tree.children) ~= nil
-
-        if hasChildren then
-          win.tree.children[project.name] = project_tree
-        else
-          win.tree.children[project.name] = nil
-        end
-        win.refreshTree()
-      end
-    end,
-  })
+  if dotnet_project.isTestPlatformProject then
+    --TODO: linux compat + msbuild calculation using TargetPath:gsub(OutputType)?
+    local testPath = absolute_dll_path:gsub('%.dll', '.exe')
+    print(testPath)
+    client.send("MTP_Discover", { outFile = out_file, testExecutablePath = testPath }, handle_rpc_response)
+  else
+    --TODO: quotes doesnt work with rpc
+    local vstest_dll = "C:/Program Files/dotnet/sdk/9.0.203/vstest.console.dll"-- polyfills.fs.joinpath(sdk_path, "vstest.console.dll")
+    client.send("VSTest_Discover", { vsTestPath = vstest_dll, dllPath = absolute_dll_path, outFile = out_file }, handle_rpc_response)
+  end
 end
 
 ---@param value DotnetProject
