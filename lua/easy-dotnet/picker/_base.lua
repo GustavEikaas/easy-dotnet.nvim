@@ -90,7 +90,6 @@ M.preview_picker = function(_, options, on_select_cb, title, _)
 end
 
 M.picker = function(_, options, on_select_cb, title, autopick, apply_numeration)
-  if autopick == nil then autopick = true end
   if #options == 0 then error("No options provided, minimum 1 is required") end
   -- Auto pick if only one option present
   if #options == 1 and autopick == true then
@@ -121,8 +120,8 @@ end
 ---@param bufnr number | nil
 ---@param options table<T>
 ---@param title string | nil
----@param autopick boolean | nil
----@param apply_numeration boolean | nil
+---@param autopick boolean
+---@param apply_numeration boolean
 ---@return T
 M.pick_sync = function(bufnr, options, title, autopick, apply_numeration)
   local co = coroutine.running()
