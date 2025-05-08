@@ -5,12 +5,14 @@ local M = {}
 ---@field id string
 ---@field namespace? string
 ---@field name string
+---@field displayName string
 ---@field filePath string
 ---@field lineNumber? integer
 
 ---@class TestNode
 ---@field id string
 ---@field name string
+---@field displayName string
 ---@field namespace string
 ---@field file_path string
 ---@field line_number number | nil
@@ -35,19 +37,13 @@ local M = {}
 
 ---@class Test
 ---@field id string
+---@field display_name string
 ---@field solution_file_path string
 ---@field cs_project_path string
 ---@field namespace string
 ---@field file_path string | nil
 ---@field line_number number | nil
 ---@field runtime string | nil
-
----@param value string
----@return string
-local function trim(value)
-  -- Match the string and capture the non-whitespace characters
-  return value:match("^%s*(.-)%s*$")
-end
 
 local function count_segments(path)
   local count = 0
@@ -76,6 +72,7 @@ local function ensure_path(root, path, has_arguments, test, options, offset_inde
       current[part] = {
         id = test.id,
         name = part,
+        displayName = test.display_name,
         namespace = table.concat(parts, ".", 1, i),
         cs_project_path = test.cs_project_path,
         solution_file_path = test.solution_file_path,
@@ -118,6 +115,7 @@ local function generate_tree(tests, options, project)
       end
       parent[test.namespace] = {
         name = test.namespace:match("([^.]+%b())$"),
+        displayName = test.display_name,
         namespace = test.namespace,
         children = {},
         cs_project_path = test.cs_project_path,
@@ -162,23 +160,26 @@ local function discover_tests_for_project_and_update_lines(project, win, options
     -- print(response.result)
     -- print(string.format("%s discovered: %d tests", project.name, #tests))
     ---@type Test[]
-    local converted = {}
-    for _, value in ipairs(tests) do
-      --HACK: This is necessary for MSTest cases where name is not a namespace.classname but rather classname
-      --TODO: Will not work with TUnit
-      local name = value.name:find("%.") and value.name or value.namespace
-      ---@type Test
-      local test = {
-        namespace = name,
-        file_path = value.filePath,
-        line_number = value.lineNumber,
-        id = value.id,
-        cs_project_path = project.cs_project_path,
-        solution_file_path = project.solution_file_path,
-        runtime = project.framework,
-      }
-      table.insert(converted, test)
-    end
+    local converted = vim.tbl_map(
+      ---@param value RPC_DiscoveredTest
+      function(value)
+        --HACK: This is necessary for MSTest cases where name is not a namespace.classname but rather classname
+        local name = value.name:find("%.") and value.name or value.namespace or ""
+        ---@type Test
+        return {
+          namespace = name,
+          file_path = value.filePath,
+          line_number = value.lineNumber,
+          id = value.id,
+          display_name = value.displayName,
+          cs_project_path = project.cs_project_path,
+          solution_file_path = project.solution_file_path,
+          runtime = project.framework,
+        }
+      end,
+      tests
+    )
+
     local project_tree = generate_tree(converted, options, project)
     local hasChildren = next(project_tree.children) ~= nil
 
@@ -197,14 +198,16 @@ local function discover_tests_for_project_and_update_lines(project, win, options
   -- print("DLL_PATH: " .. absolute_dll_path)
 
   if dotnet_project.isTestPlatformProject then
-    --TODO: linux compat + msbuild calculation using TargetPath:gsub(OutputType)?
-    local testPath = absolute_dll_path:gsub('%.dll', '.exe')
+    -- vim.print(dotnet_project.msbuild_props)
+    --TODO: linux compat
+    local testPath = absolute_dll_path:gsub("%.dll", "." .. dotnet_project.msbuild_props.outputType:lower())
     print(testPath)
-    client.send("MTP_Discover", { outFile = out_file, testExecutablePath = testPath }, handle_rpc_response)
+    print("abc")
+    client.send_and_disconnect("MTP_Discover", { outFile = out_file, testExecutablePath = testPath }, handle_rpc_response)
   else
     --TODO: quotes doesnt work with rpc
-    local vstest_dll = "C:/Program Files/dotnet/sdk/9.0.203/vstest.console.dll"-- polyfills.fs.joinpath(sdk_path, "vstest.console.dll")
-    client.send("VSTest_Discover", { vsTestPath = vstest_dll, dllPath = absolute_dll_path, outFile = out_file }, handle_rpc_response)
+    local vstest_dll = "C:/Program Files/dotnet/sdk/9.0.203/vstest.console.dll" -- polyfills.fs.joinpath(sdk_path, "vstest.console.dll")
+    client.send_and_disconnect("VSTest_Discover", { vsTestPath = vstest_dll, dllPath = absolute_dll_path, outFile = out_file }, handle_rpc_response)
   end
 end
 
@@ -220,6 +223,7 @@ local function start_discovery_for_project(value, win, options, sdk_path, soluti
     type = "csproject",
     expanded = false,
     name = value.name .. "@" .. value.version,
+    displayName = "",
     file_path = value.path,
     line_number = nil,
     full_name = value.name,
@@ -265,6 +269,7 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     type = "sln",
     preIcon = options.icons.sln,
     name = solutionFilePath:match("([^/\\]+)$"),
+    displayName = "",
     full_name = solutionFilePath:match("([^/\\]+)$"),
     file_path = solutionFilePath,
     line_number = nil,
@@ -276,6 +281,7 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     expanded = true,
     children = {},
     framework = "",
+    is_MTP = false,
   }
 
   local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solutionFilePath, function(project) return project.isTestProject end)
