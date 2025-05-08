@@ -1,5 +1,20 @@
 local logger = require("easy-dotnet.logger")
-local M = {}
+local M = {
+  _server = {
+    id = nil,
+    ready = false,
+    callbacks = {},
+    wait = nil,
+  },
+}
+
+M._server.wait = function(cb)
+  if M._server.ready then
+    pcall(cb)
+  else
+    table.insert(M._server.callbacks, cb)
+  end
+end
 
 ---@class RPC_DiscoveredTest
 ---@field id string
@@ -44,6 +59,55 @@ local M = {}
 ---@field file_path string | nil
 ---@field line_number number | nil
 ---@field runtime string | nil
+
+local function start_server(win)
+  if M._server.ready then return end
+  local server_started = win.appendJob("server", "Server")
+  local server_ready_string = "Named pipe server started: EasyDotnetPipe"
+
+  local handle = vim.fn.jobstart({
+    "dotnet",
+    "run",
+    "--project",
+    "C:\\Users\\gusta\\repo\\easy-dotnet-testrunner",
+  }, {
+    stdout_buffered = false,
+    on_stdout = function(_, data, _)
+      if data then
+        for _, line in ipairs(data) do
+          if line:find(server_ready_string, 1, true) then
+            M._server.ready = true
+            server_started()
+            for _, cb in ipairs(M._server.callbacks) do
+              pcall(cb)
+            end
+            M._server.callbacks = {}
+          end
+        end
+      end
+    end,
+    on_stderr = function(_, data, _)
+      if data then
+        for _, line in ipairs(data) do
+          if line ~= "" then vim.notify("[server stderr] " .. line, vim.log.levels.WARN) end
+        end
+      end
+    end,
+    on_exit = function(_, code, _)
+      vim.notify("Testrunner server exited with code " .. code, vim.log.levels.INFO)
+      M._server.ready = false
+      M._server.id = nil
+    end,
+  })
+
+  if handle <= 0 then
+    vim.notify("Failed to start testrunner server", vim.log.levels.ERROR)
+    return
+  end
+
+  M._server.job_id = handle
+  M._server.ready = false
+end
 
 local function count_segments(path)
   local count = 0
@@ -138,6 +202,15 @@ local function generate_tree(tests, options, project)
   return project
 end
 
+---@param file string
+---@return RPC_DiscoveredTest[]
+local function json_decode_out_file(file)
+  local contents = vim.fn.readfile(file)
+  if #contents == 1 and contents[1] == "[]" then return {} end
+  ---@type RPC_DiscoveredTest[]
+  return vim.tbl_map(function(line) return vim.fn.json_decode(line) end, contents)
+end
+
 ---@param project TestNode
 ---@param options TestRunnerOptions
 ---@param sdk_path string
@@ -154,11 +227,15 @@ local function discover_tests_for_project_and_update_lines(project, win, options
       return
     end
 
-    ---@type RPC_DiscoveredTest[]
-    local tests = vim.tbl_map(function(line) return vim.fn.json_decode(line) end, vim.fn.readfile(response.result))
+    local tests = json_decode_out_file(response.result)
+    -- vim.print("[DISCOVER]:", response.result)
+    if #tests == 0 then
+      win.tree.children[project.name] = nil
+      win.refreshTree()
+      on_job_finished()
+      return
+    end
 
-    -- print(response.result)
-    -- print(string.format("%s discovered: %d tests", project.name, #tests))
     ---@type Test[]
     local converted = vim.tbl_map(
       ---@param value RPC_DiscoveredTest
@@ -189,24 +266,19 @@ local function discover_tests_for_project_and_update_lines(project, win, options
       win.tree.children[project.name] = nil
     end
     win.refreshTree()
-    --report stuff
     on_job_finished()
   end
 
   local out_file = vim.fs.normalize(os.tmpname())
   local absolute_dll_path = dotnet_project.get_dll_path()
-  -- print("DLL_PATH: " .. absolute_dll_path)
 
   if dotnet_project.isTestPlatformProject then
     -- vim.print(dotnet_project.msbuild_props)
     --TODO: linux compat
     local testPath = absolute_dll_path:gsub("%.dll", "." .. dotnet_project.msbuild_props.outputType:lower())
-    print(testPath)
-    print("abc")
     client.send_and_disconnect("MTP_Discover", { outFile = out_file, testExecutablePath = testPath }, handle_rpc_response)
   else
-    --TODO: quotes doesnt work with rpc
-    local vstest_dll = "C:/Program Files/dotnet/sdk/9.0.203/vstest.console.dll" -- polyfills.fs.joinpath(sdk_path, "vstest.console.dll")
+    local vstest_dll = vim.fs.joinpath(sdk_path, "vstest.console.dll")
     client.send_and_disconnect("VSTest_Discover", { vsTestPath = vstest_dll, dllPath = absolute_dll_path, outFile = out_file }, handle_rpc_response)
   end
 end
@@ -242,7 +314,8 @@ local function start_discovery_for_project(value, win, options, sdk_path, soluti
 end
 
 local function refresh_runner(options, win, solutionFilePath, sdk_path)
-  if #win.jobs > 0 then
+  --TODO: refactor, basically just want to prevent refresh if discovery, building or running is already in progress
+  if #win.jobs > 0 and not (#win.jobs == 1 and win.jobs[1].id == "server") then
     logger.warn("Cant refresh while waiting for pending jobs")
     return
   end
@@ -285,9 +358,11 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
   }
 
   local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solutionFilePath, function(project) return project.isTestProject end)
-  for _, value in ipairs(test_projects) do
-    start_discovery_for_project(value, win, options, sdk_path, solutionFilePath)
-  end
+  M._server.wait(function()
+    for _, value in ipairs(test_projects) do
+      start_discovery_for_project(value, win, options, sdk_path, solutionFilePath)
+    end
+  end)
 
   win.refreshTree()
 end
@@ -316,6 +391,7 @@ local function open_runner(options, sdk_path)
 
   if is_reused then return end
 
+  start_server(win)
   refresh_runner(options, win, solutionFilePath, sdk_path)
 end
 

@@ -62,7 +62,7 @@ local function get_sdk_path()
       break
     end
   end
-  local sdk_path = polyfills.fs.joinpath(base, sdk_version):gsub("Program Files", '"Program Files"')
+  local sdk_path = polyfills.fs.joinpath(base, sdk_version)
   return sdk_path
 end
 

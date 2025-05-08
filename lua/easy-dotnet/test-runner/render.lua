@@ -62,7 +62,7 @@ M.traverse_expanded = function(tree, cb)
 end
 
 ---@param id string
----@param type "Run" | "Discovery" | "Build"
+---@param type "Run" | "Discovery" | "Build" | "Server"
 ---@param subtask_count number | nil
 function M.appendJob(id, type, subtask_count)
   local job = {
@@ -97,7 +97,12 @@ function M.redraw_virtual_text()
     vim.api.nvim_buf_set_extmark(M.buf, ns_id, 0, 0, {
       virt_text = {
         {
-          string.format("%s %s/%s", job_type == "Run" and "Running" or job_type == "Discovery" and "Discovering" or "Building", completed_count, total_subtask_count),
+          string.format(
+            "%s %s/%s",
+            job_type == "Run" and "Running" or job_type == "Discovery" and "Discovering" or job_type == "Build" and "Building" or "Starting server",
+            completed_count,
+            total_subtask_count
+          ),
           "Character",
         },
       },
