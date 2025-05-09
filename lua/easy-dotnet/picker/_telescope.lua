@@ -112,9 +112,9 @@ end
 ---@param options table<T>
 ---@param on_select_cb function
 ---@param title string | nil
----@param autopick boolean | nil
-M.picker = function(bufnr, options, on_select_cb, title, autopick)
-  if autopick == nil then autopick = true end
+---@param autopick boolean
+---@param apply_numeration boolean
+M.picker = function(bufnr, options, on_select_cb, title, autopick, apply_numeration)
   if #options == 0 then error("No options provided, minimum 1 is required") end
 
   -- Auto pick if only one option present
@@ -122,15 +122,31 @@ M.picker = function(bufnr, options, on_select_cb, title, autopick)
     on_select_cb(options[1])
     return
   end
+
+  local options_for_finder = {}
+  for i, option in ipairs(options) do
+    local display_text
+    if apply_numeration then
+      display_text = i .. ". " .. option.display
+    else
+      display_text = option.display
+    end
+
+    table.insert(options_for_finder, {
+      display_text,
+      option,
+    })
+  end
+
   local picker = require("telescope.pickers").new(bufnr, {
     prompt_title = title,
     finder = require("telescope.finders").new_table({
-      results = options,
+      results = options_for_finder,
       entry_maker = function(entry)
         return {
-          display = entry.display,
-          value = entry,
-          ordinal = entry.display,
+          display = entry.display_text,
+          value = entry.option,
+          ordinal = entry.display_text,
         }
       end,
     }),
@@ -157,14 +173,16 @@ end
 ---@param bufnr number | nil
 ---@param options table<T>
 ---@param title string | nil
+---@param autopick boolean
+---@param apply_numeration boolean
 ---@return T
-M.pick_sync = function(bufnr, options, title, autopick)
+M.pick_sync = function(bufnr, options, title, autopick, apply_numeration)
   local co = coroutine.running()
   local selected = nil
   M.picker(bufnr, options, function(i)
     selected = i
     if coroutine.status(co) ~= "running" then coroutine.resume(co) end
-  end, title or "", autopick)
+  end, title or "", autopick, apply_numeration)
   if not selected then coroutine.yield() end
   return selected
 end
