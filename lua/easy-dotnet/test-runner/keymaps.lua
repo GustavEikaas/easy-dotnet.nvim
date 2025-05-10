@@ -100,7 +100,7 @@ local function VsTest_Run(node, win)
   ---@type TestNode[]
   local tests = {}
   ---@param child TestNode
-  win.traverse_filter(node, function(child)
+  win.traverse(node, function(child)
     child.icon = "<Running>"
     if child.type == "test" or child.type == "subcase" then table.insert(tests, child) end
   end)
@@ -131,7 +131,7 @@ local function MTP_Run(node, win)
   ---@type TestNode[]
   local tests = {}
   ---@param child TestNode
-  win.traverse_filter(node, function(child)
+  win.traverse(node, function(child)
     child.icon = "<Running>"
     if child.type == "test" or child.type == "subcase" then table.insert(tests, child) end
   end)

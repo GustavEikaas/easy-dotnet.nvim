@@ -236,6 +236,7 @@ local function json_decode_out_file(file)
   local ok, contents = pcall(vim.fn.readfile, file)
   if not ok then contents = { "[]" } end
   if #contents == 1 and contents[1] == "[]" then return {} end
+  pcall(vim.loop.fs_unlink, file)
   ---@type RPC_DiscoveredTest[]
   return vim.tbl_map(function(line) return vim.fn.json_decode(line) end, contents)
 end
@@ -321,7 +322,7 @@ local function start_batch_vstest_discovery(projects, win, options, sdk_path, so
     end
 
     for _, value in pairs(project_jobs) do
-      local success = pcall(function ()
+      local success = pcall(function()
         local tests = json_decode_out_file(value.out_file)
         register_rpc_discovered_tests(tests, value.project, options, win, value.on_job_finished)
       end)
