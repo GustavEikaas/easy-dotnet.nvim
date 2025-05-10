@@ -37,27 +37,39 @@ local M = {
 }
 
 ---Traverses a tree from the given node, giving a callback for every item
----@param tree TestNode | nil
+---@param node TestNode | nil
 ---@param cb function
-M.traverse = function(tree, cb)
-  if not tree then tree = M.tree end
+M.traverse = function(node, cb)
+  if not node then node = M.tree end
   --HACK: handle no tree set
-  if not tree.name then return end
+  if not node.name then return end
 
-  cb(tree)
-  for _, node in pairs(tree.children or {}) do
-    M.traverse(node, cb)
+  cb(node)
+  for _, child_node in pairs(node.children or {}) do
+    M.traverse(child_node, cb)
   end
 end
 
-M.traverse_expanded = function(tree, cb)
-  if not tree then tree = M.tree end
+M.traverse_expanded = function(node, cb)
+  if not node then node = M.tree end
   --HACK: handle no tree set
-  if not tree.name then return end
-  cb(tree)
-  for _, node in pairs(tree.children or {}) do
-    local filterpass = M.filter == nil or (M.filter == node.icon or node.icon == "<Running>")
-    if tree.expanded and filterpass then M.traverse_expanded(node, cb) end
+  if not node.name then return end
+  cb(node)
+  for _, child_node in pairs(node.children or {}) do
+    local filterpass = M.filter == nil or (M.filter == child_node.icon or child_node.icon == "<Running>")
+    if node.expanded and filterpass then M.traverse_expanded(child_node, cb) end
+  end
+end
+
+
+M.traverse_filter = function (node, cb)
+  if not node then node = M.tree end
+  --HACK: handle no tree set
+  if not node.name then return end
+  cb(node)
+  for _, child_node in pairs(node.children or {}) do
+    local filterpass = M.filter == nil or (M.filter == child_node.icon or child_node.icon == "<Running>")
+    if filterpass then M.traverse_expanded(child_node, cb) end
   end
 end
 
