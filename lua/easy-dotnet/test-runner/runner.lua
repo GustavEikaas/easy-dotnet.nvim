@@ -216,7 +216,7 @@ end
 ---@param sdk_path string
 ---@param dotnet_project DotnetProject
 ---@param on_job_finished function
-local function discover_tests_for_project_and_update_lines(project, win, options, dotnet_project, sdk_path, on_job_finished)
+local function discover_tests_for_project_and_update_lines(project, win, options, dotnet_project, on_job_finished)
   local client = require("easy-dotnet.test-runner.rpc")()
 
   local function handle_rpc_response(response)
@@ -272,19 +272,127 @@ local function discover_tests_for_project_and_update_lines(project, win, options
   local out_file = vim.fs.normalize(os.tmpname())
   local absolute_dll_path = dotnet_project.get_dll_path()
 
-  if dotnet_project.isTestPlatformProject then
-    -- vim.print(dotnet_project.msbuild_props)
-    --TODO: linux compat
-    local testPath = absolute_dll_path:gsub("%.dll", "." .. dotnet_project.msbuild_props.outputType:lower())
-    client.send_and_disconnect("MTP_Discover", { outFile = out_file, testExecutablePath = testPath }, handle_rpc_response)
-  else
-    local vstest_dll = vim.fs.joinpath(sdk_path, "vstest.console.dll")
-    client.send_and_disconnect("VSTest_Discover", { vsTestPath = vstest_dll, dllPath = absolute_dll_path, outFile = out_file }, handle_rpc_response)
+  --TODO: linux compat
+  local testPath = absolute_dll_path:gsub("%.dll", "." .. dotnet_project.msbuild_props.outputType:lower())
+  client.send_and_disconnect("MTP_Discover", { outFile = out_file, testExecutablePath = testPath }, handle_rpc_response)
+end
+
+---@param projects DotnetProject[]
+---@param win table
+---@param options table
+---@param sdk_path string
+---@param solution_file_path string
+local function start_batch_vstest_discovery(projects, win, options, sdk_path, solution_file_path)
+  local client = require("easy-dotnet.test-runner.rpc")()
+
+  ---@param i DotnetProject
+  local project_jobs = vim.tbl_map(function(i)
+    ---@type TestNode
+    local project = {
+      id = "",
+      children = {},
+      cs_project_path = i.path,
+      solution_file_path = solution_file_path,
+      namespace = "",
+      type = "csproject",
+      expanded = false,
+      name = i.name .. "@" .. i.version,
+      displayName = "",
+      file_path = i.path,
+      line_number = nil,
+      full_name = i.name,
+      indent = 2,
+      preIcon = options.icons.project,
+      icon = "",
+      expand = {},
+      highlight = "EasyDotnetTestRunnerProject",
+      framework = i.msbuild_props.targetFramework,
+      is_MTP = false
+    }
+    local on_job_finished = win.appendJob(project.name, "Discovery")
+    win.tree.children[project.name] = project
+    win.refreshTree()
+    return {
+      project = project,
+      on_job_finished = on_job_finished,
+      dll_path = i.get_dll_path(),
+      out_file = vim.fs.normalize(os.tmpname()),
+    }
+  end, projects)
+
+  local rpc_request = vim.tbl_map(function(i)
+    return {
+      dllPath = i.dll_path,
+      outFile = i.out_file,
+    }
+  end, project_jobs)
+
+  local function handle_rpc_response(response)
+    vim.print(response)
+    if response.error then
+      --TODO: proper error handling
+      vim.schedule(function() vim.notify(string.format("[%s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
+
+      for _, value in pairs(project_jobs) do
+        --clear all jobs
+        value.on_job_finished()
+      end
+
+      return
+    end
+
+    for _, value in pairs(project_jobs) do
+      local project = value.project
+      local on_job_finished = value.on_job_finished
+      local out_file = value.out_file
+      local tests = json_decode_out_file(out_file)
+      if #tests == 0 then
+        win.tree.children[project.name] = nil
+        win.refreshTree()
+        on_job_finished()
+        return
+      end
+
+      ---@type Test[]
+      local converted = vim.tbl_map(
+        ---@param discovered_test RPC_DiscoveredTest
+        function(discovered_test)
+          --HACK: This is necessary for MSTest cases where name is not a namespace.classname but rather classname
+          local name = discovered_test.name:find("%.") and discovered_test.name or discovered_test.namespace or ""
+          ---@type Test
+          return {
+            namespace = name,
+            file_path = discovered_test.filePath,
+            line_number = discovered_test.lineNumber,
+            id = discovered_test.id,
+            display_name = discovered_test.displayName,
+            cs_project_path = project.cs_project_path,
+            solution_file_path = project.solution_file_path,
+            runtime = project.framework,
+          }
+        end,
+        tests
+      )
+
+      local project_tree = generate_tree(converted, options, project)
+      local hasChildren = next(project_tree.children) ~= nil
+
+      if hasChildren then
+        win.tree.children[project.name] = project_tree
+      else
+        win.tree.children[project.name] = nil
+      end
+      win.refreshTree()
+      on_job_finished()
+    end
   end
+
+  local vstest_dll = vim.fs.joinpath(sdk_path, "vstest.console.dll")
+  client.send_and_disconnect("VSTest_Discover", { vsTestPath = vstest_dll, projects = rpc_request }, handle_rpc_response)
 end
 
 ---@param value DotnetProject
-local function start_discovery_for_project(value, win, options, sdk_path, solution_file_path)
+local function start_MTP_discovery_for_project(value, win, options, solution_file_path)
   ---@type TestNode
   local project = {
     id = "",
@@ -310,10 +418,10 @@ local function start_discovery_for_project(value, win, options, sdk_path, soluti
   local on_job_finished = win.appendJob(project.name, "Discovery")
   win.tree.children[project.name] = project
   win.refreshTree()
-  discover_tests_for_project_and_update_lines(project, win, options, value, sdk_path, on_job_finished)
+  discover_tests_for_project_and_update_lines(project, win, options, value, on_job_finished)
 end
 
-local function refresh_runner(options, win, solutionFilePath, sdk_path)
+local function refresh_runner(options, win, solution_file_path, sdk_path)
   --TODO: refactor, basically just want to prevent refresh if discovery, building or running is already in progress
   if #win.jobs > 0 and not (#win.jobs == 1 and win.jobs[1].id == "server") then
     logger.warn("Cant refresh while waiting for pending jobs")
@@ -324,27 +432,27 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
 
   if options.noRestore == false then
     logger.info("Restoring")
-    local _, restore_err, restore_code = async.await(async.job_run_async)({ "dotnet", "restore", solutionFilePath })
+    local _, restore_err, restore_code = async.await(async.job_run_async)({ "dotnet", "restore", solution_file_path })
 
     if restore_code ~= 0 then error("Restore failed " .. vim.inspect(restore_err)) end
   end
   if options.noBuild == false then
     logger.info("Building")
-    local _, build_err, build_code = async.await(async.job_run_async)({ "dotnet", "build", solutionFilePath, "--no-restore" })
+    local _, build_err, build_code = async.await(async.job_run_async)({ "dotnet", "build", solution_file_path, "--no-restore" })
     if build_code ~= 0 then error("Build failed " .. vim.inspect(build_err)) end
   end
 
   ---@type TestNode
   win.tree = {
     id = "",
-    solution_file_path = solutionFilePath,
+    solution_file_path = solution_file_path,
     cs_project_path = "",
     type = "sln",
     preIcon = options.icons.sln,
-    name = solutionFilePath:match("([^/\\]+)$"),
+    name = solution_file_path:match("([^/\\]+)$"),
     displayName = "",
-    full_name = solutionFilePath:match("([^/\\]+)$"),
-    file_path = solutionFilePath,
+    full_name = solution_file_path:match("([^/\\]+)$"),
+    file_path = solution_file_path,
     line_number = nil,
     indent = 0,
     namespace = "",
@@ -357,11 +465,18 @@ local function refresh_runner(options, win, solutionFilePath, sdk_path)
     is_MTP = false,
   }
 
-  local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solutionFilePath, function(project) return project.isTestProject end)
+  local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(project) return project.isTestProject end)
+
+  ---@param i DotnetProject
+  local vs_test_projects = vim.tbl_filter(function(i) return not i.isTestPlatformProject end, test_projects)
+
+  local mtp_projects = vim.tbl_filter(function(i) return i.isTestPlatformProject end, test_projects)
+
   M._server.wait(function()
-    for _, value in ipairs(test_projects) do
-      start_discovery_for_project(value, win, options, sdk_path, solutionFilePath)
+    for _, value in ipairs(mtp_projects) do
+      start_MTP_discovery_for_project(value, win, options, solution_file_path)
     end
+    if #vs_test_projects > 0 then start_batch_vstest_discovery(vs_test_projects, win, options, sdk_path, solution_file_path) end
   end)
 
   win.refreshTree()

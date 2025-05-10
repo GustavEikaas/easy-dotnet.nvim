@@ -106,7 +106,7 @@ local function new()
         method = method,
         params = params or {},
       }
-      -- vim.schedule(function() vim.print("Sending message", message) end)
+      vim.schedule(function() vim.print("Sending message", message) end)
       callbacks[id] = callback
       client:write(vim.json.encode(message) .. "\n")
     end)
