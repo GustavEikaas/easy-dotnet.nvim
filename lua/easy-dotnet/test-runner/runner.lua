@@ -5,7 +5,7 @@ local M = {
     ready = false,
     callbacks = {},
     wait = nil,
-    pipe_name = nil
+    pipe_name = nil,
   },
 }
 
@@ -66,12 +66,7 @@ local function start_server(win)
   local server_started = win.appendJob("server", "Server")
   local server_ready_prefix = "Named pipe server started: "
 
-  local handle = vim.fn.jobstart({
-    "dotnet",
-    "run",
-    "--project",
-    "C:\\Users\\gusta\\repo\\easy-dotnet-testrunner",
-  }, {
+  local handle = vim.fn.jobstart({ "easydotnet" }, {
     stdout_buffered = false,
     on_stdout = function(_, data, _)
       if data then
