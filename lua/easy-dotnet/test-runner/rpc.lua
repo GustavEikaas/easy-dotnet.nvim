@@ -1,8 +1,8 @@
 ---@alias DotnetPipeMethod
----| "VSTest_Discover"
----| "VSTest_Run"
----| "MTP_Discover"
----| "MTP_Run"
+---| "vstest/discover"
+---| "vstest/run"
+---| "mtp/discover"
+---| "mtp/run"
 
 ---@class DotnetPipe
 ---@field send fun(method: DotnetPipeMethod, params: table, callback: fun(response: table)): nil
@@ -33,19 +33,34 @@ local function new()
         return
       end
 
-      if data then
-        for line in data:gmatch("[^\r\n]+") do
-          local ok, decoded = pcall(vim.json.decode, line)
-          if ok and decoded and decoded.id then
-            local cb = callbacks[decoded.id]
-            if cb then
-              callbacks[decoded.id] = nil
-              vim.schedule(function() cb(decoded) end)
-            end
-          else
-            vim.schedule(function() vim.notify("Malformed or unmatched response: " .. line, vim.log.levels.WARN) end)
-          end
+      if not data then return end
+
+      local header_end = data:find("\r\n\r\n", 1, true)
+      if not header_end then
+        vim.schedule(function() vim.notify("Incomplete JSON-RPC header", vim.log.levels.WARN) end)
+        return
+      end
+
+      local header_section = data:sub(1, header_end - 1)
+      local content_length = header_section:match("Content%-Length:%s*(%d+)")
+      if not content_length then
+        vim.schedule(function() vim.notify("Missing Content-Length header", vim.log.levels.WARN) end)
+        return
+      end
+
+      content_length = tonumber(content_length)
+      local body_start = header_end + 4
+      local body = data:sub(body_start, body_start + content_length - 1)
+
+      local ok, decoded = pcall(vim.json.decode, body)
+      if ok and decoded and decoded.id then
+        local cb = callbacks[decoded.id]
+        if cb then
+          callbacks[decoded.id] = nil
+          vim.schedule(function() cb(decoded) end)
         end
+      else
+        vim.schedule(function() vim.notify("Malformed or unmatched JSON body: " .. body, vim.log.levels.WARN) end)
       end
     end)
   end
@@ -102,13 +117,20 @@ local function new()
     connect_pipe(function()
       local id = get_command_id()
       local message = {
+        jsonrpc = "2.0",
         id = id,
         method = method,
         params = params or {},
       }
-      vim.schedule(function() vim.print("Sending message", message) end)
+      local body = vim.json.encode(message)
+      local content_length = #body
+      local header = "Content-Length: " .. content_length .. "\r\n\r\n"
+      local full_message = header .. body
+
+      vim.schedule(function() vim.print(full_message) end)
+
       callbacks[id] = callback
-      client:write(vim.json.encode(message) .. "\n")
+      client:write(full_message)
     end)
   end
 

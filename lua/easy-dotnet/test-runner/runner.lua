@@ -2,7 +2,7 @@ local logger = require("easy-dotnet.logger")
 local M = {
   _server = {
     id = nil,
-    ready = false,
+    ready = true,
     callbacks = {},
     wait = nil,
   },
@@ -334,7 +334,7 @@ local function start_batch_vstest_discovery(projects, win, options, sdk_path, so
   end
 
   local vstest_dll = vim.fs.joinpath(sdk_path, "vstest.console.dll")
-  client.send_and_disconnect("VSTest_Discover", { vsTestPath = vstest_dll, projects = rpc_request }, handle_rpc_response)
+  client.send_and_disconnect("vstest/discover", { vsTestPath = vstest_dll, projects = rpc_request }, handle_rpc_response)
 end
 
 ---@param value DotnetProject
@@ -348,6 +348,7 @@ local function start_MTP_discovery_for_project(value, win, options, solution_fil
   local client = require("easy-dotnet.test-runner.rpc")()
 
   local function handle_rpc_response(response)
+    vim.print(response)
     if response.error then
       --TODO: proper error handling
       vim.schedule(function() vim.notify(string.format("[%s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
@@ -364,7 +365,7 @@ local function start_MTP_discovery_for_project(value, win, options, solution_fil
 
   --TODO: linux compat
   local testPath = absolute_dll_path:gsub("%.dll", "." .. value.msbuild_props.outputType:lower())
-  client.send_and_disconnect("MTP_Discover", { outFile = out_file, testExecutablePath = testPath }, handle_rpc_response)
+  client.send_and_disconnect("mtp/discover", { outFile = out_file, testExecutablePath = testPath }, handle_rpc_response)
 end
 
 local function refresh_runner(options, win, solution_file_path, sdk_path)

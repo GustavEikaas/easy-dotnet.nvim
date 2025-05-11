@@ -1,5 +1,4 @@
 local window = require("easy-dotnet.test-runner.window")
-local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
 
 ---@class RPC_RunRequest
@@ -123,7 +122,7 @@ local function VsTest_Run(node, win)
   -- string OutFile
   local options = require("easy-dotnet.options").options.test_runner
   local vstest_dll = vim.fs.joinpath(options.sdk_path, "vstest.console.dll")
-  client.send_and_disconnect("VSTest_Run", { outFile = mtp_out_file, vsTestPath = vstest_dll, dllPath = testPath, testIds = filter }, get_test_result_handler(win, node, on_job_finished))
+  client.send_and_disconnect("vstest/run", { outFile = mtp_out_file, vsTestPath = vstest_dll, dllPath = testPath, testIds = filter }, get_test_result_handler(win, node, on_job_finished))
 end
 ---@param node TestNode
 ---@param win table
@@ -150,7 +149,7 @@ local function MTP_Run(node, win)
 
   local project = require("easy-dotnet.parsers.csproj-parse").get_project_from_project_file(node.cs_project_path)
   local testPath = project.get_dll_path():gsub("%.dll", "." .. project.msbuild_props.outputType:lower())
-  client.send_and_disconnect("MTP_Run", { outFile = mtp_out_file, testExecutablePath = testPath, filter = filter }, get_test_result_handler(win, node, on_job_finished))
+  client.send_and_disconnect("mtp/run", { outFile = mtp_out_file, testExecutablePath = testPath, filter = filter }, get_test_result_handler(win, node, on_job_finished))
 end
 
 ---@param node TestNode
