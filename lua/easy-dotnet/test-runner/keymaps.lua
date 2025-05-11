@@ -105,7 +105,7 @@ local function VsTest_Run(node, win)
   end)
 
   local on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
-  local client = require("easy-dotnet.test-runner.rpc")()
+  local client = require("easy-dotnet.test-runner.rpc")(require("easy-dotnet.test-runner.runner")._server.pipe_name)
   local mtp_out_file = vim.fs.normalize(os.tmpname())
 
   local filter = vim.tbl_map(function(test)
@@ -136,7 +136,7 @@ local function MTP_Run(node, win)
   end)
 
   local on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
-  local client = require("easy-dotnet.test-runner.rpc")()
+  local client = require("easy-dotnet.test-runner.rpc")(require("easy-dotnet.test-runner.runner")._server.pipe_name)
   local mtp_out_file = vim.fs.normalize(os.tmpname())
 
   local filter = vim.tbl_map(function(test)

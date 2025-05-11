@@ -11,15 +11,13 @@
 
 ---Creates a new DotnetPipe instance.
 ---@return DotnetPipe
-local function new()
+local function new(pipe_name)
   local self = {}
 
   local client = nil
   local connected = false
   local callbacks = {}
   local _id = 0
-
-  local function get_pipe_path() return "\\\\.\\pipe\\EasyDotnetPipe" end
 
   local function get_command_id()
     _id = _id + 1
@@ -72,7 +70,7 @@ local function new()
     end
 
     client = vim.loop.new_pipe(false)
-    client:connect(get_pipe_path(), function(err)
+    client:connect("\\\\.\\pipe\\" .. pipe_name, function(err)
       if err then
         vim.schedule(function() vim.notify("Failed to connect: " .. err, vim.log.levels.ERROR) end)
         return
@@ -127,7 +125,7 @@ local function new()
       local header = "Content-Length: " .. content_length .. "\r\n\r\n"
       local full_message = header .. body
 
-      vim.schedule(function() vim.print(full_message) end)
+      -- vim.schedule(function() vim.print(full_message) end)
 
       callbacks[id] = callback
       client:write(full_message)

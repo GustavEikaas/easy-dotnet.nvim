@@ -2,9 +2,10 @@ local logger = require("easy-dotnet.logger")
 local M = {
   _server = {
     id = nil,
-    ready = true,
+    ready = false,
     callbacks = {},
     wait = nil,
+    pipe_name = nil
   },
 }
 
@@ -63,7 +64,7 @@ end
 local function start_server(win)
   if M._server.ready then return end
   local server_started = win.appendJob("server", "Server")
-  local server_ready_string = "Named pipe server started: EasyDotnetPipe"
+  local server_ready_prefix = "Named pipe server started: "
 
   local handle = vim.fn.jobstart({
     "dotnet",
@@ -75,7 +76,9 @@ local function start_server(win)
     on_stdout = function(_, data, _)
       if data then
         for _, line in ipairs(data) do
-          if line:find(server_ready_string, 1, true) then
+          if line:find(server_ready_prefix, 1, true) then
+            local pipename = line:sub(#server_ready_prefix + 1)
+            M._server.pipe_name = vim.trim(pipename)
             M._server.ready = true
             server_started()
             for _, cb in ipairs(M._server.callbacks) do
@@ -288,7 +291,7 @@ end
 ---@param sdk_path string
 ---@param solution_file_path string
 local function start_batch_vstest_discovery(projects, win, options, sdk_path, solution_file_path)
-  local client = require("easy-dotnet.test-runner.rpc")()
+  local client = require("easy-dotnet.test-runner.rpc")(M._server.pipe_name)
 
   ---@param i DotnetProject
   local project_jobs = vim.tbl_map(function(i)
@@ -345,10 +348,9 @@ local function start_MTP_discovery_for_project(value, win, options, solution_fil
   win.tree.children[project.name] = project
   win.refreshTree()
 
-  local client = require("easy-dotnet.test-runner.rpc")()
+  local client = require("easy-dotnet.test-runner.rpc")(M._server.pipe_name)
 
   local function handle_rpc_response(response)
-    vim.print(response)
     if response.error then
       --TODO: proper error handling
       vim.schedule(function() vim.notify(string.format("[%s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
