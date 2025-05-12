@@ -92,7 +92,7 @@ M.picker = function(bufnr, options, on_select_cb, title, autopick, apply_numerat
   elseif active_picker == "snacks" then
     return require("easy-dotnet.picker._snacks").picker(options, on_select_cb, title, autopick, apply_numeration)
   else
-    return require("easy-dotnet.picker._base").picker(bufnr, options, on_select_cb, title, autopick, apply_numeration)
+    return require("easy-dotnet.picker._base").picker(bufnr, options, on_select_cb, title, autopick)
   end
 end
 
@@ -109,7 +109,7 @@ M.pick_sync = function(bufnr, options, title, autopick, apply_numeration)
   elseif active_picker == "snacks" then
     return require("easy-dotnet.picker._snacks").pick_sync(options, title, autopick, apply_numeration)
   else
-    return require("easy-dotnet.picker._base").pick_sync(bufnr, options, title, autopick, apply_numeration)
+    return require("easy-dotnet.picker._base").pick_sync(bufnr, options, title, autopick)
   end
 end
 
