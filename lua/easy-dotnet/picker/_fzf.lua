@@ -126,9 +126,9 @@ M.picker = function(_, options, on_select_cb, title, autopick, apply_numeration)
     actions = {
       ["default"] = function(selected)
         local selected_value = nil
-        for _, option in ipairs(options) do
-          if option.display == selected[1] then
-            selected_value = option
+        for i, display_text in ipairs(fzf_options) do
+          if display_text == selected[1] then
+            selected_value = options[i]
             break
           end
         end
