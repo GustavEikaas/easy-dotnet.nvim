@@ -73,43 +73,37 @@ M.preview_picker = function(bufnr, options, on_select_cb, title, previewer, get_
   elseif active_picker == "telescope" then
     return require("easy-dotnet.picker._telescope").preview_picker(bufnr, options, on_select_cb, title, previewer)
   elseif active_picker == "snacks" then
-    return require("easy-dotnet.picker._snacks").preview_picker(options, on_select_cb, title, get_secret_path, readFile)
+    return require("easy-dotnet.picker._snacks").preview_picker(bufnr, options, on_select_cb, title, get_secret_path, readFile)
   else
     return require("easy-dotnet.picker._base").preview_picker(bufnr, options, on_select_cb, title, previewer)
   end
 end
 
-M.picker = function(bufnr, options, on_select_cb, title, autopick, apply_numeration)
-  if autopick == nil then autopick = true end
-  if apply_numeration == nil then apply_numeration = true end
-
+M.picker = function(bufnr, options, on_select_cb, title, autopick)
   local active_picker = get_active_picker()
 
   if active_picker == "fzf" then
-    return require("easy-dotnet.picker._fzf").picker(bufnr, options, on_select_cb, title, autopick, apply_numeration)
+    return require("easy-dotnet.picker._fzf").picker(bufnr, options, on_select_cb, title, autopick)
   elseif active_picker == "telescope" then
-    return require("easy-dotnet.picker._telescope").picker(bufnr, options, on_select_cb, title, autopick, apply_numeration)
+    return require("easy-dotnet.picker._telescope").picker(bufnr, options, on_select_cb, title, autopick)
   elseif active_picker == "snacks" then
-    return require("easy-dotnet.picker._snacks").picker(options, on_select_cb, title, autopick, apply_numeration)
+    return require("easy-dotnet.picker._snacks").picker(bufnr, options, on_select_cb, title, autopick)
   else
-    return require("easy-dotnet.picker._base").picker(bufnr, options, on_select_cb, title, autopick, apply_numeration)
+    return require("easy-dotnet.picker._base").picker(bufnr, options, on_select_cb, title, autopick)
   end
 end
 
-M.pick_sync = function(bufnr, options, title, autopick, apply_numeration)
-  if autopick == nil then autopick = true end
-  if apply_numeration == nil then apply_numeration = true end
-
+M.pick_sync = function(bufnr, options, title, autopick)
   local active_picker = get_active_picker()
 
   if active_picker == "fzf" then
-    return require("easy-dotnet.picker._fzf").pick_sync(bufnr, options, title, autopick, apply_numeration)
+    return require("easy-dotnet.picker._fzf").pick_sync(bufnr, options, title, autopick)
   elseif active_picker == "telescope" then
-    return require("easy-dotnet.picker._telescope").pick_sync(bufnr, options, title, autopick, apply_numeration)
+    return require("easy-dotnet.picker._telescope").pick_sync(bufnr, options, title, autopick)
   elseif active_picker == "snacks" then
-    return require("easy-dotnet.picker._snacks").pick_sync(options, title, autopick, apply_numeration)
+    return require("easy-dotnet.picker._snacks").pick_sync(bufnr, options, title, autopick)
   else
-    return require("easy-dotnet.picker._base").pick_sync(bufnr, options, title, autopick, apply_numeration)
+    return require("easy-dotnet.picker._base").pick_sync(bufnr, options, title, autopick)
   end
 end
 
