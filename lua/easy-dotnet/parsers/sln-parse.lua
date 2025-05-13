@@ -157,12 +157,16 @@ end
 function M.get_solutions()
   local sln_files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.sln$", depth = 5 })
   local slnx_files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.slnx$", depth = 5 })
+  local slnf_files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.slnf$", depth = 5 })
 
   local normalized = {}
   for _, value in ipairs(sln_files) do
     table.insert(normalized, value)
   end
   for _, value in ipairs(slnx_files) do
+    table.insert(normalized, value)
+  end
+  for _, value in ipairs(slnf_files) do
     table.insert(normalized, value)
   end
   return normalized
