@@ -5,7 +5,7 @@ local M = {
     ready = false,
     callbacks = {},
     wait = nil,
-    pipe_name = nil
+    pipe_name = nil,
   },
 }
 
@@ -67,7 +67,7 @@ local function start_server(win)
   local server_ready_prefix = "Named pipe server started: "
 
   local handle = vim.fn.jobstart({
-    "easydotnet"
+    "easydotnet",
     -- "C:/Users/gusta/repo/easy-dotnet-testrunner/EasyDotnet.Tool/publish/EasyDotnet.exe"
     -- "dotnet",
     -- "run",
@@ -82,6 +82,9 @@ local function start_server(win)
             local pipename = line:sub(#server_ready_prefix + 1)
             M._server.pipe_name = vim.trim(pipename)
             M._server.ready = true
+            M._server.client = require("easy-dotnet.test-runner.rpc-client")
+            M._server.client.setup({ pipe_path = [[\\.\pipe\EasyDotnetPipe_]], debug = true, auto_connect = true })
+            M._server.client.connect()
             server_started()
             for _, cb in ipairs(M._server.callbacks) do
               pcall(cb)
@@ -293,7 +296,7 @@ end
 ---@param sdk_path string
 ---@param solution_file_path string
 local function start_batch_vstest_discovery(projects, win, options, sdk_path, solution_file_path)
-  local client = require("easy-dotnet.test-runner.rpc")(M._server.pipe_name)
+  local client = M._server.client
 
   ---@param i DotnetProject
   local project_jobs = vim.tbl_map(function(i)
@@ -339,7 +342,7 @@ local function start_batch_vstest_discovery(projects, win, options, sdk_path, so
   end
 
   local vstest_dll = vim.fs.joinpath(sdk_path, "vstest.console.dll")
-  client.send_and_disconnect("vstest/discover", { vsTestPath = vstest_dll, projects = rpc_request }, handle_rpc_response)
+  client.request("vstest/discover", { vsTestPath = vstest_dll, projects = rpc_request }, handle_rpc_response)
 end
 
 ---@param value DotnetProject
@@ -350,7 +353,7 @@ local function start_MTP_discovery_for_project(value, win, options, solution_fil
   win.tree.children[project.name] = project
   win.refreshTree()
 
-  local client = require("easy-dotnet.test-runner.rpc")(M._server.pipe_name)
+  local client = M._server.client
 
   local function handle_rpc_response(response)
     if response.error then
@@ -369,7 +372,7 @@ local function start_MTP_discovery_for_project(value, win, options, solution_fil
 
   --TODO: linux compat
   local testPath = absolute_dll_path:gsub("%.dll", "." .. value.msbuild_props.outputType:lower())
-  client.send_and_disconnect("mtp/discover", { outFile = out_file, testExecutablePath = testPath }, handle_rpc_response)
+  client.request("mtp/discover", { outFile = out_file, testExecutablePath = testPath }, handle_rpc_response)
 end
 
 local function refresh_runner(options, win, solution_file_path, sdk_path)
