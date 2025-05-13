@@ -61,18 +61,6 @@ M.traverse_expanded = function(node, cb)
   end
 end
 
-
-M.traverse_filter = function (node, cb)
-  if not node then node = M.tree end
-  --HACK: handle no tree set
-  if not node.name then return end
-  cb(node)
-  for _, child_node in pairs(node.children or {}) do
-    local filterpass = M.filter == nil or (M.filter == child_node.icon or child_node.icon == "<Running>")
-    if filterpass then M.traverse_expanded(child_node, cb) end
-  end
-end
-
 ---@param id string
 ---@param type "Run" | "Discovery" | "Build" | "Server"
 ---@param subtask_count number | nil
