@@ -6,6 +6,7 @@ local M = {
     callbacks = {},
     wait = nil,
     pipe_name = nil,
+    client = nil
   },
 }
 
@@ -81,15 +82,19 @@ local function start_server(win)
           if line:find(server_ready_prefix, 1, true) then
             local pipename = line:sub(#server_ready_prefix + 1)
             M._server.pipe_name = vim.trim(pipename)
-            M._server.ready = true
             M._server.client = require("easy-dotnet.test-runner.rpc-client")
-            M._server.client.setup({ pipe_path = [[\\.\pipe\EasyDotnetPipe_]], debug = true, auto_connect = true })
-            M._server.client.connect()
-            server_started()
-            for _, cb in ipairs(M._server.callbacks) do
-              pcall(cb)
-            end
-            M._server.callbacks = {}
+            M._server.client.setup({ pipe_path = [[\\.\pipe\EasyDotnetPipe_]], debug = false })
+            M._server.client.connect(function()
+              M._server.ready = true
+              vim.schedule(function()
+                server_started()
+
+                for _, cb in ipairs(M._server.callbacks) do
+                  pcall(cb)
+                end
+                M._server.callbacks = {}
+              end)
+            end)
           end
         end
       end
@@ -342,7 +347,7 @@ local function start_batch_vstest_discovery(projects, win, options, sdk_path, so
   end
 
   local vstest_dll = vim.fs.joinpath(sdk_path, "vstest.console.dll")
-  client.request("vstest/discover", { vsTestPath = vstest_dll, projects = rpc_request }, handle_rpc_response)
+  coroutine.wrap(function() client.request("vstest/discover", { vsTestPath = vstest_dll, projects = rpc_request }, handle_rpc_response) end)()
 end
 
 ---@param value DotnetProject
@@ -372,7 +377,8 @@ local function start_MTP_discovery_for_project(value, win, options, solution_fil
 
   --TODO: linux compat
   local testPath = absolute_dll_path:gsub("%.dll", "." .. value.msbuild_props.outputType:lower())
-  client.request("mtp/discover", { outFile = out_file, testExecutablePath = testPath }, handle_rpc_response)
+
+  coroutine.wrap(function() client.request("mtp/discover", { outFile = out_file, testExecutablePath = testPath }, handle_rpc_response) end)()
 end
 
 local function refresh_runner(options, win, solution_file_path, sdk_path)

@@ -77,7 +77,6 @@ end
 
 local function get_test_result_handler(win, node, on_job_finished)
   return function(rpc_res)
-    vim.print(rpc_res)
     if rpc_res.error then
       --TODO: proper error handling
       vim.schedule(function() vim.notify(string.format("[%s]: %s", rpc_res.error.code, rpc_res.error.message), vim.log.levels.ERROR) end)
@@ -87,7 +86,6 @@ local function get_test_result_handler(win, node, on_job_finished)
 
     ---@type TestCase[]
     local test_results = vim.tbl_map(function(i) return vim.fn.json_decode(i) end, vim.fn.readfile(rpc_res.result))
-    vim.print(test_results)
     test_status_updater(test_results, win, node)
     on_job_finished()
   end
@@ -105,7 +103,6 @@ local function VsTest_Run(node, win)
   end)
 
   local on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
-  local client = require("easy-dotnet.test-runner.rpc")(require("easy-dotnet.test-runner.runner")._server.pipe_name)
   local mtp_out_file = vim.fs.normalize(os.tmpname())
 
   local filter = vim.tbl_map(function(test)
@@ -122,7 +119,15 @@ local function VsTest_Run(node, win)
   -- string OutFile
   local options = require("easy-dotnet.options").options.test_runner
   local vstest_dll = vim.fs.joinpath(options.sdk_path, "vstest.console.dll")
-  client.send_and_disconnect("vstest/run", { outFile = mtp_out_file, vsTestPath = vstest_dll, dllPath = testPath, testIds = filter }, get_test_result_handler(win, node, on_job_finished))
+  coroutine.wrap(
+    function()
+      require("easy-dotnet.test-runner.runner")._server.client.request(
+        "vstest/run",
+        { outFile = mtp_out_file, vsTestPath = vstest_dll, dllPath = testPath, testIds = filter },
+        get_test_result_handler(win, node, on_job_finished)
+      )
+    end
+  )()
 end
 ---@param node TestNode
 ---@param win table
@@ -136,7 +141,6 @@ local function MTP_Run(node, win)
   end)
 
   local on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
-  local client = require("easy-dotnet.test-runner.rpc")(require("easy-dotnet.test-runner.runner")._server.pipe_name)
   local mtp_out_file = vim.fs.normalize(os.tmpname())
 
   local filter = vim.tbl_map(function(test)
@@ -149,7 +153,16 @@ local function MTP_Run(node, win)
 
   local project = require("easy-dotnet.parsers.csproj-parse").get_project_from_project_file(node.cs_project_path)
   local testPath = project.get_dll_path():gsub("%.dll", "." .. project.msbuild_props.outputType:lower())
-  client.send_and_disconnect("mtp/run", { outFile = mtp_out_file, testExecutablePath = testPath, filter = filter }, get_test_result_handler(win, node, on_job_finished))
+
+  coroutine.wrap(
+    function()
+      require("easy-dotnet.test-runner.runner")._server.client.request(
+        "mtp/run",
+        { outFile = mtp_out_file, testExecutablePath = testPath, filter = filter },
+        get_test_result_handler(win, node, on_job_finished)
+      )
+    end
+  )()
 end
 
 ---@param node TestNode
