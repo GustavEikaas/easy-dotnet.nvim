@@ -1,4 +1,26 @@
+---@type StreamJsonRpc
 local M = {}
+
+---@meta
+
+---@class StreamJsonRpc
+---@field setup fun(opts: { pipe_path: string, debug?: boolean }): StreamJsonRpc
+---@field connect fun(cb: fun()): nil
+---@field connect_sync fun(): nil
+---@field request fun(method: DotnetPipeMethod, params: table, callback: fun(result: any?, error: any?)): integer|false
+---@field notify fun(method: string, params: table): boolean
+---@field disconnect fun(): boolean
+---@field is_connected fun(): boolean
+---@field on_server_request fun(method: string, callback: fun(params: table): any): StreamJsonRpc
+---@field on_server_notification fun(method: string, callback: fun(params: table)): StreamJsonRpc
+---@field _find_json_message fun(buffer: string): (integer?, integer?, table?)
+---@field _handle_message fun(message: table): nil
+
+---@alias DotnetPipeMethod
+---| "vstest/discover"
+---| "vstest/run"
+---| "mtp/discover"
+---| "mtp/run"
 
 local connection = nil
 local is_connected = false
