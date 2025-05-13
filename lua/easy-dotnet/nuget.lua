@@ -2,8 +2,10 @@ local M = {}
 
 local polyfills = require("easy-dotnet.polyfills")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
+local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
 local picker = require("easy-dotnet.picker")
 local logger = require("easy-dotnet.logger")
+local messages = require("easy-dotnet.error-messages")
 
 local function reverse_list(list)
   local reversed = {}
@@ -23,8 +25,12 @@ end
 local function get_project()
   local sln_file_path = sln_parse.find_solution_file()
   if not sln_file_path then
-    logger.error("No solution file found")
-    error("No solution file found")
+    local proj = csproj_parse.find_project_file()
+    if not proj then
+      logger.error(messages.no_project_definition_found)
+      error("")
+    end
+    return proj
   end
   local projects = sln_parse.get_projects_from_sln(sln_file_path)
   return picker.pick_sync(nil, projects, "Select a project", true).path
