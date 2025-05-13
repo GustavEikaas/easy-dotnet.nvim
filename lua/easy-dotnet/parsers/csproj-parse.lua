@@ -352,6 +352,7 @@ M.find_fsproj_file = function()
 end
 
 ---Tries to find a csproj or fsproj file
+---@return string | nil
 M.find_project_file = function() return M.find_csproj_file() or M.find_fsproj_file() end
 
 return M
