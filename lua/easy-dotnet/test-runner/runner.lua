@@ -6,7 +6,7 @@ local M = {
     callbacks = {},
     wait = nil,
     pipe_name = nil,
-    client = nil
+    client = nil,
   },
 }
 
@@ -67,6 +67,7 @@ local function start_server(win)
   local server_started = win.appendJob("server", "Server")
   local server_ready_prefix = "Named pipe server started: "
 
+  local is_negotiating = false
   local handle = vim.fn.jobstart({
     "easydotnet",
     -- "C:/Users/gusta/repo/easy-dotnet-testrunner/EasyDotnet.Tool/publish/EasyDotnet.exe"
@@ -77,18 +78,20 @@ local function start_server(win)
   }, {
     stdout_buffered = false,
     on_stdout = function(_, data, _)
+      if M._server.ready or is_negotiating then return end
       if data then
         for _, line in ipairs(data) do
           if line:find(server_ready_prefix, 1, true) then
             local pipename = line:sub(#server_ready_prefix + 1)
             M._server.pipe_name = vim.trim(pipename)
             M._server.client = require("easy-dotnet.test-runner.rpc-client")
-            M._server.client.setup({ pipe_path = [[\\.\pipe\EasyDotnetPipe_]], debug = false })
+            local full_pipe_path = [[\\.\pipe\]] .. M._server.pipe_name
+            is_negotiating = true
+            M._server.client.setup({ pipe_path = full_pipe_path, debug = false })
             M._server.client.connect(function()
               M._server.ready = true
               vim.schedule(function()
                 server_started()
-
                 for _, cb in ipairs(M._server.callbacks) do
                   pcall(cb)
                 end
