@@ -138,9 +138,6 @@ M.picker = function(bufnr, options, on_select_cb, title, autopick, apply_numerat
     })
   end
 
-  require("snacks").debug(options)
-  -- require("snacks").debug(options_for_finder)
-
   local picker = require("telescope.pickers").new(bufnr, {
     prompt_title = title,
     finder = require("telescope.finders").new_table({
