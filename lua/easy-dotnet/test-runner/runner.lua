@@ -85,7 +85,9 @@ local function start_server(win)
             local pipename = line:sub(#server_ready_prefix + 1)
             M._server.pipe_name = vim.trim(pipename)
             M._server.client = require("easy-dotnet.test-runner.rpc-client")
-            local full_pipe_path = [[\\.\pipe\]] .. M._server.pipe_name
+            -- local full_pipe_path = [[\\.\pipe\]] .. M._server.pipe_name
+            -- local full_pipe_path = '/tmp/CoreFxPipe_'..M._server.pipe_name
+            local full_pipe_path = "/tmp/CoreFxPipe_EasyDotnetPipe_744ebbc165604c64a811a929cbab0ef5"
             is_negotiating = true
             M._server.client.setup({ pipe_path = full_pipe_path, debug = false })
             M._server.client.connect(function()
@@ -379,7 +381,8 @@ local function start_MTP_discovery_for_project(value, win, options, solution_fil
   local absolute_dll_path = value.get_dll_path()
 
   --TODO: linux compat
-  local testPath = absolute_dll_path:gsub("%.dll", "." .. value.msbuild_props.outputType:lower())
+  -- local testPath = absolute_dll_path:gsub("%.dll", "." .. value.msbuild_props.outputType:lower())
+  local testPath = absolute_dll_path:gsub("%.dll", "")
 
   coroutine.wrap(function() client.request("mtp/discover", { outFile = out_file, testExecutablePath = testPath }, handle_rpc_response) end)()
 end
