@@ -31,7 +31,7 @@ local msbuild_properties = {
 
 ---@param project_path string path to csproj file
 ---@param target_framework string | nil which target framework to query for e.g 'net9.0'
----@return table
+---@return string
 local function build_msbuild_command(project_path, target_framework)
   local cmd = { "dotnet", "msbuild", vim.fn.shellescape(project_path) }
   for _, prop in ipairs(msbuild_properties) do
@@ -39,7 +39,7 @@ local function build_msbuild_command(project_path, target_framework)
   end
   if target_framework then table.insert(cmd, "-p:TargetFramework=" .. target_framework) end
 
-  return cmd
+  return table.concat(cmd, " ")
 end
 
 local function normalized_path_or_nil(val) return val and vim.fs.normalize(val) or val end
