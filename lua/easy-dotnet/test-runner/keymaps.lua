@@ -1,5 +1,6 @@
 local window = require("easy-dotnet.test-runner.window")
 local logger = require("easy-dotnet.logger")
+local extensions = require("easy-dotnet.extensions")
 
 ---@class RPC_RunRequest
 ---@field testExecutablePath string Path to the test runner binary
@@ -149,7 +150,7 @@ local function MTP_Run(node, win)
   end, tests)
 
   local project = require("easy-dotnet.parsers.csproj-parse").get_project_from_project_file(node.cs_project_path)
-  local testPath = project.get_dll_path():gsub("%.dll", "." .. project.msbuild_props.outputType:lower())
+  local testPath = project.get_dll_path():gsub("%.dll", extensions.isWindows() and "." .. project.msbuild_props.outputType:lower() or "")
 
   coroutine.wrap(function()
     ---@type StreamJsonRpc | nil
