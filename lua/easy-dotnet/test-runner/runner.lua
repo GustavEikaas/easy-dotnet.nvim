@@ -381,6 +381,11 @@ local function start_MTP_discovery_for_project(value, win, options, solution_fil
   end)()
 end
 
+local function file_exists(path)
+  local stat = vim.loop.fs_stat(path)
+  return stat and stat.type == "file"
+end
+
 local function refresh_runner(options, win, solution_file_path, sdk_path)
   --TODO: refactor, basically just want to prevent refresh if discovery, building or running is already in progress
   if #win.jobs > 0 and not (#win.jobs == 1 and win.jobs[1].id == "server") then
@@ -420,6 +425,26 @@ local function refresh_runner(options, win, solution_file_path, sdk_path)
   }
 
   local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(project) return project.isTestProject end)
+
+  ---@param x DotnetProject
+  local unbuilt_projects = vim.tbl_filter(function(x) return not file_exists(x.get_dll_path()) end, test_projects)
+  if #unbuilt_projects > 0 then
+    local complete = win.appendJob("build", "Build")
+    local co = coroutine.running()
+    local command = string.format("dotnet build %s", solution_file_path)
+    vim.fn.jobstart(command, {
+      on_exit = function(_, b, _)
+        coroutine.resume(co)
+        if b == 0 then
+          logger.info("Built successfully")
+        else
+          logger.error("Build failed")
+        end
+      end,
+    })
+    coroutine.yield()
+    complete()
+  end
 
   ---@param i DotnetProject
   local vs_test_projects = vim.tbl_filter(function(i) return not i.isTestPlatformProject end, test_projects)
