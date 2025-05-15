@@ -43,7 +43,6 @@ local polyfills = require("easy-dotnet.polyfills")
 ---@field viewmode string
 ---@field enable_buffer_test_execution boolean
 ---@field noBuild boolean
----@field noRestore boolean
 ---@field icons TestRunnerIcons
 ---@field mappings TestRunnerMappings
 ---@field additional_args table
@@ -109,7 +108,6 @@ local M = {
       viewmode = "split",
       enable_buffer_test_execution = true,
       noBuild = true,
-      noRestore = true,
       icons = {
         passed = "",
         skipped = "",

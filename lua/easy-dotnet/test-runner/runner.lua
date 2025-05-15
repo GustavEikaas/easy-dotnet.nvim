@@ -390,15 +390,9 @@ local function refresh_runner(options, win, solution_file_path, sdk_path)
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
   local async = require("easy-dotnet.async-utils")
 
-  if options.noRestore == false then
-    logger.info("Restoring")
-    local _, restore_err, restore_code = async.await(async.job_run_async)({ "dotnet", "restore", solution_file_path })
-
-    if restore_code ~= 0 then error("Restore failed " .. vim.inspect(restore_err)) end
-  end
   if options.noBuild == false then
     logger.info("Building")
-    local _, build_err, build_code = async.await(async.job_run_async)({ "dotnet", "build", solution_file_path, "--no-restore" })
+    local _, build_err, build_code = async.await(async.job_run_async)({ "dotnet", "build", solution_file_path })
     if build_code ~= 0 then error("Build failed " .. vim.inspect(build_err)) end
   end
 
@@ -436,7 +430,9 @@ local function refresh_runner(options, win, solution_file_path, sdk_path)
     for _, value in ipairs(mtp_projects) do
       start_MTP_discovery_for_project(value, win, options, solution_file_path)
     end
-    if #vs_test_projects > 0 then start_batch_vstest_discovery(vs_test_projects, win, options, sdk_path, solution_file_path) end
+    for _, value in ipairs(vs_test_projects) do
+      start_batch_vstest_discovery({ value }, win, options, sdk_path, solution_file_path)
+    end
   end)
 
   win.refreshTree()
