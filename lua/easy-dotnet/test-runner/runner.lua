@@ -1,5 +1,10 @@
+local win = require("easy-dotnet.test-runner.render")
+local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
+local error_messages = require("easy-dotnet.error-messages")
+local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local logger = require("easy-dotnet.logger")
 local extensions = require("easy-dotnet.extensions")
+
 local M = {
   _server = {
     id = nil,
@@ -63,7 +68,7 @@ end
 ---@field line_number number | nil
 ---@field runtime string | nil
 
-local function start_server(win)
+local function start_server()
   if M._server.ready then return end
   local server_started = win.appendJob("server", "Server")
   local server_ready_prefix = "Named pipe server started: "
@@ -251,7 +256,7 @@ local function json_decode_out_file(file)
   return vim.tbl_map(function(line) return vim.fn.json_decode(line) end, contents)
 end
 
-local function register_rpc_discovered_tests(tests, project, options, win, on_job_finished)
+local function register_rpc_discovered_tests(tests, project, options, on_job_finished)
   if #tests == 0 then
     win.tree.children[project.name] = nil
     win.refreshTree()
@@ -293,11 +298,10 @@ local function register_rpc_discovered_tests(tests, project, options, win, on_jo
 end
 
 ---@param projects DotnetProject[]
----@param win table
 ---@param options table
 ---@param sdk_path string
 ---@param solution_file_path string
-local function start_batch_vstest_discovery(projects, win, options, sdk_path, solution_file_path)
+local function start_batch_vstest_discovery(projects, options, sdk_path, solution_file_path)
   ---@param i DotnetProject
   local project_jobs = vim.tbl_map(function(i)
     local project = create_test_node_from_dotnet_project(i, solution_file_path, options)
@@ -332,7 +336,7 @@ local function start_batch_vstest_discovery(projects, win, options, sdk_path, so
     for _, value in pairs(project_jobs) do
       local success = pcall(function()
         local tests = json_decode_out_file(value.out_file)
-        register_rpc_discovered_tests(tests, value.project, options, win, value.on_job_finished)
+        register_rpc_discovered_tests(tests, value.project, options, value.on_job_finished)
       end)
       if not success then
         logger.error("Failed to register discovered tests for " .. value.project.name)
@@ -350,7 +354,7 @@ local function start_batch_vstest_discovery(projects, win, options, sdk_path, so
 end
 
 ---@param value DotnetProject
-local function start_MTP_discovery_for_project(value, win, options, solution_file_path)
+local function start_MTP_discovery_for_project(value, options, solution_file_path)
   ---@type TestNode
   local project = create_test_node_from_dotnet_project(value, solution_file_path, options)
   local on_job_finished = win.appendJob(project.name, "Discovery")
@@ -366,7 +370,7 @@ local function start_MTP_discovery_for_project(value, win, options, solution_fil
     end
 
     local tests = json_decode_out_file(response.result)
-    register_rpc_discovered_tests(tests, project, options, win, on_job_finished)
+    register_rpc_discovered_tests(tests, project, options, on_job_finished)
   end
 
   local out_file = vim.fs.normalize(os.tmpname())
@@ -386,19 +390,11 @@ local function file_exists(path)
   return stat and stat.type == "file"
 end
 
-local function refresh_runner(options, win, solution_file_path, sdk_path)
+local function refresh_runner(options, solution_file_path, sdk_path)
   --TODO: refactor, basically just want to prevent refresh if discovery, building or running is already in progress
   if #win.jobs > 0 and not (#win.jobs == 1 and win.jobs[1].id == "server") then
     logger.warn("Cant refresh while waiting for pending jobs")
     return
-  end
-  local sln_parse = require("easy-dotnet.parsers.sln-parse")
-  local async = require("easy-dotnet.async-utils")
-
-  if options.noBuild == false then
-    logger.info("Building")
-    local _, build_err, build_code = async.await(async.job_run_async)({ "dotnet", "build", solution_file_path })
-    if build_code ~= 0 then error("Build failed " .. vim.inspect(build_err)) end
   end
 
   ---@type TestNode
@@ -428,7 +424,7 @@ local function refresh_runner(options, win, solution_file_path, sdk_path)
 
   ---@param x DotnetProject
   local unbuilt_projects = vim.tbl_filter(function(x) return not file_exists(x.get_dll_path()) end, test_projects)
-  if #unbuilt_projects > 0 then
+  if #unbuilt_projects > 0 or options.noBuild == false then
     local complete = win.appendJob("build", "Build")
     local co = coroutine.running()
     local command = string.format("dotnet build %s", solution_file_path)
@@ -453,10 +449,10 @@ local function refresh_runner(options, win, solution_file_path, sdk_path)
 
   M._server.wait(function()
     for _, value in ipairs(mtp_projects) do
-      start_MTP_discovery_for_project(value, win, options, solution_file_path)
+      start_MTP_discovery_for_project(value, options, solution_file_path)
     end
     for _, value in ipairs(vs_test_projects) do
-      start_batch_vstest_discovery({ value }, win, options, sdk_path, solution_file_path)
+      start_batch_vstest_discovery({ value }, options, sdk_path, solution_file_path)
     end
   end)
 
@@ -466,11 +462,6 @@ end
 ---@param options TestRunnerOptions
 ---@param sdk_path string
 local function open_runner(options, sdk_path)
-  local win = require("easy-dotnet.test-runner.render")
-  local sln_parse = require("easy-dotnet.parsers.sln-parse")
-  local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
-  local error_messages = require("easy-dotnet.error-messages")
-
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
   if solutionFilePath == nil then
     logger.error(error_messages.no_project_definition_found)
@@ -487,8 +478,8 @@ local function open_runner(options, sdk_path)
 
   if is_reused then return end
 
-  start_server(win)
-  refresh_runner(options, win, solutionFilePath, sdk_path)
+  start_server()
+  refresh_runner(options, solutionFilePath, sdk_path)
 end
 
 M.refresh = function(options, sdk_path, args)
@@ -496,15 +487,11 @@ M.refresh = function(options, sdk_path, args)
   sdk_path = sdk_path or require("easy-dotnet.options").options.get_sdk_path()
   args = args or { build = false }
 
-  local win = require("easy-dotnet.test-runner.render")
   if #win.jobs > 0 then
     logger.warn("Cant refresh while waiting for pending jobs")
     return
   end
 
-  local sln_parse = require("easy-dotnet.parsers.sln-parse")
-  local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
-  local error_messages = require("easy-dotnet.error-messages")
   local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
 
   if solutionFilePath == nil then
@@ -532,7 +519,7 @@ M.refresh = function(options, sdk_path, args)
 
   local is_active = win.buf ~= nil
   if not is_active then error("Testrunner not initialized") end
-  refresh_runner(options, win, solutionFilePath, sdk_path)
+  refresh_runner(options, solutionFilePath, sdk_path)
 end
 
 M.runner = function(options, sdk_path)
