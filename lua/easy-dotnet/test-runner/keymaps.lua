@@ -129,8 +129,10 @@ local function VsTest_Run(node, win)
     return test.id
   end, tests)
 
+  --TODO: bug if we do this then multi-targeting breaks or we have do to some complicated lookups
   local project = require("easy-dotnet.parsers.csproj-parse").get_project_from_project_file(node.cs_project_path)
-  local testPath = project.get_dll_path()
+  local project_framework = project.get_specific_runtime_definition(node.framework)
+  local testPath = project_framework.get_dll_path()
 
   -- string VsTestPath,
   -- string DllPath,
@@ -167,8 +169,11 @@ local function MTP_Run(node, win)
     }
   end, tests)
 
+  --TODO: bug if we do this then multi-targeting breaks or we have do to some complicated lookups
   local project = require("easy-dotnet.parsers.csproj-parse").get_project_from_project_file(node.cs_project_path)
-  local testPath = project.get_dll_path():gsub("%.dll", extensions.isWindows() and "." .. project.msbuild_props.outputType:lower() or "")
+  local project_framework = project.get_specific_runtime_definition(node.framework)
+
+  local testPath = project_framework.get_dll_path():gsub("%.dll", extensions.isWindows() and "." .. project_framework.msbuild_props.outputType:lower() or "")
 
   coroutine.wrap(function()
     ---@type StreamJsonRpc | nil
