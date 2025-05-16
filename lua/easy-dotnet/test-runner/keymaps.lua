@@ -86,7 +86,7 @@ local function get_test_result_handler(win, node, on_job_finished)
     end
 
     ---@type TestCase[]
-    local test_results = vim.tbl_map(function(i) return vim.fn.json_decode(i) end, vim.fn.readfile(rpc_res.result))
+    local test_results = vim.tbl_map(function(i) return vim.fn.json_decode(i) end, vim.fn.readfile(rpc_res.result.outFile))
     test_status_updater(test_results, win, node)
     on_job_finished()
   end

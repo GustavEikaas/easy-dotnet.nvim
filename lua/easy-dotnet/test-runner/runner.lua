@@ -369,7 +369,7 @@ local function start_MTP_discovery_for_project(value, options, solution_file_pat
       return
     end
 
-    local tests = json_decode_out_file(response.result)
+    local tests = json_decode_out_file(response.result.outFile, value.name)
     register_rpc_discovered_tests(tests, project, options, on_job_finished)
   end
 
