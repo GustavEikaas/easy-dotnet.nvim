@@ -251,11 +251,11 @@ local function json_decode_out_file(file)
   local ok, contents = pcall(vim.fn.readfile, file)
 
   if not ok then
-    logger.warn("File does not exist " .. file)
+    logger.warn("File does not exist ")
     contents = { "[]" }
   end
   if #contents == 1 and contents[1] == "[]" then return {} end
-  -- pcall(vim.loop.fs_unlink, file)
+  pcall(vim.loop.fs_unlink, file)
   ---@type RPC_DiscoveredTest[]
   return vim.tbl_map(function(line) return vim.fn.json_decode(line) end, contents)
 end
