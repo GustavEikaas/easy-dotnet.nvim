@@ -249,9 +249,13 @@ end
 ---@return RPC_DiscoveredTest[]
 local function json_decode_out_file(file)
   local ok, contents = pcall(vim.fn.readfile, file)
-  if not ok then contents = { "[]" } end
+
+  if not ok then
+    logger.warn("File does not exist " .. file)
+    contents = { "[]" }
+  end
   if #contents == 1 and contents[1] == "[]" then return {} end
-  pcall(vim.loop.fs_unlink, file)
+  -- pcall(vim.loop.fs_unlink, file)
   ---@type RPC_DiscoveredTest[]
   return vim.tbl_map(function(line) return vim.fn.json_decode(line) end, contents)
 end
@@ -268,11 +272,9 @@ local function register_rpc_discovered_tests(tests, project, options, on_job_fin
   local converted = vim.tbl_map(
     ---@param discovered_test RPC_DiscoveredTest
     function(discovered_test)
-      --HACK: This is necessary for MSTest cases where name is not a namespace.classname but rather classname
-      local name = discovered_test.name:find("%.") and discovered_test.name or discovered_test.namespace or ""
       ---@type Test
       return {
-        namespace = name,
+        namespace = discovered_test.name,
         file_path = discovered_test.filePath,
         line_number = discovered_test.lineNumber,
         id = discovered_test.id,
@@ -292,9 +294,18 @@ local function register_rpc_discovered_tests(tests, project, options, on_job_fin
     win.tree.children[project.name] = project_tree
   else
     win.tree.children[project.name] = nil
+    if #converted > 0 then logger.error(string.format("%s returned %d tests but constructing a tree was not successful", project.name, #converted)) end
   end
   win.refreshTree()
   on_job_finished()
+end
+
+local function dump_to_file(obj, filepath)
+  local serialized = vim.inspect(obj)
+  local f = io.open(filepath, "w")
+  if not f then error("Could not open file: " .. filepath) end
+  f:write(serialized)
+  f:close()
 end
 
 ---@param projects DotnetProject[]
@@ -323,10 +334,16 @@ local function start_batch_vstest_discovery(projects, options, sdk_path, solutio
     }
   end, project_jobs)
 
+  ---@param response RPC_Response
   local function handle_rpc_response(response)
     if response.error then
-      --TODO: proper error handling
       vim.schedule(function() vim.notify(string.format("[%s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
+      if response.error.data then
+        local file = vim.fs.normalize(os.tmpname())
+        dump_to_file(response, file)
+        logger.error("Crash dump written at " .. file)
+      end
+
       for _, value in pairs(project_jobs) do
         value.on_job_finished()
       end
@@ -363,8 +380,12 @@ local function start_MTP_discovery_for_project(value, options, solution_file_pat
 
   local function handle_rpc_response(response)
     if response.error then
-      --TODO: proper error handling
       vim.schedule(function() vim.notify(string.format("[%s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
+      if response.error.data then
+        local file = vim.fs.normalize(os.tmpname())
+        dump_to_file(response, file)
+        logger.error("Crash dump written at " .. file)
+      end
       on_job_finished()
       return
     end
