@@ -167,7 +167,8 @@ local function build_cache_key(project_file_path, target_framework) return targe
 ---@param target_framework string | nil which target framework to query for e.g 'net9.0'
 ---@param on_finished fun(props: MsbuildProperties)? optional callback
 function M.preload_msbuild_properties(project_file_path, on_finished, target_framework)
-  if not project_file_path then error("Project file path cannot be nil") end
+  assert(project_file_path, "Project file path cannot be nil")
+  -- if not project_file_path then error("Project file path cannot be nil") end
   local cache_key = build_cache_key(project_file_path, target_framework)
   local maybe_cached = msbuild_cache[cache_key]
   if maybe_cached ~= nil then
