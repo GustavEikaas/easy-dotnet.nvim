@@ -37,32 +37,32 @@ local M = {
 }
 
 ---Traverses a tree from the given node, giving a callback for every item
----@param tree TestNode | nil
+---@param node TestNode | nil
 ---@param cb function
-M.traverse = function(tree, cb)
-  if not tree then tree = M.tree end
+M.traverse = function(node, cb)
+  if not node then node = M.tree end
   --HACK: handle no tree set
-  if not tree.name then return end
+  if not node.name then return end
 
-  cb(tree)
-  for _, node in pairs(tree.children or {}) do
-    M.traverse(node, cb)
+  cb(node)
+  for _, child_node in pairs(node.children or {}) do
+    M.traverse(child_node, cb)
   end
 end
 
-M.traverse_expanded = function(tree, cb)
-  if not tree then tree = M.tree end
+M.traverse_expanded = function(node, cb)
+  if not node then node = M.tree end
   --HACK: handle no tree set
-  if not tree.name then return end
-  cb(tree)
-  for _, node in pairs(tree.children or {}) do
-    local filterpass = M.filter == nil or (M.filter == node.icon or node.icon == "<Running>")
-    if tree.expanded and filterpass then M.traverse_expanded(node, cb) end
+  if not node.name then return end
+  cb(node)
+  for _, child_node in pairs(node.children or {}) do
+    local filterpass = M.filter == nil or (M.filter == child_node.icon or child_node.icon == "<Running>")
+    if node.expanded and filterpass then M.traverse_expanded(child_node, cb) end
   end
 end
 
 ---@param id string
----@param type "Run" | "Discovery" | "Build"
+---@param type "Run" | "Discovery" | "Build" | "Server"
 ---@param subtask_count number | nil
 function M.appendJob(id, type, subtask_count)
   local job = {
@@ -97,7 +97,12 @@ function M.redraw_virtual_text()
     vim.api.nvim_buf_set_extmark(M.buf, ns_id, 0, 0, {
       virt_text = {
         {
-          string.format("%s %s/%s", job_type == "Run" and "Running" or job_type == "Discovery" and "Discovering" or "Building", completed_count, total_subtask_count),
+          string.format(
+            "%s %s/%s",
+            job_type == "Run" and "Running" or job_type == "Discovery" and "Discovering" or job_type == "Build" and "Building" or "Starting server",
+            completed_count,
+            total_subtask_count
+          ),
           "Character",
         },
       },

@@ -142,7 +142,6 @@ Although not *required* by the plugin, it is highly recommended to install one o
         viewmode = "float",
         enable_buffer_test_execution = true, --Experimental, run tests directly from buffer
         noBuild = true,
-        noRestore = true,
           icons = {
             passed = "",
             skipped = "",

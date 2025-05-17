@@ -158,8 +158,9 @@ local function complete_command(arg_lead, cmdline)
 end
 
 local function generate_absolute_path_for_project(path, slnpath)
+  local base = vim.fs.normalize(vim.fn.getcwd())
   local dir = vim.fs.normalize(vim.fs.dirname(slnpath))
-  local res = vim.fs.normalize(polyfills.fs.joinpath(dir, vim.fs.normalize(path)))
+  local res = vim.fs.normalize(polyfills.fs.joinpath(base, dir, vim.fs.normalize(path)))
   return res
 end
 
