@@ -12,6 +12,32 @@ local error_messages = require("easy-dotnet.error-messages")
 local default_manager = require("easy-dotnet.default-manager")
 local polyfills = require("easy-dotnet.polyfills")
 
+local function get_build_log_path()
+  local data_dir = require("easy-dotnet.constants").get_data_directory()
+  local logPath = polyfills.fs.joinpath(data_dir, "build.log")
+  return logPath
+end
+
+local function build_log_to_buffer()
+  local logPath = get_build_log_path()
+  local file = io.open(logPath, "r")
+  if not file then
+    print("No build log found " .. logPath)
+    return
+  end
+
+  local content = {}
+  for line in file:lines() do
+    table.insert(content, line)
+  end
+
+  file:close()
+
+  local build_buf = vim.api.nvim_create_buf(true, true)
+  vim.api.nvim_buf_set_lines(build_buf, 0, -1, true, content)
+  vim.api.nvim_win_set_buf(0, build_buf)
+end
+
 local function select_project(solution_file_path, cb, use_default)
   local default = default_manager.check_default_project(solution_file_path, "build")
   if default ~= nil and use_default == true then return cb(default) end
@@ -93,7 +119,7 @@ local function populate_quickfix_from_file(filename)
   vim.fn.setqflist(quickfix_list)
 
   -- Open the quickfix window
-  vim.cmd("copen")
+  --vim.cmd("copen")
 end
 
 ---@param use_default boolean
@@ -106,8 +132,7 @@ M.build_project_quickfix = function(use_default, dotnet_args)
     logger.error("Build already pending...")
     return
   end
-  local data_dir = require("easy-dotnet.constants").get_data_directory()
-  local logPath = polyfills.fs.joinpath(data_dir, "build.log")
+  local logPath = get_build_log_path()
 
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
@@ -146,6 +171,7 @@ M.build_project_quickfix = function(use_default, dotnet_args)
           spinner:stop_spinner("Built successfully")
         else
           spinner:stop_spinner("Build failed", vim.log.levels.ERROR)
+          build_log_to_buffer()
           populate_quickfix_from_file(logPath)
         end
       end,
