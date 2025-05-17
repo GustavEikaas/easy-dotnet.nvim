@@ -556,10 +556,17 @@ M.refresh = function(options, sdk_path, args)
   refresh_runner(options, solutionFilePath, sdk_path)
 end
 
+local function run_with_traceback(func)
+  local co = coroutine.create(func)
+  local ok, err = coroutine.resume(co)
+
+  if not ok then error(debug.traceback(co, err), 0) end
+end
+
 M.runner = function(options, sdk_path)
   options = options or require("easy-dotnet.options").options.test_runner
   sdk_path = sdk_path or require("easy-dotnet.options").options.get_sdk_path()
-  coroutine.wrap(function() open_runner(options, sdk_path) end)()
+  run_with_traceback(function() open_runner(options, sdk_path) end)
 end
 
 return M

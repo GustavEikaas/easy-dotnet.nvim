@@ -3,6 +3,9 @@ local logger = require("easy-dotnet.logger")
 local M = {}
 
 local function generate_absolute_path_for_project(path, slnpath)
+  if not path then
+    error("path cannot be nil")
+  end
   local base = vim.fs.normalize(vim.fn.getcwd())
   local dir = vim.fs.normalize(vim.fs.dirname(slnpath))
   local res = vim.fs.normalize(polyfills.fs.joinpath(base, dir, vim.fs.normalize(path)))
@@ -130,7 +133,7 @@ function M.get_projects_from_slnx(solution_file_path, filter_fn)
   end, file_contents)
 
   polyfills.iter(project_lines):each(function(proj_path)
-    local _, _, path = proj_path:match(regexp)
+    local path = proj_path:match(regexp)
     local project_file_path = generate_absolute_path_for_project(path, solution_file_path)
     require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path)
   end)
