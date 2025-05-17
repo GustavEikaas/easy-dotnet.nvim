@@ -31,6 +31,7 @@ local M = {}
 ---@field error? RPC_Error
 
 ---@alias DotnetPipeMethod
+---| "initialize"
 ---| "vstest/discover"
 ---| "vstest/run"
 ---| "mtp/discover"

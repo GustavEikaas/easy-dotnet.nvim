@@ -88,13 +88,26 @@ local function start_server()
             is_negotiating = true
             M._server.client.setup({ pipe_path = full_pipe_path, debug = false })
             M._server.client.connect(function()
-              M._server.ready = true
               vim.schedule(function()
-                server_started()
-                for _, cb in ipairs(M._server.callbacks) do
-                  pcall(cb)
-                end
-                M._server.callbacks = {}
+                M._server.client.request("initialize", { request = { clientInfo = { name = "EasyDotnet", version = "0.0.5" } } }, function(response)
+                  if response.error then
+                    vim.schedule(function() vim.notify(string.format("[%s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
+                    M._server.ready = false
+                    is_negotiating = false
+                    server_started()
+                    return
+                  end
+
+                  M._server.ready = true
+                  vim.schedule(function()
+                    server_started()
+                    for _, cb in ipairs(M._server.callbacks) do
+                      pcall(cb)
+                    end
+                    is_negotiating = false
+                    M._server.callbacks = {}
+                  end)
+                end)
               end)
             end)
           end
