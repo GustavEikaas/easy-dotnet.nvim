@@ -21,9 +21,7 @@ function M.get(path, value_factory)
   local mtime = stat.mtime.sec
   local entry = cache[path]
 
-  if entry and entry.mtime == mtime then
-    return entry.value
-  end
+  if entry and entry.mtime == mtime then return entry.value end
 
   local lines = vim.fn.readfile(path)
   local value = value_factory(lines)
