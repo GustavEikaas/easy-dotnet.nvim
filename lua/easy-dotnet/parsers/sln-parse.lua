@@ -3,9 +3,7 @@ local logger = require("easy-dotnet.logger")
 local M = {}
 
 local function generate_absolute_path_for_project(path, slnpath)
-  if not path then
-    error("path cannot be nil")
-  end
+  assert(path, "path cannot be nil")
   local base = vim.fs.normalize(vim.fn.getcwd())
   local dir = vim.fs.normalize(vim.fs.dirname(slnpath))
   local res = vim.fs.normalize(polyfills.fs.joinpath(base, dir, vim.fs.normalize(path)))

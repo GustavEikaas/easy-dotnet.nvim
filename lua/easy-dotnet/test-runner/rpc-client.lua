@@ -12,7 +12,6 @@ local M = {}
 ---@field disconnect fun(): boolean
 ---@field is_connected fun(): boolean
 
-
 ---@class RPC_Error
 ---@field code number
 ---@field message string
