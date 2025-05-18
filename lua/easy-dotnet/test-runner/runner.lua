@@ -51,6 +51,38 @@ local function count_segments(path)
   return count
 end
 
+local function flatten_namespaces(node)
+  for _, child in pairs(node.children or {}) do
+    flatten_namespaces(child)
+  end
+
+  while true do
+    local keys = vim.tbl_keys(node.children or {})
+
+    if #keys == 1 then
+      local only_key = keys[1]
+      local child = node.children[only_key]
+
+      if child.type == "namespace" and node.type == "namespace" then
+        local merged = vim.deepcopy(child)
+        merged.name = node.name .. "." .. child.name
+        merged.namespace = child.namespace
+
+        for k in pairs(node) do
+          node[k] = nil
+        end
+        for k, v in pairs(merged) do
+          node[k] = v
+        end
+      else
+        break
+      end
+    else
+      break
+    end
+  end
+end
+
 ---@param root TestNode Treenode
 ---@param path string E.X neovimdebugproject.test.helpers
 ---@param has_arguments boolean does the test class use classdata,inlinedata etc. Add_ShouldReturnSum(a: -1, b: 1, expected: 0) == true
@@ -129,6 +161,10 @@ local function generate_tree(tests, options, project)
         is_MTP = project.is_MTP,
       }
     end
+  end
+
+  for _, child in pairs(project.children) do
+    flatten_namespaces(child)
   end
 
   return project
