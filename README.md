@@ -36,10 +36,10 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
    - [Running tests from buffer](#running-tests-directly-from-buffer)
    - [Debugging tests from buffer](#debugging-tests-directly-from-buffer)
 9. [Project view](#project-view)
-   - [Features](#features)
-   - [Keymaps](#keymaps)
+   - [Features](#features-1)
+   - [Keymaps](#keymaps-1)
 10. [Outdated](#outdated)
-    - [Requirements](#requirements)
+    - [Requirements](#requirements-1)
 11. [Add](#add)
     - [Add package](#add-package)
 12. [Project mappings](#project-mappings)
@@ -158,7 +158,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
           run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
           filter_failed_tests = { lhs = "<leader>fe", desc = "filter failed tests" },
           debug_test = { lhs = "<leader>d", desc = "debug test" },
-          go_to_file = { lhs = "g", desc = "got to file" },
+          go_to_file = { lhs = "g", desc = "go to file" },
           run_all = { lhs = "<leader>R", desc = "run all tests" },
           run = { lhs = "<leader>r", desc = "run test" },
           peek_stacktrace = { lhs = "<leader>p", desc = "peek stacktrace of failed test" },
