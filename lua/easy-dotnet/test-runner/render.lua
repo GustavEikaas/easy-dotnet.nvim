@@ -45,8 +45,10 @@ M.traverse = function(node, cb)
   if not node.name then return end
 
   cb(node)
-  for _, child_node in pairs(node.children or {}) do
-    M.traverse(child_node, cb)
+  local keys = vim.tbl_keys(node.children or {})
+  table.sort(keys)
+  for _, key in ipairs(keys) do
+    M.traverse(node.children[key], cb)
   end
 end
 
@@ -55,7 +57,10 @@ M.traverse_expanded = function(node, cb)
   --HACK: handle no tree set
   if not node.name then return end
   cb(node)
-  for _, child_node in pairs(node.children or {}) do
+  local keys = vim.tbl_keys(node.children or {})
+  table.sort(keys)
+  for _, key in ipairs(keys) do
+    local child_node = node.children[key]
     local filterpass = M.filter == nil or (M.filter == child_node.icon or child_node.icon == "<Running>")
     if node.expanded and filterpass then M.traverse_expanded(child_node, cb) end
   end
