@@ -191,6 +191,10 @@ local function flatten_namespaces(node)
         local merged = vim.deepcopy(child)
         merged.name = node.name .. "." .. child.name
         merged.namespace = child.namespace
+        merged.indent = node.indent
+        for _, value in pairs(merged.children) do
+          value.indent = merged.indent + 2
+        end
 
         for k in pairs(node) do
           node[k] = nil
