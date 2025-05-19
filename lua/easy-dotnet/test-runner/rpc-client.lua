@@ -31,6 +31,7 @@ local M = {}
 
 ---@alias DotnetPipeMethod
 ---| "initialize"
+---| "msbuild/build"
 ---| "vstest/discover"
 ---| "vstest/run"
 ---| "mtp/discover"

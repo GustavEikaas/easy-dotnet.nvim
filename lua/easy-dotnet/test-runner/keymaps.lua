@@ -122,7 +122,6 @@ local function VsTest_Run(node, win)
   end)
 
   local on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
-  local mtp_out_file = vim.fs.normalize(os.tmpname())
 
   local filter = vim.tbl_map(function(test)
     ---@type RunRequestNode
@@ -134,17 +133,13 @@ local function VsTest_Run(node, win)
   local project_framework = project.get_specific_runtime_definition(node.framework)
   local testPath = project_framework.get_dll_path()
 
-  -- string VsTestPath,
-  -- string DllPath,
-  -- Guid[] TestIds,
-  -- string OutFile
   local options = require("easy-dotnet.options").options.test_runner
   local vstest_dll = vim.fs.joinpath(options.sdk_path, "vstest.console.dll")
   coroutine.wrap(function()
     ---@type StreamJsonRpc | nil
     local client = require("easy-dotnet.test-runner.runner")._server.client
     if not client then error("RPC client not initialized") end
-    client.request("vstest/run", { outFile = mtp_out_file, vsTestPath = vstest_dll, dllPath = testPath, testIds = filter }, get_test_result_handler(win, node, on_job_finished))
+    client.request("vstest/run", { vsTestPath = vstest_dll, dllPath = testPath, testIds = filter }, get_test_result_handler(win, node, on_job_finished))
   end)()
 end
 ---@param node TestNode
@@ -159,7 +154,6 @@ local function MTP_Run(node, win)
   end)
 
   local on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
-  local mtp_out_file = vim.fs.normalize(os.tmpname())
 
   local filter = vim.tbl_map(function(test)
     ---@type RunRequestNode
@@ -179,7 +173,7 @@ local function MTP_Run(node, win)
     ---@type StreamJsonRpc | nil
     local client = require("easy-dotnet.test-runner.runner")._server.client
     if not client then error("RPC client not initialized") end
-    client.request("mtp/run", { outFile = mtp_out_file, testExecutablePath = testPath, filter = filter }, get_test_result_handler(win, node, on_job_finished))
+    client.request("mtp/run", { testExecutablePath = testPath, filter = filter }, get_test_result_handler(win, node, on_job_finished))
   end)()
 end
 

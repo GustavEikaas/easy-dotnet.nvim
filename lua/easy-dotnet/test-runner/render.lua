@@ -155,6 +155,13 @@ end
 ---@param node TestNode
 ---@return string | nil
 local function calculate_highlight(node)
+  if node.job then
+    if node.job.state == "pending" then
+      return "EasyDotnetTestRunnerRunning"
+    elseif node.job.state == "error" then
+      return "EasyDotnetTestRunnerFailed"
+    end
+  end
   if node.icon == M.options.icons.failed then
     return "EasyDotnetTestRunnerFailed"
   elseif node.icon == "<Running>" then
@@ -189,12 +196,32 @@ local function convert_time(time_str)
   end
 end
 
+---@param a BuildJob | DiscoverJob
+local function stringify_job(a)
+  if a.name == "build" then return a.state == "pending" and "Building" or a.state == "error" and "build failed" or "" end
+
+  if a.name == "discover" then return a.state == "pending" and "Discovering" or a.state == "error" and "discovery failed" or "" end
+end
+
+---@param node TestNode
 local function node_to_string(node)
   local total_tests = 0
   ---@param i TestNode
   M.traverse(node, function(i)
     if i.type == "subcase" or i.type == "test" then total_tests = total_tests + 1 end
   end)
+
+  if node.job then
+    local formatted = string.format(
+      "%s%s%s%s  <%s>",
+      string.rep(" ", node.indent or 0),
+      node.preIcon and (node.preIcon .. " ") or "",
+      node.name,
+      node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
+      stringify_job(node.job)
+    )
+    return formatted
+  end
 
   local formatted = string.format(
     "%s%s%s%s %s %s",
