@@ -541,10 +541,9 @@ local function open_runner(options, sdk_path)
   refresh_runner(options, solutionFilePath, sdk_path)
 end
 
-M.refresh = function(options, sdk_path, args)
+M.refresh = function(options, sdk_path)
   options = options or require("easy-dotnet.options").options.test_runner
   sdk_path = sdk_path or require("easy-dotnet.options").options.get_sdk_path()
-  args = args or { build = false }
 
   if #win.jobs > 0 then
     logger.warn("Cant refresh while waiting for pending jobs")
