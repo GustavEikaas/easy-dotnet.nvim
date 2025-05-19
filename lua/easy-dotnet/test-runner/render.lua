@@ -67,7 +67,7 @@ M.traverse_expanded = function(node, cb)
 end
 
 ---@param id string
----@param type "Run" | "Discovery" | "Build" | "Server"
+---@param type "Run" | "Server"
 ---@param subtask_count number | nil
 function M.appendJob(id, type, subtask_count)
   local job = {

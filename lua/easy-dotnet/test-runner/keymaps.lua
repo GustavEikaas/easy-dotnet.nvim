@@ -244,7 +244,19 @@ local keymaps = function()
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   return {
     [keymap.filter_failed_tests.lhs] = { handle = function(_, win) filter_failed_tests(win) end, desc = keymap.filter_failed_tests.desc },
-    [keymap.refresh_testrunner.lhs] = { handle = function(_) vim.cmd("Dotnet testrunner refresh build") end, desc = keymap.refresh_testrunner.desc },
+    [keymap.refresh_testrunner.lhs] = {
+      ---@param node TestNode
+      handle = function(node)
+        if node.type == "csproject" then
+          coroutine.wrap(function()
+            node.refresh()
+          end)()
+        else
+          vim.cmd("Dotnet testrunner refresh build")
+        end
+      end,
+      desc = keymap.refresh_testrunner.desc,
+    },
     [keymap.debug_test.lhs] = {
       handle = function(node, win)
         if node.type ~= "test" and node.type ~= "test_group" then

@@ -60,6 +60,7 @@ end
 ---@field expand table | nil
 ---@field framework string
 ---@field is_MTP boolean
+---@field refresh function | nil
 ---@field children table<string, TestNode>
 
 ---@class Highlight
@@ -83,7 +84,7 @@ local function request_build(sln_path)
   local co = coroutine.running()
   local success = false
 
-  client.request("msbuild/build", { request = { targetPath = sln_path, configuration = "Debug" } }, function(response)
+  client.request("msbuild/build", { request = { targetPath = sln_path, configuration = nil } }, function(response)
     success = response.result.success == true
     coroutine.resume(co)
   end)
@@ -107,8 +108,7 @@ local function start_server(solution_file_path)
             local pipename = line:sub(#server_ready_prefix + 1)
             M._server.pipe_name = vim.trim(pipename)
             M._server.client = require("easy-dotnet.test-runner.rpc-client")
-            -- local full_pipe_path = extensions.isWindows() and [[\\.\pipe\]] .. M._server.pipe_name or "/tmp/CoreFxPipe_" .. M._server.pipe_name
-            local full_pipe_path = [[\\.\pipe\EasyDotnetPipe_]]
+            local full_pipe_path = extensions.isWindows() and [[\\.\pipe\]] .. M._server.pipe_name or "/tmp/CoreFxPipe_" .. M._server.pipe_name
 
             is_negotiating = true
             M._server.client.setup({ pipe_path = full_pipe_path, debug = false })
@@ -299,8 +299,9 @@ end
 ---@param dotnet_project DotnetProject
 ---@param solution_file_path string
 ---@param options table
+---@param refresh function | nil
 ---@return TestNode
-local function create_test_node_from_dotnet_project(dotnet_project, solution_file_path, options)
+local function create_test_node_from_dotnet_project(dotnet_project, solution_file_path, options, refresh)
   return {
     id = "",
     children = {},
@@ -321,6 +322,7 @@ local function create_test_node_from_dotnet_project(dotnet_project, solution_fil
     highlight = "EasyDotnetTestRunnerProject",
     framework = dotnet_project.msbuild_props.targetFramework,
     is_MTP = dotnet_project.isTestPlatformProject,
+    refresh = refresh,
   }
 end
 
@@ -415,7 +417,7 @@ end
 ---@param sdk_path string
 ---@param solution_file_path string
 local function start_vstest_discovery(project, options, sdk_path, solution_file_path)
-  local project_node = create_test_node_from_dotnet_project(project, solution_file_path, options)
+  local project_node = create_test_node_from_dotnet_project(project, solution_file_path, options, function() start_vstest_discovery(project, options, sdk_path, solution_file_path) end)
   win.tree.children[project_node.name] = project_node
 
   project_node.job = { name = "build", state = "pending" }
@@ -439,7 +441,7 @@ end
 ---@param project DotnetProject
 local function start_MTP_discovery_for_project(project, options, solution_file_path)
   ---@type TestNode
-  local project_node = create_test_node_from_dotnet_project(project, solution_file_path, options)
+  local project_node = create_test_node_from_dotnet_project(project, solution_file_path, options, function() start_MTP_discovery_for_project(project, solution_file_path, options) end)
   project_node.job = { state = "pending", name = "build" }
   win.tree.children[project_node.name] = project_node
   win.refreshTree()
@@ -512,15 +514,6 @@ local function refresh_runner(options, solution_file_path, sdk_path)
   win.refreshTree()
 end
 
-local function measure_function(cb)
-  local start_time = os.clock()
-  local res = cb()
-  local end_time = os.clock()
-  local elapsed_time = end_time - start_time
-  print(string.format("%d elapsed", elapsed_time))
-  return elapsed_time, res
-end
-
 ---@param options TestRunnerOptions
 ---@param sdk_path string
 local function open_runner(options, sdk_path)
@@ -541,8 +534,7 @@ local function open_runner(options, sdk_path)
   if is_reused then return end
 
   start_server(solutionFilePath)
-  -- print(string.format("%d elapsed starting server", s))
-  measure_function(function() refresh_runner(options, solutionFilePath, sdk_path) end)
+  refresh_runner(options, solutionFilePath, sdk_path)
 end
 
 M.refresh = function(options, sdk_path, args)
@@ -560,24 +552,6 @@ M.refresh = function(options, sdk_path, args)
   if solutionFilePath == nil then
     logger.error(error_messages.no_project_definition_found)
     return
-  end
-
-  if args.build then
-    local complete = win.appendJob("build", "Build")
-    local co = coroutine.running()
-    local command = string.format("dotnet build %s", solutionFilePath)
-    vim.fn.jobstart(command, {
-      on_exit = function(_, b, _)
-        coroutine.resume(co)
-        if b == 0 then
-          logger.info("Built successfully")
-        else
-          logger.error("Build failed")
-        end
-      end,
-    })
-    coroutine.yield()
-    complete()
   end
 
   local is_active = win.buf ~= nil
