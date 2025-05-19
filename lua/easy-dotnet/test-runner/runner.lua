@@ -421,7 +421,9 @@ end
 ---@param sdk_path string
 ---@param solution_file_path string
 local function start_vstest_discovery(project, options, sdk_path, solution_file_path)
-  local project_node = create_test_node_from_dotnet_project(project, solution_file_path, options, function() start_vstest_discovery(project, options, sdk_path, solution_file_path) end)
+  local project_node = create_test_node_from_dotnet_project(project, solution_file_path, options, function()
+    start_vstest_discovery(project, options, sdk_path, solution_file_path)
+  end)
   win.tree.children[project_node.name] = project_node
 
   project_node.job = { name = "build", state = "pending" }
@@ -445,7 +447,7 @@ end
 ---@param project DotnetProject
 local function start_MTP_discovery_for_project(project, options, solution_file_path)
   ---@type TestNode
-  local project_node = create_test_node_from_dotnet_project(project, solution_file_path, options, function() start_MTP_discovery_for_project(project, solution_file_path, options) end)
+  local project_node = create_test_node_from_dotnet_project(project, solution_file_path, options, function() start_MTP_discovery_for_project(project, options, solution_file_path) end)
   project_node.job = { state = "pending", name = "build" }
   win.tree.children[project_node.name] = project_node
   win.refreshTree()
