@@ -66,6 +66,20 @@ M.traverse_expanded = function(node, cb)
   end
 end
 
+M.traverse_filtered = function(node, cb)
+  if not node then node = M.tree end
+  --HACK: handle no tree set
+  if not node.name then return end
+  cb(node)
+  local keys = vim.tbl_keys(node.children or {})
+  table.sort(keys)
+  for _, key in ipairs(keys) do
+    local child_node = node.children[key]
+    local filterpass = M.filter == nil or (M.filter == child_node.icon)
+    if filterpass then M.traverse_expanded(child_node, cb) end
+  end
+end
+
 ---@param id string
 ---@param type "Run" | "Server"
 ---@param subtask_count number | nil
