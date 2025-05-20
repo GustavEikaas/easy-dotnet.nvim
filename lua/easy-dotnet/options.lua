@@ -1,4 +1,13 @@
 local polyfills = require("easy-dotnet.polyfills")
+---@class Options
+---@field get_sdk_path fun(): string
+---@field test_runner TestRunnerOptions
+---@field csproj_mappings boolean
+---@field fsproj_mappings boolean
+---@field new { project: {prefix: "sln" | "none"} }
+---@field enable_filetypes boolean
+---@field picker PickerType
+
 ---@class TestRunnerIcons
 ---@field passed string
 ---@field skipped string
@@ -34,7 +43,6 @@ local polyfills = require("easy-dotnet.polyfills")
 ---@field viewmode string
 ---@field enable_buffer_test_execution boolean
 ---@field noBuild boolean
----@field noRestore boolean
 ---@field icons TestRunnerIcons
 ---@field mappings TestRunnerMappings
 ---@field additional_args table
@@ -47,11 +55,13 @@ local function get_sdk_path()
   local base = nil
   for line in sdk_list:gmatch("[^\n]+") do
     if line:find(sdk_version, 1, true) then
-      base = vim.fs.normalize(line:match("%[(.-)%]"))
+      local path = line:match("%[(.-)%]")
+      if not path then error("no sdk path found calling dotnet --list-sdks " .. (path or "empty")) end
+      base = vim.fs.normalize(path)
       break
     end
   end
-  local sdk_path = polyfills.fs.joinpath(base, sdk_version):gsub("Program Files", '"Program Files"')
+  local sdk_path = polyfills.fs.joinpath(base, sdk_version)
   return sdk_path
 end
 
@@ -69,6 +79,7 @@ local function get_secret_path(secret_guid)
 end
 
 local M = {
+  ---@type Options
   options = {
     ---@type function | string
     get_sdk_path = get_sdk_path,
@@ -97,7 +108,6 @@ local M = {
       viewmode = "split",
       enable_buffer_test_execution = true,
       noBuild = true,
-      noRestore = true,
       icons = {
         passed = "",
         skipped = "",
@@ -130,6 +140,11 @@ local M = {
     },
     csproj_mappings = true,
     fsproj_mappings = true,
+    new = {
+      project = {
+        prefix = "sln",
+      },
+    },
     enable_filetypes = true,
     auto_bootstrap_namespace = {
       type = "block_scoped",
@@ -140,6 +155,8 @@ local M = {
     -- if nil, will auto-detect available pickers in order: telescope -> fzf -> basic
     ---@type PickerType
     picker = nil,
+    --For performance reasons this will query msbuild properties as soon as vim starts
+    background_scanning = true,
   },
 }
 
@@ -153,13 +170,16 @@ local function handle_auto_bootstrap_namespace(a)
   } end
 end
 
+M.orig_config = nil
+
 M.set_options = function(a)
+  M.orig_config = a
   a = a or {}
   handle_auto_bootstrap_namespace(a)
   M.options = merge_tables(M.options, a)
   return M.options
 end
 
-M.get_option = function(key) return M.options[key] end
+function M.get_option(key) return M.options[key] end
 
 return M

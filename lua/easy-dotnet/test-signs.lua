@@ -2,7 +2,12 @@ local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
 local M = {}
 
-local function compare_paths(path1, path2) return vim.fs.normalize(path1):lower() == vim.fs.normalize(path2):lower() end
+local function compare_paths(path1, path2)
+  if not path1 or type(path1) == "userdata" then return false end
+  if not path2 or type(path2) == "userdata" then return false end
+
+  return vim.fs.normalize(path1):lower() == vim.fs.normalize(path2):lower()
+end
 
 local function run_test(name, namespace, cs_project_path, cb)
   local log_file_name = string.format("%s.xml", namespace:gsub("%b()", ""))
@@ -74,6 +79,11 @@ local function run_test_from_buffer()
   ---@param node TestNode
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and node.line_number - 1 == current_line then
+      if node.is_MTP then
+        logger.error("Running MTP tests directly from buffer is not supported yet")
+        return
+      end
+
       local spinner = require("easy-dotnet.ui-modules.spinner").new()
       spinner:start_spinner("Running test")
 

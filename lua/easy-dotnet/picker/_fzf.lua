@@ -1,15 +1,19 @@
 local M = {}
 
-M.nuget_search = function(cb)
+M.nuget_search = function()
+  local co = coroutine.running()
+  local package
   require("fzf-lua").fzf_live('dotnet package search <query> --format json | jq ".searchResult | .[] | .packages | .[] | .id"', {
     fn_transform = function(line) return line:gsub('"', ""):gsub("\r", ""):gsub("\n", "") end,
     actions = {
       ["default"] = function(selected)
-        local package = selected[1]
-        cb(package)
+        package = selected[1]
+        coroutine.resume(co)
       end,
     },
   })
+  coroutine.yield()
+  return package
 end
 
 M.migration_picker = function(opts, migration)
@@ -101,8 +105,7 @@ M.preview_picker = function(_, options, on_select_cb, title, get_secret_path, re
   })
 end
 
-M.picker = function(_, options, on_select_cb, title, autopick)
-  if autopick == nil then autopick = true end
+M.picker = function(_, options, on_select_cb, title, autopick, apply_numeration)
   if #options == 0 then error("No options provided, minimum 1 is required") end
 
   if #options == 1 and autopick == true then
@@ -111,8 +114,10 @@ M.picker = function(_, options, on_select_cb, title, autopick)
   end
 
   local fzf_options = {}
-  for _, option in ipairs(options) do
-    table.insert(fzf_options, option.display)
+  for index, option in ipairs(options) do
+    local display_text = option.display
+    if apply_numeration then display_text = index .. ". " .. option.display end
+    table.insert(fzf_options, display_text)
   end
 
   require("fzf-lua").fzf_exec(fzf_options, {
@@ -121,9 +126,9 @@ M.picker = function(_, options, on_select_cb, title, autopick)
     actions = {
       ["default"] = function(selected)
         local selected_value = nil
-        for _, option in ipairs(options) do
-          if option.display == selected[1] then
-            selected_value = option
+        for i, display_text in ipairs(fzf_options) do
+          if display_text == selected[1] then
+            selected_value = options[i]
             break
           end
         end
@@ -137,14 +142,16 @@ end
 ---@param bufnr number | nil
 ---@param options table<T>
 ---@param title string | nil
+---@param autopick boolean
+---@param apply_numeration boolean
 ---@return T
-M.pick_sync = function(bufnr, options, title, autopick)
+M.pick_sync = function(bufnr, options, title, autopick, apply_numeration)
   local co = coroutine.running()
   local selected = nil
   M.picker(bufnr, options, function(i)
     selected = i
     if coroutine.status(co) ~= "running" then coroutine.resume(co) end
-  end, title or "", autopick)
+  end, title or "", autopick, apply_numeration)
   if not selected then coroutine.yield() end
   return selected
 end

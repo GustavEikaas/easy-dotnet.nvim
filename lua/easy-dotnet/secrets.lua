@@ -42,11 +42,7 @@ local function create_directory(dir)
   end
 end
 
-local function append_to_file(file, content)
-  local fd = assert(vim.loop.fs_open(file, "a+", 420)) -- 420 = 0644 permissions
-  assert(vim.loop.fs_write(fd, content, -1)) -- Append content
-  vim.loop.fs_close(fd)
-end
+local function append_to_file(file, content) vim.fn.writefile(content, file) end
 --- Initializes secrets for a given project
 ---@param project_file_path string
 ---@param get_secret_path function
@@ -57,17 +53,23 @@ local init_secrets = function(project_file_path, get_secret_path)
     return guid
   end
 
-  --TODO: vim.fn.system
-  local handler = io.popen("Dotnet user-secrets init --project " .. project_file_path)
-  if handler == nil then error("Failed to create user-secrets for " .. project_file_path) end
-  local value = handler:read("*a")
-  local guid = extract_secret_guid(value)
+  if not project_file_path then error("Error no project path when creating user secrets") end
+
+  local res = vim.fn.system({
+    "dotnet",
+    "user-secrets",
+    "init",
+    "--project",
+    project_file_path,
+  })
+  if vim.v.shell_error ~= 0 then error("Failed to create user-secrets for " .. project_file_path) end
+  local guid = extract_secret_guid(res)
+  if not guid then error("User secrets created but unable to extract secrets guid") end
   local path = get_secret_path(guid)
   local parentDir = vim.fs.dirname(path)
   create_directory(parentDir)
-  append_to_file(path, "{ }\n")
+  append_to_file(path, { "{ }" })
 
-  handler:close()
   logger.info("User secrets created")
   return guid
 end
@@ -79,13 +81,15 @@ local function csproj_fallback(get_secret_path)
     return
   end
 
-  local csproj = csproj_parse.get_project_from_csproj(csproj_path)
+  local csproj = csproj_parse.get_project_from_project_file(csproj_path)
   if not csproj.secrets then
     local secret_id = init_secrets(csproj.path, get_secret_path)
     csproj.secrets = secret_id
   end
   picker.picker(nil, { csproj }, function(i)
     local path = get_secret_path(i.secrets)
+    local parentDir = vim.fs.dirname(path)
+    create_directory(parentDir)
     vim.cmd("edit! " .. path)
   end, "Secrets")
 end
@@ -109,6 +113,8 @@ M.edit_secrets_picker = function(get_secret_path)
       item.secrets = secret_id
     end
     local path = get_secret_path(item.secrets)
+    local parentDir = vim.fs.dirname(path)
+    create_directory(parentDir)
     vim.cmd("edit! " .. path)
   end, "Secrets", function(self, entry) secrets_preview(self, entry, get_secret_path) end, get_secret_path, readFile)
 end

@@ -58,6 +58,29 @@ M.run = {
   },
 }
 
+M._cached_files = {
+  handle = function()
+    local dir = require("easy-dotnet.constants").get_data_directory()
+    local pattern = dir .. [[/*.json]]
+    local files = vim.tbl_map(function(value) return { display = vim.fs.basename(value), name = value, path = value } end, vim.fn.glob(pattern, false, true))
+    local file_preview = function(self, entry)
+      local path = entry.value.path
+      local content = table.concat(vim.fn.readfile(path), "\n")
+
+      local ok, parsed = pcall(vim.json.decode, content)
+      if not ok then
+        vim.notify("Invalid JSON in: " .. path, vim.log.levels.ERROR)
+        return
+      end
+
+      local lines = vim.split(vim.inspect(parsed), "\n")
+      vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, lines)
+    end
+
+    require("easy-dotnet.picker").preview_picker(nil, files, function(i) vim.cmd("edit " .. i.path) end, "", file_preview)
+  end,
+}
+
 M.watch = {
   handle = function(args, options) actions.watch(options.terminal, false, passthrough_dotnet_cli_args_handler(args)) end,
   passthrough = true,
@@ -175,15 +198,16 @@ M.testrunner = {
       handle = function(_, options)
         local test_runner = options and options.test_runner or nil
         local sdk_path = options and options.get_sdk_path() or nil
-        require("easy-dotnet.test-runner.runner").refresh(test_runner, sdk_path, { build = false })
+        require("easy-dotnet.test-runner.runner").refresh(test_runner, sdk_path)
       end,
       subcommands = {
+        ---@deprecated building happens automatically now
         build = {
           handle = function(_, options)
             local test_runner = options and options.test_runner or nil
             local sdk_path = options and options.get_sdk_path() or nil
 
-            require("easy-dotnet.test-runner.runner").refresh(test_runner, sdk_path, { build = true })
+            require("easy-dotnet.test-runner.runner").refresh(test_runner, sdk_path)
           end,
         },
       },

@@ -1,6 +1,15 @@
 local window = require("easy-dotnet.test-runner.window")
-local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
+local extensions = require("easy-dotnet.extensions")
+
+---@class RPC_RunRequest
+---@field testExecutablePath string Path to the test runner binary
+---@field filter RunRequestNode[] Optional filter for which tests to run
+---@field outFile string Path where test results should be written
+
+---@class RunRequestNode
+---@field uid string Unique test run identifier
+---@field displayName string Human-readable name for the run
 
 ---@param node TestNode
 ---@param options table
@@ -28,123 +37,149 @@ end
 local function parse_status(result, test_line, options)
   if result.duration then test_line.duration = result.duration end
   --TODO: handle more cases like cancelled etc...
-  if result.outcome == "Passed" then
+  if result.outcome == "passed" then
     test_line.icon = options.icons.passed
-  elseif result.outcome == "Failed" then
+    --TODO: figure this shit out
+  elseif result.outcome == "failed" or result.outcome == "error" then
     test_line.icon = options.icons.failed
-    if result.message or result.stackTrace then test_line.expand = vim.split((result.message or "") .. "\n" .. (result.stackTrace or ""):gsub("^%s+", ""):gsub("\n%s+", "\n"), "\n") end
-  elseif result.outcome == "NotExecuted" then
+    if result.errorMessage or result.stackTrace then test_line.expand = vim.split((result.errorMessage or "") .. "\n" .. (result.stackTrace or ""):gsub("^%s+", ""):gsub("\n%s+", "\n"), "\n") end
+  elseif result.outcome == "skipped" then
     test_line.icon = options.icons.skipped
   else
+    vim.print({
+      detail = "encountered unexpected status",
+      field = result.outcome,
+    })
     test_line.icon = "??"
   end
 end
 
----@param relative_log_file_path string
+---@param unit_test_results TestCase[]
 ---@param win table
 ---@param node TestNode
----@param on_completed function
-local function parse_log_file(relative_log_file_path, win, node, on_completed)
-  require("easy-dotnet.test-runner.test-parser").xml_to_json(
-    relative_log_file_path,
-    ---@param unit_test_results TestCase[]
-    function(unit_test_results)
-      if #unit_test_results == 0 then
-        win.traverse(node, function(child)
-          if child.icon == "<Running>" then child.icon = "<No status reported>" end
-        end)
-        on_completed()
-        win.refreshTree()
-        return
-      end
+local test_status_updater = function(unit_test_results, win, node)
+  if #unit_test_results == 0 then
+    win.traverse(node, function(child)
+      if child.icon == "<Running>" then child.icon = "<No status reported>" end
+    end)
+    win.refreshTree()
+    return
+  end
 
-      for _, value in ipairs(unit_test_results) do
-        win.traverse(node, function(child_node)
-          if (child_node.type == "test" or child_node.type == "subcase") and child_node.id == value.id then parse_status(value, child_node, win.options) end
-        end)
-      end
+  for _, value in ipairs(unit_test_results) do
+    win.traverse(node, function(child_node)
+      if (child_node.type == "test" or child_node.type == "subcase") and child_node.id == value.id then parse_status(value, child_node, win.options) end
+    end)
+  end
 
-      aggregate_status(win.tree, win.options)
-      on_completed()
-      win.refreshTree()
-    end
-  )
+  aggregate_status(win.tree, win.options)
+  win.refreshTree()
 end
 
----@param options TestRunnerOptions
-local function get_dotnet_args(options)
-  local args = {}
-  if options.noBuild == true then table.insert(args, "--no-build") end
-  if options.noRestore == true then table.insert(args, "--no-restore") end
-  return table.concat(args, " ") .. " " .. table.concat(options.additional_args or {}, " ")
+local function dump_to_file(obj, filepath)
+  local serialized = vim.inspect(obj)
+  local f = io.open(filepath, "w")
+  if not f then error("Could not open file: " .. filepath) end
+  f:write(serialized)
+  f:close()
+end
+
+local function get_test_result_handler(win, node, on_job_finished)
+  ---@param rpc_res RPC_Response
+  return function(rpc_res)
+    if rpc_res.error then
+      vim.schedule(function() vim.notify(string.format("[%s]: %s", rpc_res.error.code, rpc_res.error.message), vim.log.levels.ERROR) end)
+      if rpc_res.error.data then
+        local file = vim.fs.normalize(os.tmpname())
+        dump_to_file(rpc_res, file)
+        logger.error("Crash dump written at " .. file)
+      end
+      on_job_finished()
+
+      win.traverse(node, function(child)
+        if child.icon == "<Running>" then child.icon = "<Operation failed>" end
+      end)
+      win.refreshTree()
+      return
+    end
+
+    ---@type TestCase[]
+    local test_results = vim.tbl_map(function(i) return vim.fn.json_decode(i) end, vim.fn.readfile(rpc_res.result.outFile))
+    test_status_updater(test_results, win, node)
+    on_job_finished()
+  end
 end
 
 ---@param node TestNode
-local function run_csproject(win, node)
-  local log_file_name = string.format("%s.xml", node.cs_project_path:match("([^/\\]+)$"))
-  local normalized_path = node.cs_project_path:gsub("\\", "/")
-  -- Find the last slash and extract the directory path
-  local directory_path = normalized_path:match("^(.*)/[^/]*$")
-  local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
-
-  local matches = {}
-  local testcount = 0
+---@param win table
+local function VsTest_Run(node, win)
+  ---@type TestNode[]
+  local tests = {}
   ---@param child TestNode
-  win.traverse(node, function(child)
+  win.traverse_filtered(node, function(child)
     child.icon = "<Running>"
-    table.insert(matches, { ref = child, line = child.namespace, id = child.id })
-    if child.type == "test" or child.type == "subcase" then testcount = testcount + 1 end
+    if child.type == "test" or child.type == "subcase" then table.insert(tests, child) end
   end)
 
-  local on_job_finished = win.appendJob(node.cs_project_path, "Run", testcount)
+  local on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
 
-  win.refreshTree()
-  vim.fn.jobstart(string.format('dotnet test --nologo %s %s --logger="trx;logFileName=%s"', get_dotnet_args(win.options), node.cs_project_path, log_file_name), {
-    on_exit = function(_) parse_log_file(relative_log_file_path, win, node, on_job_finished) end,
-  })
+  local filter = vim.tbl_map(function(test) return test.id end, tests)
+
+  local project = require("easy-dotnet.parsers.csproj-parse").get_project_from_project_file(node.cs_project_path)
+  local project_framework = project.get_specific_runtime_definition(node.framework)
+  local testPath = project_framework.get_dll_path()
+
+  local options = require("easy-dotnet.options").options.test_runner
+  local vstest_dll = vim.fs.joinpath(options.sdk_path, "vstest.console.dll")
+  coroutine.wrap(function()
+    ---@type StreamJsonRpc | nil
+    local client = require("easy-dotnet.test-runner.runner")._server.client
+    if not client then error("RPC client not initialized") end
+    client.request("vstest/run", { vsTestPath = vstest_dll, dllPath = testPath, testIds = filter }, get_test_result_handler(win, node, on_job_finished))
+  end)()
+end
+---@param node TestNode
+---@param win table
+local function MTP_Run(node, win)
+  ---@type TestNode[]
+  local tests = {}
+  ---@param child TestNode
+  win.traverse_filtered(node, function(child)
+    child.icon = "<Running>"
+    if child.type == "test" or child.type == "subcase" then table.insert(tests, child) end
+  end)
+
+  local on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
+
+  local filter = vim.tbl_map(function(test)
+    ---@type RunRequestNode
+    return {
+      uid = test.id,
+      displayName = test.displayName,
+    }
+  end, tests)
+
+  local project = require("easy-dotnet.parsers.csproj-parse").get_project_from_project_file(node.cs_project_path)
+  local project_framework = project.get_specific_runtime_definition(node.framework)
+
+  local testPath = project_framework.get_dll_path():gsub("%.dll", extensions.isWindows() and "." .. project_framework.msbuild_props.outputType:lower() or "")
+
+  coroutine.wrap(function()
+    ---@type StreamJsonRpc | nil
+    local client = require("easy-dotnet.test-runner.runner")._server.client
+    if not client then error("RPC client not initialized") end
+    client.request("mtp/run", { testExecutablePath = testPath, filter = filter }, get_test_result_handler(win, node, on_job_finished))
+  end)()
 end
 
----@param line TestNode
-local function run_test_group(line, win)
-  local log_file_name = string.format("%s.xml", line.name)
-  local normalized_path = line.cs_project_path:gsub("\\", "/")
-  local directory_path = normalized_path:match("^(.*)/[^/]*$")
-  local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
-
-  local suite_name = line.namespace
-  local testcount = 0
-  ---@param child TestNode
-  win.traverse(line, function(child)
-    child.icon = "<Running>"
-    if child.type == "test" or child.type == "subcase" then testcount = testcount + 1 end
-  end)
-
-  local on_job_finished = win.appendJob(line.name, "Run", testcount)
-  win.refreshTree()
-  vim.fn.jobstart(string.format('dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"', suite_name, get_dotnet_args(win.options), line.cs_project_path, log_file_name), {
-    on_exit = function() parse_log_file(relative_log_file_path, win, line, on_job_finished) end,
-  })
-end
-
----@param line TestNode
-local function run_test_suite(line, win)
-  local log_file_name = string.format("%s.xml", line.namespace)
-  local normalized_path = line.cs_project_path:gsub("\\", "/")
-  local directory_path = normalized_path:match("^(.*)/[^/]*$")
-  local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
-
-  local testcount = 0
-  local suite_name = line.namespace
-  win.traverse(line, function(child)
-    child.icon = "<Running>"
-    if child.type == "test" or child.type == "subcase" then testcount = testcount + 1 end
-  end)
-  win.refreshTree()
-
-  local on_job_finished = win.appendJob(line.namespace, "Run", testcount)
-  vim.fn.jobstart(string.format('dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"', suite_name, get_dotnet_args(win.options), line.cs_project_path, log_file_name), {
-    on_exit = function() parse_log_file(relative_log_file_path, win, line, on_job_finished) end,
-  })
+---@param node TestNode
+local function run_tests(node, win)
+  if node.is_MTP then
+    MTP_Run(node, win)
+    return
+  else
+    VsTest_Run(node, win)
+  end
 end
 
 local function filter_failed_tests(win)
@@ -170,38 +205,6 @@ local function get_path_from_stack_trace(stack_trace)
   else
     return nil -- Return nil if no match is found
   end
-end
-
----@param node TestNode
-local function run_test(node, win)
-  local log_file_name = string.format("%s.xml", node.name)
-  local normalized_path = node.cs_project_path:gsub("\\", "/")
-  local directory_path = normalized_path:match("^(.*)/[^/]*$")
-  local relative_log_file_path = polyfills.fs.joinpath(directory_path, "TestResults", log_file_name)
-
-  local command =
-    string.format('dotnet test --filter=%s --nologo %s %s --logger="trx;logFileName=%s"', node.namespace:gsub("%b()", ""), get_dotnet_args(win.options), node.cs_project_path, log_file_name)
-
-  local on_job_finished = win.appendJob(node.name, "Run")
-
-  node.icon = "<Running>"
-  vim.fn.jobstart(command, {
-    on_exit = function()
-      require("easy-dotnet.test-runner.test-parser").xml_to_json(
-        relative_log_file_path,
-        ---@param unit_test_results TestCase
-        function(unit_test_results)
-          local result = unit_test_results[1]
-          if result == nil then error(string.format("Status of %s was not present in xml file", node.name)) end
-          parse_status(result, node, win.options)
-          on_job_finished()
-          win.refreshTree()
-        end
-      )
-    end,
-  })
-
-  win.refreshTree()
 end
 
 local function open_stack_trace(line)
@@ -236,7 +239,17 @@ local keymaps = function()
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   return {
     [keymap.filter_failed_tests.lhs] = { handle = function(_, win) filter_failed_tests(win) end, desc = keymap.filter_failed_tests.desc },
-    [keymap.refresh_testrunner.lhs] = { handle = function(_) vim.cmd("Dotnet testrunner refresh build") end, desc = keymap.refresh_testrunner.desc },
+    [keymap.refresh_testrunner.lhs] = {
+      ---@param node TestNode
+      handle = function(node)
+        if node.type == "csproject" then
+          coroutine.wrap(function() node.refresh() end)()
+        else
+          vim.cmd("Dotnet testrunner refresh build")
+        end
+      end,
+      desc = keymap.refresh_testrunner.desc,
+    },
     [keymap.debug_test.lhs] = {
       handle = function(node, win)
         if node.type ~= "test" and node.type ~= "test_group" then
@@ -268,8 +281,8 @@ local keymaps = function()
       end,
       desc = keymap.debug_test.desc,
     },
-    ---@param node Test
     [keymap.go_to_file.lhs] = {
+      ---@param node TestNode
       handle = function(node, win)
         if node.type == "test" or node.type == "subcase" or node.type == "test_group" then
           if node.file_path ~= nil then
@@ -310,8 +323,8 @@ local keymaps = function()
       end,
       desc = keymap.collapse_all.desc,
     },
-    ---@param node TestNode
     [keymap.expand.lhs] = {
+      ---@param node TestNode
       handle = function(node, win)
         node.expanded = node.expanded == false
         win.refreshTree()
@@ -322,28 +335,28 @@ local keymaps = function()
     [keymap.run_all.lhs] = {
       handle = function(_, win)
         win.traverse(win.tree, function(node)
-          if node.type == "csproject" then run_csproject(win, node) end
+          if node.type == "csproject" then run_tests(node, win) end
         end)
       end,
       desc = keymap.run_all.desc,
     },
-    ---@param node TestNode
     [keymap.run.lhs] = {
+      ---@param node TestNode
       handle = function(node, win)
         if node.type == "sln" then
           for _, value in pairs(node.children) do
-            run_csproject(win, value)
+            run_tests(value, win)
           end
         elseif node.type == "csproject" then
-          run_csproject(win, node)
+          run_tests(node, win)
         elseif node.type == "namespace" then
-          run_test_suite(node, win)
+          run_tests(node, win)
         elseif node.type == "test_group" then
-          run_test_group(node, win)
+          run_tests(node, win)
         elseif node.type == "subcase" then
-          logger.error("Running specific subcases is not supported")
+          run_tests(node, win)
         elseif node.type == "test" then
-          run_test(node, win)
+          run_tests(node, win)
         else
           logger.warn("Unknown line type " .. node.type)
           return

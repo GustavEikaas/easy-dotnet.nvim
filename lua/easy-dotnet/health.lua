@@ -35,10 +35,10 @@ end
 
 local function measure_function(cb)
   local start_time = os.clock()
-  cb()
+  local res = cb()
   local end_time = os.clock()
   local elapsed_time = end_time - start_time
-  return elapsed_time
+  return elapsed_time, res
 end
 
 local function check_coreclr_configured()
@@ -81,9 +81,65 @@ local function check_cmp()
   vim.health.warn("cmp source not configured", { "https://github.com/GustavEikaas/easy-dotnet.nvim?tab=readme-ov-file#package-autocomplete" })
 end
 
+local function os_info()
+  local platform = vim.loop.os_uname()
+  local sysname = platform.sysname
+  local release = platform.release
+
+  if release:lower():match("arch") then release = release .. " btw" end
+
+  vim.health.info(string.format("%s (%s)", sysname, release))
+end
+
+local function print_dotnet_info()
+  local version = vim.fn.system("dotnet --version"):gsub("\n", "")
+  local sdks = vim.fn.systemlist("dotnet --list-sdks")
+
+  if version == "" then
+    vim.health.warn("dotnet is not installed or not in PATH")
+    return
+  end
+
+  vim.health.info("dotnet version: " .. version)
+
+  if #sdks == 0 then
+    vim.health.warn("No .NET SDKs found")
+  else
+    vim.health.info("Installed SDKs:")
+    for _, sdk in ipairs(sdks) do
+      vim.health.info("  " .. sdk)
+    end
+  end
+end
+
+local function print_nvim_version()
+  local v = vim.version()
+  local version_str = string.format("Neovim version: %d.%d.%d", v.major, v.minor, v.patch)
+  vim.health.info(version_str)
+end
+
+local function get_shell_info()
+  local shell = vim.o.shell
+  vim.health.info("Shell: " .. shell)
+end
+local function get_commit_info()
+  local source = debug.getinfo(1, "S").source:sub(2)
+  local dir = vim.fn.fnamemodify(source, ":h")
+  local sha = vim.fn.system({ "git", "-C", dir, "rev-parse", "HEAD" })
+  vim.health.info("Commit: " .. vim.trim(sha or ""))
+end
+
 M.check = function()
+  vim.health.start("General information")
+  os_info()
+  print_nvim_version()
+  get_shell_info()
+  pcall(get_commit_info)
+  vim.health.start("Dotnet information")
+  print_dotnet_info()
   vim.health.start("easy-dotnet CLI dependencies")
   ensure_dep_installed({ "dotnet", "-h" })
+  ensure_dep_installed({ "easydotnet", "-v" }, "dotnet tool install --global EasyDotnet")
   ensure_dep_installed({ "jq" })
   ensure_dep_installed({ "dotnet", "outdated", "-h" }, "dotnet tool install --global dotnet-outdated-tool")
   ensure_dep_installed({ "dotnet", "ef" }, "dotnet tool install --global dotnet-ef")
@@ -112,11 +168,14 @@ M.check = function()
     ensure_nvim_dep_installed("snacks", { "This is selected in your config but is not installed", "A fallback will be used instead", "https://github.com/folke/snacks.nvim" }, true)
   end
 
-  local sdk_path_time = measure_function(config.get_sdk_path)
+  local sdk_path_time, path = measure_function(config.get_sdk_path)
+  vim.health.ok("sdk_path: " .. path)
   if sdk_path_time > 1 then
     vim.health.warn(string.format("options.get_sdk_path took %d seconds", sdk_path_time), "You should add get_sdk_path to your options for a performance improvement🚀. Check readme")
   end
   check_cmp()
+  vim.health.start("User config")
+  vim.health.info(vim.inspect(require("easy-dotnet.options").orig_config))
 end
 
 return M

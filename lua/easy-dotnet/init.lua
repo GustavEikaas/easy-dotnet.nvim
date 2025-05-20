@@ -132,6 +132,96 @@ local function check_picker_config(opts)
   end
 end
 
+---@param arg_lead string
+---@param cmdline string
+---@return string[]
+local function complete_command(arg_lead, cmdline)
+  local all_commands = collect_commands(commands)
+  local args = cmdline:match(".*Dotnet[!]*%s+(.*)")
+  if not args then return all_commands end
+  -- Everything before arg_lead
+  local pre_arg_lead = args:match("^(.*)" .. arg_lead .. "$")
+
+  local matches = polyfills
+    .iter(all_commands)
+    :map(function(command)
+      if pre_arg_lead ~= "" then
+        local truncated_command = command:match("^" .. pre_arg_lead .. "(.*)")
+        if truncated_command == nil then return nil end
+        command = truncated_command
+      end
+      return command:find(arg_lead) ~= nil and command or nil
+    end)
+    :totable()
+
+  return matches
+end
+
+local function generate_absolute_path_for_project(path, slnpath)
+  local base = vim.fs.normalize(vim.fn.getcwd())
+  local dir = vim.fs.normalize(vim.fs.dirname(slnpath))
+  local res = vim.fs.normalize(polyfills.fs.joinpath(base, dir, vim.fs.normalize(path)))
+  return res
+end
+
+local function background_scanning(merged_opts)
+  if merged_opts.background_scanning then
+    --prewarm msbuild properties
+    local sln = require("easy-dotnet.parsers.sln-parse")
+    local slns = sln.get_solutions()
+    if #slns ~= 1 then return end
+    local path = sln.find_solution_file()
+    if not path then return end
+
+    local stdout
+    local stderr
+    local cmd = require("easy-dotnet.dotnet_cli").list_projects(path)
+    vim.fn.jobstart(cmd, {
+      stdout_buffered = true,
+      stderr_buffered = true,
+      on_stdout = function(_, data) stdout = data end,
+      on_stderr = function(_, data) stderr = data end,
+      on_exit = function(_, code)
+        if code == 0 then
+          local function trim(s) return s:match("^%s*(.-)%s*$") end
+          local project_lines = {}
+          for _, line in ipairs(stdout) do
+            local t = trim(line)
+            if t:match("%.csproj$") or t:match("%.fsproj$") then table.insert(project_lines, t) end
+          end
+
+          polyfills.iter(project_lines):each(function(proj_path)
+            local project_file_path = generate_absolute_path_for_project(proj_path, path)
+            require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path)
+          end)
+        else
+          print("Preloading msbuild properties for " .. path .. " failed")
+          vim.print(stderr)
+        end
+      end,
+    })
+  end
+end
+
+local function auto_install_easy_dotnet()
+  local is_installed = vim.fn.executable("easydotnet") == 1
+  if not is_installed then
+    pcall(function()
+      print("Auto-installing EasyDotnet")
+      vim.fn.jobstart({ "dotnet", "tool", "install", "-g", "EasyDotnet" }, {
+        on_exit = function(_, code)
+          if code ~= 0 then
+            logger.info("[easy-dotnet.nvim]: New dependency EasyDotnet(testrunner) not installed. This is required for the testrunner `dotnet tool install -g EasyDotnet`")
+          else
+            logger.info("EasyDotnet(testrunner) installed successfully")
+          end
+        end,
+      })
+    end)
+    return
+  end
+end
+
 M.setup = function(opts)
   local merged_opts = require("easy-dotnet.options").set_options(opts)
   define_highlights_and_signs(merged_opts)
@@ -150,7 +240,7 @@ M.setup = function(opts)
     else
       print("Invalid subcommand:", command)
     end
-  end, { nargs = "?" })
+  end, { nargs = "?", complete = complete_command })
 
   if merged_opts.csproj_mappings == true then require("easy-dotnet.csproj-mappings").attach_mappings() end
 
@@ -170,6 +260,8 @@ M.setup = function(opts)
   end)
 
   register_legacy_functions()
+  wrap(background_scanning)(merged_opts)
+  wrap(auto_install_easy_dotnet)()
 end
 
 M.create_new_item = wrap(function(...) require("easy-dotnet.actions.new").create_new_item(...) end)

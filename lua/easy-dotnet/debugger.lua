@@ -16,13 +16,14 @@ local function pick_project(use_default)
     local csproject_path = csproj_parse.find_project_file()
     if not csproject_path then logger.error(error_messages.no_runnable_projects_found) end
     local project = csproj_parse.get_project_from_project_file(csproject_path)
-    return project, nil
+    local selected = picker.pick_sync(nil, project.get_all_runtime_definitions(), "Select TargetFramework", true)
+    return selected, nil
   end
 
   local default = default_manager.check_default_project(solution_file_path, "debug")
-  if default ~= nil and use_default == true then return default, solution_file_path end
+  if default ~= nil and use_default == true then return default.project, solution_file_path end
 
-  local projects = polyfills.tbl_filter(function(i) return i.runnable == true end, sln_parse.get_projects_from_sln(solution_file_path))
+  local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(project) return project.runnable end)
 
   if #projects == 0 then
     logger.error(error_messages.no_runnable_projects_found)
@@ -37,17 +38,31 @@ local function pick_project(use_default)
   return project, solution_file_path
 end
 
+local function strip_single_starting_dot(str)
+  if str:sub(1, 2) == ".." then
+    return str
+  elseif str:sub(1, 1) == "." then
+    return str:sub(2)
+  else
+    return str
+  end
+end
+
 M.get_debug_dll = function(default)
   local sln_file = sln_parse.find_solution_file()
   local result = sln_file ~= nil and M.get_dll_for_solution_project(default) or M.get_dll_for_project()
-  local relative_dll_path = polyfills.fs.joinpath(vim.fn.getcwd(), result.dll)
-  local relative_project_path = polyfills.fs.joinpath(vim.fn.getcwd(), result.project)
+  local target_path = result.dll
+  local absolute_project_path = polyfills.fs.joinpath(vim.fs.normalize(vim.fn.getcwd()), strip_single_starting_dot(result.project))
+
   return {
-    dll_path = result.dll,
+    target_path = target_path,
+    absolute_project_path = absolute_project_path,
+    --OBSOLETE kept for backwards compat
+    dll_path = target_path,
     project_path = result.project,
     project_name = result.projectName,
-    relative_dll_path = relative_dll_path,
-    relative_project_path = relative_project_path,
+    relative_dll_path = target_path,
+    relative_project_path = absolute_project_path,
   }
 end
 
@@ -85,8 +100,7 @@ end
 M.start_debugging_test_project = function(project_path)
   local sln_file = sln_parse.find_solution_file()
   assert(sln_file, "Failed to find a solution file")
-  local projects = sln_parse.get_projects_from_sln(sln_file)
-  local test_projects = polyfills.tbl_filter(function(i) return i.isTestProject end, projects)
+  local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(sln_file, function(i) return i.isTestProject end)
   local test_project = project_path and project_path or picker.pick_sync(nil, test_projects, "Pick test project").path
   assert(test_project, "No project selected")
 
@@ -97,7 +111,13 @@ M.start_debugging_test_project = function(project_path)
   }
 end
 
-M.get_environment_variables = function(project_name, relative_project_path)
+local function select_profile(profiles, result)
+  local profile_name = picker.pick_sync(nil, polyfills.tbl_map(function(i) return { display = i, value = i } end, profiles), "Pick launch profile", true)
+  return result.profiles[profile_name.value]
+end
+
+M.get_environment_variables = function(project_name, relative_project_path, autoselect)
+  if autoselect == nil then autoselect = true end
   local launchSettings = polyfills.fs.joinpath(relative_project_path, "Properties", "launchSettings.json")
 
   local stat = vim.loop.fs_stat(launchSettings)
@@ -106,7 +126,9 @@ M.get_environment_variables = function(project_name, relative_project_path)
   local success, result = pcall(vim.fn.json_decode, vim.fn.readfile(launchSettings, ""))
   if not success then return nil, "Error parsing JSON: " .. result end
 
-  local launchProfile = result.profiles[project_name]
+  local profiles = polyfills.tbl_keys(result.profiles)
+
+  local launchProfile = (not autoselect and #profiles > 0) and select_profile(profiles, result) or result.profiles[project_name]
 
   if launchProfile == nil then return nil end
 
@@ -131,11 +153,11 @@ M.get_dll_for_project = function()
   local project_file_path = csproj_parse.find_project_file()
   if project_file_path == nil then error("No project or solution file found") end
   local project = csproj_parse.get_project_from_project_file(project_file_path)
-  local path = vim.fs.dirname(project.path)
+  local selected = picker.pick_sync(nil, project.get_all_runtime_definitions(), "Select TargetFramework", true)
   return {
-    projectName = project.name,
-    dll = project.get_dll_path(),
-    project = path,
+    projectName = selected.name,
+    dll = selected.get_dll_path(),
+    project = vim.fs.dirname(selected.path),
   }
 end
 
