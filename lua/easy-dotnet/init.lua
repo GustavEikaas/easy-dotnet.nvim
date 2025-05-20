@@ -203,24 +203,36 @@ local function background_scanning(merged_opts)
   end
 end
 
-local function auto_install_easy_dotnet()
-  vim.fn.system("dotnet easydotnet -v")
-  if vim.v.shell_error ~= 0 then
-    pcall(function()
-      print("Auto-installing EasyDotnet")
-      vim.fn.jobstart({ "dotnet", "tool", "install", "-g", "EasyDotnet" }, {
-        on_exit = function(_, code)
-          if code ~= 0 then
-            logger.info("[easy-dotnet.nvim]: New dependency EasyDotnet(testrunner) not installed. This is required for the testrunner `dotnet tool install -g EasyDotnet`")
-          else
-            logger.info("EasyDotnet(testrunner) installed successfully")
-          end
-        end,
-      })
-    end)
-  end
-end
+local is_installed = constants.get_data_directory() .. "/easy_dotnet_installed"
 
+local function auto_install_easy_dotnet()
+  if vim.fn.filereadable(is_installed) == 1 then
+    return
+  end
+
+  vim.fn.jobstart({ "dotnet", "easydotnet", "-v" }, {
+    stdout_buffered = true,
+    stderr_buffered = true,
+    on_exit = function(_, code)
+      if code ~= 0 then
+        pcall(function()
+          print("Auto-installing EasyDotnet")
+          vim.fn.jobstart({ "dotnet", "tool", "install", "-g", "EasyDotnet" }, {
+            on_exit = function(_, install_code)
+              if install_code ~= 0 then
+                logger.info("[easy-dotnet.nvim]: New dependency EasyDotnet(testrunner) not installed. This is required for the testrunner `dotnet tool install -g EasyDotnet`")
+              else
+                logger.info("EasyDotnet(testrunner) installed successfully")
+                local ok, err = pcall(function() vim.fn.writefile({ "installed" }, is_installed) end)
+                if not ok then logger.warn("[easy-dotnet.nvim]: Failed to write install marker file: " .. err) end
+              end
+            end,
+          })
+        end)
+      end
+    end,
+  })
+end
 M.setup = function(opts)
   local merged_opts = require("easy-dotnet.options").set_options(opts)
   define_highlights_and_signs(merged_opts)

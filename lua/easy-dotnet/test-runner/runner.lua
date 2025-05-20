@@ -104,7 +104,7 @@ local function start_server(solution_file_path)
     logger.error("EasyDotnet not installed. `dotnet tool install -g EasyDotnet`")
     return
   end
-  local handle = vim.fn.jobstart({ "dotnet easydotnet" }, {
+  local handle = vim.fn.jobstart({ "dotnet", "easydotnet" }, {
     stdout_buffered = false,
     on_stdout = function(_, data, _)
       if M._server.ready or is_negotiating then return end
