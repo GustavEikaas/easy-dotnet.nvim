@@ -158,8 +158,9 @@ local function complete_command(arg_lead, cmdline)
 end
 
 local function generate_absolute_path_for_project(path, slnpath)
+  local base = vim.fs.normalize(vim.fn.getcwd())
   local dir = vim.fs.normalize(vim.fs.dirname(slnpath))
-  local res = vim.fs.normalize(polyfills.fs.joinpath(dir, vim.fs.normalize(path)))
+  local res = vim.fs.normalize(polyfills.fs.joinpath(base, dir, vim.fs.normalize(path)))
   return res
 end
 
@@ -202,6 +203,25 @@ local function background_scanning(merged_opts)
   end
 end
 
+local function auto_install_easy_dotnet()
+  local is_installed = vim.fn.executable("easydotnet") == 1
+  if not is_installed then
+    pcall(function()
+      print("Auto-installing EasyDotnet")
+      vim.fn.jobstart({ "dotnet", "tool", "install", "-g", "EasyDotnet" }, {
+        on_exit = function(_, code)
+          if code ~= 0 then
+            logger.info("[easy-dotnet.nvim]: New dependency EasyDotnet(testrunner) not installed. This is required for the testrunner `dotnet tool install -g EasyDotnet`")
+          else
+            logger.info("EasyDotnet(testrunner) installed successfully")
+          end
+        end,
+      })
+    end)
+    return
+  end
+end
+
 M.setup = function(opts)
   local merged_opts = require("easy-dotnet.options").set_options(opts)
   define_highlights_and_signs(merged_opts)
@@ -241,6 +261,7 @@ M.setup = function(opts)
 
   register_legacy_functions()
   wrap(background_scanning)(merged_opts)
+  wrap(auto_install_easy_dotnet)()
 end
 
 M.create_new_item = wrap(function(...) require("easy-dotnet.actions.new").create_new_item(...) end)

@@ -81,6 +81,7 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 ## Requirements
 
 - Neovim needs to be built with **LuaJIT**
+- [EasyDotnet](https://www.nuget.org/packages/EasyDotnet) for testrunner. `dotnet tool install -g EasyDotnet`
 - `jq`
 
 Although not *required* by the plugin, it is highly recommended to install one of:
@@ -142,7 +143,6 @@ Although not *required* by the plugin, it is highly recommended to install one o
         viewmode = "float",
         enable_buffer_test_execution = true, --Experimental, run tests directly from buffer
         noBuild = true,
-        noRestore = true,
           icons = {
             passed = "",
             skipped = "",

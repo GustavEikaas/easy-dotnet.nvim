@@ -167,6 +167,7 @@ local function build_cache_key(project_file_path, target_framework) return targe
 ---@param target_framework string | nil which target framework to query for e.g 'net9.0'
 ---@param on_finished fun(props: MsbuildProperties)? optional callback
 function M.preload_msbuild_properties(project_file_path, on_finished, target_framework)
+  assert(project_file_path, "Project file path cannot be nil")
   local cache_key = build_cache_key(project_file_path, target_framework)
   local maybe_cached = msbuild_cache[cache_key]
   if maybe_cached ~= nil then
@@ -176,6 +177,9 @@ function M.preload_msbuild_properties(project_file_path, on_finished, target_fra
     end
     return
   end
+
+  local ext = vim.fn.fnamemodify(project_file_path, ":e"):lower()
+  if ext ~= "csproj" and ext ~= "fsproj" then error(project_file_path .. " is not a known project file") end
 
   local command = build_msbuild_command(project_file_path, target_framework)
   local stdout = ""
@@ -268,7 +272,10 @@ M.get_project_from_project_file = function(project_file_path)
     runnable = is_web_project or is_worker_project or is_console_project or is_win_project,
     secrets = maybe_secret_guid,
     --TODO: consolidate method and property, support multi target frameworks where targetPath would be nil
-    get_dll_path = function() return msbuild_props.targetPath end,
+    get_dll_path = function()
+      if msbuild_props.isMultiTarget then logger.error("Calling get_dll_path on the root definition of a multi target project is invalid") end
+      return msbuild_props.targetPath
+    end,
     dll_path = msbuild_props.targetPath,
     isTestProject = is_test_project,
     isTestPlatformProject = is_test_platform_project,
