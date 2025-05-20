@@ -206,9 +206,7 @@ end
 local is_installed = constants.get_data_directory() .. "/easy_dotnet_installed"
 
 local function auto_install_easy_dotnet()
-  if vim.fn.filereadable(is_installed) == 1 then
-    return
-  end
+  if vim.fn.filereadable(is_installed) == 1 then return end
 
   vim.fn.jobstart({ "dotnet", "easydotnet", "-v" }, {
     stdout_buffered = true,
@@ -216,11 +214,11 @@ local function auto_install_easy_dotnet()
     on_exit = function(_, code)
       if code ~= 0 then
         pcall(function()
-          print("Auto-installing EasyDotnet")
+          logger.info("Auto-installing EasyDotnet")
           vim.fn.jobstart({ "dotnet", "tool", "install", "-g", "EasyDotnet" }, {
             on_exit = function(_, install_code)
               if install_code ~= 0 then
-                logger.info("[easy-dotnet.nvim]: New dependency EasyDotnet(testrunner) not installed. This is required for the testrunner `dotnet tool install -g EasyDotnet`")
+                logger.info("[easy-dotnet.nvim]: Failed to install new dependency EasyDotnet(testrunner). This is required for the testrunner `dotnet tool install -g EasyDotnet`")
               else
                 logger.info("EasyDotnet(testrunner) installed successfully")
                 local ok, err = pcall(function() vim.fn.writefile({ "installed" }, is_installed) end)
