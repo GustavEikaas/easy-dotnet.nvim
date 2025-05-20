@@ -1,11 +1,13 @@
 local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
+local cache = require("easy-dotnet.modules.file-cache")
 local M = {}
 
--- Generates a relative path from cwd to the project.csproj file
-local function generate_relative_path_for_project(path, slnpath)
-  local dir = vim.fs.dirname(slnpath)
-  local res = polyfills.fs.joinpath(dir, path):gsub("\\", "/")
+local function generate_absolute_path_for_project(path, slnpath)
+  assert(path, "path cannot be nil")
+  local base = vim.fs.normalize(vim.fn.getcwd())
+  local dir = vim.fs.normalize(vim.fs.dirname(slnpath))
+  local res = vim.fs.normalize(polyfills.fs.joinpath(base, dir, vim.fs.normalize(path)))
   return res
 end
 
@@ -126,31 +128,35 @@ end
 ---@param filter_fn? fun(project: DotnetProject): boolean Optional predicate to filter projects.
 ---@return DotnetProject[]: A list of DotnetProject objects from the solution, optionally filtered.
 function M.get_projects_from_sln(solution_file_path, filter_fn)
-  local cmd = require("easy-dotnet.dotnet_cli").list_projects(solution_file_path)
-  local data = vim.fn.systemlist(cmd)
+  local result = cache.get(solution_file_path, function()
+    local cmd = require("easy-dotnet.dotnet_cli").list_projects(solution_file_path)
+    local data = vim.fn.systemlist(cmd)
 
-  local function trim(s) return s:match("^%s*(.-)%s*$") end
-  local project_lines = {}
-  for _, line in ipairs(data) do
-    local t = trim(line)
-    if t:match("%.csproj$") or t:match("%.fsproj$") then table.insert(project_lines, t) end
-  end
+    local function trim(s) return s:match("^%s*(.-)%s*$") end
+    local project_lines = {}
+    for _, line in ipairs(data) do
+      local t = trim(line)
+      if t:match("%.csproj$") or t:match("%.fsproj$") then table.insert(project_lines, t) end
+    end
 
-  polyfills.iter(project_lines):each(function(proj_path)
-    local project_file_path = generate_relative_path_for_project(proj_path, solution_file_path)
-    require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path)
+    polyfills.iter(project_lines):each(function(proj_path)
+      local project_file_path = generate_absolute_path_for_project(proj_path, solution_file_path)
+      require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path)
+    end)
+
+    local projects = polyfills.tbl_map(function(proj_path)
+      local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
+      local project_file_path = generate_absolute_path_for_project(proj_path, solution_file_path)
+      local project = csproj_parser.get_project_from_project_file(project_file_path)
+      return project
+    end, project_lines)
+
+    if filter_fn then return vim.tbl_filter(filter_fn, projects) end
+
+    return projects
   end)
 
-  local projects = polyfills.tbl_map(function(proj_path)
-    local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
-    local project_file_path = generate_relative_path_for_project(proj_path, solution_file_path)
-    local project = csproj_parser.get_project_from_project_file(project_file_path)
-    return project
-  end, project_lines)
-
-  if filter_fn then return vim.tbl_filter(filter_fn, projects) end
-
-  return projects
+  return result
 end
 
 ---@return table<string>

@@ -43,7 +43,6 @@ local polyfills = require("easy-dotnet.polyfills")
 ---@field viewmode string
 ---@field enable_buffer_test_execution boolean
 ---@field noBuild boolean
----@field noRestore boolean
 ---@field icons TestRunnerIcons
 ---@field mappings TestRunnerMappings
 ---@field additional_args table
@@ -62,7 +61,7 @@ local function get_sdk_path()
       break
     end
   end
-  local sdk_path = polyfills.fs.joinpath(base, sdk_version):gsub("Program Files", '"Program Files"')
+  local sdk_path = polyfills.fs.joinpath(base, sdk_version)
   return sdk_path
 end
 
@@ -129,7 +128,6 @@ local M = {
       viewmode = "split",
       enable_buffer_test_execution = true,
       noBuild = true,
-      noRestore = true,
       icons = {
         passed = "",
         skipped = "",

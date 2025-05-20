@@ -37,32 +37,37 @@ local M = {
 }
 
 ---Traverses a tree from the given node, giving a callback for every item
----@param tree TestNode | nil
+---@param node TestNode | nil
 ---@param cb function
-M.traverse = function(tree, cb)
-  if not tree then tree = M.tree end
+M.traverse = function(node, cb)
+  if not node then node = M.tree end
   --HACK: handle no tree set
-  if not tree.name then return end
+  if not node.name then return end
 
-  cb(tree)
-  for _, node in pairs(tree.children or {}) do
-    M.traverse(node, cb)
+  cb(node)
+  local keys = vim.tbl_keys(node.children or {})
+  table.sort(keys)
+  for _, key in ipairs(keys) do
+    M.traverse(node.children[key], cb)
   end
 end
 
-M.traverse_expanded = function(tree, cb)
-  if not tree then tree = M.tree end
+M.traverse_expanded = function(node, cb)
+  if not node then node = M.tree end
   --HACK: handle no tree set
-  if not tree.name then return end
-  cb(tree)
-  for _, node in pairs(tree.children or {}) do
-    local filterpass = M.filter == nil or (M.filter == node.icon or node.icon == "<Running>")
-    if tree.expanded and filterpass then M.traverse_expanded(node, cb) end
+  if not node.name then return end
+  cb(node)
+  local keys = vim.tbl_keys(node.children or {})
+  table.sort(keys)
+  for _, key in ipairs(keys) do
+    local child_node = node.children[key]
+    local filterpass = M.filter == nil or (M.filter == child_node.icon or child_node.icon == "<Running>")
+    if node.expanded and filterpass then M.traverse_expanded(child_node, cb) end
   end
 end
 
 ---@param id string
----@param type "Run" | "Discovery" | "Build"
+---@param type "Run" | "Server"
 ---@param subtask_count number | nil
 function M.appendJob(id, type, subtask_count)
   local job = {
@@ -97,7 +102,12 @@ function M.redraw_virtual_text()
     vim.api.nvim_buf_set_extmark(M.buf, ns_id, 0, 0, {
       virt_text = {
         {
-          string.format("%s %s/%s", job_type == "Run" and "Running" or job_type == "Discovery" and "Discovering" or "Building", completed_count, total_subtask_count),
+          string.format(
+            "%s %s/%s",
+            job_type == "Run" and "Running" or job_type == "Discovery" and "Discovering" or job_type == "Build" and "Building" or "Starting server",
+            completed_count,
+            total_subtask_count
+          ),
           "Character",
         },
       },
@@ -145,6 +155,13 @@ end
 ---@param node TestNode
 ---@return string | nil
 local function calculate_highlight(node)
+  if node.job then
+    if node.job.state == "pending" then
+      return "EasyDotnetTestRunnerRunning"
+    elseif node.job.state == "error" then
+      return "EasyDotnetTestRunnerFailed"
+    end
+  end
   if node.icon == M.options.icons.failed then
     return "EasyDotnetTestRunnerFailed"
   elseif node.icon == "<Running>" then
@@ -179,12 +196,32 @@ local function convert_time(time_str)
   end
 end
 
+---@param a BuildJob | DiscoverJob
+local function stringify_job(a)
+  if a.name == "build" then return a.state == "pending" and "Building" or a.state == "error" and "build failed" or "" end
+
+  if a.name == "discover" then return a.state == "pending" and "Discovering" or a.state == "error" and "discovery failed" or "" end
+end
+
+---@param node TestNode
 local function node_to_string(node)
   local total_tests = 0
   ---@param i TestNode
   M.traverse(node, function(i)
     if i.type == "subcase" or i.type == "test" then total_tests = total_tests + 1 end
   end)
+
+  if node.job then
+    local formatted = string.format(
+      "%s%s%s%s  <%s>",
+      string.rep(" ", node.indent or 0),
+      node.preIcon and (node.preIcon .. " ") or "",
+      node.name,
+      node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
+      stringify_job(node.job)
+    )
+    return formatted
+  end
 
   local formatted = string.format(
     "%s%s%s%s %s %s",
