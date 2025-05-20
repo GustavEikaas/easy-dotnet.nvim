@@ -204,8 +204,8 @@ local function background_scanning(merged_opts)
 end
 
 local function auto_install_easy_dotnet()
-  local is_installed = vim.fn.executable("easydotnet") == 1
-  if not is_installed then
+  vim.fn.system("dotnet easydotnet -v")
+  if vim.v.shell_error ~= 0 then
     pcall(function()
       print("Auto-installing EasyDotnet")
       vim.fn.jobstart({ "dotnet", "tool", "install", "-g", "EasyDotnet" }, {
@@ -218,7 +218,6 @@ local function auto_install_easy_dotnet()
         end,
       })
     end)
-    return
   end
 end
 

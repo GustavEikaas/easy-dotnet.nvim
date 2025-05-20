@@ -98,12 +98,13 @@ local function start_server(solution_file_path)
   local server_ready_prefix = "Named pipe server started: "
 
   local is_negotiating = false
-  local is_installed = vim.fn.executable("easydotnet") == 1
-  if not is_installed then
+
+  vim.fn.system("dotnet easydotnet -v")
+  if vim.v.shell_error ~= 0 then
     logger.error("EasyDotnet not installed. `dotnet tool install -g EasyDotnet`")
     return
   end
-  local handle = vim.fn.jobstart({ "easydotnet" }, {
+  local handle = vim.fn.jobstart({ "dotnet easydotnet" }, {
     stdout_buffered = false,
     on_stdout = function(_, data, _)
       if M._server.ready or is_negotiating then return end
