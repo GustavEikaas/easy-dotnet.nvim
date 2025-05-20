@@ -140,7 +140,7 @@ M.run_project_with_profile = function(term, use_default, args)
   local project, solution_file_path = pick_project_framework(use_default)
   if not project then error("Failed to select project") end
   local profile = get_or_pick_profile(use_default, project, solution_file_path)
-  local arg = profile and string.format("--launch-profile '%s'", profile) or ""
+  local arg = profile and string.format("--launch-profile %s", vim.fn.shellescape(profile)) or ""
   run_project(project, arg .. " " .. args, term)
 end
 

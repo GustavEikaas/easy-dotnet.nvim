@@ -60,7 +60,7 @@ local init_secrets = function(project_file_path, get_secret_path)
     "user-secrets",
     "init",
     "--project",
-    project_file_path,
+    vim.fn.shellescape(project_file_path),
   })
   if vim.v.shell_error ~= 0 then error("Failed to create user-secrets for " .. project_file_path) end
   local guid = extract_secret_guid(res)

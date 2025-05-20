@@ -3,7 +3,7 @@ local M = {}
 ---@param source string source project file path
 ---@param target string target project file path
 ---@return string
-function M.add_project(source, target) return string.format("dotnet add %s reference %s", source, target) end
+function M.add_project(source, target) return string.format("dotnet add %s reference %s", vim.fn.shellescape(source), vim.fn.shellescape(target)) end
 
 --- `dotnet package search <QUERY> [--take <NUMBER>] [--format <FORMAT>] [--exact-match]`
 --- Search for nuget packages meeting the search term.
@@ -18,6 +18,6 @@ function M.package_search(query, is_json, exact, take)
   return string.format("dotnet package search %s %s %s %s", query, take_query, json_query, exact_query)
 end
 
-function M.list_projects(sln_file_path) return string.format("dotnet sln %s list", sln_file_path) end
+function M.list_projects(sln_file_path) return string.format("dotnet sln %s list", vim.fn.shellescape(sln_file_path)) end
 
 return M
