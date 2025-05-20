@@ -128,7 +128,6 @@ local function VsTest_Run(node, win)
     return test.id
   end, tests)
 
-  --TODO: bug if we do this then multi-targeting breaks or we have do to some complicated lookups
   local project = require("easy-dotnet.parsers.csproj-parse").get_project_from_project_file(node.cs_project_path)
   local project_framework = project.get_specific_runtime_definition(node.framework)
   local testPath = project_framework.get_dll_path()
@@ -163,7 +162,6 @@ local function MTP_Run(node, win)
     }
   end, tests)
 
-  --TODO: bug if we do this then multi-targeting breaks or we have do to some complicated lookups
   local project = require("easy-dotnet.parsers.csproj-parse").get_project_from_project_file(node.cs_project_path)
   local project_framework = project.get_specific_runtime_definition(node.framework)
 
@@ -340,7 +338,6 @@ local keymaps = function()
     [keymap.run_all.lhs] = {
       handle = function(_, win)
         win.traverse(win.tree, function(node)
-          --TODO: batching for vstest
           if node.type == "csproject" then run_tests(node, win) end
         end)
       end,
@@ -351,7 +348,6 @@ local keymaps = function()
       handle = function(node, win)
         if node.type == "sln" then
           for _, value in pairs(node.children) do
-            --TODO: batching for vstest
             run_tests(value, win)
           end
         elseif node.type == "csproject" then
