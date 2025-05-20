@@ -116,17 +116,14 @@ local function VsTest_Run(node, win)
   ---@type TestNode[]
   local tests = {}
   ---@param child TestNode
-  win.traverse(node, function(child)
+  win.traverse_filtered(node, function(child)
     child.icon = "<Running>"
     if child.type == "test" or child.type == "subcase" then table.insert(tests, child) end
   end)
 
   local on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
 
-  local filter = vim.tbl_map(function(test)
-    ---@type RunRequestNode
-    return test.id
-  end, tests)
+  local filter = vim.tbl_map(function(test) return test.id end, tests)
 
   local project = require("easy-dotnet.parsers.csproj-parse").get_project_from_project_file(node.cs_project_path)
   local project_framework = project.get_specific_runtime_definition(node.framework)
@@ -147,7 +144,7 @@ local function MTP_Run(node, win)
   ---@type TestNode[]
   local tests = {}
   ---@param child TestNode
-  win.traverse(node, function(child)
+  win.traverse_filtered(node, function(child)
     child.icon = "<Running>"
     if child.type == "test" or child.type == "subcase" then table.insert(tests, child) end
   end)
