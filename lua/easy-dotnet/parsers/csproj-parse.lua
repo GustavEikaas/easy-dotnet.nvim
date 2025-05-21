@@ -289,8 +289,9 @@ M.get_project_from_project_file = function(project_file_path)
   }
 
   ---@param target_framework string specified as e.g net8.0
-  ---@return DotnetProject
+  ---@return DotnetProjectFramework
   project.get_specific_runtime_definition = function(target_framework)
+    if not project.msbuild_props.isMultiTarget then return project end
     --TODO: validate that arg is a valid targetFramework on the project
     local msbuild_target_framework_props = get_or_wait_or_set_cached_value(project_file_path, target_framework)
     local runtime_version = target_framework:gsub("%net", "")
