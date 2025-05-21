@@ -113,7 +113,7 @@ local function start_server(solution_file_path)
             if extensions.isWindows() then
               full_pipe_path = [[\\.\pipe\]] .. M._server.pipe_name
             elseif extensions.isDarwin() then
-              full_pipe_path = os.getenv("TMPDIR") .. "CoreFxPipe" .. M._server.pipe_name
+              full_pipe_path = os.getenv("TMPDIR") .. "CoreFxPipe_" .. M._server.pipe_name
             else
               full_pipe_path = "/tmp/CoreFxPipe_" .. M._server.pipe_name
             end
