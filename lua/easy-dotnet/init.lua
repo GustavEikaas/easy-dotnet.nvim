@@ -175,9 +175,7 @@ local function background_scanning(merged_opts)
     --prewarm msbuild properties
     get_solutions_async(function(slns)
       if #slns ~= 1 then return end
-      local path = slns[1]
-
-      require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(path)
+      require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(slns[1])
     end)
   end
 end
