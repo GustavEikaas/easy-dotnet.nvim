@@ -1,4 +1,3 @@
-local polyfills = require("easy-dotnet.polyfills")
 local file_cache = require("easy-dotnet.modules.file-cache")
 local logger = require("easy-dotnet.logger")
 local M = {}
