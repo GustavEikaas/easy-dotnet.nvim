@@ -147,7 +147,7 @@ end
 ---@param filter_fn? fun(project: DotnetProject): boolean Optional predicate to filter projects.
 ---@return DotnetProject[]: A list of DotnetProject objects from the solution, optionally filtered.
 function M.get_projects_from_sln_async(solution_file_path, filter_fn)
-  local result = cache.get(solution_file_path, function()
+  local project_lines = cache.get(solution_file_path, function()
     local project_lines
     local co = coroutine.running()
     assert(co, "get_projects_from_sln_async must be called within a coroutine")
@@ -171,25 +171,26 @@ function M.get_projects_from_sln_async(solution_file_path, filter_fn)
       end,
     })
     coroutine.yield()
-
-    local remaining = #project_lines
-    for _, proj_path in ipairs(project_lines) do
-      local project_file_path = generate_absolute_path_for_project(proj_path, solution_file_path)
-      require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path, function()
-        remaining = remaining - 1
-        if remaining == 0 then coroutine.resume(co) end
-      end)
-    end
-
-    if remaining > 0 then coroutine.yield() end
-
-    local projects = get_all_projects_from_paths(project_lines, solution_file_path)
-    if filter_fn then return vim.tbl_filter(filter_fn, projects) end
-
-    return projects
+    return project_lines
   end)
 
-  return result
+  local co = coroutine.running()
+
+  local remaining = #project_lines
+  for _, proj_path in ipairs(project_lines) do
+    local project_file_path = generate_absolute_path_for_project(proj_path, solution_file_path)
+    require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path, function()
+      remaining = remaining - 1
+      if remaining == 0 then coroutine.resume(co) end
+    end)
+  end
+
+  if remaining > 0 then coroutine.yield() end
+
+  local projects = get_all_projects_from_paths(project_lines, solution_file_path)
+  if filter_fn then return vim.tbl_filter(filter_fn, projects) end
+
+  return projects
 end
 
 ---Parses a .sln file and returns a list of DotnetProject objects.
@@ -206,20 +207,19 @@ function M.get_projects_from_sln(solution_file_path, filter_fn)
     if vim.v.shell_error ~= 0 then error("Command failed: " .. cmd) end
 
     local project_lines = get_project_paths_from_stdout(stdout)
-
-    polyfills.iter(project_lines):each(function(proj_path)
-      local project_file_path = generate_absolute_path_for_project(proj_path, solution_file_path)
-      require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path)
-    end)
-
-    local projects = get_all_projects_from_paths(project_lines, solution_file_path)
-
-    if filter_fn then return vim.tbl_filter(filter_fn, projects) end
-
-    return projects
+    return project_lines
   end)
 
-  return result
+  polyfills.iter(result):each(function(proj_path)
+    local project_file_path = generate_absolute_path_for_project(proj_path, solution_file_path)
+    require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path)
+  end)
+
+  local projects = get_all_projects_from_paths(result, solution_file_path)
+
+  if filter_fn then return vim.tbl_filter(filter_fn, projects) end
+
+  return projects
 end
 
 ---@return table<string>
