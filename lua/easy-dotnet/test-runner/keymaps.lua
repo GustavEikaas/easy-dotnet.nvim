@@ -1,4 +1,5 @@
 local window = require("easy-dotnet.test-runner.window")
+local runner = require("easy-dotnet.test-runner.runner")
 local logger = require("easy-dotnet.logger")
 local extensions = require("easy-dotnet.extensions")
 
@@ -129,8 +130,7 @@ local function VsTest_Run(node, win)
   local project_framework = project.get_specific_runtime_definition(node.framework)
   local testPath = project_framework.get_dll_path()
 
-  local options = require("easy-dotnet.options").options.test_runner
-  local vstest_dll = vim.fs.joinpath(options.sdk_path, "vstest.console.dll")
+  local vstest_dll = vim.fs.joinpath(runner.sdk_path, "vstest.console.dll")
   coroutine.wrap(function()
     ---@type StreamJsonRpc | nil
     local client = require("easy-dotnet.test-runner.runner")._server.client

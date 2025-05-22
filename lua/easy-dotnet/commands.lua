@@ -190,24 +190,20 @@ M.createfile = {
 M.testrunner = {
   handle = function(_, options)
     local test_runner = options and options.test_runner or nil
-    local sdk_path = options and options.get_sdk_path() or nil
-    require("easy-dotnet.test-runner.runner").runner(test_runner, sdk_path)
+    require("easy-dotnet.test-runner.runner").runner(test_runner)
   end,
   subcommands = {
     refresh = {
       handle = function(_, options)
         local test_runner = options and options.test_runner or nil
-        local sdk_path = options and options.get_sdk_path() or nil
-        require("easy-dotnet.test-runner.runner").refresh(test_runner, sdk_path)
+        require("easy-dotnet.test-runner.runner").refresh(test_runner)
       end,
       subcommands = {
         ---@deprecated building happens automatically now
         build = {
           handle = function(_, options)
             local test_runner = options and options.test_runner or nil
-            local sdk_path = options and options.get_sdk_path() or nil
-
-            require("easy-dotnet.test-runner.runner").refresh(test_runner, sdk_path)
+            require("easy-dotnet.test-runner.runner").refresh(test_runner)
           end,
         },
       },
