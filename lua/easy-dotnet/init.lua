@@ -164,42 +164,55 @@ local function generate_absolute_path_for_project(path, slnpath)
   return res
 end
 
+local function get_solutions_async(cb)
+  local scan = require("plenary.scandir")
+  scan.scan_dir_async(".", {
+    respect_gitignore = true,
+    search_pattern = "%.slnx?$",
+    depth = 5,
+    silent = true,
+    on_exit = function(output)
+      vim.schedule(function() cb(output) end)
+    end,
+  })
+end
+
 local function background_scanning(merged_opts)
   if merged_opts.background_scanning then
     --prewarm msbuild properties
-    local sln = require("easy-dotnet.parsers.sln-parse")
-    local slns = sln.get_solutions()
-    if #slns ~= 1 then return end
-    local path = sln.find_solution_file()
-    if not path then return end
+    get_solutions_async(function(slns)
+      vim.print(slns)
+      if #slns ~= 1 then return end
+      local path = slns[1]
 
-    local stdout
-    local stderr
-    local cmd = require("easy-dotnet.dotnet_cli").list_projects(path)
-    vim.fn.jobstart(cmd, {
-      stdout_buffered = true,
-      stderr_buffered = true,
-      on_stdout = function(_, data) stdout = data end,
-      on_stderr = function(_, data) stderr = data end,
-      on_exit = function(_, code)
-        if code == 0 then
-          local function trim(s) return s:match("^%s*(.-)%s*$") end
-          local project_lines = {}
-          for _, line in ipairs(stdout) do
-            local t = trim(line)
-            if t:match("%.csproj$") or t:match("%.fsproj$") then table.insert(project_lines, t) end
+      local stdout
+      local stderr
+      local cmd = require("easy-dotnet.dotnet_cli").list_projects(path)
+      vim.fn.jobstart(cmd, {
+        stdout_buffered = true,
+        stderr_buffered = true,
+        on_stdout = function(_, data) stdout = data end,
+        on_stderr = function(_, data) stderr = data end,
+        on_exit = function(_, code)
+          if code == 0 then
+            local function trim(s) return s:match("^%s*(.-)%s*$") end
+            local project_lines = {}
+            for _, line in ipairs(stdout) do
+              local t = trim(line)
+              if t:match("%.csproj$") or t:match("%.fsproj$") then table.insert(project_lines, t) end
+            end
+
+            polyfills.iter(project_lines):each(function(proj_path)
+              local project_file_path = generate_absolute_path_for_project(proj_path, path)
+              require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path)
+            end)
+          else
+            print("Preloading msbuild properties for " .. path .. " failed")
+            vim.print(stderr)
           end
-
-          polyfills.iter(project_lines):each(function(proj_path)
-            local project_file_path = generate_absolute_path_for_project(proj_path, path)
-            require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path)
-          end)
-        else
-          print("Preloading msbuild properties for " .. path .. " failed")
-          vim.print(stderr)
-        end
-      end,
-    })
+        end,
+      })
+    end)
   end
 end
 
