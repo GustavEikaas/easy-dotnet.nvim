@@ -157,16 +157,28 @@ local function complete_command(arg_lead, cmdline)
   return matches
 end
 
+local function get_solutions_async(cb)
+  local scan = require("plenary.scandir")
+  scan.scan_dir_async(".", {
+    respect_gitignore = true,
+    search_pattern = "%.slnx?$",
+    depth = 5,
+    silent = true,
+    on_exit = function(output)
+      vim.schedule(function() wrap(cb)(output) end)
+    end,
+  })
+end
+
 local function background_scanning(merged_opts)
   if merged_opts.background_scanning then
     --prewarm msbuild properties
-    local sln = require("easy-dotnet.parsers.sln-parse")
-    local slns = sln.get_solutions()
-    if #slns ~= 1 then return end
-    local path = sln.find_solution_file()
-    if not path then return end
+    get_solutions_async(function(slns)
+      if #slns ~= 1 then return end
+      local path = slns[1]
 
-    require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(path)
+      require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(path)
+    end)
   end
 end
 
