@@ -168,6 +168,7 @@ end
 ---@param filter_fn? fun(project: DotnetProject): boolean Optional predicate to filter projects.
 ---@return DotnetProject[]: A list of DotnetProject objects from the solution, optionally filtered.
 function M.get_projects_from_sln_async(solution_file_path, filter_fn)
+  ---@type string[]
   local project_lines = cache.get(solution_file_path, function()
     local project_lines
     local co = coroutine.running()
