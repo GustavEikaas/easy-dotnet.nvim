@@ -161,17 +161,8 @@ end
 
 ---@return table<string>
 function M.get_solutions()
-  local sln_files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.sln$", depth = 5 })
-  local slnx_files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.slnx$", depth = 5 })
-
-  local normalized = {}
-  for _, value in ipairs(sln_files) do
-    table.insert(normalized, value)
-  end
-  for _, value in ipairs(slnx_files) do
-    table.insert(normalized, value)
-  end
-  return normalized
+  local sln_files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.slnx?$", depth = 5 })
+  return sln_files
 end
 
 M.try_get_selected_solution_file = function()
