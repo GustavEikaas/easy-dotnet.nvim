@@ -521,6 +521,7 @@ local function refresh_runner(options, solution_file_path)
     end
     if #vs_test_projects > 0 then
       local sdk_path = M.sdk_path or require("easy-dotnet.options").options.get_sdk_path()
+      M.sdk_path = sdk_path
       for _, value in ipairs(vs_test_projects) do
         coroutine.wrap(function() start_vstest_discovery(value, options, sdk_path, solution_file_path) end)()
       end
