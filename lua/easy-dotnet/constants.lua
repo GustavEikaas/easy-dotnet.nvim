@@ -29,6 +29,7 @@ M.signs = {
   EasyDotnetTestFailed = "EasyDotnetTestFailed",
   EasyDotnetTestSkipped = "EasyDotnetTestSkipped",
   EasyDotnetTestError = "EasyDotnetTestError",
+  EasyDotnetTestInProgress = "EasyDotnetTestInProgress",
 }
 
 return M
