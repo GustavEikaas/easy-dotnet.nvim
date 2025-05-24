@@ -304,4 +304,10 @@ M.ef = {
   },
 }
 
+M._integration_tests = {
+  handle = function()
+    require('easy-dotnet.integration-tests.dashboard').show_dashboard()
+  end,
+}
+
 return M
