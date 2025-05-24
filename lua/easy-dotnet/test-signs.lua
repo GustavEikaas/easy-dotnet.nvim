@@ -66,6 +66,21 @@ local function debug_test_from_buffer()
   end)
 end
 
+local function get_nearest_method_line()
+  local ts_utils = require("nvim-treesitter.ts_utils")
+  local node = ts_utils.get_node_at_cursor()
+
+  while node do
+    if node:type() == "method_declaration" then
+      local wantedNode = node:field("name")[1]
+      local wantedNodeStartRow, _, _ = wantedNode:start()
+      -- treesitter uses 0 based indexing where as line numbers start at 1
+      return wantedNodeStartRow + 1
+    end
+    node = node:parent()
+  end
+end
+
 local function run_test_from_buffer()
   local options = require("easy-dotnet.test-runner.render").options
   local constants = require("easy-dotnet.constants")
@@ -74,7 +89,7 @@ local function run_test_from_buffer()
 
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
-  local current_line = vim.api.nvim_win_get_cursor(0)[1]
+  local current_line = get_nearest_method_line()
 
   ---@param node TestNode
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
@@ -86,6 +101,7 @@ local function run_test_from_buffer()
 
       local spinner = require("easy-dotnet.ui-modules.spinner").new()
       spinner:start_spinner("Running test")
+      vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestInProgress, bufnr, { lnum = current_line, priority = 20 })
 
       run_test(node.name, node.namespace, node.cs_project_path, function(results)
         ---@type TestResult
