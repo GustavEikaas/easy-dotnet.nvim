@@ -84,6 +84,7 @@ local function define_highlights_and_signs(merged_opts)
   vim.fn.sign_define(constants.signs.EasyDotnetTestSign, { text = icons.test, texthl = "Character" })
   vim.fn.sign_define(constants.signs.EasyDotnetTestPassed, { text = icons.passed, texthl = "EasyDotnetTestRunnerPassed" })
   vim.fn.sign_define(constants.signs.EasyDotnetTestFailed, { text = icons.failed, texthl = "EasyDotnetTestRunnerFailed" })
+  vim.fn.sign_define(constants.signs.EasyDotnetTestInProgress, { text = icons.reload, texthl = "EasyDotnetTestRunnerRunning" })
   vim.fn.sign_define(constants.signs.EasyDotnetTestSkipped, { text = icons.skipped })
   vim.fn.sign_define(constants.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
 end
@@ -157,71 +158,57 @@ local function complete_command(arg_lead, cmdline)
   return matches
 end
 
-local function generate_absolute_path_for_project(path, slnpath)
-  local base = vim.fs.normalize(vim.fn.getcwd())
-  local dir = vim.fs.normalize(vim.fs.dirname(slnpath))
-  local res = vim.fs.normalize(polyfills.fs.joinpath(base, dir, vim.fs.normalize(path)))
-  return res
+local function get_solutions_async(cb)
+  local scan = require("plenary.scandir")
+  scan.scan_dir_async(".", {
+    respect_gitignore = true,
+    search_pattern = "%.slnx?$",
+    depth = 5,
+    silent = true,
+    on_exit = function(output)
+      vim.schedule(function() wrap(cb)(output) end)
+    end,
+  })
 end
 
 local function background_scanning(merged_opts)
   if merged_opts.background_scanning then
     --prewarm msbuild properties
-    local sln = require("easy-dotnet.parsers.sln-parse")
-    local slns = sln.get_solutions()
-    if #slns ~= 1 then return end
-    local path = sln.find_solution_file()
-    if not path then return end
-
-    local stdout
-    local stderr
-    local cmd = require("easy-dotnet.dotnet_cli").list_projects(path)
-    vim.fn.jobstart(cmd, {
-      stdout_buffered = true,
-      stderr_buffered = true,
-      on_stdout = function(_, data) stdout = data end,
-      on_stderr = function(_, data) stderr = data end,
-      on_exit = function(_, code)
-        if code == 0 then
-          local function trim(s) return s:match("^%s*(.-)%s*$") end
-          local project_lines = {}
-          for _, line in ipairs(stdout) do
-            local t = trim(line)
-            if t:match("%.csproj$") or t:match("%.fsproj$") then table.insert(project_lines, t) end
-          end
-
-          polyfills.iter(project_lines):each(function(proj_path)
-            local project_file_path = generate_absolute_path_for_project(proj_path, path)
-            require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path)
-          end)
-        else
-          print("Preloading msbuild properties for " .. path .. " failed")
-          vim.print(stderr)
-        end
-      end,
-    })
+    get_solutions_async(function(slns)
+      if #slns ~= 1 then return end
+      require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(slns[1])
+    end)
   end
 end
+
+local is_installed = constants.get_data_directory() .. "/easy_dotnet_installed"
 
 local function auto_install_easy_dotnet()
-  local is_installed = vim.fn.executable("easydotnet") == 1
-  if not is_installed then
-    pcall(function()
-      print("Auto-installing EasyDotnet")
-      vim.fn.jobstart({ "dotnet", "tool", "install", "-g", "EasyDotnet" }, {
-        on_exit = function(_, code)
-          if code ~= 0 then
-            logger.info("[easy-dotnet.nvim]: New dependency EasyDotnet(testrunner) not installed. This is required for the testrunner `dotnet tool install -g EasyDotnet`")
-          else
-            logger.info("EasyDotnet(testrunner) installed successfully")
-          end
-        end,
-      })
-    end)
-    return
-  end
-end
+  if vim.fn.filereadable(is_installed) == 1 then return end
 
+  vim.fn.jobstart({ "dotnet", "easydotnet", "-v" }, {
+    stdout_buffered = true,
+    stderr_buffered = true,
+    on_exit = function(_, code)
+      if code ~= 0 then
+        pcall(function()
+          logger.info("Auto-installing EasyDotnet")
+          vim.fn.jobstart({ "dotnet", "tool", "install", "-g", "EasyDotnet" }, {
+            on_exit = function(_, install_code)
+              if install_code ~= 0 then
+                logger.info("[easy-dotnet.nvim]: Failed to install new dependency EasyDotnet(testrunner). This is required for the testrunner `dotnet tool install -g EasyDotnet`")
+              else
+                logger.info("EasyDotnet(testrunner) installed successfully")
+                local ok, err = pcall(function() vim.fn.writefile({ "installed" }, is_installed) end)
+                if not ok then logger.warn("[easy-dotnet.nvim]: Failed to write install marker file: " .. err) end
+              end
+            end,
+          })
+        end)
+      end
+    end,
+  })
+end
 M.setup = function(opts)
   local merged_opts = require("easy-dotnet.options").set_options(opts)
   define_highlights_and_signs(merged_opts)

@@ -5,4 +5,9 @@ E.isWindows = function()
   return platform == "Windows_NT"
 end
 
+E.isDarwin = function()
+  local platform = vim.loop.os_uname().sysname
+  return platform == "Darwin"
+end
+
 return E

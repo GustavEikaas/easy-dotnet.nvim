@@ -76,7 +76,7 @@ M.traverse_filtered = function(node, cb)
   for _, key in ipairs(keys) do
     local child_node = node.children[key]
     local filterpass = M.filter == nil or (M.filter == child_node.icon)
-    if filterpass then M.traverse_expanded(child_node, cb) end
+    if filterpass then M.traverse_filtered(child_node, cb) end
   end
 end
 

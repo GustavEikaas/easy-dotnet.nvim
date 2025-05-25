@@ -6,6 +6,7 @@ local logger = require("easy-dotnet.logger")
 local extensions = require("easy-dotnet.extensions")
 
 local M = {
+  sdk_path = nil,
   _server = {
     id = nil,
     ready = false,
@@ -98,12 +99,8 @@ local function start_server(solution_file_path)
   local server_ready_prefix = "Named pipe server started: "
 
   local is_negotiating = false
-  local is_installed = vim.fn.executable("easydotnet") == 1
-  if not is_installed then
-    logger.error("EasyDotnet not installed. `dotnet tool install -g EasyDotnet`")
-    return
-  end
-  local handle = vim.fn.jobstart({ "easydotnet" }, {
+
+  local handle = vim.fn.jobstart({ "dotnet", "easydotnet" }, {
     stdout_buffered = false,
     on_stdout = function(_, data, _)
       if M._server.ready or is_negotiating then return end
@@ -113,7 +110,14 @@ local function start_server(solution_file_path)
             local pipename = line:sub(#server_ready_prefix + 1)
             M._server.pipe_name = vim.trim(pipename)
             M._server.client = require("easy-dotnet.test-runner.rpc-client")
-            local full_pipe_path = extensions.isWindows() and [[\\.\pipe\]] .. M._server.pipe_name or "/tmp/CoreFxPipe_" .. M._server.pipe_name
+            local full_pipe_path
+            if extensions.isWindows() then
+              full_pipe_path = [[\\.\pipe\]] .. M._server.pipe_name
+            elseif extensions.isDarwin() then
+              full_pipe_path = os.getenv("TMPDIR") .. "CoreFxPipe_" .. M._server.pipe_name
+            else
+              full_pipe_path = "/tmp/CoreFxPipe_" .. M._server.pipe_name
+            end
 
             is_negotiating = true
             M._server.client.setup({ pipe_path = full_pipe_path, debug = false })
@@ -473,7 +477,7 @@ local function start_MTP_discovery_for_project(project, options, solution_file_p
   client.request("mtp/discover", { testExecutablePath = testPath }, handle_rpc_response(project_node, options))
 end
 
-local function refresh_runner(options, solution_file_path, sdk_path)
+local function refresh_runner(options, solution_file_path)
   --TODO: refactor, basically just want to prevent refresh if discovery, building or running is already in progress
   if #win.jobs > 0 and not (#win.jobs == 1 and win.jobs[1].id == "server") then
     logger.warn("Cant refresh while waiting for pending jobs")
@@ -515,8 +519,12 @@ local function refresh_runner(options, solution_file_path, sdk_path)
     for _, value in ipairs(mtp_projects) do
       coroutine.wrap(function() start_MTP_discovery_for_project(value, options, solution_file_path) end)()
     end
-    for _, value in ipairs(vs_test_projects) do
-      coroutine.wrap(function() start_vstest_discovery(value, options, sdk_path, solution_file_path) end)()
+    if #vs_test_projects > 0 then
+      local sdk_path = M.sdk_path or require("easy-dotnet.options").options.get_sdk_path()
+      M.sdk_path = sdk_path
+      for _, value in ipairs(vs_test_projects) do
+        coroutine.wrap(function() start_vstest_discovery(value, options, sdk_path, solution_file_path) end)()
+      end
     end
   end)
 
@@ -524,8 +532,7 @@ local function refresh_runner(options, solution_file_path, sdk_path)
 end
 
 ---@param options TestRunnerOptions
----@param sdk_path string
-local function open_runner(options, sdk_path)
+local function open_runner(options)
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
     logger.error(error_messages.no_project_definition_found)
@@ -536,19 +543,16 @@ local function open_runner(options, sdk_path)
 
   win.buf_name = "Test manager"
   win.filetype = "easy-dotnet"
-  --TODO: make plugin options state
-  options.sdk_path = sdk_path
   win.setOptions(options).setKeymaps(require("easy-dotnet.test-runner.keymaps")).render(options.viewmode)
 
   if is_reused then return end
 
   start_server(solutionFilePath)
-  refresh_runner(options, solutionFilePath, sdk_path)
+  refresh_runner(options, solutionFilePath)
 end
 
-M.refresh = function(options, sdk_path)
+M.refresh = function(options)
   options = options or require("easy-dotnet.options").options.test_runner
-  sdk_path = sdk_path or require("easy-dotnet.options").options.get_sdk_path()
 
   if #win.jobs > 0 then
     logger.warn("Cant refresh while waiting for pending jobs")
@@ -564,7 +568,7 @@ M.refresh = function(options, sdk_path)
 
   local is_active = win.buf ~= nil
   if not is_active then error("Testrunner not initialized") end
-  refresh_runner(options, solutionFilePath, sdk_path)
+  refresh_runner(options, solutionFilePath)
 end
 
 local function run_with_traceback(func)
@@ -574,10 +578,9 @@ local function run_with_traceback(func)
   if not ok then error(debug.traceback(co, err), 0) end
 end
 
-M.runner = function(options, sdk_path)
+M.runner = function(options)
   options = options or require("easy-dotnet.options").options.test_runner
-  sdk_path = sdk_path or require("easy-dotnet.options").options.get_sdk_path()
-  run_with_traceback(function() open_runner(options, sdk_path) end)
+  run_with_traceback(function() open_runner(options) end)
 end
 
 return M
