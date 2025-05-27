@@ -281,7 +281,7 @@ end
 
 local function setMappings()
   if M.keymap == nil then return end
-  if M.buf == nil then return end
+  if M.buf == nil or not vim.api.nvim_buf_is_valid(M.buf) then return end
   for key, value in pairs(M.keymap()) do
     vim.keymap.set("n", key, function()
       local line_num = vim.api.nvim_win_get_cursor(0)[1]
