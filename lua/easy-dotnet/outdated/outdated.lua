@@ -56,12 +56,15 @@ end
 local function find_package_in_buffer(package_name, pattern_type)
   local buf = vim.api.nvim_get_current_buf()
 
+  -- Escape dots and hyphens in package name
+  local escaped_package_name = package_name:gsub("[%.%-]", "%%%1")
+
   -- Define the pattern based on the type
   local pattern
   if pattern_type == PATTERN_TYPE_REFERENCE then
-    pattern = '<PackageReference Include="' .. package_name:gsub("%.", "%%.") .. '"'
+    pattern = '<PackageReference Include="' .. escaped_package_name .. '"'
   elseif pattern_type == PATTERN_TYPE_VERSION then
-    pattern = '<PackageVersion Include="' .. package_name:gsub("%.", "%%.") .. '"'
+    pattern = '<PackageVersion Include="' .. escaped_package_name .. '"'
   else
     error("Invalid pattern_type: " .. tostring(pattern_type))
     return nil
