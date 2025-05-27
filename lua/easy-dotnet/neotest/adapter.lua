@@ -15,15 +15,17 @@ neotest.Adapter = {
 ---@param dir string @Directory to treat as cwd
 ---@return string | nil @Absolute root dir of test suite
 function neotest.Adapter.root(dir)
-  local solution_path = "/home/gustav/repo/NeovimDebugProject/src/NeovimDebugProject.sln" or test_runner.tree.solution_file_path -- e.g. "./src/NeovimDebugProject.sln"
-
-  if not solution_path then
-    return nil -- No solution file path available
-  end
-
-  local path = Path:new(dir):joinpath(solution_path):absolute()
-  local root_dir = Path:new(path):parent():absolute()
-  return root_dir
+  print(dir)
+  return dir
+  -- local solution_path = "C:/Users/Gustav/repo/neotest/neotest.sln"
+  --
+  -- if not solution_path then
+  --   return nil -- No solution file path available
+  -- end
+  --
+  -- local path = Path:new(dir):joinpath(solution_path):absolute()
+  -- local root_dir = Path:new(path):parent():absolute()
+  -- return root_dir
 end
 
 ---Filter directories when searching for test files
@@ -41,7 +43,7 @@ function neotest.Adapter.is_test_file(file_path)
   local is_test_file = false
   test_runner.traverse(nil, function(i)
     if is_test_file == true then return end
-    if i.file_path == file_path then is_test_file = true end
+    if i.file_path == vim.fs.normalize(file_path) and i.type == "test" then is_test_file = true end
   end)
   return is_test_file
 end
@@ -64,23 +66,16 @@ function neotest.Adapter.discover_positions(file_path)
   }
 
   test_runner.traverse(nil, function(i)
-    if i.file_path == file_path and i.type == "test" then
+    if i.file_path == vim.fs.normalize(file_path) and i.type == "test" then
       table.insert(result, {
         {
-          type = "namespace",
-          id = "/home/gustav/repo/NeovimDebugProject/src/NeovimDebugProject.Specs/UnitTest1.cs::UnitTest1",
-          name = "UnitTest1",
-          path = "/home/gustav/repo/NeovimDebugProject/src/NeovimDebugProject.Specs/UnitTest1.cs",
-          range = { 2, 0, 9, 1 },
-        },
-        {
-          type = i.type,
-          id = file_path .. "::UnitTest1::Test1",
+          type = "test",
+          id = i.id,
           name = i.name,
           path = file_path,
           --TODO: can get end range from F#
           range = { i.line_number - 2, i.line_number, 0, 1 },
-          running_id = file_path .. "::UnitTest1::Test1",
+          running_id = i.id,
         },
       })
     end
