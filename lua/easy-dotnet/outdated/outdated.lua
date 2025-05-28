@@ -1,48 +1,34 @@
 local polyfills = require("easy-dotnet.polyfills")
+local constants = require("easy-dotnet.constants")
 local logger = require("easy-dotnet.logger")
-
--- Define constants for pattern types
-local PATTERN_TYPE_REFERENCE = "reference"
-local PATTERN_TYPE_VERSION = "version"
-
 local M = {}
 
-local function readFile(filePath)
-  local file = io.open(filePath, "r")
-  if not file then return nil end
+---@alias PatternType "reference" | "version"
 
-  local content = {}
-  for line in file:lines() do
-    table.insert(content, line)
-  end
+---@class PackageInfo
+---@field Name string
+---@field ResolvedVersion string
+---@field LatestVersion string
 
-  file:close()
-  return content
-end
-
-local function readPackageInfo(path, project_name)
-  local contents = readFile(path)
-  if contents == nil then
-    error("Failed to read file " .. vim.fs.basename(path))
-    return
-  end
-  local parsedJson = vim.fn.json_decode(table.concat(contents))
-  for _, value in ipairs(parsedJson.Projects) do
+local function read_package_info(path, project_name)
+  local success, contents = pcall(vim.fn.readfile, path)
+  if not success then return {} end
+  local parsed_json = vim.fn.json_decode(table.concat(contents))
+  for _, value in ipairs(parsed_json.Projects) do
     if value.Name == project_name then return value.TargetFrameworks[1].Dependencies end
   end
   return {}
 end
 
-local function readSolutionPackagesInfo(path)
+---@param path string
+---@return PackageInfo[]
+local function read_solution_packages_info(path)
   local deps = {}
   local seen = {}
-  local contents = readFile(path)
-  if contents == nil then
-    error("Failed to read file " .. vim.fs.basename(path))
-    return
-  end
-  local parsedJson = vim.fn.json_decode(table.concat(contents))
-  for _, value in ipairs(parsedJson.Projects) do
+  local success, contents = pcall(vim.fn.readfile, path)
+  if not success then return {} end
+  local parsed_json = vim.fn.json_decode(table.concat(contents))
+  for _, value in ipairs(parsed_json.Projects) do
     for _, dep in ipairs(value.TargetFrameworks[1].Dependencies) do
       if not seen[dep.Name] then
         table.insert(deps, dep)
@@ -53,6 +39,9 @@ local function readSolutionPackagesInfo(path)
   return deps
 end
 
+---@param package_name string # The name of the package to search for.
+---@param pattern_type PatternType # The pattern type to use ("reference" or "version").
+---@return integer|nil # Returns the line number where the package is found, or nil if not found
 local function find_package_in_buffer(package_name, pattern_type)
   local buf = vim.api.nvim_get_current_buf()
 
@@ -61,9 +50,9 @@ local function find_package_in_buffer(package_name, pattern_type)
 
   -- Define the pattern based on the type
   local pattern
-  if pattern_type == PATTERN_TYPE_REFERENCE then
+  if pattern_type == "reference" then
     pattern = '<PackageReference Include="' .. escaped_package_name .. '"'
-  elseif pattern_type == PATTERN_TYPE_VERSION then
+  elseif pattern_type == "version" then
     pattern = '<PackageVersion Include="' .. escaped_package_name .. '"'
   else
     error("Invalid pattern_type: " .. tostring(pattern_type))
@@ -80,140 +69,110 @@ local function find_package_in_buffer(package_name, pattern_type)
   return nil
 end
 
+-- No outdated dependencies were detected
+---@param cmd string
+---@param cb function
+local function handle_outdated_command(cmd, cb)
+  local spinner = require("easy-dotnet.ui-modules.spinner").new()
+  spinner:start_spinner("Checking package references")
+  local stderr = {}
+  vim.fn.jobstart(cmd, {
+    stderr_buffered = true,
+    on_stderr = function(_, data)
+      if data then stderr = data end
+    end,
+    on_exit = function(_, b)
+      if b == 0 then
+        spinner:stop_spinner("")
+        cb()
+      else
+        spinner:stop_spinner("Dotnet outdated failed with exit code " .. b, vim.log.levels.ERROR)
+        logger.warn("stderr: " .. vim.inspect(stderr))
+      end
+    end,
+  })
+end
+
+---@param deps PackageInfo[]
+---@param pattern_type PatternType
+local function apply_ext_marks(deps, pattern_type)
+  local ns_id = constants.ns_id
+  local bnr = vim.fn.bufnr("%")
+  vim.api.nvim_buf_clear_namespace(bnr, ns_id, 0, -1)
+  for _, value in ipairs(deps) do
+    local line = find_package_in_buffer(value.Name, pattern_type)
+    if line ~= nil then
+      vim.api.nvim_buf_set_extmark(bnr, ns_id, line - 1, 0, {
+        virt_text = { { string.format("%s -> %s", value.ResolvedVersion, value.LatestVersion), "EasyDotnetPackage" } },
+        virt_text_pos = "eol",
+        priority = 200,
+      })
+    else
+      logger.warn("Failed to find package " .. value.Name)
+    end
+  end
+end
+
 M.outdated = function()
   local path = vim.fs.normalize(vim.fn.expand("%"))
   local filename = vim.fs.basename(path):lower()
   local bnr = vim.fn.bufnr("%")
-  local ns_id = require("easy-dotnet.constants").ns_id
+  local ns_id = constants.ns_id
 
-  local data_dir = require("easy-dotnet.constants").get_data_directory()
-  local outPath = polyfills.fs.joinpath(data_dir, "package.json")
+  local data_dir = constants.get_data_directory()
+  local out_path = polyfills.fs.joinpath(data_dir, "package.json")
 
-  os.remove(outPath) -- Delete the package.json file if it exists
+  os.remove(out_path) -- Delete the package.json file if it exists
 
   vim.api.nvim_buf_clear_namespace(bnr, ns_id, 0, -1)
 
   if path:match("[^/\\]+%.%a+proj") then
     local project_name = vim.fs.basename(path:gsub("%.csproj$", ""):gsub("%.fsproj$", ""))
-    local cmd = string.format("dotnet outdated %s --output %s", path, outPath)
+    local cmd = string.format("dotnet outdated %s --output %s", path, out_path)
 
-    vim.fn.jobstart(cmd, {
-      on_exit = function(_, b)
-        if b == 0 then
-          local file = io.open(outPath, "r")
-          if not file then return end
-          file:close()
+    handle_outdated_command(cmd, function()
+      local deps = read_package_info(out_path, project_name)
 
-          local deps = readPackageInfo(outPath, project_name)
-          if deps == nil then
-            error("Parsing outdated packages failed")
-            return
-          end
+      if #deps == 0 then
+        logger.info("All packages are up to date")
+        return
+      end
 
-          if #deps == 0 then
-            logger.info("All packages are up to date")
-            return
-          end
-
-          for _, value in ipairs(deps) do
-            local line = find_package_in_buffer(value.Name, PATTERN_TYPE_REFERENCE)
-            if line ~= nil then
-              vim.api.nvim_buf_set_extmark(bnr, ns_id, line - 1, 0, {
-                virt_text = { { string.format("%s -> %s", value.ResolvedVersion, value.LatestVersion), "EasyDotnetPackage" } },
-                virt_text_pos = "eol",
-                priority = 200,
-              })
-            else
-              logger.warn("Failed to find package " .. value.Name)
-            end
-          end
-        else
-          logger.error("Dotnet outdated tool not installed")
-        end
-      end,
-    })
+      apply_ext_marks(deps, "reference")
+    end)
   elseif filename == "directory.packages.props" or filename == "packages.props" then
     local sln_parse = require("easy-dotnet.parsers.sln-parse")
     local solutionFilePath = sln_parse.find_solution_file()
-    local cmd = string.format("dotnet outdated %s --output %s", solutionFilePath, outPath)
+    local cmd = string.format("dotnet outdated %s --output %s", solutionFilePath, out_path)
 
-    vim.fn.jobstart(cmd, {
-      on_exit = function(_, b)
-        if b == 0 then
-          local file = io.open(outPath, "r")
-          if not file then return end
-          file:close()
+    handle_outdated_command(cmd, function()
+      local deps = read_solution_packages_info(out_path)
 
-          local deps = readSolutionPackagesInfo(outPath)
-          if deps == nil then
-            error("Parsing outdated packages failed")
-            return
-          end
+      if #deps == 0 then
+        logger.info("All packages are up to date")
+        return
+      end
 
-          if #deps == 0 then
-            logger.info("All packages are up to date")
-            return
-          end
-
-          for _, value in ipairs(deps) do
-            local line = find_package_in_buffer(value.Name, PATTERN_TYPE_VERSION)
-            if line ~= nil then
-              vim.api.nvim_buf_set_extmark(bnr, ns_id, line - 1, 0, {
-                virt_text = { { string.format("%s -> %s", value.ResolvedVersion, value.LatestVersion), "EasyDotnetPackage" } },
-                virt_text_pos = "eol",
-                priority = 200,
-              })
-            else
-              logger.warn("Failed to find package " .. value.Name)
-            end
-          end
-        else
-          logger.info("Dotnet outdated tool not installed")
-        end
-      end,
-    })
+      apply_ext_marks(deps, "version")
+    end)
   elseif filename == "directory.build.props" then
     local sln_parse = require("easy-dotnet.parsers.sln-parse")
     local solutionFilePath = sln_parse.find_solution_file()
-    local cmd = string.format("dotnet outdated %s --output %s", solutionFilePath, outPath)
+    local cmd = string.format("dotnet outdated %s --output %s", solutionFilePath, out_path)
 
-    vim.fn.jobstart(cmd, {
-      on_exit = function(_, b)
-        if b == 0 then
-          local file = io.open(outPath, "r")
-          if not file then return end
-          file:close()
+    handle_outdated_command(cmd, function()
+      local deps = read_solution_packages_info(out_path)
 
-          local deps = readSolutionPackagesInfo(outPath)
-          if deps == nil then
-            error("Parsing outdated packages failed")
-            return
-          end
+      if #deps == 0 then
+        logger.info("All packages are up to date")
+        return
+      end
 
-          if #deps == 0 then
-            logger.info("All packages are up to date")
-            return
-          end
-
-          for _, value in ipairs(deps) do
-            local line = find_package_in_buffer(value.Name, PATTERN_TYPE_REFERENCE)
-            if line ~= nil then
-              vim.api.nvim_buf_set_extmark(bnr, ns_id, line - 1, 0, {
-                virt_text = { { string.format("%s -> %s", value.ResolvedVersion, value.LatestVersion), "EasyDotnetPackage" } },
-                virt_text_pos = "eol",
-                priority = 200,
-              })
-            else
-              logger.warn("Failed to find package " .. value.Name)
-            end
-          end
-        else
-          logger.info("Dotnet outdated tool not installed")
-        end
-      end,
-    })
+      apply_ext_marks(deps, "reference")
+    end)
   else
     logger.error("Current buffer is not *.csproj, *.fsproj, directory.packages.props, packages.props or directory.build.props")
   end
 end
+
 return M
