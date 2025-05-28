@@ -280,7 +280,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
 | `dotnet.is_dotnet_project()`                  | Returns `true` if a `.csproj` or `.sln` file is present in the current working directory or subfolders       |
 | `dotnet.try_get_selected_solution()`          | If a solution is selected, returns `{ basename: string, path: string }`, otherwise `nil`                    |
 | `dotnet.new()`                                | Picker for creating a new template based on `Dotnet new`                                                                                                            |
-| `dotnet.outdated()`                           | Runs `Dotnet outdated` in supported file types (`.csproj`, `.fsproj`, `Directory.Packages.props`, `Packages.props`) and displays virtual text with the latest package versions. |
+| `dotnet.outdated()`                           | Runs `Dotnet outdated` in supported file types (`.csproj`, `.fsproj`, `Directory.Packages.props`, `Packages.props`, `Directory.Build.props`) and displays virtual text with the latest package versions. |
 ||
 | `dotnet.solution_select()`                    | Select the solution file for easy-dotnet.nvim to use, useful when multiple .sln files are present in the project.     |
 | `dotnet.solution_add()`                       | `dotnet sln <sln> add <TS>`.                                                                                                            |
@@ -489,6 +489,7 @@ Supports the following filetypes
 - *.fsproj
 - Directory.Packages.props
 - Packages.props
+- Directory.Build.props
 
 
 ![image](https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113)
