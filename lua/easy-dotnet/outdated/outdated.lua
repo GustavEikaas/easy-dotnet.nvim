@@ -172,8 +172,48 @@ M.outdated = function()
         end
       end,
     })
+  elseif filename == "directory.build.props" then
+    local sln_parse = require("easy-dotnet.parsers.sln-parse")
+    local solutionFilePath = sln_parse.find_solution_file()
+    local cmd = string.format("dotnet outdated %s --output %s", solutionFilePath, outPath)
+
+    vim.fn.jobstart(cmd, {
+      on_exit = function(_, b)
+        if b == 0 then
+          local file = io.open(outPath, "r")
+          if not file then return end
+          file:close()
+
+          local deps = readSolutionPackagesInfo(outPath)
+          if deps == nil then
+            error("Parsing outdated packages failed")
+            return
+          end
+
+          if #deps == 0 then
+            logger.info("All packages are up to date")
+            return
+          end
+
+          for _, value in ipairs(deps) do
+            local line = find_package_in_buffer(value.Name, PATTERN_TYPE_REFERENCE)
+            if line ~= nil then
+              vim.api.nvim_buf_set_extmark(bnr, ns_id, line - 1, 0, {
+                virt_text = { { string.format("%s -> %s", value.ResolvedVersion, value.LatestVersion), "EasyDotnetPackage" } },
+                virt_text_pos = "eol",
+                priority = 200,
+              })
+            else
+              logger.warn("Failed to find package " .. value.Name)
+            end
+          end
+        else
+          logger.info("Dotnet outdated tool not installed")
+        end
+      end,
+    })
   else
-    logger.error("Current buffer is not *.csproj, *.fsproj, directory.packages.props or packages.props")
+    logger.error("Current buffer is not *.csproj, *.fsproj, directory.packages.props, packages.props or directory.build.props")
   end
 end
 return M
