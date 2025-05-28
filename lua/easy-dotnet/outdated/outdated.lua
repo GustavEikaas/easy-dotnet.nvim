@@ -11,11 +11,8 @@ local M = {}
 ---@field LatestVersion string
 
 local function read_package_info(path, project_name)
-  local contents = vim.fn.readfile(path)
-  if contents == nil then
-    error("Failed to read file " .. vim.fs.basename(path))
-    return
-  end
+  local success, contents = pcall(vim.fn.readfile, path)
+  if not success then return {} end
   local parsed_json = vim.fn.json_decode(table.concat(contents))
   for _, value in ipairs(parsed_json.Projects) do
     if value.Name == project_name then return value.TargetFrameworks[1].Dependencies end
@@ -28,8 +25,8 @@ end
 local function read_solution_packages_info(path)
   local deps = {}
   local seen = {}
-  local contents = vim.fn.readfile(path)
-  if contents == nil then error("Failed to read file " .. vim.fs.basename(path)) end
+  local success, contents = pcall(vim.fn.readfile, path)
+  if not success then return {} end
   local parsed_json = vim.fn.json_decode(table.concat(contents))
   for _, value in ipairs(parsed_json.Projects) do
     for _, dep in ipairs(value.TargetFrameworks[1].Dependencies) do
@@ -72,10 +69,12 @@ local function find_package_in_buffer(package_name, pattern_type)
   return nil
 end
 
+-- No outdated dependencies were detected
 ---@param cmd string
----@param out_path string
 ---@param cb function
-local function handle_outdated_command(cmd, out_path, cb)
+local function handle_outdated_command(cmd, cb)
+  local spinner = require("easy-dotnet.ui-modules.spinner").new()
+  spinner:start_spinner("Checking package references")
   local stderr = {}
   vim.fn.jobstart(cmd, {
     stderr_buffered = true,
@@ -84,14 +83,10 @@ local function handle_outdated_command(cmd, out_path, cb)
     end,
     on_exit = function(_, b)
       if b == 0 then
-        if vim.fn.filereadable(out_path) == 0 then
-          logger.warn("Dotnet outdated did not write to given out file")
-          return
-        end
-
+        spinner:stop_spinner("")
         cb()
       else
-        logger.warn("Dotnet outdated failed")
+        spinner:stop_spinner("Dotnet outdated failed with exit code " .. b, vim.log.levels.ERROR)
         logger.warn("stderr: " .. vim.inspect(stderr))
       end
     end,
@@ -103,6 +98,7 @@ end
 local function apply_ext_marks(deps, pattern_type)
   local ns_id = constants.ns_id
   local bnr = vim.fn.bufnr("%")
+  vim.api.nvim_buf_clear_namespace(bnr, ns_id, 0, -1)
   for _, value in ipairs(deps) do
     local line = find_package_in_buffer(value.Name, pattern_type)
     if line ~= nil then
@@ -134,12 +130,8 @@ M.outdated = function()
     local project_name = vim.fs.basename(path:gsub("%.csproj$", ""):gsub("%.fsproj$", ""))
     local cmd = string.format("dotnet outdated %s --output %s", path, out_path)
 
-    handle_outdated_command(cmd, out_path, function()
+    handle_outdated_command(cmd, function()
       local deps = read_package_info(out_path, project_name)
-      if deps == nil then
-        error("Parsing outdated packages failed")
-        return
-      end
 
       if #deps == 0 then
         logger.info("All packages are up to date")
@@ -153,12 +145,8 @@ M.outdated = function()
     local solutionFilePath = sln_parse.find_solution_file()
     local cmd = string.format("dotnet outdated %s --output %s", solutionFilePath, out_path)
 
-    handle_outdated_command(cmd, out_path, function()
+    handle_outdated_command(cmd, function()
       local deps = read_solution_packages_info(out_path)
-      if deps == nil then
-        error("Parsing outdated packages failed")
-        return
-      end
 
       if #deps == 0 then
         logger.info("All packages are up to date")
@@ -172,12 +160,8 @@ M.outdated = function()
     local solutionFilePath = sln_parse.find_solution_file()
     local cmd = string.format("dotnet outdated %s --output %s", solutionFilePath, out_path)
 
-    handle_outdated_command(cmd, out_path, function()
+    handle_outdated_command(cmd, function()
       local deps = read_solution_packages_info(out_path)
-      if deps == nil then
-        error("Parsing outdated packages failed")
-        return
-      end
 
       if #deps == 0 then
         logger.info("All packages are up to date")
