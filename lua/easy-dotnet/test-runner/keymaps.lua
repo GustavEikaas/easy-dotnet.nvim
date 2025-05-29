@@ -145,7 +145,8 @@ function M.VsTest_Run(node, win, cb)
 end
 ---@param node TestNode
 ---@param win table
-local function MTP_Run(node, win)
+---@param cb function | nil
+function M.MTP_Run(node, win, cb)
   ---@type TestNode[]
   local tests = {}
   ---@param child TestNode
@@ -154,7 +155,11 @@ local function MTP_Run(node, win)
     if child.type == "test" or child.type == "subcase" then table.insert(tests, child) end
   end)
 
-  local on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
+  local _on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
+  local on_job_finished = function()
+    _on_job_finished()
+    if cb then cb() end
+  end
 
   local filter = vim.tbl_map(function(test)
     ---@type RunRequestNode
@@ -180,7 +185,7 @@ end
 ---@param node TestNode
 local function run_tests(node, win)
   if node.is_MTP then
-    MTP_Run(node, win)
+    M.MTP_Run(node, win)
     return
   else
     M.VsTest_Run(node, win)

@@ -69,10 +69,12 @@ local function run_test_from_buffer()
 
   ---@param node TestNode
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
-    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and node.line_number - 1 == current_line then
+    --TODO: move line logic in here. Need to know if test is MTP or vstest before calculating get_nearest_method_line()
+    --Should be fine to take first test in file because mixing mtp and vstest is not supported
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and node.line_number + 1 == current_line then
       if node.is_MTP then
-        logger.error("Running MTP tests directly from buffer is not supported yet")
-        return
+        vim.fn.sign_place(0, constants.sign_namespace, constants.signs.EasyDotnetTestInProgress, bufnr, { lnum = current_line, priority = 20 })
+        keymaps.MTP_Run(node, win, function() M.add_gutter_test_signs() end)
       else
         vim.fn.sign_place(0, constants.sign_namespace, constants.signs.EasyDotnetTestInProgress, bufnr, { lnum = current_line, priority = 20 })
         keymaps.VsTest_Run(node, win, function() M.add_gutter_test_signs() end)
@@ -95,7 +97,7 @@ function M.add_gutter_test_signs()
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then
       is_test_file = true
-      local line_offset = node.line_number - 1
+      local line_offset = node.line_number - (node.is_MTP and 0 or 1)
       vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSign, bufnr, { lnum = line_offset, priority = 20 })
 
       if node.icon then
