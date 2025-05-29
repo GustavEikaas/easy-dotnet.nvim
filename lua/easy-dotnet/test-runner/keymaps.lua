@@ -1,3 +1,4 @@
+local M = {}
 local window = require("easy-dotnet.test-runner.window")
 local runner = require("easy-dotnet.test-runner.runner")
 local logger = require("easy-dotnet.logger")
@@ -113,7 +114,7 @@ end
 
 ---@param node TestNode
 ---@param win table
-local function VsTest_Run(node, win)
+function M.VsTest_Run(node, win, cb)
   ---@type TestNode[]
   local tests = {}
   ---@param child TestNode
@@ -122,7 +123,11 @@ local function VsTest_Run(node, win)
     if child.type == "test" or child.type == "subcase" then table.insert(tests, child) end
   end)
 
-  local on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
+  local _on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
+  local function on_job_finished()
+    _on_job_finished()
+    if cb then cb() end
+  end
 
   local filter = vim.tbl_map(function(test) return test.id end, tests)
 
@@ -178,7 +183,7 @@ local function run_tests(node, win)
     MTP_Run(node, win)
     return
   else
-    VsTest_Run(node, win)
+    M.VsTest_Run(node, win)
   end
 end
 
@@ -235,7 +240,7 @@ local function open_stack_trace(line)
   if path ~= nil and path.line ~= nil then vim.api.nvim_win_set_cursor(file_float.win, { path.line, 0 }) end
 end
 
-local keymaps = function()
+M.keymaps = function()
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   return {
     [keymap.filter_failed_tests.lhs] = { handle = function(_, win) filter_failed_tests(win) end, desc = keymap.filter_failed_tests.desc },
@@ -368,4 +373,4 @@ local keymaps = function()
   }
 end
 
-return keymaps
+return M
