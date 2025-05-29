@@ -38,21 +38,11 @@ local function pick_project(use_default)
   return project, solution_file_path
 end
 
-local function strip_single_starting_dot(str)
-  if str:sub(1, 2) == ".." then
-    return str
-  elseif str:sub(1, 1) == "." then
-    return str:sub(2)
-  else
-    return str
-  end
-end
-
 M.get_debug_dll = function(default)
   local sln_file = sln_parse.find_solution_file()
   local result = sln_file ~= nil and M.get_dll_for_solution_project(default) or M.get_dll_for_project()
   local target_path = result.dll
-  local absolute_project_path = polyfills.fs.joinpath(vim.fs.normalize(vim.fn.getcwd()), strip_single_starting_dot(result.project))
+  local absolute_project_path = result.project
 
   return {
     target_path = target_path,
@@ -118,12 +108,12 @@ end
 
 M.get_environment_variables = function(project_name, relative_project_path, autoselect)
   if autoselect == nil then autoselect = true end
-  local launchSettings = polyfills.fs.joinpath(relative_project_path, "Properties", "launchSettings.json")
+  local launch_settings_path = polyfills.fs.joinpath(relative_project_path, "Properties", "launchSettings.json")
 
-  local stat = vim.loop.fs_stat(launchSettings)
+  local stat = vim.loop.fs_stat(launch_settings_path)
   if stat == nil then return nil end
 
-  local success, result = pcall(vim.fn.json_decode, vim.fn.readfile(launchSettings, ""))
+  local success, result = pcall(vim.fn.json_decode, vim.fn.readfile(launch_settings_path, ""))
   if not success then
     logger.warn(result)
     return nil, "Error parsing JSON: " .. result
