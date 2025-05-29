@@ -124,7 +124,10 @@ M.get_environment_variables = function(project_name, relative_project_path, auto
   if stat == nil then return nil end
 
   local success, result = pcall(vim.fn.json_decode, vim.fn.readfile(launchSettings, ""))
-  if not success then return nil, "Error parsing JSON: " .. result end
+  if not success then
+    logger.warn(result)
+    return nil, "Error parsing JSON: " .. result
+  end
 
   local profiles = polyfills.tbl_keys(result.profiles)
 
