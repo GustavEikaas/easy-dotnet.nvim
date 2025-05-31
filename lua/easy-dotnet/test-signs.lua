@@ -63,8 +63,6 @@ end
 local function run_test_from_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
-  local current_line = get_nearest_method_line()
-
   --BUG: This wont work in case of test-groups, need to collect all id's and run or run the parent(if possible?)
 
   ---@param node TestNode
@@ -74,8 +72,7 @@ local function run_test_from_buffer()
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then
       if node.is_MTP and node.line_number == vim.api.nvim_win_get_cursor(0)[1] then
         keymaps.MTP_Run(node, win, function() M.add_gutter_test_signs() end)
-      elseif not node.is_MTP and node.line_number + 1 == get_nearest_method_line() then
-        vim.fn.sign_place(0, constants.sign_namespace, constants.signs.EasyDotnetTestError, bufnr, { lnum = current_line, priority = 20 })
+      elseif not node.is_MTP and (node.line_number - 1 == vim.api.nvim_win_get_cursor(0)[1] or node.line_number - 1 == get_nearest_method_line()) then
         keymaps.VsTest_Run(node, win, function() M.add_gutter_test_signs() end)
       end
     end
@@ -102,6 +99,7 @@ function M.add_gutter_test_signs()
 
       if node.icon then
         if node.icon == options.icons.failed then
+          vim.print(node)
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr, { lnum = line_offset, priority = 20 })
         elseif node.icon == options.icons.skipped then
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr, { lnum = line_offset, priority = 20 })
