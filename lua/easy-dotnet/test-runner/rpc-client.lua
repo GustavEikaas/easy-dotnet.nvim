@@ -136,7 +136,6 @@ function M.connect_sync()
 end
 
 function M.request(method, params, callback)
-  if method == "mtp/run" or method == "vstest/run" then vim.print(params) end
   --nil check, method, params, callback
   if not is_connected then M.connect_sync() end
 

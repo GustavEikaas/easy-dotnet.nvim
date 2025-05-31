@@ -63,17 +63,17 @@ end
 local function run_test_from_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
-  --BUG: This wont work in case of test-groups, need to collect all id's and run or run the parent(if possible?)
 
   ---@param node TestNode
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
-    --TODO: move line logic in here. Need to know if test is MTP or vstest before calculating get_nearest_method_line()
-    --Should be fine to take first test in file because mixing mtp and vstest is not supported
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then
+      --TODO: replace sign with in-progress
       if node.is_MTP and node.line_number == vim.api.nvim_win_get_cursor(0)[1] then
-        keymaps.MTP_Run(node, win, function() M.add_gutter_test_signs() end)
+        keymaps.MTP_Run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
+        M.add_gutter_test_signs()
       elseif not node.is_MTP and (node.line_number - 1 == vim.api.nvim_win_get_cursor(0)[1] or node.line_number - 1 == get_nearest_method_line()) then
-        keymaps.VsTest_Run(node, win, function() M.add_gutter_test_signs() end)
+        keymaps.VsTest_Run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
+        M.add_gutter_test_signs()
       end
     end
   end)
@@ -99,10 +99,11 @@ function M.add_gutter_test_signs()
 
       if node.icon then
         if node.icon == options.icons.failed then
-          vim.print(node)
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr, { lnum = line_offset, priority = 20 })
         elseif node.icon == options.icons.skipped then
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr, { lnum = line_offset, priority = 20 })
+        elseif node.icon == "<Running>" then
+          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestInProgress, bufnr, { lnum = line_offset, priority = 20 })
         elseif node.icon == options.icons.passed then
           vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr, { lnum = line_offset, priority = 20 })
         end
