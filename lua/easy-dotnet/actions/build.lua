@@ -135,17 +135,18 @@ M.build_project_quickfix = function(use_default, dotnet_args)
 
   select_project(solutionFilePath, function(project)
     if project == nil then return end
-    local spinner = require("easy-dotnet.ui-modules.spinner").new()
-    spinner:start_spinner("Building")
+
+    local jobs = require("easy-dotnet.ui-modules.jobs")
+    local on_finished = jobs.register_job("Building")
+
     M.pending = true
     local command = string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", project.path, logPath, dotnet_args or "")
     vim.fn.jobstart(command, {
       on_exit = function(_, b, _)
         M.pending = false
+        on_finished()
         if b == 0 then
-          spinner:stop_spinner("Built successfully")
         else
-          spinner:stop_spinner("Build failed", vim.log.levels.ERROR)
           populate_quickfix_from_file(logPath)
         end
       end,

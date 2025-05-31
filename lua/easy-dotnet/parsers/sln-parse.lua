@@ -148,9 +148,12 @@ local function preload_msbuild_async_or_sync(project_lines, solution_file_path)
   local co = coroutine.running()
   local remaining = #project_lines
 
+  local jobs = require("easy-dotnet.ui-modules.jobs")
   for _, proj_path in ipairs(project_lines) do
     local project_file_path = generate_absolute_path_for_project(proj_path, solution_file_path)
+    local on_finished = jobs.register_job("Loading " .. vim.fn.fnamemodify(project_file_path, ":t:r"))
     require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path, function()
+      on_finished()
       remaining = remaining - 1
       if remaining == 0 then
         if co then coroutine.resume(co) end

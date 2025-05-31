@@ -73,8 +73,7 @@ end
 ---@param cmd string
 ---@param cb function
 local function handle_outdated_command(cmd, cb)
-  local spinner = require("easy-dotnet.ui-modules.spinner").new()
-  spinner:start_spinner("Checking package references")
+  local on_job_finished = require("easy-dotnet.ui-modules.jobs").register_job("Checking package references")
   local stderr = {}
   vim.fn.jobstart(cmd, {
     stderr_buffered = true,
@@ -83,10 +82,9 @@ local function handle_outdated_command(cmd, cb)
     end,
     on_exit = function(_, b)
       if b == 0 then
-        spinner:stop_spinner("")
+        on_job_finished()
         cb()
       else
-        spinner:stop_spinner("Dotnet outdated failed with exit code " .. b, vim.log.levels.ERROR)
         logger.warn("stderr: " .. vim.inspect(stderr))
       end
     end,
