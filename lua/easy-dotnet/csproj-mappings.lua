@@ -75,7 +75,7 @@ M.package_completion_cmp = {
     if inside_include then
       local search_term = inside_include:gsub('%Include="', "")
       local command = cli.package_search(search_term, true, false, 5)
-      vim.fn.jobstart(string.format("%s | jq '.searchResult | .[] | .packages | .[] | .id'", command), {
+      vim.fn.jobstart(string.format('%s | jq ".searchResult | .[] | .packages | .[] | .id"', command), {
         stdout_buffered = true,
         on_stdout = function(_, data)
           local items = polyfills.tbl_map(function(i) return { label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', ""), kind = 18 } end, data)
@@ -85,7 +85,7 @@ M.package_completion_cmp = {
     elseif inside_version then
       local package_name = current_line:match('Include="([^"]+)"')
       local command = cli.package_search(package_name, true, true)
-      vim.fn.jobstart(string.format("%s | jq '.searchResult[].packages[].version'", command), {
+      vim.fn.jobstart(string.format('%s | jq ".searchResult[].packages[].version"', command), {
         stdout_buffered = true,
         on_stdout = function(_, data)
           local index = 0

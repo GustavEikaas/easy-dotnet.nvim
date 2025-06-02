@@ -16,7 +16,7 @@ local function reverse_list(list)
 end
 
 local function get_all_versions(package)
-  local command = string.format("dotnet package search %s --exact-match --format json | jq '.searchResult[].packages[].version'", package)
+  local command = string.format('dotnet package search %s --exact-match --format json | jq ".searchResult[].packages[].version"', package)
   local versions = vim.fn.split(vim.fn.system(command):gsub('"', ""), "\n")
   return reverse_list(versions)
 end
@@ -77,7 +77,7 @@ M.search_nuget = function(project_path)
 end
 
 local function get_package_refs(project_path)
-  local command = string.format("dotnet list %s package --format json | jq '[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]'", project_path)
+  local command = string.format('dotnet list %s package --format json | jq "[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]"', project_path)
   local out = vim.fn.system(command)
   if vim.v.shell_error then logger.error("Failed to get packages for " .. project_path) end
   local packages = vim.fn.json_decode(out)
