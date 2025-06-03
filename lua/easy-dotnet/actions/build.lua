@@ -61,6 +61,24 @@ M.build_project_picker = function(term, use_default, args)
   select_project(solutionFilePath, function(project) term(project.path, "build", args) end, use_default)
 end
 
+local qf_title = "easy-dotnet"
+
+local function set_quickfix_list(items)
+  vim.fn.setqflist({}, " ", {
+    title = qf_title,
+    items = items,
+  })
+  vim.cmd("copen")
+end
+
+local function close_quickfix_list()
+  local info = vim.fn.getqflist({ title = 1 })
+  if info.title == qf_title then
+    vim.fn.setqflist({})
+    vim.cmd("cclose")
+  end
+end
+
 local function populate_quickfix_from_file(filename)
   local file = io.open(filename, "r")
   if not file then
@@ -90,15 +108,10 @@ local function populate_quickfix_from_file(filename)
   file:close()
 
   -- Set the quickfix list
-  vim.fn.setqflist(quickfix_list)
+  set_quickfix_list(quickfix_list)
 
   -- Open the quickfix window
   vim.cmd("copen")
-end
-
-local function clear_quickfix_list()
-  vim.fn.setqflist({})
-  vim.cmd("cclose")
 end
 
 local function execute_build_quickfix_command(command, log_path)
@@ -110,7 +123,7 @@ local function execute_build_quickfix_command(command, log_path)
       M.pending = false
       if b == 0 then
         spinner:stop_spinner("Built successfully")
-        clear_quickfix_list()
+        close_quickfix_list()
       else
         spinner:stop_spinner("Build failed", vim.log.levels.ERROR)
         populate_quickfix_from_file(log_path)
