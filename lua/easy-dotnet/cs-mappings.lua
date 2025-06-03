@@ -121,7 +121,7 @@ M.auto_bootstrap_namespace = function(mode)
 end
 
 M.add_test_signs = function()
-  vim.api.nvim_create_autocmd({ "BufReadPost" }, {
+  vim.api.nvim_create_autocmd({ "BufEnter" }, {
     pattern = "*.cs",
     callback = function() require("easy-dotnet.test-signs").add_gutter_test_signs() end,
   })

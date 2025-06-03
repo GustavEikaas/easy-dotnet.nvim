@@ -184,6 +184,13 @@ local function count_segments(path)
   return count
 end
 
+local function update_indent_recursively(node, base_indent)
+  node.indent = base_indent
+  for _, child in pairs(node.children or {}) do
+    update_indent_recursively(child, base_indent + 2)
+  end
+end
+
 local function flatten_namespaces(node)
   for _, child in pairs(node.children or {}) do
     flatten_namespaces(child)
@@ -200,10 +207,7 @@ local function flatten_namespaces(node)
         local merged = vim.deepcopy(child)
         merged.name = node.name .. "." .. child.name
         merged.namespace = child.namespace
-        merged.indent = node.indent
-        for _, value in pairs(merged.children) do
-          value.indent = merged.indent + 2
-        end
+        update_indent_recursively(merged, node.indent)
 
         for k in pairs(node) do
           node[k] = nil
@@ -543,7 +547,7 @@ local function open_runner(options)
 
   win.buf_name = "Test manager"
   win.filetype = "easy-dotnet"
-  win.setOptions(options).setKeymaps(require("easy-dotnet.test-runner.keymaps")).render(options.viewmode)
+  win.setOptions(options).setKeymaps(require("easy-dotnet.test-runner.keymaps").keymaps).render(options.viewmode)
 
   if is_reused then return end
 
