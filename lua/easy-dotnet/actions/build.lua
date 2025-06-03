@@ -61,6 +61,24 @@ M.build_project_picker = function(term, use_default, args)
   select_project(solutionFilePath, function(project) term(project.path, "build", args) end, use_default)
 end
 
+local qf_title = "easy-dotnet"
+
+local function set_quickfix_list(items)
+  vim.fn.setqflist({}, " ", {
+    title = qf_title,
+    items = items,
+  })
+  vim.cmd("copen")
+end
+
+local function close_quickfix_list()
+  local info = vim.fn.getqflist({ title = 1 })
+  if info.title == qf_title then
+    vim.fn.setqflist({})
+    vim.cmd("cclose")
+  end
+end
+
 local function populate_quickfix_from_file(filename)
   local file = io.open(filename, "r")
   if not file then
@@ -90,10 +108,28 @@ local function populate_quickfix_from_file(filename)
   file:close()
 
   -- Set the quickfix list
-  vim.fn.setqflist(quickfix_list)
+  set_quickfix_list(quickfix_list)
 
   -- Open the quickfix window
   vim.cmd("copen")
+end
+
+local function execute_build_quickfix_command(command, log_path)
+  local spinner = require("easy-dotnet.ui-modules.spinner").new()
+  spinner:start_spinner("Building")
+  M.pending = true
+  vim.fn.jobstart(command, {
+    on_exit = function(_, b, _)
+      M.pending = false
+      if b == 0 then
+        spinner:stop_spinner("Built successfully")
+        close_quickfix_list()
+      else
+        spinner:stop_spinner("Build failed", vim.log.levels.ERROR)
+        populate_quickfix_from_file(log_path)
+      end
+    end,
+  })
 end
 
 ---@param use_default boolean
@@ -107,7 +143,7 @@ M.build_project_quickfix = function(use_default, dotnet_args)
     return
   end
   local data_dir = require("easy-dotnet.constants").get_data_directory()
-  local logPath = polyfills.fs.joinpath(data_dir, "build.log")
+  local log_path = polyfills.fs.joinpath(data_dir, "build.log")
 
   local solutionFilePath = sln_parse.find_solution_file()
   if solutionFilePath == nil then
@@ -116,40 +152,15 @@ M.build_project_quickfix = function(use_default, dotnet_args)
       logger.error(messages.no_project_definition_found)
       return
     end
-    local command = string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", csproj, logPath, dotnet_args or "")
-    M.pending = true
-    vim.fn.jobstart(command, {
-      on_exit = function(_, b, _)
-        M.pending = false
-        if b == 0 then
-          logger.info("Built successfully")
-        else
-          logger.info("Build failed")
-          populate_quickfix_from_file(logPath)
-        end
-      end,
-    })
-
+    local command = string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", csproj, log_path, dotnet_args or "")
+    execute_build_quickfix_command(command, log_path)
     return
   end
 
   select_project(solutionFilePath, function(project)
     if project == nil then return end
-    local spinner = require("easy-dotnet.ui-modules.spinner").new()
-    spinner:start_spinner("Building")
-    M.pending = true
-    local command = string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", project.path, logPath, dotnet_args or "")
-    vim.fn.jobstart(command, {
-      on_exit = function(_, b, _)
-        M.pending = false
-        if b == 0 then
-          spinner:stop_spinner("Built successfully")
-        else
-          spinner:stop_spinner("Build failed", vim.log.levels.ERROR)
-          populate_quickfix_from_file(logPath)
-        end
-      end,
-    })
+    local command = string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", project.path, log_path, dotnet_args or "")
+    execute_build_quickfix_command(command, log_path)
   end, use_default)
 end
 
@@ -163,6 +174,23 @@ M.build_solution = function(term, args)
     return
   end
   term(solutionFilePath, "build", args or "")
+end
+
+M.build_solution_quickfix = function(dotnet_args)
+  dotnet_args = dotnet_args or ""
+  if M.pending == true then
+    logger.error("Build already pending...")
+    return
+  end
+  local data_dir = require("easy-dotnet.constants").get_data_directory()
+  local log_path = polyfills.fs.joinpath(data_dir, "build.log")
+  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
+  if solutionFilePath == nil then
+    logger.error(error_messages.no_project_definition_found)
+    return
+  end
+  local command = string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", solutionFilePath, log_path, dotnet_args or "")
+  execute_build_quickfix_command(command, log_path)
 end
 
 return M

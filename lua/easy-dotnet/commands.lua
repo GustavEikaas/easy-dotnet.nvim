@@ -166,6 +166,12 @@ M.build = {
         actions.build_solution(terminal, passthrough_dotnet_cli_args_handler(args))
       end,
       passthrough = true,
+      subcommands = {
+        quickfix = {
+          handle = function(args) actions.build_solution_quickfix(passthrough_dotnet_cli_args_handler(args)) end,
+          passthrough = true,
+        },
+      },
     },
     default = {
       handle = function(args, options)
