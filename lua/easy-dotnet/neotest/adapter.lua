@@ -1,7 +1,8 @@
 local neotest = {}
-local tree = require("neotest.types.tree")
 local test_runner = require("easy-dotnet.test-runner.render")
-local Path = require("plenary.path")
+local win = require("easy-dotnet.test-runner.render")
+local icons = require("easy-dotnet.options").options.test_runner.icons
+local nio = require("nio")
 
 ---@class neotest.Adapter
 ---@field name string
@@ -95,40 +96,22 @@ end
 ---@param args neotest.RunArgs
 ---@return nil | neotest.RunSpec | neotest.RunSpec[]
 function neotest.Adapter.build_spec(args)
-  -- TODO: dispatch run command to F# process that takes a list of test id's
-  print("Build spec for: " .. args.tree:data().name)
-
-  local tree = args.tree
-  local node = tree:data()
-  local file_path = node.path
-
-  local position = node.type
-  local test_name = node.name
-
-  local command = ""
-
-  if position == "file" then
-    -- Run all tests in the file
-    command = "dotnet test " .. vim.fn.fnameescape(file_path) .. " --filter " .. vim.fn.shellescape("FullyQualifiedName=" .. test_name)
-    -- command = "dotnet test " .. vim.fn.fnameescape(file_path)
-  elseif position == "test" then
-    -- Run a specific test
-    command = "dotnet test " .. vim.fn.fnameescape(file_path) .. " --filter " .. vim.fn.shellescape("FullyQualifiedName=" .. test_name)
-  else
-    return nil
-  end
-
-  command = 'dotnet test /home/gustav/repo/NeovimDebugProject/src/NeovimDebugProject.Specs --filter "UnitTest"'
-
-  print(command)
   return {
-    command = command,
-    cwd = vim.fn.getcwd(),
+    command = "echo",
+    cwd = args.tree:data().path,
     context = {
-      file = file_path,
-      test = test_name,
+      node = args.tree:data(),
     },
   }
+end
+
+local function find_node_or_throw(id)
+  local node = nil
+  win.traverse(nil, function(i)
+    if i.id == id then node = i end
+  end)
+  if not node then error("failed to find node with id " .. id) end
+  return node
 end
 
 ---@async
@@ -137,16 +120,27 @@ end
 ---@param tree neotest.Tree
 ---@return table<string, neotest.Result>
 function neotest.Adapter.results(spec, result, tree)
-  --TODO: capture stdout from F# script and either parse stdout as result or file path. Investigate size limitations with respect to vim.fn.json_decode
-  local results = {}
+  local id = spec.context.node.id
+  local node = find_node_or_throw(id)
+  local future = nio.control.future()
+  require("easy-dotnet.test-runner.keymaps").VsTest_Run(node, win, function() future.set(find_node_or_throw(id)) end)
 
-  for _, node in tree:iter_nodes() do
-    if node:data().type == "test" then results[node:data().id] = {
-      status = "passed",
-    } end
+  local final_node = future.wait()
+
+  local status = "failed"
+  if final_node and final_node.icon then
+    if final_node.icon == icons.passed then
+      status = "passed"
+    elseif final_node.icon == icons.skipped then
+      status = "skipped"
+    end
   end
 
-  return results
+  return {
+    [id] = {
+      status = status,
+    },
+  }
 end
 
 return neotest
