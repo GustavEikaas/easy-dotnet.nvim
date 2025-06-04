@@ -136,15 +136,29 @@ function neotest.Adapter.build_spec(args)
   }
 end
 
+local function get_node_for_file(file_path)
+  local node = nil
+  ---@param i TestNode
+  test_runner.traverse(nil, function(i)
+    if node then return end
+    if i.file_path == vim.fs.normalize(file_path) then node = i end
+  end)
+  return node
+end
+
 ---@async
 ---@param spec neotest.RunSpec
 ---@param result neotest.StrategyResult
 ---@param tree neotest.Tree
 ---@return table<string, neotest.Result>
 function neotest.Adapter.results(spec, result, tree)
-  local node = spec.context.node.context.get_node()
+  local node = spec.context.node.type == "file" and get_node_for_file(spec.context.node.path) or spec.context.node.context.get_node()
   local future = nio.control.future()
-  require("easy-dotnet.test-runner.keymaps").VsTest_Run(node, win, function() future.set(spec.context.node.context.get_node()) end)
+  require("easy-dotnet.test-runner.keymaps").VsTest_Run(
+    node,
+    win,
+    function() future.set(spec.context.node.type == "file" and get_node_for_file(spec.context.node.path) or spec.context.node.context.get_node()) end
+  )
 
   local final_node = future.wait()
   local res = {}
