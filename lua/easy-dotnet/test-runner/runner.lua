@@ -241,7 +241,7 @@ local function ensure_path(root, path, has_arguments, test, options, offset_inde
     if not current[part] then
       local is_full_path = i == #parts
       current[part] = {
-        id = test.id,
+        id = not is_full_path and table.concat(parts, ".", 1, i) or test.id,
         name = part,
         displayName = test.display_name,
         namespace = table.concat(parts, ".", 1, i),

@@ -4,6 +4,15 @@ local win = require("easy-dotnet.test-runner.render")
 local icons = require("easy-dotnet.options").options.test_runner.icons
 local nio = require("nio")
 
+local function find_node_or_throw(id)
+  local node = nil
+  win.traverse(nil, function(i)
+    if i.id == id then node = i end
+  end)
+  if not node then error("failed to find node with id " .. id) end
+  return node
+end
+
 ---@class neotest.Adapter
 ---@field name string
 neotest.Adapter = {
@@ -56,29 +65,51 @@ end
 function neotest.Adapter.discover_positions(file_path)
   print("Discover positions in file: " .. file_path)
 
+  local ns_id = file_path
+
   local result = {
     {
       type = "file",
-      id = file_path,
+      id = ns_id,
       name = vim.fn.fnamemodify(file_path, ":t"),
       path = file_path,
       range = { 0, -1, 0, -1 },
+      context = {},
     },
   }
 
+  ---@param i TestNode
   test_runner.traverse(nil, function(i)
-    if i.file_path == vim.fs.normalize(file_path) and i.type == "test" then
-      table.insert(result, {
+    if i.file_path == vim.fs.normalize(file_path) and vim.iter(vim.tbl_values(i.children)):any(function(r) return r.type == "test" or r.type == "test_group" end) then
+      local group = {
         {
-          type = "test",
+          type = "namespace",
           id = i.id,
           name = i.name,
           path = file_path,
-          --TODO: can get end range from F#
-          range = { i.line_number - 2, i.line_number, 0, 1 },
+          range = { 0, -1, 0, -1 },
           running_id = i.id,
+          context = {
+            get_node = function() return find_node_or_throw(i.id) end,
+          },
         },
-      })
+      }
+
+      for _, value in pairs(i.children) do
+        table.insert(group, {
+          type = "test",
+          id = value.id,
+          name = value.name,
+          path = file_path,
+          range = { value.line_number - 2, value.line_number, 0, 1 },
+          running_id = value.id,
+          context = {
+            get_node = function() return find_node_or_throw(value.id) end,
+          },
+        })
+      end
+
+      table.insert(result, group)
     end
   end)
 
@@ -105,42 +136,35 @@ function neotest.Adapter.build_spec(args)
   }
 end
 
-local function find_node_or_throw(id)
-  local node = nil
-  win.traverse(nil, function(i)
-    if i.id == id then node = i end
-  end)
-  if not node then error("failed to find node with id " .. id) end
-  return node
-end
-
 ---@async
 ---@param spec neotest.RunSpec
 ---@param result neotest.StrategyResult
 ---@param tree neotest.Tree
 ---@return table<string, neotest.Result>
 function neotest.Adapter.results(spec, result, tree)
-  local id = spec.context.node.id
-  local node = find_node_or_throw(id)
+  local node = spec.context.node.context.get_node()
   local future = nio.control.future()
-  require("easy-dotnet.test-runner.keymaps").VsTest_Run(node, win, function() future.set(find_node_or_throw(id)) end)
+  require("easy-dotnet.test-runner.keymaps").VsTest_Run(node, win, function() future.set(spec.context.node.context.get_node()) end)
 
   local final_node = future.wait()
+  local res = {}
 
-  local status = "failed"
-  if final_node and final_node.icon then
-    if final_node.icon == icons.passed then
-      status = "passed"
-    elseif final_node.icon == icons.skipped then
-      status = "skipped"
+  win.traverse(final_node, function(i)
+    local status = "failed"
+    if i and i.icon then
+      if i.icon == icons.passed then
+        status = "passed"
+      elseif i.icon == icons.skipped then
+        status = "skipped"
+      end
     end
-  end
 
-  return {
-    [id] = {
+    res[i.id] = {
       status = status,
-    },
-  }
+    }
+  end)
+
+  return res
 end
 
 return neotest
