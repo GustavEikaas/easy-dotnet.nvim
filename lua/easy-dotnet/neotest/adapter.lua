@@ -40,18 +40,7 @@ neotest.Adapter = {
 ---@async
 ---@param dir string @Directory to treat as cwd
 ---@return string | nil @Absolute root dir of test suite
-function neotest.Adapter.root(dir)
-  return dir
-  -- local solution_path = "C:/Users/Gustav/repo/neotest/neotest.sln"
-  --
-  -- if not solution_path then
-  --   return nil -- No solution file path available
-  -- end
-  --
-  -- local path = Path:new(dir):joinpath(solution_path):absolute()
-  -- local root_dir = Path:new(path):parent():absolute()
-  -- return root_dir
-end
+function neotest.Adapter.root(dir) return dir end
 
 ---Filter directories when searching for test files
 ---@async
@@ -153,13 +142,22 @@ end
 ---@param tree neotest.Tree
 ---@return table<string, neotest.Result>
 function neotest.Adapter.results(spec, result, tree)
+  ---@type TestNode
   local node = spec.context.node.type == "file" and get_node_for_file(spec.context.node.path) or spec.context.node.context.get_node()
   local future = nio.control.future()
-  require("easy-dotnet.test-runner.keymaps").VsTest_Run(
-    node,
-    win,
-    function() future.set(spec.context.node.type == "file" and get_node_for_file(spec.context.node.path) or spec.context.node.context.get_node()) end
-  )
+  if node.is_MTP then
+    require("easy-dotnet.test-runner.keymaps").MTP_Run(
+      node,
+      win,
+      function() future.set(spec.context.node.type == "file" and get_node_for_file(spec.context.node.path) or spec.context.node.context.get_node()) end
+    )
+  else
+    require("easy-dotnet.test-runner.keymaps").VsTest_Run(
+      node,
+      win,
+      function() future.set(spec.context.node.type == "file" and get_node_for_file(spec.context.node.path) or spec.context.node.context.get_node()) end
+    )
+  end
 
   local final_node = future.wait()
   local res = {}
