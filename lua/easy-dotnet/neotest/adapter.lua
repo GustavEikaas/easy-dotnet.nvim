@@ -4,12 +4,28 @@ local win = require("easy-dotnet.test-runner.render")
 local icons = require("easy-dotnet.options").options.test_runner.icons
 local nio = require("nio")
 
+local neotest_statuses = {
+  [icons.passed] = "passed",
+  [icons.skipped] = "skipped",
+  [icons.failed] = "failed",
+}
+
 local function find_node_or_throw(id)
   local node = nil
   win.traverse(nil, function(i)
     if i.id == id then node = i end
   end)
   if not node then error("failed to find node with id " .. id) end
+  return node
+end
+
+local function get_node_for_file(file_path)
+  local node = nil
+  ---@param i TestNode
+  test_runner.traverse(nil, function(i)
+    if node then return end
+    if i.file_path == vim.fs.normalize(file_path) then node = i end
+  end)
   return node
 end
 
@@ -131,16 +147,6 @@ function neotest.Adapter.build_spec(args)
   }
 end
 
-local function get_node_for_file(file_path)
-  local node = nil
-  ---@param i TestNode
-  test_runner.traverse(nil, function(i)
-    if node then return end
-    if i.file_path == vim.fs.normalize(file_path) then node = i end
-  end)
-  return node
-end
-
 ---@async
 ---@param spec neotest.RunSpec
 ---@param result neotest.StrategyResult
@@ -159,17 +165,8 @@ function neotest.Adapter.results(spec, result, tree)
   local res = {}
 
   win.traverse(final_node, function(i)
-    local status = "failed"
-    if i and i.icon then
-      if i.icon == icons.passed then
-        status = "passed"
-      elseif i.icon == icons.skipped then
-        status = "skipped"
-      end
-    end
-
     res[i.id] = {
-      status = status,
+      status = neotest_statuses[i.icon],
     }
   end)
 
