@@ -25,7 +25,6 @@ neotest.Adapter = {
 ---@param dir string @Directory to treat as cwd
 ---@return string | nil @Absolute root dir of test suite
 function neotest.Adapter.root(dir)
-  print(dir)
   return dir
   -- local solution_path = "C:/Users/Gustav/repo/neotest/neotest.sln"
   --
@@ -63,8 +62,6 @@ end
 ---@param file_path string Absolute file path
 ---@return neotest.Tree | nil
 function neotest.Adapter.discover_positions(file_path)
-  print("Discover positions in file: " .. file_path)
-
   local ns_id = file_path
 
   local result = {
@@ -118,8 +115,6 @@ function neotest.Adapter.discover_positions(file_path)
     return nil
   end
 
-  print(file_path .. " " .. #result)
-
   local trees = require("neotest.types.tree").from_list(result, function(item) return item.name end)
   return trees
 end
@@ -128,7 +123,7 @@ end
 ---@return nil | neotest.RunSpec | neotest.RunSpec[]
 function neotest.Adapter.build_spec(args)
   return {
-    command = "echo",
+    command = nil,
     cwd = args.tree:data().path,
     context = {
       node = args.tree:data(),
