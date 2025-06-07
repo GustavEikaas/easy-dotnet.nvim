@@ -73,7 +73,7 @@ end
 ---@param cmd string
 ---@param cb function
 local function handle_outdated_command(cmd, cb)
-  local on_job_finished = require("easy-dotnet.ui-modules.jobs").register_job("Checking package references")
+  local on_job_finished = require("easy-dotnet.ui-modules.jobs").register_job({ job = "Checking package references", on_error_text = "Checking package references failed" })
   local stderr = {}
   vim.fn.jobstart(cmd, {
     stderr_buffered = true,
@@ -81,8 +81,8 @@ local function handle_outdated_command(cmd, cb)
       if data then stderr = data end
     end,
     on_exit = function(_, b)
+      on_job_finished(b == 0)
       if b == 0 then
-        on_job_finished()
         cb()
       else
         logger.warn("stderr: " .. vim.inspect(stderr))

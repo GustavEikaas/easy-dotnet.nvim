@@ -116,17 +116,16 @@ end
 
 local function execute_build_quickfix_command(command, log_path)
   local jobs = require("easy-dotnet.ui-modules.jobs")
-  local on_finished = jobs.register_job("Building")
+  local on_finished = jobs.register_job({ job = "Building", on_error_text = "Build failed", on_success_text = "Successfully built" })
 
   M.pending = true
   vim.fn.jobstart(command, {
     on_exit = function(_, b, _)
       M.pending = false
-      on_finished()
+      on_finished(b == 0)
       if b == 0 then
         close_quickfix_list()
       else
-        -- spinner:stop_spinner("Build failed", vim.log.levels.ERROR)
         populate_quickfix_from_file(log_path)
       end
     end,
