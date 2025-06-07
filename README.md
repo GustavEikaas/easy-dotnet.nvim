@@ -217,7 +217,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
       -- if no picker is specified, the plugin will determine
       -- the available one automatically with this priority:
       -- telescope -> fzf -> snacks ->  basic
-      picker = "telescope" 
+      picker = "telescope",
       background_scanning = true
     })
 
