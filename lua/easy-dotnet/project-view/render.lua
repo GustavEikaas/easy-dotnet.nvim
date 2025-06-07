@@ -91,7 +91,7 @@ local function discover_package_references(project)
   --Incase of out of mem, do some jq tricks to read line by line
   --TODO: research the frameworks[]
   --TODO: is it possible to resolve transitive dependencies?
-  local command = string.format("dotnet list %s package --format json | jq '[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]'", project.path)
+  local command = string.format('dotnet list %s package --format json | jq "[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]"', project.path)
   vim.fn.jobstart(command, {
     stdout_buffered = true,
     on_exit = function(_, code)

@@ -253,6 +253,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
 ||  
 | `dotnet.build()` | `dotnet build <TS> <DArgs>` |
 | `dotnet.build_solution()` | `dotnet build <sln> <DArgs>` |
+| `dotnet.build_solution_quickfix()` | `dotnet build <sln> <DArgs>` and opens build errors in the quickfix list |
 | `dotnet.build_quickfix()` | `dotnet build <TS> <DArgs>` and opens build errors in the quickfix list |
 | `dotnet.build_default()` | `dotnet build <TS Default> <DArgs>` |
 | `dotnet.build_default_quickfix()` | `dotnet build <TS Default> <DArgs>` and opens build errors in the quickfix list |
@@ -326,6 +327,7 @@ dotnet.ef_database_update_pick()
 dotnet.createfile(path: string)                                    
 dotnet.build()                           
 dotnet.build_solution()
+dotnet.build_solution_quickfix()
 dotnet.build_quickfix()                 
 dotnet.build_default()                 
 dotnet.build_default_quickfix()       
@@ -361,6 +363,7 @@ Dotnet test solution
 Dotnet build
 Dotnet build quickfix
 Dotnet build solution
+Dotnet build solution quickfix
 Dotnet build default
 Dotnet build default quickfix
 Dotnet add package
