@@ -242,6 +242,19 @@ M.setup = function(opts)
     require("easy-dotnet.fs-mappings").add_test_signs()
   end
 
+  require("easy-dotnet.ui-modules.jobs").register_listener(function(start_event)
+    local spinner = require("easy-dotnet.ui-modules.spinner").new()
+    spinner:start_spinner(start_event.job.job)
+
+    ---@param finished_event JobEvent
+    return function(finished_event)
+      local is_error = finished_event.success == false
+      local msg = is_error and (finished_event.job.on_error_text or finished_event.job.job) or (finished_event.job.on_success_text or finished_event.job.job)
+      local level = is_error and vim.log.levels.ERROR or vim.log.levels.INFO
+      spinner:stop_spinner(msg, level)
+    end
+  end)
+
   polyfills.iter(collect_commands_with_handles(commands)):each(function(name, handle)
     M[name] = wrap(function(args, options) handle(args, options or require("easy-dotnet.options").options) end)
   end)
