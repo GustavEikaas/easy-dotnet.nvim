@@ -2,6 +2,9 @@ local file_cache = require("easy-dotnet.modules.file-cache")
 local logger = require("easy-dotnet.logger")
 local M = {}
 
+---@class MsbuildNetFramework
+---@field use_iis_express boolean | nil Whether IIS Express is used (specific to .NET Framework projects)
+
 ---@class MsbuildProperties
 ---@field outputPath string | nil Normalized path to the build output directory (e.g., "bin/Debug/net9.0/")
 ---@field outputType string | nil Type of output, typically "Exe" or "Library"
@@ -15,6 +18,7 @@ local M = {}
 ---@field targetPath string | nil Full path to the built output artifact
 ---@field version string | nil TargetVersion without net (e.g '8.0')
 ---@field isMultiTarget boolean Does it target multiple versions
+---@field net_framework MsbuildNetFramework | nil .NET Framework-specific properties
 
 local msbuild_properties_shared = {
   "OutputPath",
@@ -22,21 +26,23 @@ local msbuild_properties_shared = {
   "TargetExt",
   "AssemblyName",
   "TargetPath",
+  "IsTestProject",
 }
 
-local msbuild_properties_framework = vim.tbl_deep_extend("force", msbuild_properties_shared, {
+local msbuild_properties_framework = vim.list_extend({
   "TargetFrameworkVersion",
   "UseIISExpress",
-})
+  -- <TestProjectType>UnitTest</TestProjectType>
+  -- <ProjectTypeGuids> //comma separated lines
+  -- <Service Include="{B4F97281-0DBD-4835-9ED8-7DFB966E87FF}" /> //PROJECT FILE
+}, msbuild_properties_shared)
 
-local msbuild_properties_core = vim.tbl_deep_extend("force", msbuild_properties_shared, {
+local msbuild_properties_core = vim.list_extend({
   "TargetFramework",
   "TargetFrameworks",
-  "IsTestProject",
   "UserSecretsId",
   "TestingPlatformDotnetTestSupport",
-  "TargetPath",
-})
+}, msbuild_properties_shared)
 
 ---@param project_path string path to csproj file
 ---@return string
@@ -92,6 +98,9 @@ local parse_msbuild_properties = function(output)
     targetFramework = empty_string_to_nil(target_framework),
     targetFrameworks = (raw.TargetFrameworks ~= "" and raw.TargetFrameworks ~= nil) and vim.split(raw.TargetFrameworks, ";") or {},
     isMultiTarget = raw.TargetFrameworks ~= "" and raw.TargetFrameworks ~= nil,
+    net_framework = {
+      use_iis_express = string_to_boolean(raw.UseIISExpress),
+    },
   }
 end
 
@@ -113,6 +122,7 @@ end
 ---@field msbuild_props MsbuildProperties
 ---@field get_specific_runtime_definition fun(target_framework: string): DotnetProject
 ---@field get_all_runtime_definitions fun(): DotnetProject[]
+---@field is_net_framework boolean
 ---@field type 'project' | 'project_framework'
 
 ---@class DotnetProjectFramework
@@ -210,7 +220,6 @@ function M.preload_msbuild_properties(project_file_path, on_finished, target_fra
     on_stdout = function(_, data)
       if data then stdout = table.concat(data, "\n") end
     end,
-    on_stderr = function(_, data) vim.print(data) end,
     on_exit = function()
       local properties = parse_msbuild_properties(stdout)
       msbuild_cache[cache_key] = properties
@@ -263,7 +272,7 @@ M.get_project_from_project_file = function(project_file_path)
     local is_web_project = M.is_web_project(lines)
     local is_worker_project = M.is_worker_project(lines)
     local is_console_project = string.lower(msbuild_props.outputType or "") == "exe"
-    local is_test_project = not is_net_framework and (msbuild_props.isTestProject or M.is_directly_referencing_test_packages(lines))
+    local is_test_project = msbuild_props.isTestProject or M.is_directly_referencing_test_packages(lines) or M.is_net_framework_test_project(lines)
     local is_test_platform_project = msbuild_props.testingPlatformDotnetTestSupport
     local is_win_project = string.lower(msbuild_props.outputType or "") == "winexe"
     local maybe_secret_guid = msbuild_props.userSecretsId
@@ -291,7 +300,7 @@ M.get_project_from_project_file = function(project_file_path)
       language = language,
       name = name,
       version = version,
-      runnable = not is_net_framework and (is_web_project or is_worker_project or is_console_project or is_win_project),
+      runnable = is_web_project or is_worker_project or is_console_project or is_win_project or msbuild_props.net_framework.use_iis_express,
       secrets = maybe_secret_guid,
       --TODO: consolidate method and property, support multi target frameworks where targetPath would be nil
       get_dll_path = function()
@@ -306,6 +315,7 @@ M.get_project_from_project_file = function(project_file_path)
       isWebProject = is_web_project,
       isWinProject = is_win_project,
       is_net_framework = is_net_framework,
+      net_framework = msbuild_props.net_framework,
       msbuild_props = msbuild_props,
       type = "project",
       get_all_runtime_definitions = nil,
@@ -379,6 +389,11 @@ M.is_web_project = function(project_file_lines) return extract_from_lines(projec
 ---@param project_file_lines string[]
 ---@return boolean
 M.is_worker_project = function(project_file_lines) return extract_from_lines(project_file_lines, '<Project%s+Sdk="Microsoft.NET.Sdk.Worker"') end
+
+M.is_net_framework_test_project = function(project_file_lines)
+  return extract_from_lines(project_file_lines, [[<Service Include="{B4F97281-0DBD-4835-9ED8-7DFB966E87FF}" />]])
+    or extract_from_lines(project_file_lines, [[<ProjectTypeGuids>.*{3AC096D0%-A1C2%-E12C%-1390%-A8335801FDAB}.*</ProjectTypeGuids>]])
+end
 
 M.find_csproj_file = function()
   local file = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.csproj$", depth = 3 })

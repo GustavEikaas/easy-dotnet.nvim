@@ -513,6 +513,7 @@ local function refresh_runner(options, solution_file_path)
   win.refreshTree()
 
   local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(project) return project.isTestProject end)
+  vim.print(test_projects)
 
   ---@param i DotnetProject
   local vs_test_projects = vim.tbl_filter(function(i) return not i.isTestPlatformProject end, test_projects)

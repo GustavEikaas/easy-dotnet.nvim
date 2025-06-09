@@ -12,6 +12,12 @@ local error_messages = require("easy-dotnet.error-messages")
 local default_manager = require("easy-dotnet.default-manager")
 local polyfills = require("easy-dotnet.polyfills")
 
+---@param project DotnetProject
+local function build_msbuild_command(project)
+  local r = "msbuild %s /verbosity:minimal /p:configuration=debug /m"
+  return r
+end
+
 local function select_project(solution_file_path, cb, use_default)
   local default = default_manager.check_default_project(solution_file_path, "build")
   if default ~= nil and use_default == true then return cb(default) end
@@ -60,7 +66,7 @@ M.build_project_picker = function(term, use_default, args)
 
   select_project(solutionFilePath, function(project)
     vim.print("Building...", project)
-    term(project.path, "build", args, { is_net_framework = project.is_net_framework })
+    term(project.path, "build", args, csproj_parse.build_context(project))
   end, use_default)
 end
 
