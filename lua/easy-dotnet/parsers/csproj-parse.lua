@@ -32,9 +32,6 @@ local msbuild_properties_shared = {
 local msbuild_properties_framework = vim.list_extend({
   "TargetFrameworkVersion",
   "UseIISExpress",
-  -- <TestProjectType>UnitTest</TestProjectType>
-  -- <ProjectTypeGuids> //comma separated lines
-  -- <Service Include="{B4F97281-0DBD-4835-9ED8-7DFB966E87FF}" /> //PROJECT FILE
 }, msbuild_properties_shared)
 
 local msbuild_properties_core = vim.list_extend({
@@ -380,7 +377,9 @@ end
 
 ---@param project_file_lines string[]
 ---@return boolean
-M.is_dotnet_framework_project = function(project_file_lines) return extract_from_lines(project_file_lines, '<Project%s[^>]*[^Sdk]="[^"]*"') end
+M.is_dotnet_framework_project = function(project_file_lines)
+  return not vim.iter(project_file_lines):any(function(line) return line:match("<Project%s+Sdk=") end)
+end
 
 ---@param project_file_lines string[]
 ---@return boolean

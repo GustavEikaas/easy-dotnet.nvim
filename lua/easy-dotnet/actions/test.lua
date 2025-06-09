@@ -77,7 +77,7 @@ local function test_project(project, args, term)
   if project.type == "project_framework" then arg = arg .. " --framework " .. project.msbuild_props.targetFramework end
   ---@type DotnetActionContext
   local ctx = {
-    command = project.is_net_framework and string.format("dotnet vstest %s", project.get_dll_path()) or string.format("dotnet test %s %s", project.path, args),
+    command = project.is_net_framework and string.format("dotnet vstest %s %s", project.get_dll_path(), args) or string.format("dotnet test %s %s", project.path, args),
     is_net_framework = project.is_net_framework,
   }
   term(project.path, "test", arg .. " " .. args, ctx)

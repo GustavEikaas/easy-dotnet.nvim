@@ -13,10 +13,7 @@ local default_manager = require("easy-dotnet.default-manager")
 local polyfills = require("easy-dotnet.polyfills")
 
 ---@param project DotnetProject
-local function build_msbuild_command(project)
-  local cmd = string.format("msbuild %s /verbosity:minimal /p:configuration=debug /m", project.path)
-  return cmd
-end
+local function build_msbuild_command(project) return string.format("msbuild %s /verbosity:minimal /p:configuration=debug /m", project.path) end
 
 local function select_project(solution_file_path, cb, use_default)
   local default = default_manager.check_default_project(solution_file_path, "build")
@@ -174,7 +171,6 @@ M.build_project_quickfix = function(use_default, dotnet_args)
   end
 
   select_project(solutionFilePath, function(project)
-    vim.print(project)
     if project == nil then return end
     local command = project.is_net_framework and string.format("msbuild %s", project.path) or string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", project.path, log_path, dotnet_args or "")
     execute_build_quickfix_command(command, log_path)
