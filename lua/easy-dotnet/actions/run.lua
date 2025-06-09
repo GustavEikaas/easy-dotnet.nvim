@@ -38,9 +38,12 @@ local function run_project(project, args, term)
   args = args or ""
   local arg = ""
   if project.type == "project_framework" then arg = arg .. " --framework " .. project.msbuild_props.targetFramework end
-  local cmd = not project.is_net_framework and "dotnet run" or project.net_framework.use_iis_express and build_iis_command(project) or project.msbuild_props.targetPath
-  vim.print(project, cmd)
-  term(project.path, "run", arg .. " " .. args, { command = cmd })
+
+  local cmd = project.is_net_framework == false and string.format("dotnet run --project %s %s", project.path, args)
+    or project.msbuild_props.net_framework.use_iis_express and build_iis_command(project)
+    or project.msbuild_props.targetPath
+
+  term(project.path, "run", arg .. " " .. args, { command = cmd, is_net_framework = project.is_net_framework })
 end
 
 local pick_project_without_solution = function()
