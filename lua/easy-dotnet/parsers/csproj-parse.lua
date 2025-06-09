@@ -16,25 +16,45 @@ local M = {}
 ---@field version string | nil TargetVersion without net (e.g '8.0')
 ---@field isMultiTarget boolean Does it target multiple versions
 
-local msbuild_properties = {
+local msbuild_properties_shared = {
   "OutputPath",
   "OutputType",
   "TargetExt",
   "AssemblyName",
+  "TargetPath",
+}
+
+local msbuild_properties_framework = vim.tbl_deep_extend("force", msbuild_properties_shared, {
+  "TargetFrameworkVersion",
+  "UseIISExpress",
+})
+
+local msbuild_properties_core = vim.tbl_deep_extend("force", msbuild_properties_shared, {
   "TargetFramework",
   "TargetFrameworks",
   "IsTestProject",
   "UserSecretsId",
   "TestingPlatformDotnetTestSupport",
   "TargetPath",
-}
+})
+
+---@param project_path string path to csproj file
+---@return string
+local function build_msbuild_command_framework(project_path)
+  local cmd = { "msbuild", vim.fn.shellescape(project_path) }
+  for _, prop in ipairs(msbuild_properties_framework) do
+    table.insert(cmd, ("-getProperty:%s"):format(prop))
+  end
+
+  return table.concat(cmd, " ")
+end
 
 ---@param project_path string path to csproj file
 ---@param target_framework string | nil which target framework to query for e.g 'net9.0'
 ---@return string
-local function build_msbuild_command(project_path, target_framework)
+local function build_msbuild_command_core(project_path, target_framework)
   local cmd = { "dotnet", "msbuild", vim.fn.shellescape(project_path) }
-  for _, prop in ipairs(msbuild_properties) do
+  for _, prop in ipairs(msbuild_properties_core) do
     table.insert(cmd, ("-getProperty:%s"):format(prop))
   end
   if target_framework then table.insert(cmd, "-p:TargetFramework=" .. target_framework) end
@@ -56,6 +76,7 @@ local parse_msbuild_properties = function(output)
   if not ok or not result or not result.Properties then error("Failed to parse msbuild output: " .. tostring(output)) end
 
   local raw = result.Properties
+  local target_framework = raw.TargetFramework or raw.TargetFrameworkVersion
 
   ---@type MsbuildProperties
   return {
@@ -66,11 +87,11 @@ local parse_msbuild_properties = function(output)
     targetPath = normalized_path_or_nil(empty_string_to_nil(raw.TargetPath)),
     isTestProject = string_to_boolean(raw.IsTestProject),
     testingPlatformDotnetTestSupport = string_to_boolean(raw.TestingPlatformDotnetTestSupport),
-    version = raw.TargetFramework ~= nil and raw.TargetFramework:gsub("%net", "") or nil,
+    version = target_framework ~= nil and target_framework:gsub("%net", "") or nil,
     targetExt = empty_string_to_nil(raw.TargetExt),
-    targetFramework = empty_string_to_nil(raw.TargetFramework),
-    targetFrameworks = raw.TargetFrameworks ~= "" and vim.split(raw.TargetFrameworks, ";") or nil,
-    isMultiTarget = raw.TargetFrameworks ~= "",
+    targetFramework = empty_string_to_nil(target_framework),
+    targetFrameworks = (raw.TargetFrameworks ~= "" and raw.TargetFrameworks ~= nil) and vim.split(raw.TargetFrameworks, ";") or {},
+    isMultiTarget = raw.TargetFrameworks ~= "" and raw.TargetFrameworks ~= nil,
   }
 end
 
@@ -160,6 +181,8 @@ local function build_cache_key(project_file_path, target_framework) return targe
 ---@param on_finished fun(props: MsbuildProperties)? optional callback
 function M.preload_msbuild_properties(project_file_path, on_finished, target_framework)
   assert(project_file_path, "Project file path cannot be nil")
+  local lines = vim.fn.readfile(project_file_path)
+  local is_net_framework = M.is_dotnet_framework_project(lines)
   local cache_key = build_cache_key(project_file_path, target_framework)
   local maybe_cached = msbuild_cache[cache_key]
   if maybe_cached ~= nil then
@@ -179,7 +202,7 @@ function M.preload_msbuild_properties(project_file_path, on_finished, target_fra
   local ext = vim.fn.fnamemodify(project_file_path, ":e"):lower()
   if ext ~= "csproj" and ext ~= "fsproj" then error(project_file_path .. " is not a known project file") end
 
-  local command = build_msbuild_command(project_file_path, target_framework)
+  local command = is_net_framework and build_msbuild_command_framework(project_file_path) or build_msbuild_command_core(project_file_path, target_framework)
   local stdout = ""
 
   local job_id = vim.fn.jobstart(command, {
@@ -187,6 +210,7 @@ function M.preload_msbuild_properties(project_file_path, on_finished, target_fra
     on_stdout = function(_, data)
       if data then stdout = table.concat(data, "\n") end
     end,
+    on_stderr = function(_, data) vim.print(data) end,
     on_exit = function()
       local properties = parse_msbuild_properties(stdout)
       msbuild_cache[cache_key] = properties
@@ -206,7 +230,7 @@ function M.preload_msbuild_properties(project_file_path, on_finished, target_fra
   end
 end
 
-local function get_or_wait_or_set_cached_value(project_file_path, target_framework)
+local function get_or_wait_or_set_cached_value(project_file_path, is_net_framework, target_framework)
   local cache_key = build_cache_key(project_file_path, target_framework)
   local cached = msbuild_cache[cache_key]
 
@@ -218,7 +242,7 @@ local function get_or_wait_or_set_cached_value(project_file_path, target_framewo
   end
 
   if not cached or type(cached) ~= "table" then
-    local command = build_msbuild_command(project_file_path, target_framework)
+    local command = is_net_framework and build_msbuild_command_framework(project_file_path) or build_msbuild_command_core(project_file_path, target_framework)
     local output = vim.fn.system(command)
     cached = parse_msbuild_properties(output)
     msbuild_cache[cache_key] = cached
@@ -231,16 +255,17 @@ end
 ---@return DotnetProject
 M.get_project_from_project_file = function(project_file_path)
   local result = file_cache.get(project_file_path, function(lines)
-    local msbuild_props = get_or_wait_or_set_cached_value(project_file_path)
+    local is_net_framework = M.is_dotnet_framework_project(lines)
+    local msbuild_props = get_or_wait_or_set_cached_value(project_file_path, is_net_framework)
     local display = extract_project_name(project_file_path)
     local name = display
     local language = project_file_path:match("%.csproj$") and "csharp" or project_file_path:match("%.fsproj$") and "fsharp" or "unknown"
     local is_web_project = M.is_web_project(lines)
     local is_worker_project = M.is_worker_project(lines)
-    local is_console_project = string.lower(msbuild_props.outputType) == "exe"
-    local is_test_project = msbuild_props.isTestProject or M.is_directly_referencing_test_packages(lines)
+    local is_console_project = string.lower(msbuild_props.outputType or "") == "exe"
+    local is_test_project = not is_net_framework and (msbuild_props.isTestProject or M.is_directly_referencing_test_packages(lines))
     local is_test_platform_project = msbuild_props.testingPlatformDotnetTestSupport
-    local is_win_project = string.lower(msbuild_props.outputType) == "winexe"
+    local is_win_project = string.lower(msbuild_props.outputType or "") == "winexe"
     local maybe_secret_guid = msbuild_props.userSecretsId
     local version = msbuild_props.version
 
@@ -266,7 +291,7 @@ M.get_project_from_project_file = function(project_file_path)
       language = language,
       name = name,
       version = version,
-      runnable = is_web_project or is_worker_project or is_console_project or is_win_project,
+      runnable = not is_net_framework and (is_web_project or is_worker_project or is_console_project or is_win_project),
       secrets = maybe_secret_guid,
       --TODO: consolidate method and property, support multi target frameworks where targetPath would be nil
       get_dll_path = function()
@@ -280,6 +305,7 @@ M.get_project_from_project_file = function(project_file_path)
       isWorkerProject = is_worker_project,
       isWebProject = is_web_project,
       isWinProject = is_win_project,
+      is_net_framework = is_net_framework,
       msbuild_props = msbuild_props,
       type = "project",
       get_all_runtime_definitions = nil,
@@ -289,6 +315,7 @@ M.get_project_from_project_file = function(project_file_path)
     ---@param target_framework string specified as e.g net8.0
     ---@return DotnetProjectFramework
     project.get_specific_runtime_definition = function(target_framework)
+      if project.is_net_framework then return project end
       if not project.msbuild_props.isMultiTarget then return project end
       --TODO: validate that arg is a valid targetFramework on the project
       local msbuild_target_framework_props = get_or_wait_or_set_cached_value(project_file_path, target_framework)
@@ -309,6 +336,7 @@ M.get_project_from_project_file = function(project_file_path)
     end
 
     project.get_all_runtime_definitions = function()
+      if project.is_net_framework then return { project } end
       if not project.msbuild_props.isMultiTarget then return { project } end
       return vim.tbl_map(function(target) return project.get_specific_runtime_definition(target) end, project.msbuild_props.targetFrameworks)
     end
@@ -339,6 +367,10 @@ M.is_directly_referencing_test_packages = function(project_file_lines)
 
   return false
 end
+
+---@param project_file_lines string[]
+---@return boolean
+M.is_dotnet_framework_project = function(project_file_lines) return extract_from_lines(project_file_lines, '<Project%s[^>]*[^Sdk]="[^"]*"') end
 
 ---@param project_file_lines string[]
 ---@return boolean

@@ -58,7 +58,10 @@ M.build_project_picker = function(term, use_default, args)
     return
   end
 
-  select_project(solutionFilePath, function(project) term(project.path, "build", args) end, use_default)
+  select_project(solutionFilePath, function(project)
+    vim.print("Building...", project)
+    term(project.path, "build", args, { is_net_framework = project.is_net_framework })
+  end, use_default)
 end
 
 local qf_title = "easy-dotnet"
@@ -158,8 +161,9 @@ M.build_project_quickfix = function(use_default, dotnet_args)
   end
 
   select_project(solutionFilePath, function(project)
+    vim.print(project)
     if project == nil then return end
-    local command = string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", project.path, log_path, dotnet_args or "")
+    local command = project.is_net_framework and string.format("msbuild %s", project.path) or string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", project.path, log_path, dotnet_args or "")
     execute_build_quickfix_command(command, log_path)
   end, use_default)
 end
