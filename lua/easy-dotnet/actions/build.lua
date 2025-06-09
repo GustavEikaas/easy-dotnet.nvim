@@ -63,14 +63,14 @@ M.build_project_picker = function(term, use_default, args)
   use_default = use_default or false
   args = args or ""
 
-  local solutionFilePath = sln_parse.find_solution_file()
-  if solutionFilePath == nil then
+  local solution_file_path = sln_parse.find_solution_file()
+  if solution_file_path == nil then
     csproj_fallback(term)
     return
   end
 
-  select_project(solutionFilePath, function(project)
-    local cmd = project.is_net_framework == false and string.format("dotnet build %s %s", project.path, args) or build_msbuild_command(project)
+  select_project(solution_file_path, function(project)
+    local cmd = not project.is_net_framework and string.format("dotnet build %s %s", project.path, args) or build_msbuild_command(project)
     ---@type DotnetActionContext
     local context = { command = cmd, is_net_framework = project.is_net_framework }
     term(project.path, "build", args, context)

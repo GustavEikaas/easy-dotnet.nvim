@@ -75,7 +75,12 @@ local function test_project(project, args, term)
 
   local arg = ""
   if project.type == "project_framework" then arg = arg .. " --framework " .. project.msbuild_props.targetFramework end
-  term(project.path, "test", arg .. " " .. args)
+  ---@type DotnetActionContext
+  local ctx = {
+    command = project.is_net_framework and string.format("dotnet vstest %s", project.get_dll_path()) or string.format("dotnet test %s %s", project.path, args),
+    is_net_framework = project.is_net_framework,
+  }
+  term(project.path, "test", arg .. " " .. args, ctx)
 end
 
 ---@param term function
@@ -109,18 +114,18 @@ end
 M.test_solution = function(term, args)
   term = term or require("easy-dotnet.options").options.terminal
   args = args or ""
-  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
-  if solutionFilePath == nil then
+  local solution_file_path = sln_parse.find_solution_file() or csproj_parse.find_project_file()
+  if solution_file_path == nil then
     logger.error(error_messages.no_project_definition_found)
     return
   end
-  term(solutionFilePath, "test", args or "")
+  term(solution_file_path, "test", args or "")
 end
 
 M.test_watcher = function(icons)
   local dn = require("easy-dotnet.parsers").sln_parser
-  local slnPath = dn.find_solution_file()
-  local projects = dn.get_projects_from_sln(slnPath)
+  local sln_path = dn.find_solution_file()
+  local projects = dn.get_projects_from_sln(sln_path)
   local testProjects = {}
   for _, value in pairs(projects) do
     if value.isTestProject then table.insert(testProjects, value) end
