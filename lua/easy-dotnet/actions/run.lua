@@ -42,8 +42,12 @@ local function run_project(project, args, term)
   local cmd = project.is_net_framework == false and string.format("dotnet run --project %s %s", project.path, args)
     or project.msbuild_props.net_framework.use_iis_express and build_iis_command(project)
     or project.msbuild_props.targetPath
+    or error("Failed to compute run command for " .. project.path)
 
-  term(project.path, "run", arg .. " " .. args, { command = cmd, is_net_framework = project.is_net_framework })
+  ---@type DotnetActionContext
+  local context = { command = cmd, is_net_framework = project.is_net_framework }
+
+  term(project.path, "run", arg .. " " .. args, context)
 end
 
 local pick_project_without_solution = function()

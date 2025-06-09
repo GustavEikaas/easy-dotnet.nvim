@@ -14,8 +14,8 @@ local polyfills = require("easy-dotnet.polyfills")
 
 ---@param project DotnetProject
 local function build_msbuild_command(project)
-  local r = "msbuild %s /verbosity:minimal /p:configuration=debug /m"
-  return r
+  local cmd = string.format("msbuild %s /verbosity:minimal /p:configuration=debug /m", project.path)
+  return cmd
 end
 
 local function select_project(solution_file_path, cb, use_default)
@@ -48,7 +48,12 @@ local function csproj_fallback(term)
     logger.error(error_messages.no_project_definition_found)
     return
   end
-  picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i) term(i.path, "build", "") end, "Build project(s)")
+
+  --BUG: actually resolve if its .net framework
+
+  ---@type DotnetActionContext
+  local ctx = { command = string.format("dotnet build %s", csproj_path), is_net_framework = false }
+  picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i) term(i.path, "build", "", ctx) end, "Build project(s)")
 end
 
 ---@param term function | nil
@@ -65,8 +70,10 @@ M.build_project_picker = function(term, use_default, args)
   end
 
   select_project(solutionFilePath, function(project)
-    vim.print("Building...", project)
-    term(project.path, "build", args, csproj_parse.build_context(project))
+    local cmd = project.is_net_framework == false and string.format("dotnet build %s %s", project.path, args) or build_msbuild_command(project)
+    ---@type DotnetActionContext
+    local context = { command = cmd, is_net_framework = project.is_net_framework }
+    term(project.path, "build", args, context)
   end, use_default)
 end
 
@@ -178,12 +185,13 @@ M.build_solution = function(term, args)
   term = term or require("easy-dotnet.options").options.terminal
   args = args or ""
 
-  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
-  if solutionFilePath == nil then
+  local solution_file_path = sln_parse.find_solution_file() or csproj_parse.find_project_file()
+  if solution_file_path == nil then
     logger.error(error_messages.no_project_definition_found)
     return
   end
-  term(solutionFilePath, "build", args or "")
+  local ctx = { command = string.format("dotnet build %s %s", solution_file_path, args), is_net_framework = false }
+  term(solution_file_path, "build", args or "", ctx)
 end
 
 M.build_solution_quickfix = function(dotnet_args)
