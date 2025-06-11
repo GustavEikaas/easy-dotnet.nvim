@@ -136,8 +136,6 @@ local function start_server(solution_file_path)
               full_pipe_path = "/tmp/CoreFxPipe_" .. M._server.pipe_name
             end
 
-            full_pipe_path = [[\\.\pipe\EasyDotnet_9e46df687a7142cb9aaab8252a88fd62]]
-
             is_negotiating = true
             M._server.client.setup({ pipe_path = full_pipe_path, debug = false })
             M._server.client.connect(function()
