@@ -89,7 +89,6 @@ local function get_package_refs(project_path)
   return packages
 end
 
-
 ---@async
 --- Asynchronously lists NuGet sources using `dotnet nuget list source`.
 --- Returns a list of `NugetSource` objects representing each source.
