@@ -413,14 +413,6 @@ local function register_rpc_discovered_tests(tests, project, options)
   win.refreshTree()
 end
 
-local function dump_to_file(obj, filepath)
-  local serialized = vim.inspect(obj)
-  local f = io.open(filepath, "w")
-  if not f then error("Could not open file: " .. filepath) end
-  f:write(serialized)
-  f:close()
-end
-
 ---@param project_node TestNode
 ---@param options table
 local function handle_rpc_response(project_node, options)
