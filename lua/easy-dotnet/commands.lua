@@ -106,19 +106,19 @@ M.project = {
 }
 
 M.pack = {
-  handle = function(args) actions.pack(args) end,
-  passthrough = true,
+  handle = function) actions.pack() end,
+  passthrough = false,
 }
 
 M.push = {
-  handle = function(args) actions.pack_and_push(args) end,
-  passthrough = true,
+  handle = function() actions.pack_and_push() end,
+  passthrough = false,
 }
 
 M.add = {
   subcommands = {
     package = {
-      handle = function(args) require("easy-dotnet.nuget").search_nuget(nil, stringify_args(args)) end,
+      handle = function(args) require("easy-dotnet.nuget").search_nuget(nil) end,
       passthrough = true,
     },
   },

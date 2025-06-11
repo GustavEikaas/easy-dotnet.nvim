@@ -120,9 +120,9 @@ local function csproj_fallback(push)
   if push then select_source_and_push(project, configuration) end
 end
 
-M.pack = function(args)
+--TODO: add passthrough args
+M.pack = function()
   local configuration = "release"
-  args = args or ""
   local solution_file_path = sln_parse.find_solution_file()
   if solution_file_path == nil then
     csproj_fallback(false)
@@ -135,9 +135,9 @@ M.pack = function(args)
   build_and_pack_project(project, configuration)
 end
 
-M.push = function(args)
+--TODO: add passthrough args
+M.push = function()
   local configuration = "release"
-  args = args or ""
   local solution_file_path = sln_parse.find_solution_file()
   if solution_file_path == nil then
     csproj_fallback(true)
