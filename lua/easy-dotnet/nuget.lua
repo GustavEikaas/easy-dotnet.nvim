@@ -1,5 +1,10 @@
 local M = {}
 
+---@class NugetSource
+---@field name string  # The source URL or path
+---@field display string  # Display-friendly name (same as URL here)
+
+local async = require("easy-dotnet.async-utils")
 local polyfills = require("easy-dotnet.polyfills")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
@@ -82,6 +87,30 @@ local function get_package_refs(project_path)
   if vim.v.shell_error then logger.error("Failed to get packages for " .. project_path) end
   local packages = vim.fn.json_decode(out)
   return packages
+end
+
+---@async
+--- Asynchronously lists NuGet sources using `dotnet nuget list source`.
+--- Returns a list of `NugetSource` objects representing each source.
+--- Throws an error if the command fails.
+---
+--- @return NugetSource[] List of NuGet source objects.
+M.get_nuget_sources_async = function()
+  local pack_res = async.await(async.job_run_async)({ "dotnet", "nuget", "list", "source", "--format", "short" })
+
+  if not pack_res.success then
+    vim.print(pack_res.stderr)
+    error("Listing nuget sources failed")
+  end
+  return vim
+    .iter(pack_res.stdout)
+    :map(function(line)
+      local url = vim.trim(line):match("^%u%s+(.*)")
+      if not url then return nil end
+      return { name = url, display = url }
+    end)
+    :filter(function(val) return val ~= nil end)
+    :totable()
 end
 
 M.remove_nuget = function()

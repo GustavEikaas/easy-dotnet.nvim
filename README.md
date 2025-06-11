@@ -261,6 +261,9 @@ Although not *required* by the plugin, it is highly recommended to install one o
 | `dotnet.project_view()` | Opens the project view |
 | `dotnet.project_view_default()` | Opens the project view for your default project |
 ||
+| `dotnet.pack()` | `dotnet pack -c release` |
+| `dotnet.push()` | `dotnet pack and push` |
+||
 | `dotnet.test()` | `dotnet test <TS> <DArgs>` |
 | `dotnet.test_solution()` | `dotnet test <TS> <DArgs>` |
 | `dotnet.test_default()` | `dotnet test <TS Default> <DArgs>` |
@@ -333,6 +336,8 @@ dotnet.build_default()
 dotnet.build_default_quickfix()       
 dotnet.project_view()
 dotnet.project_view_default()
+dotnet.pack()                           
+dotnet.push()                           
 dotnet.run()
 dotnet.run_profile_default()
 dotnet.run_default()
@@ -370,6 +375,8 @@ Dotnet add package
 Dotnet remove package
 Dotnet project view
 Dotnet project view default
+Dotnet pack
+Dotnet push
 Dotnet ef database update
 Dotnet ef database update pick
 Dotnet ef database drop
