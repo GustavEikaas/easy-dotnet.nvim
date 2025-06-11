@@ -86,6 +86,10 @@ local function request_build(sln_path)
   local success = false
 
   client.request("msbuild/build", { request = { targetPath = sln_path, configuration = nil } }, function(response)
+    if not response.result then
+      vim.print(response)
+      error("Build failed")
+    end
     success = response.result.success == true
     coroutine.resume(co)
   end)
