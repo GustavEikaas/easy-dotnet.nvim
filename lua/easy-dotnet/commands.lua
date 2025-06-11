@@ -105,6 +105,16 @@ M.project = {
   },
 }
 
+M.pack = {
+  handle = function(args) actions.pack(args) end,
+  passthrough = true,
+}
+
+M.push = {
+  handle = function(args) actions.pack_and_push(args) end,
+  passthrough = true,
+}
+
 M.add = {
   subcommands = {
     package = {
