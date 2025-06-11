@@ -129,6 +129,10 @@ M.pack = function()
     return
   end
   local nuget_packages = sln_parse.get_projects_from_sln(solution_file_path, function(project) return project.isNugetPackage end)
+  if #nuget_packages == 0 then
+    logger.warn("No nuget packages found in solution")
+    return
+  end
 
   local project = picker.pick_sync(nil, nuget_packages, "Pack projects", false, true)
 
@@ -144,6 +148,11 @@ M.push = function()
     return
   end
   local nuget_packages = sln_parse.get_projects_from_sln(solution_file_path, function(project) return project.isNugetPackage end)
+
+  if #nuget_packages == 0 then
+    logger.warn("No nuget packages found in solution")
+    return
+  end
 
   local project = picker.pick_sync(nil, nuget_packages, "Pack projects", false, true)
 
