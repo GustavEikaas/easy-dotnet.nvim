@@ -106,7 +106,7 @@ M.project = {
 }
 
 M.pack = {
-  handle = function) actions.pack() end,
+  handle = function() actions.pack() end,
   passthrough = false,
 }
 
