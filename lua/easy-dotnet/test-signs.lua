@@ -128,7 +128,6 @@ function M.add_gutter_test_signs()
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   if is_test_file == true then
     if not vim.b.easy_dotnet_gutter_autocmd_set then
-      print("adding autocmd")
       vim.api.nvim_create_autocmd("BufWritePost", {
         buffer = bufnr,
         callback = function() vim.b.easy_dotnet_file_changed = true end,
