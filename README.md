@@ -27,6 +27,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 6. [Setup](#setup)
    - [Without options](#without-options)
    - [With options](#with-options)
+   - [Lualine config](#lualine-config)
 7. [Commands](#commands)
    - [Lua functions](#lua-functions)
    - [Vim commands](#vim-commands)
