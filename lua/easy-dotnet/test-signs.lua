@@ -1,7 +1,9 @@
 local constants = require("easy-dotnet.constants")
+local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
 local keymaps = require("easy-dotnet.test-runner.keymaps")
 local win = require("easy-dotnet.test-runner.render")
+local runner = require("easy-dotnet.test-runner.runner")
 local M = {}
 
 local function compare_paths(path1, path2)
@@ -60,23 +62,37 @@ local function get_nearest_method_line()
   end
 end
 
-local function run_test_from_buffer()
+---@param requires_rebuild boolean whether file has been altered
+local function run_test_from_buffer(requires_rebuild)
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
+  local handlers = {}
+
   ---@param node TestNode
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
-    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then
-      --TODO: replace sign with in-progress
-      if node.is_MTP and node.line_number == vim.api.nvim_win_get_cursor(0)[1] then
-        keymaps.MTP_Run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
-        M.add_gutter_test_signs()
-      elseif not node.is_MTP and (node.line_number - 1 == vim.api.nvim_win_get_cursor(0)[1] or node.line_number - 1 == get_nearest_method_line()) then
-        keymaps.VsTest_Run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
-        M.add_gutter_test_signs()
-      end
-    end
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then table.insert(handlers, node) end
   end)
+  ---@type TestNode
+  local first_node = handlers[1]
+
+  if requires_rebuild and first_node then
+    local on_finished = job.register_job({ name = "Building...", on_error_text = "Build failed", on_success_text = "Built successfully" })
+
+    local res = runner.request_build(first_node.cs_project_path)
+    if res then vim.b.easy_dotnet_file_changed = false end
+    on_finished(res)
+  end
+
+  for _, node in ipairs(handlers) do
+    if node.is_MTP and node.line_number == vim.api.nvim_win_get_cursor(0)[1] then
+      keymaps.MTP_Run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
+      M.add_gutter_test_signs()
+    elseif not node.is_MTP and (node.line_number - 1 == vim.api.nvim_win_get_cursor(0)[1] or node.line_number - 1 == get_nearest_method_line()) then
+      keymaps.VsTest_Run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
+      M.add_gutter_test_signs()
+    end
+  end
 end
 
 function M.add_gutter_test_signs()
@@ -86,8 +102,6 @@ function M.add_gutter_test_signs()
   local is_test_file = false
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
-
-  --BUG: This wont work in case of test-groups, need to aggregate the statuses and choose the worst outcome
 
   ---@param node TestNode
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
@@ -113,9 +127,19 @@ function M.add_gutter_test_signs()
 
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   if is_test_file == true then
+    if not vim.b.easy_dotnet_gutter_autocmd_set then
+      print("adding autocmd")
+      vim.api.nvim_create_autocmd("BufWritePost", {
+        buffer = bufnr,
+        callback = function() vim.b.easy_dotnet_file_changed = true end,
+      })
+      vim.b.easy_dotnet_gutter_autocmd_set = true
+    end
     vim.keymap.set("n", keymap.debug_test_from_buffer.lhs, function() debug_test_from_buffer() end, { silent = true, buffer = bufnr, desc = keymap.debug_test_from_buffer.desc })
 
-    vim.keymap.set("n", keymap.run_test_from_buffer.lhs, function() run_test_from_buffer() end, { silent = true, buffer = bufnr, desc = keymap.run_test_from_buffer.desc })
+    vim.keymap.set("n", keymap.run_test_from_buffer.lhs, function()
+      coroutine.wrap(function() run_test_from_buffer(vim.b.easy_dotnet_file_changed) end)()
+    end, { silent = true, buffer = bufnr, desc = keymap.run_test_from_buffer.desc })
   end
 end
 
