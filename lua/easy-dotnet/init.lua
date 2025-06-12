@@ -127,9 +127,9 @@ end
 
 local function check_picker_config(opts)
   if opts.picker == "fzf" and not (pcall(require, "fzf-lua")) then
-    vim.notify("config.picker is set to fzf but fzf-lua is not installed. Using basic picker.")
+    logger.warn("config.picker is set to fzf but fzf-lua is not installed. Using basic picker.")
   elseif opts.picker == "telescope" and not (pcall(require, "telescope")) then
-    vim.notify("config.picker is set to telescope but telescope is not installed. Using basic picker.")
+    logger.warn("config.picker is set to telescope but telescope is not installed. Using basic picker.")
   end
 end
 

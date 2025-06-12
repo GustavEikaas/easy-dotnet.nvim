@@ -42,29 +42,21 @@ local function push_nuget_package(project, configuration, source)
 
   if not res.success then
     vim.print(res.stderr)
-    vim.notify("Failed to get MSBuild properties", vim.log.levels.ERROR)
-    return
+    error("Failed to get MSBuild properties")
   end
 
   local json = table.concat(res.stdout, "")
   local ok, props = pcall(vim.fn.json_decode, json)
-  if not ok or not props then
-    vim.notify("Failed to parse MSBuild JSON output", vim.log.levels.ERROR)
-    return
-  end
+  if not ok or not props then error("Failed to parse MSBuild JSON output") end
 
   local out_dir = vim.fs.normalize(props.Properties.PackageOutputPath)
   local id = props.Properties.PackageId
   local version = props.Properties.Version
-  if not id or not version then
-    vim.notify("Missing PackageId or Version from MSBuild output", vim.log.levels.ERROR)
-    return
-  end
+  if not id or not version then error("Missing PackageId or Version from MSBuild output") end
 
   local package_path = vim.fs.joinpath(vim.fs.dirname(project.path), vim.fs.joinpath(out_dir, id .. "." .. version .. ".nupkg"))
 
   if not file_exists(package_path) then error(string.format("No nuget package at %s was found", package_path)) end
-
 
   local push_job = job.register_job({ name = "Pushing...", on_error_text = "Pushing failed", on_success_text = "Pushed to nuget feed!" })
   local push_res = async.await(async.job_run_async)({ "dotnet", "nuget", "push", package_path, "--source", source.name })
