@@ -286,14 +286,8 @@ M.get_project_from_project_file = function(project_file_path)
     local is_console_project = string.lower(msbuild_props.outputType or "") == "exe"
     local is_test_project = msbuild_props.isTestProject or M.is_directly_referencing_test_packages(lines) or M.is_net_framework_test_project(lines)
     local is_test_platform_project = msbuild_props.testingPlatformDotnetTestSupport
-<<<<<<< HEAD
     local is_win_project = string.lower(msbuild_props.outputType or "") == "winexe"
-||||||| 905fb69
-    local is_win_project = string.lower(msbuild_props.outputType) == "winexe"
-=======
-    local is_win_project = string.lower(msbuild_props.outputType) == "winexe"
     local is_nuget_package = msbuild_props.generatePackageOnBuild or msbuild_props.is_packable
->>>>>>> d59e3501e1d0a3277ec286c460baeae2c8ad2447
     local maybe_secret_guid = msbuild_props.userSecretsId
     local version = msbuild_props.version
 
