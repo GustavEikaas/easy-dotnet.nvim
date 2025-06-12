@@ -173,19 +173,19 @@ local function start_server(solution_file_path)
     on_stderr = function(_, data, _)
       if data then
         for _, line in ipairs(data) do
-          if line ~= "" then vim.notify("[server stderr] " .. line, vim.log.levels.WARN) end
+          if line ~= "" then logger.warn("[server stderr] " .. line) end
         end
       end
     end,
     on_exit = function(_, code, _)
-      vim.notify("Testrunner server exited with code " .. code, vim.log.levels.INFO)
+      vim.notify("Testrunner server exited with code " .. code, code == 0 and vim.log.levels.INFO or vim.log.levels.ERROR)
       M._server.ready = false
       M._server.id = nil
     end,
   })
 
   if handle <= 0 then
-    vim.notify("Failed to start testrunner server", vim.log.levels.ERROR)
+    error("Failed to start testrunner server")
     return
   end
 

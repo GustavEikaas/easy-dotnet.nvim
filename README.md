@@ -27,6 +27,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 6. [Setup](#setup)
    - [Without options](#without-options)
    - [With options](#with-options)
+   - [Lualine config](#lualine-config)
 7. [Commands](#commands)
    - [Lua functions](#lua-functions)
    - [Vim commands](#vim-commands)
@@ -218,7 +219,18 @@ Although not *required* by the plugin, it is highly recommended to install one o
       -- the available one automatically with this priority:
       -- telescope -> fzf -> snacks ->  basic
       picker = "telescope",
-      background_scanning = true
+      background_scanning = true,
+      notifications = {
+        --Set this to false if you have configured lualine to avoid double logging
+        handler = function(start_event)
+          local spinner = require("easy-dotnet.ui-modules.spinner").new()
+          spinner:start_spinner(start_event.job.name)
+          ---@param finished_event JobEvent
+          return function(finished_event)
+            spinner:stop_spinner(finished_event.result.text, finished_event.result.level)
+          end
+        end,
+      },
     })
 
     -- Example command
@@ -231,6 +243,19 @@ Although not *required* by the plugin, it is highly recommended to install one o
       dotnet.run_project()
     end)
   end
+}
+```
+
+### Lualine config
+```lua
+local job_indicator = { require("easy-dotnet.ui-modules.jobs").lualine }
+
+require("lualine").setup {
+  sections = {
+    -- ...
+    lualine_a = { "mode", job_indicator },
+    -- ...
+  },
 }
 ```
 

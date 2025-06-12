@@ -1,4 +1,5 @@
 local logger = require("easy-dotnet.logger")
+local job = require("easy-dotnet.ui-modules.jobs")
 local M = {}
 
 ---@param migration_name string
@@ -12,17 +13,9 @@ M.add_migration = function(migration_name)
   local startup_project = selections.startup_project
 
   local cmd = string.format("dotnet ef migrations add %s --project %s --startup-project %s", migration_name, project.path, startup_project.path)
-  local spinner = require("easy-dotnet.ui-modules.spinner").new()
-  spinner:start_spinner("Adding migration")
-  vim.fn.jobstart(cmd, {
-    on_exit = function(_, code)
-      if code == 0 then
-        spinner:stop_spinner("Migration added")
-      else
-        spinner:stop_spinner("Failed to add migration", vim.log.levels.ERROR)
-      end
-    end,
-  })
+
+  local migration_job = job.register_job({ name = "Adding migration", on_error_text = "Failed to add migration", on_success_text = "Migration added" })
+  vim.fn.jobstart(cmd, { on_exit = function(_, code) migration_job(code == 0) end })
 end
 
 M.remove_migration = function()
@@ -30,17 +23,11 @@ M.remove_migration = function()
   local project = selections.project
   local startup_project = selections.startup_project
 
-  local spinner = require("easy-dotnet.ui-modules.spinner").new()
   local cmd = string.format("dotnet ef migrations remove --project %s --startup-project %s", project.path, startup_project.path)
-  spinner:start_spinner("Removing migration")
+
+  local migration_job = job.register_job({ name = "Removing migration", on_error_text = "Failed to remove migration", on_success_text = "Migration removed" })
   vim.fn.jobstart(cmd, {
-    on_exit = function(_, code)
-      if code == 0 then
-        spinner:stop_spinner("Migration removed")
-      else
-        spinner:stop_spinner("Failed to remove migration", vim.log.levels.ERROR)
-      end
-    end,
+    on_exit = function(_, code) migration_job(code == 0) end,
   })
 end
 
@@ -51,8 +38,8 @@ M.list_migrations = function()
 
   local cmd = string.format("dotnet ef migrations list --prefix-output --project %s --startup-project %s", project.path, startup_project.path)
   local migrations = {}
-  local spinner = require("easy-dotnet.ui-modules.spinner").new()
-  spinner:start_spinner("Loading migrations")
+
+  local migration_job = job.register_job({ name = "Loading migrations", on_error_text = "Failed to load migrations", on_success_text = "Migrations loaded" })
   vim.fn.jobstart(cmd, {
     stdout_buffered = true,
     ---@param data table<string>
@@ -68,8 +55,8 @@ M.list_migrations = function()
       end
     end,
     on_exit = function(_, code)
+      migration_job(code == 0)
       if code == 0 then
-        spinner:stop_spinner("")
         local opts = {
           entry_maker = function(entry)
             return {
@@ -81,8 +68,6 @@ M.list_migrations = function()
           end,
         }
         require("easy-dotnet.picker").migration_picker(opts, migrations)
-      else
-        spinner:stop_spinner("Failed to load migrations", vim.log.levels.ERROR)
       end
     end,
   })

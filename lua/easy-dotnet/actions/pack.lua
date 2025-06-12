@@ -4,7 +4,7 @@ local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
 local logger = require("easy-dotnet.logger")
 local picker = require("easy-dotnet.picker")
 local async = require("easy-dotnet.async-utils")
-local spinner = require("easy-dotnet.ui-modules.spinner")
+local job = require("easy-dotnet.ui-modules.jobs")
 local nuget = require("easy-dotnet.nuget")
 
 local function file_exists(path)
@@ -12,32 +12,39 @@ local function file_exists(path)
   return stat and stat.type == "file"
 end
 
+---@param cmd string[] The command run
+---@param res { stdout: string[], stderr: string[], success: boolean }
+---@return nil | { command: string, stdout?: string[], stderr?: string[] }
+local function format_command_failure(cmd, res)
+  if res.success then return nil end
+
+  local function is_only_whitespace(lines) return vim.tbl_isempty(lines) or (#lines == 1 and vim.trim(lines[1]) == "") end
+
+  local stdout_valid = not is_only_whitespace(res.stdout)
+  local stderr_valid = not is_only_whitespace(res.stderr)
+
+  return {
+    command = table.concat(cmd, " "),
+    stdout = stdout_valid and res.stdout or nil,
+    stderr = stderr_valid and res.stderr or nil,
+  }
+end
+
 local M = {}
 
 local function build_project(project, configuration)
-  local build_spinner = spinner.new()
-  build_spinner:start_spinner("Building...")
-  local build_res = async.await(async.job_run_async)({ "dotnet", "build", project.path, "-c", configuration })
-  if not build_res.success then
-    vim.print(build_res.stderr)
-    build_spinner:stop_spinner("Build failed", vim.log.levels.ERROR)
-    return
-  else
-    build_spinner:stop_spinner("Build success")
-  end
+  local build_job = job.register_job({ name = "Building...", on_error_text = "Build failed", on_success_text = "Build success" })
+  local cmd = { "dotnet", "build", project.path, "-c", configuration }
+  local build_res = async.await(async.job_run_async)(cmd)
+  build_job(build_res.success, format_command_failure(cmd, build_res))
+  return build_res.success
 end
 
 local function pack_project(project, configuration)
-  local pack_spinner = spinner.new()
-  pack_spinner:start_spinner("Packing...")
-  local pack_res = async.await(async.job_run_async)({ "dotnet", "pack", project.path, "-c", configuration })
-  if not pack_res.success then
-    vim.print(pack_res.stderr)
-    pack_spinner:stop_spinner("Packing failed", vim.log.levels.ERROR)
-    return
-  else
-    pack_spinner:stop_spinner("Packing success")
-  end
+  local pack_job = job.register_job({ name = "Packing...", on_error_text = "Packing failed", on_success_text = "Packing success" })
+  local cmd = { "dotnet", "pack", project.path, "-c", configuration }
+  local pack_res = async.await(async.job_run_async)(cmd)
+  pack_job(pack_res.success, format_command_failure(cmd, pack_res))
 end
 
 ---@param project DotnetProject
@@ -56,45 +63,33 @@ local function push_nuget_package(project, configuration, source)
 
   if not res.success then
     vim.print(res.stderr)
-    vim.notify("Failed to get MSBuild properties", vim.log.levels.ERROR)
-    return
+    error("Failed to get MSBuild properties")
   end
 
   local json = table.concat(res.stdout, "")
   local ok, props = pcall(vim.fn.json_decode, json)
-  if not ok or not props then
-    vim.notify("Failed to parse MSBuild JSON output", vim.log.levels.ERROR)
-    return
-  end
+  if not ok or not props then error("Failed to parse MSBuild JSON output") end
 
   local out_dir = vim.fs.normalize(props.Properties.PackageOutputPath)
   local id = props.Properties.PackageId
   local version = props.Properties.Version
-  if not id or not version then
-    vim.notify("Missing PackageId or Version from MSBuild output", vim.log.levels.ERROR)
-    return
-  end
+  if not id or not version then error("Missing PackageId or Version from MSBuild output") end
 
   local package_path = vim.fs.joinpath(vim.fs.dirname(project.path), vim.fs.joinpath(out_dir, id .. "." .. version .. ".nupkg"))
 
   if not file_exists(package_path) then error(string.format("No nuget package at %s was found", package_path)) end
 
-  local push_spinner = spinner.new()
-  push_spinner:start_spinner("Pushing...")
-  local push_res = async.await(async.job_run_async)({ "dotnet", "nuget", "push", package_path, "--source", source.name })
-  if not push_res.success then
-    vim.print(push_res.stderr)
-    push_spinner:stop_spinner("Pushing failed", vim.log.levels.ERROR)
-    return
-  else
-    push_spinner:stop_spinner("Pushed to nuget feed!")
-  end
+  local push_job = job.register_job({ name = "Pushing...", on_error_text = "Pushing failed", on_success_text = "Pushed to nuget feed!" })
+  local cmd = { "dotnet", "nuget", "push", package_path, "--source", source.name }
+  local push_res = async.await(async.job_run_async)(cmd)
+  push_job(push_res.success, format_command_failure(cmd, push_res))
 end
 
 ---@param project DotnetProject
 ---@param configuration string
 local function build_and_pack_project(project, configuration)
-  build_project(project, configuration)
+  local res = build_project(project, configuration)
+  if res == false then return end
   pack_project(project, configuration)
 end
 
