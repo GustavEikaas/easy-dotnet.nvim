@@ -220,6 +220,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
       picker = "telescope",
       background_scanning = true,
       notifications = {
+        --Set this to false if you have configured lualine to avoid double logging
         handler = function(start_event)
           local spinner = require("easy-dotnet.ui-modules.spinner").new()
           spinner:start_spinner(start_event.job.name)
@@ -241,6 +242,19 @@ Although not *required* by the plugin, it is highly recommended to install one o
       dotnet.run_project()
     end)
   end
+}
+```
+
+### Lualine config
+```lua
+local job_indicator = { require("easy-dotnet.ui-modules.jobs").lualine }
+
+require("lualine").setup {
+  sections = {
+    -- ...
+    lualine_a = { "mode", job_indicator },
+    -- ...
+  },
 }
 ```
 
