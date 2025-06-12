@@ -152,7 +152,7 @@ local function preload_msbuild_async_or_sync(project_lines, solution_file_path)
   for _, proj_path in ipairs(project_lines) do
     local project_file_path = generate_absolute_path_for_project(proj_path, solution_file_path)
     local proj_name = vim.fn.fnamemodify(project_file_path, ":t:r")
-    local on_finished = jobs.register_job({ job = "Loading " .. proj_name, on_error_text = "Failed to load " .. proj_name })
+    local on_finished = jobs.register_job({ job = "Loading " .. proj_name, on_success_text = proj_name .. " loaded", on_error_text = "Failed to load " .. proj_name })
     require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path, function()
       on_finished(true)
       remaining = remaining - 1
