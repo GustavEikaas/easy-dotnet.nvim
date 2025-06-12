@@ -79,6 +79,14 @@ end
 ---@field line_number number | nil
 ---@field runtime string | nil
 
+local function dump_to_file(obj, filepath)
+  local serialized = vim.inspect(obj)
+  local f = io.open(filepath, "w")
+  if not f then error("Could not open file: " .. filepath) end
+  f:write(serialized)
+  f:close()
+end
+
 local function request_build(sln_path)
   local client = M._server.client
   if not client then error("RPC client not initialized") end
@@ -86,6 +94,15 @@ local function request_build(sln_path)
   local success = false
 
   client.request("msbuild/build", { request = { targetPath = sln_path, configuration = nil } }, function(response)
+    if response.error then
+      vim.schedule(function() vim.notify(string.format("[%s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
+      if response.error.data then
+        local file = vim.fs.normalize(os.tmpname())
+        dump_to_file(response, file)
+        logger.error("Crash dump written at " .. file)
+      end
+      return
+    end
     success = response.result.success == true
     coroutine.resume(co)
   end)
@@ -394,14 +411,6 @@ local function register_rpc_discovered_tests(tests, project, options)
     if #converted > 0 then logger.error(string.format("%s returned %d tests but constructing a tree was not successful", project.name, #converted)) end
   end
   win.refreshTree()
-end
-
-local function dump_to_file(obj, filepath)
-  local serialized = vim.inspect(obj)
-  local f = io.open(filepath, "w")
-  if not f then error("Could not open file: " .. filepath) end
-  f:write(serialized)
-  f:close()
 end
 
 ---@param project_node TestNode
