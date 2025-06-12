@@ -14,6 +14,7 @@
 ---@class JobResult
 ---@field msg string The result text of the job
 ---@field level vim.log.levels The log level of the result
+---@field stack_trace? string[]
 
 ---@class JobTracker
 ---@field jobs JobData[] List of current jobs.
@@ -22,7 +23,7 @@
 ---@field MAX_DESC_LEN integer Max length of job description.
 ---@field spinner_frames string[] Spinner animation frames.
 ---@field listeners JobLifecycleListener[]
----@field register_job fun(job: JobData): fun(success: boolean) Adds a job and returns a function to remove it.
+---@field register_job fun(job: JobData): fun(success: boolean, error?: string[]) Adds a job and returns a function to remove it.
 ---@field register_listener fun(listener: JobLifecycleListener): fun() Registers a listener and returns a function to remove it.
 ---@field notify_listeners fun(event: JobEvent): (fun(event: JobEvent)?)[] Calls all registered listeners with a job event and returns their optional finish callbacks.
 ---@field lualine fun(): string Returns a string representing current job state, intended for statusline display.
@@ -45,14 +46,13 @@ local M = {
 
 ---Register a job and get a function to remove it
 ---@param job JobData The job description
----@return fun(success: boolean) remove_callback
+---@return fun(success: boolean, error?: string[]) remove_callback
 function M.register_job(job)
   local index = #M.jobs + 1
   M.jobs[index] = job
   local on_finished = M.notify_listeners({ event = "started", job = job })
 
-  ---@param success boolean Whether the job succeeded
-  return function(success)
+  return function(success, error)
     M.jobs = vim.tbl_filter(function(x) return x ~= job end, M.jobs)
     local is_error = success == false
     local msg = is_error and (job.on_error_text or job.name) or (job.on_success_text or job.name)
@@ -60,7 +60,7 @@ function M.register_job(job)
     M.finished_job = msg
     M.job_counter = M.job_counter + 1
     for _, value in ipairs(on_finished) do
-      value({ event = "finished", success = success, job = job, result = { msg = msg, level = level } })
+      value({ event = "finished", success = success, job = job, result = { msg = msg, level = level, stack_trace = error } })
     end
   end
 end
