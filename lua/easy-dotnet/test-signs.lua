@@ -4,6 +4,23 @@ local logger = require("easy-dotnet.logger")
 local keymaps = require("easy-dotnet.test-runner.keymaps")
 local win = require("easy-dotnet.test-runner.render")
 local runner = require("easy-dotnet.test-runner.runner")
+
+---@param path string Absolute path to the file
+---@return integer mtime File's last modification time in seconds since epoch
+local get_mtime = function(path)
+  local stat = vim.loop.fs_stat(path)
+  if not stat then
+    error("File not found: " .. path)
+  end
+
+  local mtime = stat.mtime.sec
+  return mtime
+end
+
+---@param path string Absolute path to the file
+local function reset_buf_mtime(path) vim.b.easy_dotnet_mtime = get_mtime(path) end
+local get_buf_mtime = function() return vim.b.easy_dotnet_mtime end
+
 local M = {}
 
 local function compare_paths(path1, path2)
@@ -62,10 +79,10 @@ local function get_nearest_method_line()
   end
 end
 
----@param requires_rebuild boolean whether file has been altered
-local function run_test_from_buffer(requires_rebuild)
+local function run_test_from_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
+  local requires_rebuild = get_buf_mtime() ~= get_mtime(curr_file)
 
   local handlers = {}
 
@@ -80,7 +97,7 @@ local function run_test_from_buffer(requires_rebuild)
     local on_finished = job.register_job({ name = "Building...", on_error_text = "Build failed", on_success_text = "Built successfully" })
 
     local res = runner.request_build(first_node.cs_project_path)
-    if res then vim.b.easy_dotnet_file_changed = false end
+    if res then reset_buf_mtime(curr_file) end
     on_finished(res)
   end
 
@@ -127,17 +144,11 @@ function M.add_gutter_test_signs()
 
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   if is_test_file == true then
-    if not vim.b.easy_dotnet_gutter_autocmd_set then
-      vim.api.nvim_create_autocmd("BufWritePost", {
-        buffer = bufnr,
-        callback = function() vim.b.easy_dotnet_file_changed = true end,
-      })
-      vim.b.easy_dotnet_gutter_autocmd_set = true
-    end
+    if not get_buf_mtime() then reset_buf_mtime(curr_file) end
     vim.keymap.set("n", keymap.debug_test_from_buffer.lhs, function() debug_test_from_buffer() end, { silent = true, buffer = bufnr, desc = keymap.debug_test_from_buffer.desc })
 
     vim.keymap.set("n", keymap.run_test_from_buffer.lhs, function()
-      coroutine.wrap(function() run_test_from_buffer(vim.b.easy_dotnet_file_changed) end)()
+      coroutine.wrap(function() run_test_from_buffer() end)()
     end, { silent = true, buffer = bufnr, desc = keymap.run_test_from_buffer.desc })
   end
 end
