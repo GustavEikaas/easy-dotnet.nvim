@@ -40,6 +40,7 @@ local M = {
   MAX_DESC_LEN = 36,
   spinner_frames = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" },
   listeners = {},
+  finished_job = nil,
 }
 
 ---Register a job and get a function to remove it
@@ -53,11 +54,12 @@ function M.register_job(job)
   ---@param success boolean Whether the job succeeded
   return function(success)
     M.jobs = vim.tbl_filter(function(x) return x ~= job end, M.jobs)
+    local is_error = success == false
+    local msg = is_error and (job.on_error_text or job.name) or (job.on_success_text or job.name)
+    local level = is_error and vim.log.levels.ERROR or vim.log.levels.INFO
+    M.finished_job = msg
     M.job_counter = M.job_counter + 1
     for _, value in ipairs(on_finished) do
-      local is_error = success == false
-      local msg = is_error and (job.on_error_text or job.name) or (job.on_success_text or job.name)
-      local level = is_error and vim.log.levels.ERROR or vim.log.levels.INFO
       value({ event = "finished", success = success, job = job, result = { msg = msg, level = level } })
     end
   end
@@ -80,7 +82,7 @@ end
 
 function M.lualine()
   local total_jobs = #M.jobs
-  if total_jobs == 0 then return "" end
+  if total_jobs == 0 then return M.finished_job or "" end
 
   M.job_counter = (M.job_counter % total_jobs) + 1
   M.spinner_counter = (M.spinner_counter % #M.spinner_frames) + 1
