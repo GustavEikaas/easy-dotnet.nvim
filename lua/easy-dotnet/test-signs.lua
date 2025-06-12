@@ -9,12 +9,8 @@ local runner = require("easy-dotnet.test-runner.runner")
 ---@return integer mtime File's last modification time in seconds since epoch
 local get_mtime = function(path)
   local stat = vim.loop.fs_stat(path)
-  if not stat then
-    error("File not found: " .. path)
-  end
-
-  local mtime = stat.mtime.sec
-  return mtime
+  if not stat then error("File not found: " .. path) end
+  return stat.mtime.sec
 end
 
 ---@param path string Absolute path to the file
