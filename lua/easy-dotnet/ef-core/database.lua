@@ -1,3 +1,4 @@
+local job = require("easy-dotnet.ui-modules.jobs")
 local M = {}
 
 M.database_update = function(mode)
@@ -28,18 +29,11 @@ M.database_update = function(mode)
     selected_migration = selected
   end
 
-  local spinner = require("easy-dotnet.ui-modules.spinner").new()
+  local migrations_job = job.register_job({ name = "Applying migrations", on_error_text = "Database update failed", on_success_text = "Database update failed" })
   local cmd = string.format("dotnet ef database update %s --project %s --startup-project %s", selected_migration.value, project.path, startup_project.path)
 
-  spinner:start_spinner("Applying migrations")
   vim.fn.jobstart(cmd, {
-    on_exit = function(_, code)
-      if code == 0 then
-        spinner:stop_spinner("Database updated")
-      else
-        spinner:stop_spinner("Database update failed", vim.log.levels.ERROR)
-      end
-    end,
+    on_exit = function(_, code) migrations_job(code == 0) end,
   })
 end
 --
@@ -48,17 +42,10 @@ M.database_drop = function()
   local project = selections.project
   local startup_project = selections.startup_project
 
-  local spinner = require("easy-dotnet.ui-modules.spinner").new()
+  local drop_job = job.register_job({ name = "Dropping database", on_error_text = "Failed to drop database", on_success_text = "Database dropped" })
   local cmd = string.format("dotnet ef database drop --project %s --startup-project %s -f", project.path, startup_project.path)
-  spinner:start_spinner("Dropping database")
   vim.fn.jobstart(cmd, {
-    on_exit = function(_, code)
-      if code == 0 then
-        spinner:stop_spinner("Database dropped")
-      else
-        spinner:stop_spinner("Failed to drop database", vim.log.levels.ERROR)
-      end
-    end,
+    on_exit = function(_, code) drop_job(code == 0) end,
   })
 end
 

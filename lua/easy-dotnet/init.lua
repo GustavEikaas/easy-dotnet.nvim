@@ -4,6 +4,7 @@ local constants = require("easy-dotnet.constants")
 local commands = require("easy-dotnet.commands")
 local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
+local job = require("easy-dotnet.ui-modules.jobs")
 
 local M = {}
 local function wrap(callback)
@@ -127,9 +128,9 @@ end
 
 local function check_picker_config(opts)
   if opts.picker == "fzf" and not (pcall(require, "fzf-lua")) then
-    vim.notify("config.picker is set to fzf but fzf-lua is not installed. Using basic picker.")
+    logger.warn("config.picker is set to fzf but fzf-lua is not installed. Using basic picker.")
   elseif opts.picker == "telescope" and not (pcall(require, "telescope")) then
-    vim.notify("config.picker is set to telescope but telescope is not installed. Using basic picker.")
+    logger.warn("config.picker is set to telescope but telescope is not installed. Using basic picker.")
   end
 end
 
@@ -236,6 +237,17 @@ M.setup = function(opts)
   if merged_opts.auto_bootstrap_namespace.enabled == true then require("easy-dotnet.cs-mappings").auto_bootstrap_namespace(merged_opts.auto_bootstrap_namespace.type) end
 
   if merged_opts.enable_filetypes == true then require("easy-dotnet.filetypes").enable_filetypes() end
+
+  if merged_opts.notifications.handler then
+    job.register_listener(merged_opts.notifications.handler)
+  else
+    job.register_listener(function()
+      ---@param e JobEvent
+      return function(e)
+        if not e.success then logger.error(e.result.msg) end
+      end
+    end)
+  end
 
   if merged_opts.test_runner.enable_buffer_test_execution then
     require("easy-dotnet.cs-mappings").add_test_signs()

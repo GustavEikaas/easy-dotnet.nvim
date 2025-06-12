@@ -7,6 +7,10 @@ local polyfills = require("easy-dotnet.polyfills")
 ---@field new { project: {prefix: "sln" | "none"} }
 ---@field enable_filetypes boolean
 ---@field picker PickerType
+---@field notifications Notifications
+
+---@class Notifications
+---@field handler fun(start_event: JobEvent): fun(finished_event: JobEvent)
 
 ---@class TestRunnerIcons
 ---@field passed string
@@ -157,6 +161,15 @@ local M = {
     picker = nil,
     --For performance reasons this will query msbuild properties as soon as vim starts
     background_scanning = true,
+    notifications = {
+      --Set this to false if you have configured lualine to avoid double logging
+      handler = function(start_event)
+        local spinner = require("easy-dotnet.ui-modules.spinner").new()
+        spinner:start_spinner(start_event.job.name)
+        ---@param finished_event JobEvent
+        return function(finished_event) spinner:stop_spinner(finished_event.result.msg, finished_event.result.level) end
+      end,
+    },
   },
 }
 

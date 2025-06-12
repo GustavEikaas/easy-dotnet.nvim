@@ -19,6 +19,10 @@ local M = {}
 ---@field version string | nil TargetVersion without net (e.g '8.0')
 ---@field isMultiTarget boolean Does it target multiple versions
 ---@field net_framework MsbuildNetFramework | nil .NET Framework-specific properties
+---@field packageId string | nil Nuget package id
+---@field generatePackageOnBuild boolean Whether to generate nuget package on build
+---@field is_packable boolean is nuget package
+---@field nuget_version string | nil nuget package version
 
 local msbuild_properties_shared = {
   "OutputPath",
@@ -37,6 +41,11 @@ local msbuild_properties_framework = vim.list_extend({
 local msbuild_properties_core = vim.list_extend({
   "TargetFramework",
   "TargetFrameworks",
+  "GeneratePackageOnBuild",
+  "IsPackable",
+  "PackageId",
+  "Version",
+  "PackageOutputPath",
   "UserSecretsId",
   "TestingPlatformDotnetTestSupport",
 }, msbuild_properties_shared)
@@ -88,6 +97,11 @@ local parse_msbuild_properties = function(output)
     userSecretsId = empty_string_to_nil(raw.UserSecretsId),
     assemblyName = empty_string_to_nil(raw.AssemblyName),
     targetPath = normalized_path_or_nil(empty_string_to_nil(raw.TargetPath)),
+    generatePackageOnBuild = string_to_boolean(raw.GeneratePackageOnBuild),
+    packageId = empty_string_to_nil(raw.PackageId),
+    is_packable = string_to_boolean(raw.IsPackable),
+    nuget_version = empty_string_to_nil(raw.Version),
+    packagePath = empty_string_to_nil(raw.PackageOutputPath),
     isTestProject = string_to_boolean(raw.IsTestProject),
     testingPlatformDotnetTestSupport = string_to_boolean(raw.TestingPlatformDotnetTestSupport),
     version = target_framework ~= nil and target_framework:gsub("%net", "") or nil,
@@ -111,6 +125,7 @@ end
 ---@field secrets string | nil
 ---@field get_dll_path function
 ---@field isTestProject boolean
+---@field isNugetPackage boolean
 ---@field isTestPlatformProject boolean
 ---@field isConsoleProject boolean
 ---@field isWebProject boolean
@@ -271,7 +286,14 @@ M.get_project_from_project_file = function(project_file_path)
     local is_console_project = string.lower(msbuild_props.outputType or "") == "exe"
     local is_test_project = msbuild_props.isTestProject or M.is_directly_referencing_test_packages(lines) or M.is_net_framework_test_project(lines)
     local is_test_platform_project = msbuild_props.testingPlatformDotnetTestSupport
+<<<<<<< HEAD
     local is_win_project = string.lower(msbuild_props.outputType or "") == "winexe"
+||||||| 905fb69
+    local is_win_project = string.lower(msbuild_props.outputType) == "winexe"
+=======
+    local is_win_project = string.lower(msbuild_props.outputType) == "winexe"
+    local is_nuget_package = msbuild_props.generatePackageOnBuild or msbuild_props.is_packable
+>>>>>>> d59e3501e1d0a3277ec286c460baeae2c8ad2447
     local maybe_secret_guid = msbuild_props.userSecretsId
     local version = msbuild_props.version
 
@@ -284,6 +306,7 @@ M.get_project_from_project_file = function(project_file_path)
     end
 
     if is_test_project then display = display .. " 󰙨" end
+    if is_nuget_package then display = display .. " " end
     if maybe_secret_guid then display = display .. " " end
     if is_web_project then display = display .. " 󱂛" end
     if is_console_project then display = display .. " 󰆍" end
@@ -308,6 +331,7 @@ M.get_project_from_project_file = function(project_file_path)
       isTestProject = is_test_project,
       isTestPlatformProject = is_test_platform_project,
       isConsoleProject = is_console_project,
+      isNugetPackage = is_nuget_package,
       isWorkerProject = is_worker_project,
       isWebProject = is_web_project,
       isWinProject = is_win_project,
