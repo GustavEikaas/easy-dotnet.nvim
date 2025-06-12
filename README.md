@@ -218,7 +218,17 @@ Although not *required* by the plugin, it is highly recommended to install one o
       -- the available one automatically with this priority:
       -- telescope -> fzf -> snacks ->  basic
       picker = "telescope",
-      background_scanning = true
+      background_scanning = true,
+      notifications = {
+        handler = function(start_event)
+          local spinner = require("easy-dotnet.ui-modules.spinner").new()
+          spinner:start_spinner(start_event.job.name)
+          ---@param finished_event JobEvent
+          return function(finished_event)
+            spinner:stop_spinner(finished_event.result.text, finished_event.result.level)
+          end
+        end,
+      },
     })
 
     -- Example command

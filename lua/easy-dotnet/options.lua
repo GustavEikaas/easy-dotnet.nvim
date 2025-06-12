@@ -164,14 +164,10 @@ local M = {
     notifications = {
       handler = function(start_event)
         local spinner = require("easy-dotnet.ui-modules.spinner").new()
-        spinner:start_spinner(start_event.job.job)
-
+        spinner:start_spinner(start_event.job.name)
         ---@param finished_event JobEvent
         return function(finished_event)
-          local is_error = finished_event.success == false
-          local msg = is_error and (finished_event.job.on_error_text or finished_event.job.job) or (finished_event.job.on_success_text or finished_event.job.job)
-          local level = is_error and vim.log.levels.ERROR or vim.log.levels.INFO
-          spinner:stop_spinner(msg, level)
+          spinner:stop_spinner(finished_event.result.msg, finished_event.result.level)
         end
       end,
     },

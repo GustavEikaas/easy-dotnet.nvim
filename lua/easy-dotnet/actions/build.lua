@@ -116,7 +116,7 @@ end
 
 local function execute_build_quickfix_command(command, log_path)
   local jobs = require("easy-dotnet.ui-modules.jobs")
-  local on_finished = jobs.register_job({ job = "Building", on_error_text = "Build failed", on_success_text = "Successfully built" })
+  local on_finished = jobs.register_job({ name = "Building", on_error_text = "Build failed", on_success_text = "Successfully built" })
 
   M.pending = true
   vim.fn.jobstart(command, {

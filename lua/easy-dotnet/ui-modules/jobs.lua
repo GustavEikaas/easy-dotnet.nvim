@@ -1,5 +1,5 @@
 ---@class JobData
----@field job string The job description text (e.g., "building...")
+---@field name string The job description text (e.g., "building...")
 ---@field on_success_text? string Text shown if the job succeeds
 ---@field on_error_text? string Text shown if the job fails
 
@@ -9,6 +9,11 @@
 ---@field event JobEventType The type of job event.
 ---@field job JobData The job identifier or description.
 ---@field success? boolean Whether the job was successful (only for "finished" events).
+---@field result? JobResult
+
+---@class JobResult
+---@field msg string The result text of the job
+---@field level vim.log.levels The log level of the result
 
 ---@class JobTracker
 ---@field jobs JobData[] List of current jobs.
@@ -50,7 +55,10 @@ function M.register_job(job)
     M.jobs = vim.tbl_filter(function(x) return x ~= job end, M.jobs)
     M.job_counter = M.job_counter + 1
     for _, value in ipairs(on_finished) do
-      value({ event = "finished", success = success, job = job })
+      local is_error = success == false
+      local msg = is_error and (job.on_error_text or job.name) or (job.on_success_text or job.name)
+      local level = is_error and vim.log.levels.ERROR or vim.log.levels.INFO
+      value({ event = "finished", success = success, job = job, result = { msg = msg, level = level } })
     end
   end
 end
@@ -79,7 +87,7 @@ function M.lualine()
   local spinner_frame = M.spinner_frames[M.spinner_counter]
 
   local job_obj = M.jobs[M.job_counter]
-  local job_desc = job_obj and job_obj.job or ""
+  local job_desc = job_obj and job_obj.name or ""
   if #job_desc > M.MAX_DESC_LEN then job_desc = job_desc:sub(1, M.MAX_DESC_LEN - 3) .. "..." end
   if total_jobs > 1 then
     return string.format("%s (%d/%d) %s", spinner_frame, M.job_counter, total_jobs, job_desc)
