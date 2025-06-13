@@ -87,13 +87,15 @@ local function dump_to_file(obj, filepath)
   f:close()
 end
 
-local function request_build(sln_path)
+---@param project_path string path to csproject file
+---@return boolean indicating success
+function M.request_build(project_path)
   local client = M._server.client
   if not client then error("RPC client not initialized") end
   local co = coroutine.running()
   local success = false
 
-  client.request("msbuild/build", { request = { targetPath = sln_path, configuration = nil } }, function(response)
+  client.request("msbuild/build", { request = { targetPath = project_path, configuration = nil } }, function(response)
     if response.error then
       vim.schedule(function() vim.notify(string.format("[%s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
       if response.error.data then
@@ -448,7 +450,7 @@ local function start_vstest_discovery(project, options, sdk_path, solution_file_
 
   project_node.job = { name = "build", state = "pending" }
   win.refreshTree()
-  local build_success = request_build(project.path)
+  local build_success = M.request_build(project.path)
   if not build_success then
     project_node.job = { name = "build", state = "error" }
     win.refreshTree()
@@ -472,7 +474,7 @@ local function start_MTP_discovery_for_project(project, options, solution_file_p
   win.tree.children[project_node.name] = project_node
   win.refreshTree()
 
-  local success = request_build(project.path)
+  local success = M.request_build(project.path)
   if not success then
     project_node.job = { name = "build", state = "error" }
     return
