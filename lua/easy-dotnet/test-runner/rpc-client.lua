@@ -11,6 +11,7 @@ local M = {}
 ---@field notify fun(method: string, params: table): boolean
 ---@field disconnect fun(): boolean
 ---@field is_connected fun(): boolean
+---@field subscribe_notifications fun(cb: NotificationCallback): fun(): nil
 
 ---@class RPC_Error
 ---@field code number
@@ -29,6 +30,13 @@ local M = {}
 ---@field result? table
 ---@field error? RPC_Error
 
+---@class JsonRpcNotification
+---@field jsonrpc "2.0"
+---@field method string
+---@field params? any
+
+---@alias NotificationCallback fun(method: string, params: any | nil): nil
+
 ---@alias DotnetPipeMethod
 ---| "initialize"
 ---| "msbuild/build"
@@ -42,6 +50,8 @@ local is_connected = false
 local pipe_path = nil
 local request_id = 0
 local callbacks = {}
+---@type NotificationCallback[]
+local notification_callbacks = {}
 local debug_mode = false
 
 local function debug_log(msg)
@@ -86,11 +96,21 @@ local function read_loop()
     local body = data:sub(body_start, body_start + content_length - 1)
 
     local ok, decoded = pcall(vim.json.decode, body)
-    if ok and decoded and decoded.id then
-      local cb = callbacks[decoded.id]
-      if cb then
-        callbacks[decoded.id] = nil
-        vim.schedule(function() cb(decoded) end)
+    if ok and decoded then
+      if decoded.id then
+        local cb = callbacks[decoded.id]
+        if cb then
+          callbacks[decoded.id] = nil
+          vim.schedule(function() cb(decoded) end)
+        end
+      elseif decoded.method then
+        vim.schedule(function()
+          for _, cb in ipairs(notification_callbacks) do
+            pcall(cb, decoded.method, decoded.params)
+          end
+        end)
+      else
+        vim.schedule(function() vim.notify("Unknown JSON structure" .. body, vim.log.levels.WARN) end)
       end
     else
       vim.schedule(function() vim.notify("Malformed or unmatched JSON body: " .. body, vim.log.levels.WARN) end)
@@ -169,6 +189,14 @@ function M.request(method, params, callback)
   end
 
   return id
+end
+
+function M.subscribe_notifications(cb)
+  table.insert(notification_callbacks, cb)
+
+  return function()
+    notification_callbacks = vim.tbl_filter(function(fn) return fn ~= cb end, notification_callbacks)
+  end
 end
 
 function M.notify(method, params)
