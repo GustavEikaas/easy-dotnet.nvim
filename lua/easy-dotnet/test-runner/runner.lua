@@ -129,10 +129,9 @@ local function start_server(solution_file_path)
             local pipename = line:sub(#server_ready_prefix + 1)
             M._server.pipe_name = vim.trim(pipename)
             M._server.client = require("easy-dotnet.test-runner.rpc-client")
-            local unsub = M._server.client.subscribe_notifications(function(method, params) vim.print(method, params) end)
             local full_pipe_path
             if extensions.isWindows() then
-              full_pipe_path = [[\\.\pipe\EasyDotnet_fc2e7aa60d5e4d3f99a8fea34f70589f]]
+              full_pipe_path = [[\\.\pipe\]] .. M._server.pipe_name
             elseif extensions.isDarwin() then
               full_pipe_path = os.getenv("TMPDIR") .. "CoreFxPipe_" .. M._server.pipe_name
             else
