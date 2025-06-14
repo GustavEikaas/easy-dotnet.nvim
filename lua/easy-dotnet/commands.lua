@@ -326,9 +326,8 @@ M._server = {
   subcommands = {
     update = {
       handle = function()
-        require("easy-dotnet.rpc.rpc").global_rpc_client:stop()
-        vim.defer_fn(function()
-          local on_finished = job.register_job({ name = "Updating EasyDotnet", on_success_text = "Successfully updated" })
+        local on_finished = job.register_job({ name = "Updating EasyDotnet", on_success_text = "Successfully updated" })
+        require("easy-dotnet.rpc.rpc").global_rpc_client:stop(function()
           local output = {}
           vim.fn.jobstart({ "dotnet", "tool", "install", "-g", "EasyDotnet" }, {
             on_stdout = function(_, data) vim.list_extend(output, data) end,
@@ -336,27 +335,32 @@ M._server = {
             on_exit = function(_, code)
               on_finished(code == 0)
               if code == 0 then
-                require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(function() vim.print("Server started") end)
+                require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(function() end)
               else
                 vim.print("Update failed, Code " .. code)
                 vim.print(output)
               end
             end,
           })
-        end, 100)
+        end)
       end,
     },
     stop = {
-      handle = function() require("easy-dotnet.rpc.rpc").global_rpc_client:stop() end,
+      handle = function()
+        local on_finished = job.register_job({ name = "Stopping server...", on_success_text = "Server stopped" })
+        require("easy-dotnet.rpc.rpc").global_rpc_client:stop(function() on_finished(true) end)
+      end,
     },
     start = {
       handle = function()
-        require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(function() vim.print("Server started") end)
+        local on_finished = job.register_job({ name = "Starting server...", on_success_text = "Server started" })
+        require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(function() on_finished(true) end)
       end,
     },
     restart = {
       handle = function()
-        require("easy-dotnet.rpc.rpc").global_rpc_client:restart(function() vim.print("Server started") end)
+        local on_finished = job.register_job({ name = "Restarting server...", on_success_text = "Server restarted" })
+        require("easy-dotnet.rpc.rpc").global_rpc_client:restart(function() on_finished(true) end)
       end,
     },
   },

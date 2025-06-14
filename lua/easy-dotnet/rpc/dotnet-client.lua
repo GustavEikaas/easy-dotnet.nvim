@@ -67,7 +67,7 @@ end
 ---@field _client StreamJsonRpc # Underlying StreamJsonRpc client used for communication
 ---@field _server DotnetServer # Manages the .NET named pipe server process
 ---@field initialize fun(self: DotnetClient, cb: fun()): nil # Starts the dotnet server and connects the JSON-RPC client
----@field stop fun(self: DotnetClient): nil # Stops the dotnet server
+---@field stop fun(self: DotnetClient, cb: fun()): nil # Stops the dotnet server
 ---@field restart fun(self: DotnetClient, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
 ---@field nuget_restore fun(self: DotnetClient, targetPath: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
 ---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
@@ -96,18 +96,20 @@ function M:new()
   return instance
 end
 
-function M:stop()
+function M:stop(cb)
   assert(self._server, "[DotnetClient] .new() was not called before :stop(). Please construct with :new().")
   self._client.disconnect()
   self._server.stop()
 
   self._initialized = false
   self._initializing = false
+  vim.defer_fn(function()
+    if cb then cb() end
+  end, 1000)
 end
 
 function M:restart(cb)
-  self:stop()
-  vim.defer_fn(function() self:initialize(cb) end, 1000)
+  self:stop(function() self:initialize(cb) end)
 end
 
 function M:initialize(cb)
