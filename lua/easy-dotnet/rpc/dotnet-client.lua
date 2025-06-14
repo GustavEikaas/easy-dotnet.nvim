@@ -67,6 +67,8 @@ end
 ---@field _client StreamJsonRpc # Underlying StreamJsonRpc client used for communication
 ---@field _server DotnetServer # Manages the .NET named pipe server process
 ---@field initialize fun(self: DotnetClient, cb: fun()): nil # Starts the dotnet server and connects the JSON-RPC client
+---@field stop fun(self: DotnetClient): nil # Stops the dotnet server
+---@field restart fun(self: DotnetClient, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
 ---@field nuget_restore fun(self: DotnetClient, targetPath: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
 ---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
 ---@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
@@ -92,6 +94,20 @@ function M:new()
   instance._initializing = false
   instance._initialized = false
   return instance
+end
+
+function M:stop()
+  assert(self._server, "[DotnetClient] .new() was not called before :stop(). Please construct with :new().")
+  self._client.disconnect()
+  self._server.stop()
+
+  self._initialized = false
+  self._initializing = false
+end
+
+function M:restart(cb)
+  self:stop()
+  vim.defer_fn(function() self:initialize(cb) end, 1000)
 end
 
 function M:initialize(cb)
@@ -151,7 +167,7 @@ function M:get_state()
 end
 
 function M:_initialize(cb)
-  local finished = jobs.register_job({ name = "Initializing..." })
+  local finished = jobs.register_job({ name = "Initializing...", on_success_text = "Client initialized" })
   self._client.request("initialize", {
     request = {
       clientInfo = { name = "EasyDotnet", version = "0.0.5" },

@@ -180,7 +180,7 @@ end
 
 local function background_scanning(merged_opts)
   if merged_opts.background_scanning then
-    start_rpc_server()
+    -- start_rpc_server()
     --prewarm msbuild properties
     get_solutions_async(function(slns)
       if #slns ~= 1 then return end

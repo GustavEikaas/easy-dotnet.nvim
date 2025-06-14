@@ -1,3 +1,4 @@
+local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
 ---@type table<string,Command>
 local M = {}
@@ -320,27 +321,42 @@ M.ef = {
   },
 }
 
---TODO: scaffold
 M._server = {
   handle = nil,
   subcommands = {
     update = {
       handle = function()
-        vim.print("Updating server")
-        --TODO: server kill
-        --TODO: update
-        --TODO: start
+        require("easy-dotnet.rpc.rpc").global_rpc_client:stop()
+        vim.defer_fn(function()
+          local on_finished = job.register_job({ name = "Updating EasyDotnet", on_success_text = "Successfully updated" })
+          local output = {}
+          vim.fn.jobstart({ "dotnet", "tool", "install", "-g", "EasyDotnet" }, {
+            on_stdout = function(_, data) vim.list_extend(output, data) end,
+            on_stderr = function(_, data) vim.list_extend(output, data) end,
+            on_exit = function(_, code)
+              on_finished(code == 0)
+              if code == 0 then
+                require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(function() vim.print("Server started") end)
+              else
+                vim.print("Update failed, Code " .. code)
+                vim.print(output)
+              end
+            end,
+          })
+        end, 100)
       end,
     },
     stop = {
-      handle = function()
-        require("easy-dotnet.rpc.server").stop()
-      end,
+      handle = function() require("easy-dotnet.rpc.rpc").global_rpc_client:stop() end,
     },
     start = {
       handle = function()
-
-        -- require("easy-dotnet.rpc.server").start()
+        require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(function() vim.print("Server started") end)
+      end,
+    },
+    restart = {
+      handle = function()
+        require("easy-dotnet.rpc.rpc").global_rpc_client:restart(function() vim.print("Server started") end)
       end,
     },
   },
