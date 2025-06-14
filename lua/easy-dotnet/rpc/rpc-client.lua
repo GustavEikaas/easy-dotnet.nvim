@@ -1,17 +1,19 @@
 ---@type StreamJsonRpc
-local M = {}
+local M = {
+  routes = { "initialize" },
+}
 
 ---@meta
 
 ---@class StreamJsonRpc
 ---@field setup fun(opts: { pipe_path: string, debug?: boolean }): StreamJsonRpc
 ---@field connect fun(cb: fun()): nil
----@field connect_sync fun(): nil
 ---@field request fun(method: DotnetPipeMethod, params: table, callback: fun(result: RPC_Response)): integer|false
 ---@field notify fun(method: string, params: table): boolean
 ---@field disconnect fun(): boolean
 ---@field is_connected fun(): boolean
 ---@field subscribe_notifications fun(cb: NotificationCallback): fun(): nil
+---@field routes table<string>? List of routes broadcasted by server
 
 ---@class RPC_Error
 ---@field code number
@@ -148,17 +150,9 @@ function M.connect(cb)
   end)
 end
 
-function M.connect_sync()
-  print("Connecting sync")
-  local co = coroutine.running()
-  if not co then print("connect sync cannot be called outside of a coroutine") end
-  M.connect(function() coroutine.resume(co) end)
-  coroutine.yield()
-end
-
 function M.request(method, params, callback)
-  --nil check, method, params, callback
-  if not is_connected then M.connect_sync() end
+  if not vim.tbl_contains(M.routes, method) then vim.print("Server does not broadcast support for " .. method .. " perhaps your server is outdated?") end
+  if not is_connected then M.connect(function() M.request(method, params, callback) end) end
 
   request_id = request_id + 1
   local id = request_id

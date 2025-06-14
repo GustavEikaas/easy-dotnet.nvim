@@ -1,8 +1,5 @@
 local jobs = require("easy-dotnet.ui-modules.jobs")
 
----@class Options
----@field silence_errors? boolean
-
 ---@type DotnetClient
 local M = {}
 M.__index = M
@@ -27,6 +24,42 @@ local function handle_rpc_error(response)
       error("Crash dump written at " .. file)
     end
   end
+end
+
+--TODO: remove when server/client becomes 1.0.0
+local function validate_routes(...)
+  local error_msg = "Server sent invalid initialize response; server might be outdated"
+
+  local arg1 = ({ ... })[1]
+  if type(arg1) ~= "table" then
+    vim.print(arg1)
+    error(error_msg .. ": first argument is not a table")
+  end
+
+  local result = arg1.result
+  if type(result) ~= "table" then
+    vim.print(arg1)
+    error(error_msg .. ": `result` is not a table")
+  end
+
+  local capabilities = result.capabilities
+  if type(capabilities) ~= "table" then
+    vim.print(arg1)
+    error(error_msg .. ": `capabilities` is not a table")
+  end
+
+  local routes = capabilities.routes
+  if type(routes) ~= "table" then
+    vim.print(arg1)
+    error(error_msg .. ": `routes` is not a table")
+  end
+
+  for _, route in ipairs(routes) do
+    if type(route) == "string" then return routes end
+  end
+
+  vim.print(arg1)
+  error(error_msg .. ": no valid routes found")
 end
 
 ---@class DotnetClient
@@ -82,6 +115,9 @@ function M:initialize(cb)
     self._client.connect(function()
       vim.schedule(function()
         self:_initialize(function(...)
+          local routes = validate_routes(...)
+          self._client.routes = routes
+
           self._initializing = false
           self._initialized = true
 
