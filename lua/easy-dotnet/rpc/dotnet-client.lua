@@ -68,7 +68,8 @@ end
 ---@field _server DotnetServer # Manages the .NET named pipe server process
 ---@field initialize fun(self: DotnetClient, cb: fun()): nil # Starts the dotnet server and connects the JSON-RPC client
 ---@field nuget_restore fun(self: DotnetClient, targetPath: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
----@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: RPC_Response)) # Request msbuild
+---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
+---@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field vstest_discover fun(self: DotnetClient, request: VSTestDiscoverRequest, cb?: fun(res: RPC_Response)) # Request test discovery for vstest
 ---@field vstest_run fun(self: DotnetClient, request: VSTestRunRequest, cb?: fun(res: RPC_Response)) # Request running multiple tests for vstest
 ---@field mtp_run fun(self: DotnetClient, request: MtpRunRequest, cb?: fun(res: RPC_Response)) # Request running multiple tests for MTP
@@ -173,19 +174,42 @@ function M:nuget_restore(targetPath, cb)
   end)
 end
 
+---@class AddPackageReferenceParams
+---@field targetPath string
+---@field packageName string
+---@field version? string
+
+function M:msbuild_add_package_reference(params, cb, options)
+  local finished = jobs.register_job({
+    name = "Adding package...",
+    on_error_text = "Failed to add package",
+    on_success_text = "Package added successfully",
+  })
+
+  local id = self._client.request("msbuild/add-package-reference", params, function(response)
+    handle_rpc_error(response)
+    finished(true)
+    if cb then cb(response) end
+  end, options)
+
+  return id
+end
+
 ---@class BuildRequest
 ---@field targetPath string
 ---@field configuration? string
 
 function M:msbuild_build(request, cb)
   local finished = jobs.register_job({ name = "Building...", on_error_text = "Build failed", on_success_text = "Built successfully" })
-  self._client.request("msbuild/build", { request = request }, function(response)
+  local id = self._client.request("msbuild/build", { request = request }, function(response)
     handle_rpc_error(response)
     --TODO: check response body for success info
     --TODO: open qf list
     finished(true)
     if cb then cb(response) end
   end)
+
+  return id
 end
 
 ---@class VSTestDiscoverRequest

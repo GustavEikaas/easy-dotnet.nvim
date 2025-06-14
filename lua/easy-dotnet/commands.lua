@@ -320,4 +320,30 @@ M.ef = {
   },
 }
 
+--TODO: scaffold
+M._server = {
+  handle = nil,
+  subcommands = {
+    update = {
+      handle = function()
+        vim.print("Updating server")
+        --TODO: server kill
+        --TODO: update
+        --TODO: start
+      end,
+    },
+    stop = {
+      handle = function()
+        require("easy-dotnet.rpc.server").stop()
+      end,
+    },
+    start = {
+      handle = function()
+
+        -- require("easy-dotnet.rpc.server").start()
+      end,
+    },
+  },
+}
+
 return M

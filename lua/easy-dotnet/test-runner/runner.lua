@@ -12,7 +12,7 @@ local extensions = require("easy-dotnet.extensions")
 ---@type TestRunnerModule
 local M = {
   sdk_path = nil,
-  client = require('easy-dotnet.rpc.rpc').global_rpc_client
+  client = require("easy-dotnet.rpc.rpc").global_rpc_client,
 }
 
 ---@class RPC_DiscoveredTest
