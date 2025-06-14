@@ -69,33 +69,9 @@ local test_status_updater = function(unit_test_results, win, node)
   win.refreshTree()
 end
 
-local function dump_to_file(obj, filepath)
-  local serialized = vim.inspect(obj)
-  local f = io.open(filepath, "w")
-  if not f then error("Could not open file: " .. filepath) end
-  f:write(serialized)
-  f:close()
-end
-
 local function get_test_result_handler(win, node, on_job_finished)
   ---@param rpc_res RPC_Response
   return function(rpc_res)
-    if rpc_res.error then
-      vim.schedule(function() vim.notify(string.format("[%s]: %s", rpc_res.error.code, rpc_res.error.message), vim.log.levels.ERROR) end)
-      if rpc_res.error.data then
-        local file = vim.fs.normalize(os.tmpname())
-        dump_to_file(rpc_res, file)
-        logger.error("Crash dump written at " .. file)
-      end
-      on_job_finished()
-
-      win.traverse(node, function(child)
-        if child.icon == "<Running>" then child.icon = "<Operation failed>" end
-      end)
-      win.refreshTree()
-      return
-    end
-
     ---@type TestCase[]
     local test_results = vim.tbl_map(function(i) return vim.fn.json_decode(i) end, vim.fn.readfile(rpc_res.result.outFile))
     test_status_updater(test_results, win, node)

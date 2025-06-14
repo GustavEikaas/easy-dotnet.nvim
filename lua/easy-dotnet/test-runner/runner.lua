@@ -69,14 +69,6 @@ local M = {
 ---@field line_number number | nil
 ---@field runtime string | nil
 
-local function dump_to_file(obj, filepath)
-  local serialized = vim.inspect(obj)
-  local f = io.open(filepath, "w")
-  if not f then error("Could not open file: " .. filepath) end
-  f:write(serialized)
-  f:close()
-end
-
 ---@param project_path string path to csproject file
 ---@return boolean indicating success
 function M.request_build(project_path)
@@ -84,15 +76,6 @@ function M.request_build(project_path)
   local success = false
 
   M.client:msbuild_build({ targetPath = project_path, configuration = nil }, function(response)
-    if response.error then
-      vim.schedule(function() vim.notify(string.format("[%s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
-      if response.error.data then
-        local file = vim.fs.normalize(os.tmpname())
-        dump_to_file(response, file)
-        logger.error("Crash dump written at " .. file)
-      end
-      return
-    end
     success = response.result.success == true
     coroutine.resume(co)
   end)
@@ -325,18 +308,6 @@ end
 local function handle_rpc_response(project_node, options)
   ---@param response RPC_Response
   return function(response)
-    if response.error then
-      vim.schedule(function() vim.notify(string.format("[%s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
-      if response.error.data then
-        local file = vim.fs.normalize(os.tmpname())
-        dump_to_file(response, file)
-        logger.error("Crash dump written at " .. file)
-      end
-
-      project_node.job = { name = "discover", state = "error" }
-      return
-    end
-
     local tests = json_decode_out_file(response.result.outFile)
     register_rpc_discovered_tests(tests, project_node, options)
 
@@ -432,16 +403,19 @@ local function refresh_runner(options, solution_file_path)
   local mtp_projects = vim.tbl_filter(function(i) return i.isTestPlatformProject end, test_projects)
 
   for _, value in ipairs(mtp_projects) do
-    coroutine.wrap(function() start_MTP_discovery_for_project(value, options, solution_file_path) end)()
+    M.client:initialize(function()
+      coroutine.wrap(function() start_MTP_discovery_for_project(value, options, solution_file_path) end)()
+    end)
   end
   if #vs_test_projects > 0 then
     local sdk_path = M.sdk_path or require("easy-dotnet.options").options.get_sdk_path()
     M.sdk_path = sdk_path
     for _, value in ipairs(vs_test_projects) do
-      coroutine.wrap(function() start_vstest_discovery(value, options, sdk_path, solution_file_path) end)()
+      M.client:initialize(function()
+        coroutine.wrap(function() start_vstest_discovery(value, options, sdk_path, solution_file_path) end)()
+      end)
     end
   end
-
   win.refreshTree()
 end
 
@@ -461,9 +435,7 @@ local function open_runner(options)
 
   if is_reused then return end
 
-  M.client:initialize(function()
-    vim.schedule(function() refresh_runner(options, solutionFilePath) end)
-  end)
+  refresh_runner(options, solutionFilePath)
 end
 
 M.refresh = function(options)
