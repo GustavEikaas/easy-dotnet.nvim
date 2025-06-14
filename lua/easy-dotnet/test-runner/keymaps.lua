@@ -4,15 +4,6 @@ local runner = require("easy-dotnet.test-runner.runner")
 local logger = require("easy-dotnet.logger")
 local extensions = require("easy-dotnet.extensions")
 
----@class RPC_RunRequest
----@field testExecutablePath string Path to the test runner binary
----@field filter RunRequestNode[] Optional filter for which tests to run
----@field outFile string Path where test results should be written
-
----@class RunRequestNode
----@field uid string Unique test run identifier
----@field displayName string Human-readable name for the run
-
 ---@param node TestNode
 ---@param options table
 local function aggregate_status(node, options)
@@ -137,10 +128,8 @@ function M.VsTest_Run(node, win, cb)
 
   local vstest_dll = vim.fs.joinpath(runner.sdk_path, "vstest.console.dll")
   coroutine.wrap(function()
-    ---@type StreamJsonRpc | nil
-    local client = require("easy-dotnet.test-runner.runner")._server.client
-    if not client then error("RPC client not initialized") end
-    client.request("vstest/run", { vsTestPath = vstest_dll, dllPath = testPath, testIds = filter }, get_test_result_handler(win, node, on_job_finished))
+    local client = require("easy-dotnet.test-runner.runner").client
+    client:vstest_run({ vsTestPath = vstest_dll, dllPath = testPath, testIds = filter }, get_test_result_handler(win, node, on_job_finished))
   end)()
 end
 ---@param node TestNode
@@ -175,10 +164,8 @@ function M.MTP_Run(node, win, cb)
   local testPath = project_framework.get_dll_path():gsub("%.dll", extensions.isWindows() and "." .. project_framework.msbuild_props.outputType:lower() or "")
 
   coroutine.wrap(function()
-    ---@type StreamJsonRpc | nil
-    local client = require("easy-dotnet.test-runner.runner")._server.client
-    if not client then error("RPC client not initialized") end
-    client.request("mtp/run", { testExecutablePath = testPath, filter = filter }, get_test_result_handler(win, node, on_job_finished))
+    local client = require("easy-dotnet.test-runner.runner").client
+    client:mtp_run({ testExecutablePath = testPath, filter = filter }, get_test_result_handler(win, node, on_job_finished))
   end)()
 end
 
