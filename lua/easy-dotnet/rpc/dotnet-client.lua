@@ -128,7 +128,7 @@ function M:_initialize(cb)
 end
 
 function M:nuget_restore(targetPath, cb)
-  local finished = jobs.register_job({ name = "Restoring...", on_error_text = "Failed to restore nuget packages", on_success_text = "Nuget packages restored" })
+  local finished = jobs.register_job({ name = "Restoring packages...", on_error_text = "Failed to restore nuget packages", on_success_text = "Nuget packages restored" })
   self._client.request("msbuild/restore", { targetPath = targetPath }, function(response)
     handle_rpc_error(response)
     --TODO: check response body for success info
