@@ -4,15 +4,6 @@ local runner = require("easy-dotnet.test-runner.runner")
 local logger = require("easy-dotnet.logger")
 local extensions = require("easy-dotnet.extensions")
 
----@class RPC_RunRequest
----@field testExecutablePath string Path to the test runner binary
----@field filter RunRequestNode[] Optional filter for which tests to run
----@field outFile string Path where test results should be written
-
----@class RunRequestNode
----@field uid string Unique test run identifier
----@field displayName string Human-readable name for the run
-
 ---@param node TestNode
 ---@param options table
 local function aggregate_status(node, options)
@@ -78,33 +69,9 @@ local test_status_updater = function(unit_test_results, win, node)
   win.refreshTree()
 end
 
-local function dump_to_file(obj, filepath)
-  local serialized = vim.inspect(obj)
-  local f = io.open(filepath, "w")
-  if not f then error("Could not open file: " .. filepath) end
-  f:write(serialized)
-  f:close()
-end
-
 local function get_test_result_handler(win, node, on_job_finished)
   ---@param rpc_res RPC_Response
   return function(rpc_res)
-    if rpc_res.error then
-      vim.schedule(function() vim.notify(string.format("[%s]: %s", rpc_res.error.code, rpc_res.error.message), vim.log.levels.ERROR) end)
-      if rpc_res.error.data then
-        local file = vim.fs.normalize(os.tmpname())
-        dump_to_file(rpc_res, file)
-        logger.error("Crash dump written at " .. file)
-      end
-      on_job_finished()
-
-      win.traverse(node, function(child)
-        if child.icon == "<Running>" then child.icon = "<Operation failed>" end
-      end)
-      win.refreshTree()
-      return
-    end
-
     ---@type TestCase[]
     local test_results = vim.tbl_map(function(i) return vim.fn.json_decode(i) end, vim.fn.readfile(rpc_res.result.outFile))
     test_status_updater(test_results, win, node)
@@ -137,10 +104,8 @@ function M.VsTest_Run(node, win, cb)
 
   local vstest_dll = vim.fs.joinpath(runner.sdk_path, "vstest.console.dll")
   coroutine.wrap(function()
-    ---@type StreamJsonRpc | nil
-    local client = require("easy-dotnet.test-runner.runner")._server.client
-    if not client then error("RPC client not initialized") end
-    client.request("vstest/run", { vsTestPath = vstest_dll, dllPath = testPath, testIds = filter }, get_test_result_handler(win, node, on_job_finished))
+    local client = require("easy-dotnet.test-runner.runner").client
+    client:vstest_run({ vsTestPath = vstest_dll, dllPath = testPath, testIds = filter }, get_test_result_handler(win, node, on_job_finished))
   end)()
 end
 ---@param node TestNode
@@ -175,10 +140,8 @@ function M.MTP_Run(node, win, cb)
   local testPath = project_framework.get_dll_path():gsub("%.dll", extensions.isWindows() and "." .. project_framework.msbuild_props.outputType:lower() or "")
 
   coroutine.wrap(function()
-    ---@type StreamJsonRpc | nil
-    local client = require("easy-dotnet.test-runner.runner")._server.client
-    if not client then error("RPC client not initialized") end
-    client.request("mtp/run", { testExecutablePath = testPath, filter = filter }, get_test_result_handler(win, node, on_job_finished))
+    local client = require("easy-dotnet.test-runner.runner").client
+    client:mtp_run({ testExecutablePath = testPath, filter = filter }, get_test_result_handler(win, node, on_job_finished))
   end)()
 end
 

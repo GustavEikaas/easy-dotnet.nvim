@@ -422,6 +422,10 @@ checkhealth easy-dotnet
 -- Internal 
 Dotnet reset -- Deletes all persisted files
 Dotnet _cached_files -- Preview picker for persisted files
+Dotnet _server restart
+Dotnet _server update
+Dotnet _server stop
+Dotnet _server start
 ```
 
 ## Testrunner
