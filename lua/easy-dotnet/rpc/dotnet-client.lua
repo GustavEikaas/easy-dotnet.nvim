@@ -72,7 +72,9 @@ end
 ---@field restart fun(self: DotnetClient, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
 ---@field nuget_restore fun(self: DotnetClient, targetPath: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
 ---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
+---@field msbuild_query_properties fun(self: DotnetClient, request: QueryProjectPropertiesRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
 ---@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
+---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field vstest_discover fun(self: DotnetClient, request: VSTestDiscoverRequest, cb?: fun(res: RPC_Response)) # Request test discovery for vstest
 ---@field vstest_run fun(self: DotnetClient, request: VSTestRunRequest, cb?: fun(res: RPC_Response)) # Request running multiple tests for vstest
 ---@field mtp_run fun(self: DotnetClient, request: MtpRunRequest, cb?: fun(res: RPC_Response)) # Request running multiple tests for MTP
@@ -232,6 +234,21 @@ function M:msbuild_build(request, cb)
   return id
 end
 
+---@class QueryProjectPropertiesRequest
+---@field targetPath string
+---@field configuration? string
+---@field targetFramework? string
+
+function M:msbuild_query_properties(request, cb)
+  local id = self._client.request("msbuild/query-properties", { request = request }, function(response)
+    handle_rpc_error(response)
+    vim.print(response)
+    if cb then cb(response) end
+  end)
+
+  return id
+end
+
 ---@class VSTestDiscoverRequest
 ---@field vsTestPath string
 ---@field dllPath string
@@ -277,6 +294,18 @@ function M:mtp_run(request, cb)
   self._client.request("mtp/run", request, function(response)
     handle_rpc_error(response)
     if cb then cb(response) end
+  end)
+end
+
+---@class SolutionFileProjectResponse
+---@field ProjectName string
+---@field RelativePath string
+---@field AbsolutePath string
+
+function M:solution_list_projects(solution_file_path, cb)
+  self._client.request("solution/list-projects", { solutionFilePath = solution_file_path }, function(response)
+    handle_rpc_error(response)
+    if cb then cb(response.result) end
   end)
 end
 
