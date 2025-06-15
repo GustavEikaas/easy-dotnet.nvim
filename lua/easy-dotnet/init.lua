@@ -172,7 +172,6 @@ local function get_solutions_async(cb)
   })
 end
 
-
 local function background_scanning(merged_opts)
   if merged_opts.background_scanning then
     --prewarm msbuild properties
