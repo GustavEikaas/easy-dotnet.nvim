@@ -242,7 +242,6 @@ end
 function M:msbuild_query_properties(request, cb)
   local id = self._client.request("msbuild/query-properties", { request = request }, function(response)
     handle_rpc_error(response)
-    vim.print(response)
     if cb then cb(response) end
   end)
 
