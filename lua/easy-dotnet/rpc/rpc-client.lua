@@ -1,16 +1,23 @@
 ---@type StreamJsonRpc
-local M = {}
+local M = {
+  routes = { "initialize" },
+}
 
 ---@meta
+
+---@class RpcRequestOptions
+---@field on_cancel? fun(): nil  -- optional callback for cancellation
 
 ---@class StreamJsonRpc
 ---@field setup fun(opts: { pipe_path: string, debug?: boolean }): StreamJsonRpc
 ---@field connect fun(cb: fun()): nil
----@field connect_sync fun(): nil
----@field request fun(method: DotnetPipeMethod, params: table, callback: fun(result: RPC_Response)): integer|false
+---@field request fun(method: DotnetPipeMethod, params: table, callback: fun(result: RPC_Response), options?: RpcRequestOptions): integer|false
 ---@field notify fun(method: string, params: table): boolean
+---@field cancel fun(id: integer): nil
 ---@field disconnect fun(): boolean
 ---@field is_connected fun(): boolean
+---@field subscribe_notifications fun(cb: NotificationCallback): fun(): nil
+---@field routes table<string>? List of routes broadcasted by server
 
 ---@class RPC_Error
 ---@field code number
@@ -29,9 +36,18 @@ local M = {}
 ---@field result? table
 ---@field error? RPC_Error
 
+---@class JsonRpcNotification
+---@field jsonrpc "2.0"
+---@field method string
+---@field params? any
+
+---@alias NotificationCallback fun(method: string, params: any | nil): nil
+
 ---@alias DotnetPipeMethod
 ---| "initialize"
 ---| "msbuild/build"
+---| "msbuild/restore"
+---| "msbuild/add-package-reference"
 ---| "vstest/discover"
 ---| "vstest/run"
 ---| "mtp/discover"
@@ -42,6 +58,10 @@ local is_connected = false
 local pipe_path = nil
 local request_id = 0
 local callbacks = {}
+local cancellation_callbacks = {}
+
+---@type NotificationCallback[]
+local notification_callbacks = {}
 local debug_mode = false
 
 local function debug_log(msg)
@@ -57,6 +77,23 @@ function M.setup(opts)
 
   debug_log("Setup complete with pipe_path: " .. pipe_path)
   return M
+end
+
+local function handle_response(decoded)
+  local cb = callbacks[decoded.id]
+  if cb then
+    callbacks[decoded.id] = nil
+    cancellation_callbacks[decoded.id] = nil
+    vim.schedule(function() cb(decoded) end)
+  end
+end
+
+local function handle_server_notification(decoded)
+  vim.schedule(function()
+    for _, cb in ipairs(notification_callbacks) do
+      pcall(cb, decoded.method, decoded.params)
+    end
+  end)
 end
 
 local function read_loop()
@@ -86,11 +123,13 @@ local function read_loop()
     local body = data:sub(body_start, body_start + content_length - 1)
 
     local ok, decoded = pcall(vim.json.decode, body)
-    if ok and decoded and decoded.id then
-      local cb = callbacks[decoded.id]
-      if cb then
-        callbacks[decoded.id] = nil
-        vim.schedule(function() cb(decoded) end)
+    if ok and decoded then
+      if decoded.id then
+        handle_response(decoded)
+      elseif decoded.method then
+        handle_server_notification(decoded)
+      else
+        vim.schedule(function() vim.notify("Unknown JSON structure" .. body, vim.log.levels.WARN) end)
       end
     else
       vim.schedule(function() vim.notify("Malformed or unmatched JSON body: " .. body, vim.log.levels.WARN) end)
@@ -127,17 +166,10 @@ function M.connect(cb)
   end)
 end
 
-function M.connect_sync()
-  print("Connecting sync")
-  local co = coroutine.running()
-  if not co then print("connect sync cannot be called outside of a coroutine") end
-  M.connect(function() coroutine.resume(co) end)
-  coroutine.yield()
-end
-
-function M.request(method, params, callback)
-  --nil check, method, params, callback
-  if not is_connected then M.connect_sync() end
+function M.request(method, params, callback, options)
+  options = options or {}
+  -- if not vim.tbl_contains(M.routes, method) then vim.print("Server does not broadcast support for " .. method .. " perhaps your server is outdated?") end
+  if not is_connected then error("Client not connected") end
 
   request_id = request_id + 1
   local id = request_id
@@ -152,6 +184,7 @@ function M.request(method, params, callback)
   debug_log("Registering callback for request ID: " .. id)
 
   callbacks[id] = callback
+  cancellation_callbacks[id] = options.on_cancel
 
   local json_message = vim.json.encode(message)
   local header = string.format("Content-Length: %d\r\n\r\n", #json_message)
@@ -164,6 +197,7 @@ function M.request(method, params, callback)
   if not ok or not write_result then
     debug_log("Write failed: " .. (not ok and write_result or "unknown error"))
     callbacks[id] = nil
+    cancellation_callbacks[id] = nil
     if callback then vim.schedule(function() callback(nil, "Failed to send request") end) end
     return false
   end
@@ -171,11 +205,26 @@ function M.request(method, params, callback)
   return id
 end
 
-function M.notify(method, params)
-  if not is_connected then
-    debug_log("Not connected for notification, attempting to connect...")
-    if not M.connect() then return false end
+function M.cancel(id)
+  if callbacks[id] then
+    M.notify("$/cancelRequest", { id = id })
+    callbacks[id] = nil
+    local on_cancel = cancellation_callbacks[id]
+    if on_cancel then on_cancel() end
+    cancellation_callbacks[id] = nil
   end
+end
+
+function M.subscribe_notifications(cb)
+  table.insert(notification_callbacks, cb)
+
+  return function()
+    notification_callbacks = vim.tbl_filter(function(fn) return fn ~= cb end, notification_callbacks)
+  end
+end
+
+function M.notify(method, params)
+  if not is_connected then error("Client not connected") end
 
   if not connection then
     debug_log("Connection object is nil, cannot send notification")

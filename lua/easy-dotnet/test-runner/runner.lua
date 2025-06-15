@@ -5,25 +5,15 @@ local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local logger = require("easy-dotnet.logger")
 local extensions = require("easy-dotnet.extensions")
 
+---@class TestRunnerModule
+---@field sdk_path string | nil
+---@field client DotnetClient
+
+---@type TestRunnerModule
 local M = {
   sdk_path = nil,
-  _server = {
-    id = nil,
-    ready = false,
-    callbacks = {},
-    wait = nil,
-    pipe_name = nil,
-    client = nil,
-  },
+  client = require("easy-dotnet.rpc.rpc").global_rpc_client,
 }
-
-M._server.wait = function(cb)
-  if M._server.ready then
-    pcall(cb)
-  else
-    table.insert(M._server.callbacks, cb)
-  end
-end
 
 ---@class RPC_DiscoveredTest
 ---@field id string
@@ -79,118 +69,18 @@ end
 ---@field line_number number | nil
 ---@field runtime string | nil
 
-local function dump_to_file(obj, filepath)
-  local serialized = vim.inspect(obj)
-  local f = io.open(filepath, "w")
-  if not f then error("Could not open file: " .. filepath) end
-  f:write(serialized)
-  f:close()
-end
-
-local function request_build(sln_path)
-  local client = M._server.client
-  if not client then error("RPC client not initialized") end
+---@param project_path string path to csproject file
+---@return boolean indicating success
+function M.request_build(project_path)
   local co = coroutine.running()
   local success = false
 
-  client.request("msbuild/build", { request = { targetPath = sln_path, configuration = nil } }, function(response)
-    if response.error then
-      vim.schedule(function() vim.notify(string.format("[%s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
-      if response.error.data then
-        local file = vim.fs.normalize(os.tmpname())
-        dump_to_file(response, file)
-        logger.error("Crash dump written at " .. file)
-      end
-      return
-    end
+  M.client:msbuild_build({ targetPath = project_path, configuration = nil }, function(response)
     success = response.result.success == true
     coroutine.resume(co)
   end)
   coroutine.yield()
   return success
-end
-
-local function start_server(solution_file_path)
-  if M._server.ready then return end
-  local server_started = win.appendJob("server", "Server")
-  local server_ready_prefix = "Named pipe server started: "
-
-  local is_negotiating = false
-
-  local handle = vim.fn.jobstart({ "dotnet", "easydotnet" }, {
-    stdout_buffered = false,
-    on_stdout = function(_, data, _)
-      if M._server.ready or is_negotiating then return end
-      if data then
-        for _, line in ipairs(data) do
-          if line:find(server_ready_prefix, 1, true) then
-            local pipename = line:sub(#server_ready_prefix + 1)
-            M._server.pipe_name = vim.trim(pipename)
-            M._server.client = require("easy-dotnet.test-runner.rpc-client")
-            local full_pipe_path
-            if extensions.isWindows() then
-              full_pipe_path = [[\\.\pipe\]] .. M._server.pipe_name
-            elseif extensions.isDarwin() then
-              full_pipe_path = os.getenv("TMPDIR") .. "CoreFxPipe_" .. M._server.pipe_name
-            else
-              full_pipe_path = "/tmp/CoreFxPipe_" .. M._server.pipe_name
-            end
-
-            is_negotiating = true
-            M._server.client.setup({ pipe_path = full_pipe_path, debug = false })
-            M._server.client.connect(function()
-              vim.schedule(function()
-                M._server.client.request("initialize", {
-                  request = {
-                    clientInfo = { name = "EasyDotnet", version = "0.0.5" },
-                    projectInfo = { solutionFilePath = solution_file_path, rootDir = vim.fs.normalize(vim.fn.getcwd()) },
-                  },
-                }, function(response)
-                  if response.error then
-                    vim.schedule(function() vim.notify(string.format("[%s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
-                    M._server.ready = false
-                    is_negotiating = false
-                    server_started()
-                    return
-                  end
-
-                  M._server.ready = true
-                  vim.schedule(function()
-                    server_started()
-                    for _, cb in ipairs(M._server.callbacks) do
-                      pcall(cb)
-                    end
-                    is_negotiating = false
-                    M._server.callbacks = {}
-                  end)
-                end)
-              end)
-            end)
-          end
-        end
-      end
-    end,
-    on_stderr = function(_, data, _)
-      if data then
-        for _, line in ipairs(data) do
-          if line ~= "" then logger.warn("[server stderr] " .. line) end
-        end
-      end
-    end,
-    on_exit = function(_, code, _)
-      vim.notify("Testrunner server exited with code " .. code, code == 0 and vim.log.levels.INFO or vim.log.levels.ERROR)
-      M._server.ready = false
-      M._server.id = nil
-    end,
-  })
-
-  if handle <= 0 then
-    error("Failed to start testrunner server")
-    return
-  end
-
-  M._server.job_id = handle
-  M._server.ready = false
 end
 
 local function count_segments(path)
@@ -418,18 +308,6 @@ end
 local function handle_rpc_response(project_node, options)
   ---@param response RPC_Response
   return function(response)
-    if response.error then
-      vim.schedule(function() vim.notify(string.format("[%s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
-      if response.error.data then
-        local file = vim.fs.normalize(os.tmpname())
-        dump_to_file(response, file)
-        logger.error("Crash dump written at " .. file)
-      end
-
-      project_node.job = { name = "discover", state = "error" }
-      return
-    end
-
     local tests = json_decode_out_file(response.result.outFile)
     register_rpc_discovered_tests(tests, project_node, options)
 
@@ -448,7 +326,7 @@ local function start_vstest_discovery(project, options, sdk_path, solution_file_
 
   project_node.job = { name = "build", state = "pending" }
   win.refreshTree()
-  local build_success = request_build(project.path)
+  local build_success = M.request_build(project.path)
   if not build_success then
     project_node.job = { name = "build", state = "error" }
     win.refreshTree()
@@ -459,9 +337,7 @@ local function start_vstest_discovery(project, options, sdk_path, solution_file_
   win.refreshTree()
 
   local vstest_dll = vim.fs.joinpath(sdk_path, "vstest.console.dll")
-  local client = M._server.client
-  if not client then error("RPC client not initialized") end
-  client.request("vstest/discover", { vsTestPath = vstest_dll, dllPath = project.get_dll_path() }, handle_rpc_response(project_node, options))
+  M.client:vstest_discover({ vsTestPath = vstest_dll, dllPath = project.get_dll_path() }, handle_rpc_response(project_node, options))
 end
 
 ---@param project DotnetProject
@@ -472,7 +348,7 @@ local function start_MTP_discovery_for_project(project, options, solution_file_p
   win.tree.children[project_node.name] = project_node
   win.refreshTree()
 
-  local success = request_build(project.path)
+  local success = M.request_build(project.path)
   if not success then
     project_node.job = { name = "build", state = "error" }
     return
@@ -485,9 +361,7 @@ local function start_MTP_discovery_for_project(project, options, solution_file_p
 
   local testPath = absolute_dll_path:gsub("%.dll", extensions.isWindows() and "." .. project.msbuild_props.outputType:lower() or "")
 
-  local client = M._server.client
-  if not client then error("RPC client not initialized") end
-  client.request("mtp/discover", { testExecutablePath = testPath }, handle_rpc_response(project_node, options))
+  M.client:mtp_discover({ testExecutablePath = testPath }, handle_rpc_response(project_node, options))
 end
 
 local function refresh_runner(options, solution_file_path)
@@ -529,19 +403,20 @@ local function refresh_runner(options, solution_file_path)
 
   local mtp_projects = vim.tbl_filter(function(i) return i.isTestPlatformProject end, test_projects)
 
-  M._server.wait(function()
-    for _, value in ipairs(mtp_projects) do
+  for _, value in ipairs(mtp_projects) do
+    M.client:initialize(function()
       coroutine.wrap(function() start_MTP_discovery_for_project(value, options, solution_file_path) end)()
-    end
-    if #vs_test_projects > 0 then
-      local sdk_path = M.sdk_path or require("easy-dotnet.options").options.get_sdk_path()
-      M.sdk_path = sdk_path
-      for _, value in ipairs(vs_test_projects) do
+    end)
+  end
+  if #vs_test_projects > 0 then
+    local sdk_path = M.sdk_path or require("easy-dotnet.options").options.get_sdk_path()
+    M.sdk_path = sdk_path
+    for _, value in ipairs(vs_test_projects) do
+      M.client:initialize(function()
         coroutine.wrap(function() start_vstest_discovery(value, options, sdk_path, solution_file_path) end)()
-      end
+      end)
     end
-  end)
-
+  end
   win.refreshTree()
 end
 
@@ -561,7 +436,6 @@ local function open_runner(options)
 
   if is_reused then return end
 
-  start_server(solutionFilePath)
   refresh_runner(options, solutionFilePath)
 end
 
