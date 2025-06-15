@@ -224,9 +224,7 @@ function M.subscribe_notifications(cb)
 end
 
 function M.notify(method, params)
-  if not is_connected then
-    error('Client not connected')
-  end
+  if not is_connected then error("Client not connected") end
 
   if not connection then
     debug_log("Connection object is nil, cannot send notification")
