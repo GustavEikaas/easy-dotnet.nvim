@@ -7,6 +7,26 @@ local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
 local polyfills = require("easy-dotnet.polyfills")
 
+---@param project DotnetProject
+local function build_iis_command(project)
+  local sln_path = sln_parse.find_solution_file()
+  if not sln_path then error("No .sln file found. Ensure you're inside a valid solution.") end
+
+  local sln_dir = vim.fs.dirname(sln_path)
+  local sln_file_name = vim.fn.fnamemodify(sln_path, ":t:r")
+  local site_name = vim.fn.fnamemodify(project.path, ":t:r")
+
+  local config_path = string.format("%s/.vs/%s/config/applicationhost.config", sln_dir, sln_file_name)
+
+  if vim.fn.filereadable(config_path) == 0 then
+    error(string.format("Missing applicationhost.config at %s. Open the project in Visual Studio and run it once to generate the appropriate IIS Express config.", config_path))
+  end
+
+  local cmd = string.format('iisexpress.exe /config:"%s" /site:%s /apppool:Clr4IntegratedAppPool', config_path, site_name)
+
+  return cmd
+end
+
 ---Runs a dotnet project with the given arguments using the terminal runner.
 ---
 ---This is a wrapper around `term(path, "run", args)`.
@@ -18,7 +38,16 @@ local function run_project(project, args, term)
   args = args or ""
   local arg = ""
   if project.type == "project_framework" then arg = arg .. " --framework " .. project.msbuild_props.targetFramework end
-  term(project.path, "run", arg .. " " .. args)
+
+  local cmd = project.is_net_framework == false and string.format("dotnet run --project %s %s", project.path, args)
+    or project.msbuild_props.net_framework.use_iis_express and build_iis_command(project)
+    or project.msbuild_props.targetPath
+    or error("Failed to compute run command for " .. project.path)
+
+  ---@type DotnetActionContext
+  local context = { command = cmd, is_net_framework = project.is_net_framework }
+
+  term(project.path, "run", arg .. " " .. args, context)
 end
 
 local pick_project_without_solution = function()
