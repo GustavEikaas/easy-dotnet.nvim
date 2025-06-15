@@ -172,16 +172,9 @@ local function get_solutions_async(cb)
   })
 end
 
---TODO: implement later, should look for any .sln or .csproj
-local function start_rpc_server()
-  local on_started = job.register_job({ name = "Starting server", on_success_text = "Server started" })
-
-  require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(function() on_started(true) end)
-end
 
 local function background_scanning(merged_opts)
   if merged_opts.background_scanning then
-    -- start_rpc_server()
     --prewarm msbuild properties
     get_solutions_async(function(slns)
       if #slns ~= 1 then return end

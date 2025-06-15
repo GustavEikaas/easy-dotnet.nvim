@@ -1,3 +1,4 @@
+---@diagnostic disable: unused-function
 local jobs = require("easy-dotnet.ui-modules.jobs")
 
 ---@type DotnetClient
