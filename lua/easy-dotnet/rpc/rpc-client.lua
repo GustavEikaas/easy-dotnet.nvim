@@ -168,8 +168,8 @@ end
 
 function M.request(method, params, callback, options)
   options = options or {}
-  if not vim.tbl_contains(M.routes, method) then vim.print("Server does not broadcast support for " .. method .. " perhaps your server is outdated?") end
-  if not is_connected then M.connect(function() M.request(method, params, callback, options) end) end
+  -- if not vim.tbl_contains(M.routes, method) then vim.print("Server does not broadcast support for " .. method .. " perhaps your server is outdated?") end
+  if not is_connected then error("Client not connected") end
 
   request_id = request_id + 1
   local id = request_id
@@ -225,9 +225,7 @@ end
 
 function M.notify(method, params)
   if not is_connected then
-    debug_log("Not connected for notification, attempting to connect...")
-    M.connect(function() M.notify(method, params) end)
-    return false
+    error('Client not connected')
   end
 
   if not connection then

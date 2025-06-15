@@ -134,8 +134,9 @@ function M:initialize(cb)
     self._client.connect(function()
       vim.schedule(function()
         self:_initialize(function(...)
-          local routes = validate_routes(...)
-          self._client.routes = routes
+          -- TODO: start validating routes after "go live"
+          -- local routes = validate_routes(...)
+          -- self._client.routes = routes
 
           self._initializing = false
           self._initialized = true

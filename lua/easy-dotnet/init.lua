@@ -172,6 +172,7 @@ local function get_solutions_async(cb)
   })
 end
 
+--TODO: implement later, should look for any .sln or .csproj 
 local function start_rpc_server()
   local on_started = job.register_job({ name = "Starting server", on_success_text = "Server started" })
 
