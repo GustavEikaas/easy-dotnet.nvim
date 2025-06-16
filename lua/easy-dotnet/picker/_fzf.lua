@@ -22,7 +22,6 @@ end
 M.nuget_search = function()
   local co = coroutine.running()
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-  local package
   client:initialize(function()
     require("fzf-lua").fzf_live(function(prompt)
       return function(add_item, finished)
@@ -34,15 +33,11 @@ M.nuget_search = function()
       end
     end, {
       actions = {
-        ["default"] = function(selected)
-          package = selected[1]
-          coroutine.resume(co)
-        end,
+        ["default"] = function(selected) coroutine.resume(co, selected[1]) end,
       },
     })
   end)
-  coroutine.yield()
-  return package
+  return coroutine.yield()
 end
 
 M.migration_picker = function(opts, migration)

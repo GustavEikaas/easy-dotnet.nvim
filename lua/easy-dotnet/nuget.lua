@@ -12,18 +12,14 @@ local picker = require("easy-dotnet.picker")
 local logger = require("easy-dotnet.logger")
 local messages = require("easy-dotnet.error-messages")
 
-local function reverse_list(list)
-  local reversed = {}
-  for i = #list, 1, -1 do
-    table.insert(reversed, list[i])
-  end
-  return reversed
-end
-
 local function get_all_versions(package)
-  local command = string.format('dotnet package search %s --exact-match --format json | jq ".searchResult[].packages[].version"', package)
-  local versions = vim.fn.split(vim.fn.system(command):gsub('"', ""), "\n")
-  return reverse_list(versions)
+  local co = coroutine.running()
+
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  client:initialize(function()
+    client:nuget_get_package_versions(package, nil, false, function(i) coroutine.resume(co, i) end)
+  end)
+  return coroutine.yield()
 end
 
 ---@return string

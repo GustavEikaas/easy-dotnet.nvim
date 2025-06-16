@@ -52,6 +52,7 @@ local M = {
 ---| "solution/list-projects"
 ---| "nuget/search-packages"
 ---| "nuget/list-sources"
+---| "nuget/search-packages"
 ---| "vstest/discover"
 ---| "vstest/run"
 ---| "mtp/discover"
