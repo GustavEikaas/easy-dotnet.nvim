@@ -1,12 +1,13 @@
 local M = {}
 
-local function nuget_search_yielding(prompt)
+---@param prompt string search term
+---@param client DotnetClient rpc client
+local function nuget_search_rpc(prompt, client)
   local co = coroutine.running()
   assert(co, "nuget_search_yielding must be called inside a coroutine")
 
   local results = {}
 
-  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   client:nuget_search(prompt, nil, function(p)
     for _, r in ipairs(p) do
       -- table.insert(results, r.id .. " (" .. r.source .. ")")
@@ -25,7 +26,7 @@ M.nuget_search = function()
   client:initialize(function()
     require("fzf-lua").fzf_live(function(prompt)
       return function(add_item, finished)
-        local res = nuget_search_yielding(prompt)
+        local res = nuget_search_rpc(prompt, client)
         for _, r in ipairs(res) do
           add_item(r)
         end

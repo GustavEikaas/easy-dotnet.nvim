@@ -207,21 +207,21 @@ local function handle_file_results(file)
 end
 
 ---@class NugetPackageMetadata
----@field Source string
----@field Id string
----@field Version string
----@field Authors? string
----@field Description? string
----@field DownloadCount? integer
----@field LicenseUrl? string  -- Representing Uri as string
----@field Owners string[]     -- IReadOnlyList<string>
----@field ProjectUrl? string
----@field ReadmeUrl? string
----@field Summary? string
----@field Tags string[]       -- IReadOnlyList<string>
----@field Title? string
----@field PrefixReserved boolean
----@field IsListed boolean
+---@field source string
+---@field id string
+---@field version string
+---@field authors? string
+---@field description? string
+---@field downloadCount? integer
+---@field licenseUrl? string
+---@field owners string[]
+---@field projectUrl? string
+---@field readmeUrl? string
+---@field summary? string
+---@field tags string[]
+---@field title? string
+---@field prefixReserved boolean
+---@field isListed boolean
 
 function M:nuget_search(prompt, sources, cb)
   self._client.request("nuget/search-packages", { searchTerm = prompt, sources = sources }, function(response)
