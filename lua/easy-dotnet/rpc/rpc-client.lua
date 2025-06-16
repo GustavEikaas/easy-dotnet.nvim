@@ -50,6 +50,8 @@ local M = {
 ---| "msbuild/query-properties"
 ---| "msbuild/add-package-reference"
 ---| "solution/list-projects"
+---| "nuget/search-packages"
+---| "nuget/list-sources"
 ---| "vstest/discover"
 ---| "vstest/run"
 ---| "mtp/discover"

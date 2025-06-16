@@ -1,17 +1,45 @@
 local M = {}
 
+local function nuget_search_yielding(prompt)
+  local co = coroutine.running()
+  assert(co, "nuget_search_yielding must be called inside a coroutine")
+
+  local results = {}
+
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  client:nuget_search(prompt, nil, function(p)
+    for _, r in ipairs(p) do
+      -- table.insert(results, r.id .. " (" .. r.source .. ")")
+      table.insert(results, r.id)
+    end
+    vim.schedule(function() coroutine.resume(co, results) end)
+  end)
+
+  return coroutine.yield()
+end
+
 M.nuget_search = function()
   local co = coroutine.running()
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   local package
-  require("fzf-lua").fzf_live('dotnet package search <query> --format json | jq ".searchResult | .[] | .packages | .[] | .id"', {
-    fn_transform = function(line) return line:gsub('"', ""):gsub("\r", ""):gsub("\n", "") end,
-    actions = {
-      ["default"] = function(selected)
-        package = selected[1]
-        coroutine.resume(co)
-      end,
-    },
-  })
+  client:initialize(function()
+    require("fzf-lua").fzf_live(function(prompt)
+      return function(add_item, finished)
+        local res = nuget_search_yielding(prompt)
+        for _, r in ipairs(res) do
+          add_item(r)
+        end
+        finished()
+      end
+    end, {
+      actions = {
+        ["default"] = function(selected)
+          package = selected[1]
+          coroutine.resume(co)
+        end,
+      },
+    })
+  end)
   coroutine.yield()
   return package
 end

@@ -71,6 +71,7 @@ end
 ---@field stop fun(self: DotnetClient, cb: fun()): nil # Stops the dotnet server
 ---@field restart fun(self: DotnetClient, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
 ---@field nuget_restore fun(self: DotnetClient, targetPath: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
+---@field nuget_search fun(self: DotnetClient, searchTerm: string, sources?: string[], cb?: fun(res: NugetPackageMetadata[])) # Request a NuGet restore
 ---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
 ---@field msbuild_query_properties fun(self: DotnetClient, request: QueryProjectPropertiesRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
 ---@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
@@ -193,6 +194,39 @@ function M:nuget_restore(targetPath, cb)
     --TODO: check response body for success info
     finished(true)
     if cb then cb(response) end
+  end)
+end
+
+local function handle_file_results(file)
+  local contents = vim.fn.readfile(file)
+  if #contents == 1 and vim.trim(contents[1]) == "[]" then return {} end
+
+  local result = vim.tbl_map(vim.fn.json_decode, contents)
+
+  return result
+end
+
+---@class NugetPackageMetadata
+---@field Source string
+---@field Id string
+---@field Version string
+---@field Authors? string
+---@field Description? string
+---@field DownloadCount? integer
+---@field LicenseUrl? string  -- Representing Uri as string
+---@field Owners string[]     -- IReadOnlyList<string>
+---@field ProjectUrl? string
+---@field ReadmeUrl? string
+---@field Summary? string
+---@field Tags string[]       -- IReadOnlyList<string>
+---@field Title? string
+---@field PrefixReserved boolean
+---@field IsListed boolean
+
+function M:nuget_search(prompt, sources, cb)
+  self._client.request("nuget/search-packages", { searchTerm = prompt, sources = sources }, function(response)
+    handle_rpc_error(response)
+    if cb then cb(handle_file_results(response.result.outFile)) end
   end)
 end
 
