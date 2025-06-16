@@ -1,3 +1,7 @@
+---@class DotnetActionContext
+---@field command string
+---@field is_net_framework boolean
+
 local M = {}
 
 M.build = require("easy-dotnet.actions.build").build_project_picker
