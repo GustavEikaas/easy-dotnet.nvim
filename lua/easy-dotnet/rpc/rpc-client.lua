@@ -47,13 +47,9 @@ local M = {
 ---| "initialize"
 ---| "msbuild/build"
 ---| "msbuild/restore"
-<<<<<<< Updated upstream
-||||||| Stash base
----| "msbuild/user-secrets-init"
-=======
+---| "nuget/push"
 ---| "msbuild/pack"
 ---| "msbuild/user-secrets-init"
->>>>>>> Stashed changes
 ---| "msbuild/query-properties"
 ---| "msbuild/add-package-reference"
 ---| "solution/list-projects"
