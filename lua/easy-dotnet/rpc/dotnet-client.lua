@@ -75,6 +75,8 @@ end
 ---@field stop fun(self: DotnetClient, cb: fun()): nil # Stops the dotnet server
 ---@field restart fun(self: DotnetClient, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
 ---@field nuget_restore fun(self: DotnetClient, targetPath: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
+---@field nuget_search fun(self: DotnetClient, searchTerm: string, sources?: string[], cb?: fun(res: NugetPackageMetadata[])) # Request a NuGet restore
+---@field nuget_get_package_versions fun(self: DotnetClient, packageId: string, sources?: string[], include_prerelease?: boolean, cb?: fun(res: string[])) # Request a NuGet restore
 ---@field nuget_push fun(self: DotnetClient, packages: string[], source: string, cb?: fun(success: boolean)) # Request a NuGet restore
 ---@field msbuild_pack fun(self: DotnetClient, targetPath: string, configuration?: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
 ---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
@@ -209,6 +211,47 @@ function M:nuget_restore(targetPath, cb)
     --TODO: check response body for success info
     finished(true)
     if cb then cb(response) end
+  end)
+end
+
+local function handle_file_results(file)
+  local contents = vim.fn.readfile(file)
+  if #contents == 1 and vim.trim(contents[1]) == "[]" then return {} end
+
+  local result = vim.tbl_map(vim.fn.json_decode, contents)
+
+  return result
+end
+
+---@class NugetPackageMetadata
+---@field source string
+---@field id string
+---@field version string
+---@field authors? string
+---@field description? string
+---@field downloadCount? integer
+---@field licenseUrl? string
+---@field owners string[]
+---@field projectUrl? string
+---@field readmeUrl? string
+---@field summary? string
+---@field tags string[]
+---@field title? string
+---@field prefixReserved boolean
+---@field isListed boolean
+
+function M:nuget_search(prompt, sources, cb)
+  self._client.request("nuget/search-packages", { searchTerm = prompt, sources = sources }, function(response)
+    handle_rpc_error(response)
+    if cb then cb(handle_file_results(response.result.outFile)) end
+  end)
+end
+
+function M:nuget_get_package_versions(package, sources, include_prerelease, cb)
+  include_prerelease = include_prerelease or false
+  self._client.request("nuget/get-package-versions", { packageId = package, includePrerelease = include_prerelease, sources = sources }, function(response)
+    handle_rpc_error(response)
+    cb(response.result)
   end)
 end
 
