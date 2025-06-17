@@ -214,7 +214,7 @@ function M:nuget_restore(targetPath, cb)
   end)
 end
 
-local function handle_file_results(file)
+local function handle_file_result(file)
   local contents = vim.fn.readfile(file)
   if #contents == 1 and vim.trim(contents[1]) == "[]" then return {} end
 
@@ -243,7 +243,7 @@ end
 function M:nuget_search(prompt, sources, cb)
   self._client.request("nuget/search-packages", { searchTerm = prompt, sources = sources }, function(response)
     handle_rpc_error(response)
-    if cb then cb(handle_file_results(response.result.outFile)) end
+    if cb then cb(handle_file_result(response.result.outFile)) end
   end)
 end
 
