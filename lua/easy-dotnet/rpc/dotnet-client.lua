@@ -75,6 +75,8 @@ end
 ---@field stop fun(self: DotnetClient, cb: fun()): nil # Stops the dotnet server
 ---@field restart fun(self: DotnetClient, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
 ---@field nuget_restore fun(self: DotnetClient, targetPath: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
+---@field nuget_push fun(self: DotnetClient, packages: string[], source: string, cb?: fun(success: boolean)) # Request a NuGet restore
+---@field msbuild_pack fun(self: DotnetClient, targetPath: string, configuration?: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
 ---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
 ---@field msbuild_query_properties fun(self: DotnetClient, request: QueryProjectPropertiesRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
 ---@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
@@ -191,12 +193,30 @@ function M:_initialize(cb)
   end)
 end
 
+function M:nuget_push(packages, source, cb)
+  local finished = jobs.register_job({ name = "Pushing packages", on_error_text = "Failed to push packages", on_success_text = "Packages pushed to " .. source })
+  self._client.request("nuget/push", { packagePaths = packages, source = source }, function(response)
+    handle_rpc_error(response)
+    finished(response.result.success)
+    if cb then cb(response.result.success) end
+  end)
+end
+
 function M:nuget_restore(targetPath, cb)
   local finished = jobs.register_job({ name = "Restoring packages...", on_error_text = "Failed to restore nuget packages", on_success_text = "Nuget packages restored" })
   self._client.request("msbuild/restore", { targetPath = targetPath }, function(response)
     handle_rpc_error(response)
     --TODO: check response body for success info
     finished(true)
+    if cb then cb(response) end
+  end)
+end
+
+function M:msbuild_pack(target_path, configuration, cb)
+  local finished = jobs.register_job({ name = "Packing...", on_error_text = "Packing failed", on_success_text = "Packed successfully" })
+  self._client.request("msbuild/pack", { targetPath = target_path, configuration = configuration }, function(response)
+    handle_rpc_error(response)
+    finished(response.result.success)
     if cb then cb(response) end
   end)
 end
@@ -307,10 +327,19 @@ end
 ---@field AbsolutePath string
 
 function M:solution_list_projects(solution_file_path, cb)
-  self._client.request("solution/list-projects", { solutionFilePath = solution_file_path }, function(response)
+  local id = self._client.request("solution/list-projects", { solutionFilePath = solution_file_path }, function(response)
     handle_rpc_error(response)
     if cb then cb(response.result) end
   end)
+  return id
+end
+
+function M:secrets_init(project_path, cb)
+  local id = self._client.request("user-secrets/init", { projectPath = project_path }, function(response)
+    handle_rpc_error(response)
+    if cb then cb(response.result) end
+  end)
+  return id
 end
 
 function M:secrets_init(project_path, cb)
