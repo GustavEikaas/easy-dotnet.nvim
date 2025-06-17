@@ -214,6 +214,7 @@ function M:nuget_restore(targetPath, cb)
   end)
 end
 
+<<<<<<< HEAD
 local function handle_file_results(file)
   local contents = vim.fn.readfile(file)
   if #contents == 1 and vim.trim(contents[1]) == "[]" then return {} end
@@ -244,6 +245,39 @@ function M:nuget_search(prompt, sources, cb)
   self._client.request("nuget/search-packages", { searchTerm = prompt, sources = sources }, function(response)
     handle_rpc_error(response)
     if cb then cb(handle_file_results(response.result.outFile)) end
+||||||| b7f8bfe
+=======
+local function handle_file_result(file)
+  local contents = vim.fn.readfile(file)
+  if #contents == 1 and vim.trim(contents[1]) == "[]" then return {} end
+
+  local result = vim.tbl_map(vim.fn.json_decode, contents)
+
+  return result
+end
+
+---@class NugetPackageMetadata
+---@field source string
+---@field id string
+---@field version string
+---@field authors? string
+---@field description? string
+---@field downloadCount? integer
+---@field licenseUrl? string
+---@field owners string[]
+---@field projectUrl? string
+---@field readmeUrl? string
+---@field summary? string
+---@field tags string[]
+---@field title? string
+---@field prefixReserved boolean
+---@field isListed boolean
+
+function M:nuget_search(prompt, sources, cb)
+  self._client.request("nuget/search-packages", { searchTerm = prompt, sources = sources }, function(response)
+    handle_rpc_error(response)
+    if cb then cb(handle_file_result(response.result.outFile)) end
+>>>>>>> bbc83b7b72a9073c087d2603db7b2e0c4b84e1ae
   end)
 end
 
