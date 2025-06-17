@@ -342,10 +342,4 @@ function M:secrets_init(project_path, cb)
   return id
 end
 
-function M:secrets_init(target_path, cb)
-  self._client.request("msbuild/user-secrets-init", { targetPath = target_path }, function(response)
-    handle_rpc_error(response)
-    if cb then cb(response.result) end
-  end)
-end
 return M
