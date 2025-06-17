@@ -309,15 +309,11 @@ function M:solution_list_projects(solution_file_path, cb)
   end)
 end
 
-
-
 function M:secrets_init(target_path, cb)
   self._client.request("msbuild/user-secrets-init", { targetPath = target_path }, function(response)
     handle_rpc_error(response)
     if cb then cb(response.result) end
   end)
 end
-
--- EasyDotnet_672125a29a02441190139ef88fdce328
 
 return M
