@@ -63,6 +63,10 @@ end
 --   error(error_msg .. ": no valid routes found")
 -- end
 
+---@class ProjectSecretInitResponse
+---@field id string
+---@field filePath string
+
 ---@class DotnetClient
 ---@field new fun(self: DotnetClient): DotnetClient # Constructor
 ---@field _client StreamJsonRpc # Underlying StreamJsonRpc client used for communication
@@ -73,9 +77,12 @@ end
 ---@field nuget_restore fun(self: DotnetClient, targetPath: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
 ---@field nuget_search fun(self: DotnetClient, searchTerm: string, sources?: string[], cb?: fun(res: NugetPackageMetadata[])) # Request a NuGet restore
 ---@field nuget_get_package_versions fun(self: DotnetClient, packageId: string, sources?: string[], include_prerelease?: boolean, cb?: fun(res: string[])) # Request a NuGet restore
+---@field nuget_push fun(self: DotnetClient, packages: string[], source: string, cb?: fun(success: boolean)) # Request a NuGet restore
+---@field msbuild_pack fun(self: DotnetClient, targetPath: string, configuration?: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
 ---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
 ---@field msbuild_query_properties fun(self: DotnetClient, request: QueryProjectPropertiesRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
 ---@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
+---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: ProjectSecretInitResponse), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field vstest_discover fun(self: DotnetClient, request: VSTestDiscoverRequest, cb?: fun(res: RPC_Response)) # Request test discovery for vstest
 ---@field vstest_run fun(self: DotnetClient, request: VSTestRunRequest, cb?: fun(res: RPC_Response)) # Request running multiple tests for vstest
@@ -188,6 +195,15 @@ function M:_initialize(cb)
   end)
 end
 
+function M:nuget_push(packages, source, cb)
+  local finished = jobs.register_job({ name = "Pushing packages", on_error_text = "Failed to push packages", on_success_text = "Packages pushed to " .. source })
+  self._client.request("nuget/push", { packagePaths = packages, source = source }, function(response)
+    handle_rpc_error(response)
+    finished(response.result.success)
+    if cb then cb(response.result.success) end
+  end)
+end
+
 function M:nuget_restore(targetPath, cb)
   local finished = jobs.register_job({ name = "Restoring packages...", on_error_text = "Failed to restore nuget packages", on_success_text = "Nuget packages restored" })
   self._client.request("msbuild/restore", { targetPath = targetPath }, function(response)
@@ -236,6 +252,15 @@ function M:nuget_get_package_versions(package, sources, include_prerelease, cb)
   self._client.request("nuget/get-package-versions", { packageId = package, includePrerelease = include_prerelease, sources = sources }, function(response)
     handle_rpc_error(response)
     cb(response.result)
+  end)
+end
+
+function M:msbuild_pack(target_path, configuration, cb)
+  local finished = jobs.register_job({ name = "Packing...", on_error_text = "Packing failed", on_success_text = "Packed successfully" })
+  self._client.request("msbuild/pack", { targetPath = target_path, configuration = configuration }, function(response)
+    handle_rpc_error(response)
+    finished(response.result.success)
+    if cb then cb(response) end
   end)
 end
 
@@ -345,10 +370,19 @@ end
 ---@field AbsolutePath string
 
 function M:solution_list_projects(solution_file_path, cb)
-  self._client.request("solution/list-projects", { solutionFilePath = solution_file_path }, function(response)
+  local id = self._client.request("solution/list-projects", { solutionFilePath = solution_file_path }, function(response)
     handle_rpc_error(response)
     if cb then cb(response.result) end
   end)
+  return id
+end
+
+function M:secrets_init(project_path, cb)
+  local id = self._client.request("user-secrets/init", { projectPath = project_path }, function(response)
+    handle_rpc_error(response)
+    if cb then cb(response.result) end
+  end)
+  return id
 end
 
 return M
