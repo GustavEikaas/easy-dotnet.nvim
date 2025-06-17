@@ -47,6 +47,7 @@ local M = {
 ---| "initialize"
 ---| "msbuild/build"
 ---| "msbuild/restore"
+---| "msbuild/user-secrets-init"
 ---| "msbuild/query-properties"
 ---| "msbuild/add-package-reference"
 ---| "solution/list-projects"
