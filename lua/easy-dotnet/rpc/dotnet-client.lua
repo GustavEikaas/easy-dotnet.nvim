@@ -88,6 +88,7 @@ end
 ---@field vstest_run fun(self: DotnetClient, request: VSTestRunRequest, cb?: fun(res: RPC_Response)) # Request running multiple tests for vstest
 ---@field mtp_run fun(self: DotnetClient, request: MtpRunRequest, cb?: fun(res: RPC_Response)) # Request running multiple tests for MTP
 ---@field mtp_discover fun(self: DotnetClient, request: MtpDiscoverRequest, cb?: fun(res: RPC_Response)) # Request test discovery for MTP
+---@field outdated_packages fun(self: DotnetClient, target_path: string, cb?: fun(res: OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
 ---@field get_state fun(self: DotnetClient): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
 ---@field _initializing boolean? # True while initialization is in progress
 ---@field _initialized boolean? # True once initialization is complete
@@ -219,6 +220,8 @@ local function handle_file_result(file)
   if #contents == 1 and vim.trim(contents[1]) == "[]" then return {} end
 
   local result = vim.tbl_map(vim.fn.json_decode, contents)
+
+  pcall(vim.loop.fs_unlink, file)
 
   return result
 end
@@ -381,6 +384,24 @@ function M:secrets_init(project_path, cb)
   local id = self._client.request("user-secrets/init", { projectPath = project_path }, function(response)
     handle_rpc_error(response)
     if cb then cb(response.result) end
+  end)
+  return id
+end
+
+---@class OutdatedPackage
+---@field name string
+---@field currentVersion string
+---@field latestVersion string
+---@field isOutdated boolean
+---@field isTransitive boolean
+---@field targetFramework string
+---@field upgradeSeverity "None" | "Patch" | "Minor" | "Major" | "Unknown"
+
+function M:outdated_packages(target_path, cb)
+  local id = self._client.request("outdated/packages", { targetPath = target_path }, function(response)
+    handle_rpc_error(response)
+    local packages = handle_file_result(response.result.outFile)
+    if cb then cb(packages) end
   end)
   return id
 end

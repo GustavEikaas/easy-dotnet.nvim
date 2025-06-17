@@ -59,6 +59,7 @@ local M = {
 ---| "vstest/run"
 ---| "mtp/discover"
 ---| "mtp/run"
+---| "outdated/packages"
 
 local connection = nil
 local is_connected = false
