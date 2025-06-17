@@ -63,6 +63,10 @@ end
 --   error(error_msg .. ": no valid routes found")
 -- end
 
+---@class ProjectSecretInitResponse
+---@field id string
+---@field filePath string
+
 ---@class DotnetClient
 ---@field new fun(self: DotnetClient): DotnetClient # Constructor
 ---@field _client StreamJsonRpc # Underlying StreamJsonRpc client used for communication
@@ -76,6 +80,7 @@ end
 ---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
 ---@field msbuild_query_properties fun(self: DotnetClient, request: QueryProjectPropertiesRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
 ---@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
+---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: ProjectSecretInitResponse), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field vstest_discover fun(self: DotnetClient, request: VSTestDiscoverRequest, cb?: fun(res: RPC_Response)) # Request test discovery for vstest
 ---@field vstest_run fun(self: DotnetClient, request: VSTestRunRequest, cb?: fun(res: RPC_Response)) # Request running multiple tests for vstest
@@ -322,10 +327,19 @@ end
 ---@field AbsolutePath string
 
 function M:solution_list_projects(solution_file_path, cb)
-  self._client.request("solution/list-projects", { solutionFilePath = solution_file_path }, function(response)
+  local id = self._client.request("solution/list-projects", { solutionFilePath = solution_file_path }, function(response)
     handle_rpc_error(response)
     if cb then cb(response.result) end
   end)
+  return id
+end
+
+function M:secrets_init(project_path, cb)
+  local id = self._client.request("user-secrets/init", { projectPath = project_path }, function(response)
+    handle_rpc_error(response)
+    if cb then cb(response.result) end
+  end)
+  return id
 end
 
 return M

@@ -49,7 +49,7 @@ local M = {
 ---| "msbuild/restore"
 ---| "nuget/push"
 ---| "msbuild/pack"
----| "msbuild/user-secrets-init"
+---| "user-secrets/init"
 ---| "msbuild/query-properties"
 ---| "msbuild/add-package-reference"
 ---| "solution/list-projects"
