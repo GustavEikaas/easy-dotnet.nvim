@@ -21,7 +21,6 @@ local function build_and_pack_project(project, configuration)
 end
 
 local function select_source_and_push(path)
-  vim.print("Pushing " .. path)
   local sources = nuget.get_nuget_sources_async()
   local source = picker.pick_sync(nil, sources, "Pick nuget source", false, true)
 
@@ -29,8 +28,6 @@ local function select_source_and_push(path)
   client:initialize(function()
     client:nuget_push({ path }, source.name, function(i) vim.print(i) end)
   end)
-
-  -- push_nuget_package(path, source)
 end
 
 local function csproj_fallback(push)
