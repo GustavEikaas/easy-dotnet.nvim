@@ -398,7 +398,7 @@ end
 ---@field upgradeSeverity "None" | "Patch" | "Minor" | "Major" | "Unknown"
 
 function M:outdated_packages(target_path, cb)
-  local id = self._client.request("outdated/packages", { targetPath = target_path }, function(response)
+  local id = self._client.request("outdated/packages", { targetPath = target_path, includeTransitive = false }, function(response)
     handle_rpc_error(response)
     local packages = handle_file_result(response.result.outFile)
     if cb then cb(packages) end
