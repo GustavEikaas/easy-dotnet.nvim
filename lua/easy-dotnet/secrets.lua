@@ -45,11 +45,9 @@ end
 --- Initializes secrets for a given project
 ---@param project DotnetProject
 local init_secrets = function(project)
-  vim.print(project.path)
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   client:initialize(function()
     client:secrets_init(project.path, function(res)
-      vim.print(res)
       project.secrets = res.id
       vim.cmd("edit! " .. res.filePath)
     end)
