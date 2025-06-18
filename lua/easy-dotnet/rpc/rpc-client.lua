@@ -60,6 +60,7 @@ local M = {
 ---| "mtp/discover"
 ---| "mtp/run"
 ---| "outdated/packages"
+---| "roslyn/bootstrap-file"
 
 local connection = nil
 local is_connected = false

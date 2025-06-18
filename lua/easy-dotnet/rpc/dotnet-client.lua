@@ -53,6 +53,7 @@ end
 ---@field mtp_run fun(self: DotnetClient, request: MtpRunRequest, cb?: fun(res: RPC_Response)) # Request running multiple tests for MTP
 ---@field mtp_discover fun(self: DotnetClient, request: MtpDiscoverRequest, cb?: fun(res: RPC_Response)) # Request test discovery for MTP
 ---@field outdated_packages fun(self: DotnetClient, target_path: string, cb?: fun(res: OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
+---@field roslyn_bootstrap_file fun(self: DotnetClient, file_path: string, type: "Class" | "Interface" | "Record", prefer_file_scoped: boolean, cb?: fun(success: true)): integer | false
 ---@field get_state fun(self: DotnetClient): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
 ---@field _initializing boolean? # True while initialization is in progress
 ---@field _initialized boolean? # True once initialization is complete
@@ -365,6 +366,14 @@ function M:outdated_packages(target_path, cb)
     handle_rpc_error(response)
     local packages = handle_file_result(response.result.outFile)
     if cb then cb(packages) end
+  end)
+  return id
+end
+
+function M:roslyn_bootstrap_file(filePath, type, prefer_file_scoped, cb)
+  local id = self._client.request("roslyn/bootstrap-file", { filePath = filePath, kind = type, fileScopedNsPreference = prefer_file_scoped }, function(response)
+    handle_rpc_error(response)
+    if cb then cb(response.result.success) end
   end)
   return id
 end
