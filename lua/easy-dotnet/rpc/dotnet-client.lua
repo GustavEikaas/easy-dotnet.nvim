@@ -410,8 +410,8 @@ function M:outdated_packages(target_path, cb)
   return id
 end
 
-function M:roslyn_bootstrap_file(filePath, type, prefer_file_scoped, cb)
-  local id = self._client.request("roslyn/bootstrap-file", { filePath = filePath, kind = type, preferFileScopedNamespace = prefer_file_scoped }, function(response)
+function M:roslyn_bootstrap_file(file_path, type, prefer_file_scoped, cb)
+  local id = self._client.request("roslyn/bootstrap-file", { filePath = file_path, kind = type, preferFileScopedNamespace = prefer_file_scoped }, function(response)
     local crash = handle_rpc_error(response)
     if crash then return end
     if cb then cb(response.result.success) end
