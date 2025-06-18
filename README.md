@@ -10,6 +10,12 @@ Are you a .NET developer looking to harness the power of Neovim for your daily c
 > This plugin and all its features should work for both **C#** and **F#**.
 
 >[!IMPORTANT]
+>This plugin now uses [easy-dotnet-server](https://github.com/GustavEikaas/easy-dotnet-server) to enable more advanced functionality. As a result, the server may require more frequent updates.
+>Run `:Dotnet _server update` or `dotnet tool install -g EasyDotnet` to update it.
+>The plugin will attempt to detect when the server is outdated and notify you. If you encounter any issues, please don't hesitate to file an issue.
+
+
+>[!IMPORTANT]
 >I need feedback! The last months I have had a blast developing this plugin, i have gotten a lot of feedback from you guys, and I want more! Please dont hesitate to file an issue with an improvement/bug/question etc..
 >And most importantly thank you guys for using my plugin :D
 
