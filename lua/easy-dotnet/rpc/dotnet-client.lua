@@ -1,5 +1,6 @@
 ---@diagnostic disable: unused-function
 local jobs = require("easy-dotnet.ui-modules.jobs")
+local logger = require("easy-dotnet.logger")
 
 ---@type DotnetClient
 local M = {}
@@ -15,6 +16,7 @@ end
 
 --- Handles an RPC response and displays/logs error info if present
 ---@param response RPC_Response
+---@return boolean did_error
 local function handle_rpc_error(response)
   if response.error then
     vim.schedule(function() vim.notify(string.format("[RPC Error %s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
@@ -22,9 +24,13 @@ local function handle_rpc_error(response)
     if response.error.data then
       local file = vim.fs.normalize(os.tmpname())
       dump_to_file(response, file)
-      error("Crash dump written at " .. file)
+      logger.error("Crash dump written at " .. file)
+      return true
     end
+
+    return true
   end
+  return false
 end
 
 ---@class ProjectSecretInitResponse
@@ -154,7 +160,11 @@ function M:_initialize(cb)
       projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()) },
     },
   }, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then
+      finished(false)
+      return
+    end
     finished(true)
     if cb then cb(response) end
   end)
@@ -163,7 +173,11 @@ end
 function M:nuget_push(packages, source, cb)
   local finished = jobs.register_job({ name = "Pushing packages", on_error_text = "Failed to push packages", on_success_text = "Packages pushed to " .. source })
   self._client.request("nuget/push", { packagePaths = packages, source = source }, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then
+      finished(false)
+      return
+    end
     finished(response.result.success)
     if cb then cb(response.result.success) end
   end)
@@ -172,7 +186,11 @@ end
 function M:nuget_restore(targetPath, cb)
   local finished = jobs.register_job({ name = "Restoring packages...", on_error_text = "Failed to restore nuget packages", on_success_text = "Nuget packages restored" })
   self._client.request("msbuild/restore", { targetPath = targetPath }, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then
+      finished(false)
+      return
+    end
     --TODO: check response body for success info
     finished(true)
     if cb then cb(response) end
@@ -209,7 +227,8 @@ end
 
 function M:nuget_search(prompt, sources, cb)
   self._client.request("nuget/search-packages", { searchTerm = prompt, sources = sources }, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then return end
     if cb then cb(handle_file_result(response.result.outFile)) end
   end)
 end
@@ -217,7 +236,8 @@ end
 function M:nuget_get_package_versions(package, sources, include_prerelease, cb)
   include_prerelease = include_prerelease or false
   self._client.request("nuget/get-package-versions", { packageId = package, includePrerelease = include_prerelease, sources = sources }, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then return end
     cb(response.result)
   end)
 end
@@ -225,7 +245,11 @@ end
 function M:msbuild_pack(target_path, configuration, cb)
   local finished = jobs.register_job({ name = "Packing...", on_error_text = "Packing failed", on_success_text = "Packed successfully" })
   self._client.request("msbuild/pack", { targetPath = target_path, configuration = configuration }, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then
+      finished(false)
+      return
+    end
     finished(response.result.success)
     if cb then cb(response) end
   end)
@@ -244,7 +268,11 @@ function M:msbuild_add_package_reference(params, cb, options)
   })
 
   local id = self._client.request("msbuild/add-package-reference", params, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then
+      finished(false)
+      return
+    end
     finished(true)
     if cb then cb(response) end
   end, options)
@@ -259,7 +287,11 @@ end
 function M:msbuild_build(request, cb)
   local finished = jobs.register_job({ name = "Building...", on_error_text = "Build failed", on_success_text = "Built successfully" })
   local id = self._client.request("msbuild/build", { request = request }, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then
+      finished(false)
+      return
+    end
     --TODO: check response body for success info
     --TODO: open qf list
     finished(true)
@@ -276,7 +308,8 @@ end
 
 function M:msbuild_query_properties(request, cb)
   local id = self._client.request("msbuild/query-properties", { request = request }, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then return end
     if cb then cb(response) end
   end)
 
@@ -289,7 +322,8 @@ end
 
 function M:vstest_discover(request, cb)
   self._client.request("vstest/discover", request, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then return end
     if cb then cb(response) end
   end)
 end
@@ -299,7 +333,8 @@ end
 
 function M:mtp_discover(request, cb)
   self._client.request("mtp/discover", request, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then return end
     if cb then cb(response) end
   end)
 end
@@ -311,7 +346,8 @@ end
 
 function M:vstest_run(request, cb)
   self._client.request("vstest/run", request, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then return end
     if cb then cb(response) end
   end)
 end
@@ -326,7 +362,8 @@ end
 
 function M:mtp_run(request, cb)
   self._client.request("mtp/run", request, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then return end
     if cb then cb(response) end
   end)
 end
@@ -338,7 +375,8 @@ end
 
 function M:solution_list_projects(solution_file_path, cb)
   local id = self._client.request("solution/list-projects", { solutionFilePath = solution_file_path }, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then return end
     if cb then cb(response.result) end
   end)
   return id
@@ -346,7 +384,8 @@ end
 
 function M:secrets_init(project_path, cb)
   local id = self._client.request("user-secrets/init", { projectPath = project_path }, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then return end
     if cb then cb(response.result) end
   end)
   return id
@@ -363,7 +402,8 @@ end
 
 function M:outdated_packages(target_path, cb)
   local id = self._client.request("outdated/packages", { targetPath = target_path, includeTransitive = false }, function(response)
-    handle_rpc_error(response)
+    local crash = handle_rpc_error(response)
+    if crash then return end
     local packages = handle_file_result(response.result.outFile)
     if cb then cb(packages) end
   end)
@@ -371,8 +411,9 @@ function M:outdated_packages(target_path, cb)
 end
 
 function M:roslyn_bootstrap_file(filePath, type, prefer_file_scoped, cb)
-  local id = self._client.request("roslyn/bootstrap-file", { filePath = filePath, kind = type, fileScopedNsPreference = prefer_file_scoped }, function(response)
-    handle_rpc_error(response)
+  local id = self._client.request("roslyn/bootstrap-file", { filePath = filePath, kind = type, preferFileScopedNamespace = prefer_file_scoped }, function(response)
+    local crash = handle_rpc_error(response)
+    if crash then return end
     if cb then cb(response.result.success) end
   end)
   return id
