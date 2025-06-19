@@ -11,19 +11,16 @@ local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
 local picker = require("easy-dotnet.picker")
 local logger = require("easy-dotnet.logger")
 local messages = require("easy-dotnet.error-messages")
-
-local function reverse_list(list)
-  local reversed = {}
-  for i = #list, 1, -1 do
-    table.insert(reversed, list[i])
-  end
-  return reversed
-end
+local job = require("easy-dotnet.ui-modules.jobs")
 
 local function get_all_versions(package)
-  local command = string.format('dotnet package search %s --exact-match --format json | jq ".searchResult[].packages[].version"', package)
-  local versions = vim.fn.split(vim.fn.system(command):gsub('"', ""), "\n")
-  return reverse_list(versions)
+  local co = coroutine.running()
+
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  client:initialize(function()
+    client:nuget_get_package_versions(package, nil, false, function(i) coroutine.resume(co, i) end)
+  end)
+  return coroutine.yield()
 end
 
 ---@return string
@@ -43,31 +40,32 @@ end
 
 ---@param project_path string | nil
 local function add_package(package, project_path)
-  print("Getting versions...")
   local versions = polyfills.tbl_map(function(v) return { value = v, display = v } end, get_all_versions(package))
 
   local selected_version = picker.pick_sync(nil, versions, "Select a version", true)
-  logger.info("Adding package...")
+  local finished = job.register_job({
+    name = string.format("Installing %s@%s", package, selected_version.value),
+    on_error_text = string.format("dotnet restore failed"),
+    on_success_text = string.format("%s@%s installed", package, selected_version.value),
+  })
   local selected_project = project_path or get_project()
   local command = string.format("dotnet add %s package %s --version %s", selected_project, package, selected_version.value)
   local co = coroutine.running()
   vim.fn.jobstart(command, {
     on_exit = function(_, ex_code)
       if ex_code == 0 then
-        logger.info("Restoring packages...")
         vim.fn.jobstart(string.format("dotnet restore %s", selected_project), {
           on_exit = function(_, code)
             if code ~= 0 then
-              logger.error("Dotnet restore failed...")
-              --Retry usings users terminal, this will present the error for them. Not sure if this is the correct design choice
               require("easy-dotnet.options").options.terminal(selected_project, "restore", "")
+              finished(false)
             else
-              logger.info(string.format("Installed %s@%s in %s", package, selected_version.value, vim.fs.basename(selected_project)))
+              finished(true)
             end
           end,
         })
       else
-        logger.error(string.format("Failed to install %s@%s in %s", package, selected_version.value, vim.fs.basename(selected_project)))
+        finished(false)
       end
       coroutine.resume(co)
     end,
