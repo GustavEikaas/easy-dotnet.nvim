@@ -1,3 +1,4 @@
+local logger = require("easy-dotnet.logger")
 ---@type StreamJsonRpc
 local M = {
   routes = { "initialize" },
@@ -53,6 +54,7 @@ local M = {
 ---| "msbuild/add-package-reference"
 ---| "solution/list-projects"
 ---| "nuget/push"
+---| "nuget/get-package-versions"
 ---| "nuget/search-packages"
 ---| "nuget/list-sources"
 ---| "vstest/discover"
@@ -60,6 +62,7 @@ local M = {
 ---| "mtp/discover"
 ---| "mtp/run"
 ---| "outdated/packages"
+---| "roslyn/bootstrap-file"
 
 local connection = nil
 local is_connected = false
@@ -176,7 +179,7 @@ end
 
 function M.request(method, params, callback, options)
   options = options or {}
-  if not vim.tbl_contains(M.routes, method) then vim.print("Server does not broadcast support for " .. method .. " perhaps your server is outdated? :Dotnet _server update") end
+  if not vim.tbl_contains(M.routes, method) then logger.warn("Server does not broadcast support for " .. method .. " perhaps your server is outdated? :Dotnet _server update") end
   if not is_connected then error("Client not connected") end
 
   request_id = request_id + 1
