@@ -174,6 +174,9 @@ end
 
 local function background_scanning(merged_opts)
   if merged_opts.background_scanning then
+    vim.defer_fn(function()
+      vim.cmd("Dotnet codesearch")
+    end, 200)
     --prewarm msbuild properties
     get_solutions_async(function(slns)
       if #slns ~= 1 then return end
