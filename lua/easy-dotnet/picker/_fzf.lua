@@ -1,19 +1,51 @@
 local M = {}
 
+---@param prompt string search term
+---@param client DotnetClient rpc client
+local function nuget_search_rpc(prompt, client)
+  local co = coroutine.running()
+  assert(co, "nuget_search_yielding must be called inside a coroutine")
+
+  local results = {}
+
+  client:nuget_search(prompt, nil, function(p)
+    for _, r in ipairs(p) do
+      table.insert(results, { id = r.id, display = r.id .. " (" .. r.source .. ")" })
+    end
+    vim.schedule(function() coroutine.resume(co, results) end)
+  end)
+
+  return coroutine.yield()
+end
+
 M.nuget_search = function()
   local co = coroutine.running()
-  local package
-  require("fzf-lua").fzf_live('dotnet package search <query> --format json | jq ".searchResult | .[] | .packages | .[] | .id"', {
-    fn_transform = function(line) return line:gsub('"', ""):gsub("\r", ""):gsub("\n", "") end,
-    actions = {
-      ["default"] = function(selected)
-        package = selected[1]
-        coroutine.resume(co)
-      end,
-    },
-  })
-  coroutine.yield()
-  return package
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  local results = {}
+  client:initialize(function()
+    require("fzf-lua").fzf_live(function(prompt)
+      return function(add_item, finished)
+        local res = nuget_search_rpc(prompt, client)
+        results = res
+        for _, r in ipairs(res) do
+          add_item(r.display)
+        end
+        finished()
+      end
+    end, {
+      actions = {
+        ["default"] = function(selected)
+          for _, value in ipairs(results) do
+            if value.display == selected[1] then
+              coroutine.resume(co, value.id)
+              return
+            end
+          end
+        end,
+      },
+    })
+  end)
+  return coroutine.yield()
 end
 
 M.migration_picker = function(opts, migration)
