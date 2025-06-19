@@ -10,7 +10,7 @@ M.handler = function(client, method, params)
     logger.info("Server requested restore for " .. vim.fs.basename(params.targetPath))
     nuget_restore_handler(client, params.targetPath)
   else
-    vim.print("Unknown server notification " .. method)
+    -- vim.print("Unknown server notification " .. method)
   end
 end
 

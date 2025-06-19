@@ -60,6 +60,7 @@ local M = {
 ---| "mtp/discover"
 ---| "mtp/run"
 ---| "outdated/packages"
+---| "roslyn/symbol-search"
 
 local connection = nil
 local is_connected = false
