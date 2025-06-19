@@ -10,8 +10,7 @@ local function nuget_search_rpc(prompt, client)
 
   client:nuget_search(prompt, nil, function(p)
     for _, r in ipairs(p) do
-      -- table.insert(results, r.id .. " (" .. r.source .. ")")
-      table.insert(results, r.id)
+      table.insert(results, { id = r.id, display = r.id .. " (" .. r.source .. ")" })
     end
     vim.schedule(function() coroutine.resume(co, results) end)
   end)
@@ -22,18 +21,27 @@ end
 M.nuget_search = function()
   local co = coroutine.running()
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  local results = {}
   client:initialize(function()
     require("fzf-lua").fzf_live(function(prompt)
       return function(add_item, finished)
         local res = nuget_search_rpc(prompt, client)
+        results = res
         for _, r in ipairs(res) do
-          add_item(r)
+          add_item(r.display)
         end
         finished()
       end
     end, {
       actions = {
-        ["default"] = function(selected) coroutine.resume(co, selected[1]) end,
+        ["default"] = function(selected)
+          for _, value in ipairs(results) do
+            if value.display == selected[1] then
+              coroutine.resume(co, value.id)
+              return
+            end
+          end
+        end,
       },
     })
   end)

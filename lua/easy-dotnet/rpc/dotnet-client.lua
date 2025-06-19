@@ -234,10 +234,15 @@ function M:nuget_search(prompt, sources, cb)
 end
 
 function M:nuget_get_package_versions(package, sources, include_prerelease, cb)
+  local finished = jobs.register_job({ name = "Getting versions for " .. package, on_error_text = string.format("Failed to get versions for %s", package) })
   include_prerelease = include_prerelease or false
   self._client.request("nuget/get-package-versions", { packageId = package, includePrerelease = include_prerelease, sources = sources }, function(response)
     local crash = handle_rpc_error(response)
-    if crash then return end
+    if crash then
+      finished(false)
+      return
+    end
+    finished(true)
     cb(response.result)
   end)
 end
