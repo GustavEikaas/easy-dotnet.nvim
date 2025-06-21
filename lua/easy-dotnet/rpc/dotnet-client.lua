@@ -378,12 +378,10 @@ end
 ---@field RelativePath string
 ---@field AbsolutePath string
 
-function M:solution_list_projects(solution_file_path, cb)
-  local id = self._client.request("solution/list-projects", { solutionFilePath = solution_file_path }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response.result) end
-  end)
+function M:solution_list_projects(solution_file_path, on_yield, projects_cb)
+  local id = self._client:request_enumerate("solution/list-projects", { solutionFilePath = solution_file_path }, function(project) on_yield(project) end, function(projects)
+    if projects_cb then projects_cb(projects) end
+  end, function(error_res) handle_rpc_error(error_res) end)
   return id
 end
 
