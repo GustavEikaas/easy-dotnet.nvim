@@ -10,7 +10,7 @@ local M = {
 ---@field on_cancel? fun(): nil  -- optional callback for cancellation
 
 ---@class StreamJsonRpc
----@field enumerable_next fun (token: integer, cb): nil
+---@field _enumerable_next fun (token: integer, cb): nil
 ---@field setup fun(opts: { pipe_path: string, debug?: boolean }): StreamJsonRpc
 ---@field connect fun(cb: fun()): nil
 ---@field request fun(method: DotnetPipeMethod, params: table, callback: fun(result: RPC_Response), options?: RpcRequestOptions): integer|false
@@ -225,7 +225,7 @@ function M:request_enumerate(method, params, on_yield, on_finished, on_error)
   local all_results = {}
 
   local function handle_next(token)
-    self.enumerable_next(token, function(res)
+    self._enumerable_next(token, function(res)
       if res.error and on_error then on_error(res) end
       if res.result then
         if #res.result.values > 0 then
@@ -261,7 +261,7 @@ function M.cancel(id)
   end
 end
 
-function M.enumerable_next(id, cb) M.request("$/enumerator/next", { token = id }, cb) end
+function M._enumerable_next(id, cb) M.request("$/enumerator/next", { token = id }, cb) end
 
 function M.subscribe_notifications(cb)
   table.insert(notification_callbacks, cb)
