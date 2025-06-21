@@ -182,7 +182,9 @@ end
 
 function M.request(method, params, callback, options)
   options = options or {}
-  -- if not vim.tbl_contains(M.routes, method) then logger.warn("Server does not broadcast support for " .. method .. " perhaps your server is outdated? :Dotnet _server update") end
+  if not vim.tbl_contains(M.routes, method) and method ~= "$enumerator/next" then
+    logger.warn("Server does not broadcast support for " .. method .. " perhaps your server is outdated? :Dotnet _server update")
+  end
   if not is_connected then error("Client not connected") end
 
   request_id = request_id + 1
