@@ -10,9 +10,11 @@ local M = {
 ---@field on_cancel? fun(): nil  -- optional callback for cancellation
 
 ---@class StreamJsonRpc
+---@field _enumerable_next fun (token: integer, cb): nil
 ---@field setup fun(opts: { pipe_path: string, debug?: boolean }): StreamJsonRpc
 ---@field connect fun(cb: fun()): nil
 ---@field request fun(method: DotnetPipeMethod, params: table, callback: fun(result: RPC_Response), options?: RpcRequestOptions): integer|false
+---@field request_enumerate fun(self: StreamJsonRpc, method: DotnetPipeMethod, params: table, on_yield: fun(result: table)|nil, on_finished: fun(results: table[])|nil, on_error: fun(res: RPC_Response)|nil): integer|false
 ---@field notify fun(method: string, params: table): boolean
 ---@field cancel fun(id: integer): nil
 ---@field disconnect fun(): boolean
@@ -63,6 +65,7 @@ local M = {
 ---| "mtp/run"
 ---| "outdated/packages"
 ---| "roslyn/bootstrap-file"
+---| "$/enumerator/next"
 
 local connection = nil
 local is_connected = false
@@ -179,7 +182,9 @@ end
 
 function M.request(method, params, callback, options)
   options = options or {}
-  if not vim.tbl_contains(M.routes, method) then logger.warn("Server does not broadcast support for " .. method .. " perhaps your server is outdated? :Dotnet _server update") end
+  if not vim.tbl_contains(M.routes, method) and method ~= "$enumerator/next" then
+    logger.warn("Server does not broadcast support for " .. method .. " perhaps your server is outdated? :Dotnet _server update")
+  end
   if not is_connected then error("Client not connected") end
 
   request_id = request_id + 1
@@ -216,6 +221,36 @@ function M.request(method, params, callback, options)
   return id
 end
 
+function M:request_enumerate(method, params, on_yield, on_finished, on_error)
+  local all_results = {}
+
+  local function handle_next(token)
+    self._enumerable_next(token, function(res)
+      if res.error and on_error then on_error(res) end
+      if res.result then
+        if #res.result.values > 0 then
+          vim.list_extend(all_results, res.result.values)
+          if on_yield then on_yield(res.result.values) end
+        end
+        if res.result.finished == false then
+          handle_next(token)
+        else
+          if on_finished then on_finished(all_results) end
+        end
+      end
+    end)
+  end
+
+  self.request(method, params, function(response)
+    if response.error and on_error then on_error(response) end
+    if response.result and response.result.token then
+      handle_next(response.result.token)
+    else
+      error("Response was not an enumerable")
+    end
+  end)
+end
+
 function M.cancel(id)
   if callbacks[id] then
     M.notify("$/cancelRequest", { id = id })
@@ -225,6 +260,8 @@ function M.cancel(id)
     cancellation_callbacks[id] = nil
   end
 end
+
+function M._enumerable_next(id, cb) M.request("$/enumerator/next", { token = id }, cb) end
 
 function M.subscribe_notifications(cb)
   table.insert(notification_callbacks, cb)
