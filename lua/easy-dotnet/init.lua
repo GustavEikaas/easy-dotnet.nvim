@@ -80,14 +80,6 @@ local function define_highlights_and_signs(merged_opts)
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerPassed, { link = "DiagnosticOk" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerFailed, { link = "DiagnosticError" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
-
-  local icons = merged_opts.test_runner.icons
-  vim.fn.sign_define(constants.signs.EasyDotnetTestSign, { text = icons.test, texthl = "Character" })
-  vim.fn.sign_define(constants.signs.EasyDotnetTestPassed, { text = icons.passed, texthl = "EasyDotnetTestRunnerPassed" })
-  vim.fn.sign_define(constants.signs.EasyDotnetTestFailed, { text = icons.failed, texthl = "EasyDotnetTestRunnerFailed" })
-  vim.fn.sign_define(constants.signs.EasyDotnetTestInProgress, { text = icons.reload, texthl = "EasyDotnetTestRunnerRunning" })
-  vim.fn.sign_define(constants.signs.EasyDotnetTestSkipped, { text = icons.skipped })
-  vim.fn.sign_define(constants.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
 end
 
 local register_legacy_functions = function()

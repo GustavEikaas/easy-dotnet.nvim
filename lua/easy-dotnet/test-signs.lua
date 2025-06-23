@@ -110,8 +110,6 @@ end
 
 function M.add_gutter_test_signs()
   local options = require("easy-dotnet.test-runner.render").options
-  local signs = constants.signs
-  local sign_ns = constants.sign_namespace
   local is_test_file = false
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
@@ -122,17 +120,43 @@ function M.add_gutter_test_signs()
       is_test_file = true
       --INFO: line number for MTP is on the [Test] attribute. VSTest is on the method_declaration
       local line_offset = node.line_number - (node.is_MTP and 0 or 1)
-      vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSign, bufnr, { lnum = line_offset, priority = 20 })
+
+      vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
+        id = node.line_number,
+        sign_text = options.icons.test,
+        priority = 20,
+        sign_hl_group = constants.highlights.EasyDotnetTestRunnerProject,
+      })
 
       if node.icon then
         if node.icon == options.icons.failed then
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestFailed, bufnr, { lnum = line_offset, priority = 20 })
+          vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
+            id = node.line_number,
+            sign_text = options.icons.failed,
+            priority = 20,
+            sign_hl_group = constants.highlights.EasyDotnetTestRunnerFailed,
+          })
         elseif node.icon == options.icons.skipped then
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestSkipped, bufnr, { lnum = line_offset, priority = 20 })
+          vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
+            id = node.line_number,
+            sign_text = options.icons.skipped,
+            priority = 20,
+            sign_hl_group = constants.highlights.EasyDotnetTestRunnerTest,
+          })
         elseif node.icon == "<Running>" then
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestInProgress, bufnr, { lnum = line_offset, priority = 20 })
+          vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
+            id = node.line_number,
+            sign_text = options.icons.reload,
+            priority = 20,
+            sign_hl_group = constants.highlights.EasyDotnetTestRunnerRunning,
+          })
         elseif node.icon == options.icons.passed then
-          vim.fn.sign_place(0, sign_ns, signs.EasyDotnetTestPassed, bufnr, { lnum = line_offset, priority = 20 })
+          vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
+            id = node.line_number,
+            sign_text = options.icons.passed,
+            priority = 20,
+            sign_hl_group = constants.highlights.EasyDotnetTestRunnerPassed,
+          })
         end
       end
     end
