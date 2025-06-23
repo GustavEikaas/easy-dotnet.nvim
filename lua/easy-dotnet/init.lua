@@ -62,7 +62,7 @@ local function present_command_picker()
   end, "Select command", false)
 end
 
-local function define_highlights_and_signs(merged_opts)
+local function define_highlights()
   vim.api.nvim_set_hl(0, "EasyDotnetPackage", {
     fg = "#000000",
     bg = "#ffffff",
@@ -204,7 +204,7 @@ local function auto_install_easy_dotnet()
 end
 M.setup = function(opts)
   local merged_opts = require("easy-dotnet.options").set_options(opts)
-  define_highlights_and_signs(merged_opts)
+  define_highlights()
   check_picker_config(merged_opts)
 
   vim.api.nvim_create_user_command("Dotnet", function(commandOpts)
