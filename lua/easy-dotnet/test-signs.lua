@@ -119,7 +119,7 @@ function M.add_gutter_test_signs()
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then
       is_test_file = true
       --INFO: line number for MTP is on the [Test] attribute. VSTest is on the method_declaration
-      local line_offset = node.line_number - (node.is_MTP and 0 or 1)
+      local line_offset = node.line_number - 1 - (node.is_MTP and 0 or 1)
 
       vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
         id = node.line_number,
