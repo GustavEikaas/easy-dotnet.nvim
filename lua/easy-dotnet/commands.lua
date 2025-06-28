@@ -201,6 +201,7 @@ M.build = {
 }
 
 M.createfile = {
+  passthrough = true,
   handle = function(args) require("easy-dotnet.actions.new").create_new_item(args[1]) end,
 }
 
