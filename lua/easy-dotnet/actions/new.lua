@@ -271,14 +271,17 @@ M.create_new_item = function(path, cb)
   end
 
   local cmd = string.format("dotnet new %s -o %s %s", template.value, path, args)
+  local stdout = {}
   vim.fn.jobstart(cmd, {
-    on_stderr = function(_, data)
-      for _, value in ipairs(data) do
-        logger.error(value)
-      end
-    end,
+    on_stderr = function(_, data) vim.list_extend(stdout, data) end,
+    on_stdout = function(_, data) vim.list_extend(stdout, data) end,
+    stdout_buffered = true,
+    stderr_buffered = true,
     on_exit = function(_, code)
-      if code ~= 0 then logger.error("Command failed") end
+      if code ~= 0 then
+        vim.print(stdout)
+        logger.error("Command failed")
+      end
       if cb then cb() end
     end,
   })
