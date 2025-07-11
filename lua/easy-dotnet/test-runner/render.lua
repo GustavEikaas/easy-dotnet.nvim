@@ -370,9 +370,9 @@ function M.open(mode)
   elseif mode == "split" or mode == "vsplit" then
     if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
     if mode == "vsplit" and type(M.options.vsplit_width) == "number" and M.options.vsplit_width < vim.o.columns then
-      mode = tostring(M.options.vsplit_width) .. mode
+      mode = (M.options.vsplit_pos or "") .. tostring(M.options.vsplit_width) .. mode
     else
-      mode = tostring(math.floor(vim.o.columns * 0.5)) .. mode
+      mode = (M.options.vsplit_pos or "") .. tostring(math.floor(vim.o.columns * 0.5)) .. mode
     end
     vim.cmd(mode)
     M.win = vim.api.nvim_get_current_win()
