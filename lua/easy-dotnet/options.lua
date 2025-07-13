@@ -46,6 +46,7 @@ local polyfills = require("easy-dotnet.polyfills")
 ---@class TestRunnerOptions
 ---@field viewmode string
 ---@field vsplit_width number|nil
+---@field vsplit_pos string|nil
 ---@field enable_buffer_test_execution boolean
 ---@field noBuild boolean
 ---@field icons TestRunnerIcons
@@ -112,6 +113,7 @@ local M = {
     test_runner = {
       viewmode = "split",
       vsplit_width = nil,
+      vsplit_pos = nil,
       enable_buffer_test_execution = true,
       noBuild = true,
       icons = {
