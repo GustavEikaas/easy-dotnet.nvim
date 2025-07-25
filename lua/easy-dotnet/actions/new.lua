@@ -233,40 +233,43 @@ local function name_input_sync() return vim.fn.input("Enter name:") end
 M.create_new_item = function(path, cb)
   path = path or "."
   local template = require("easy-dotnet.picker").pick_sync(nil, {
-    { value = "buildprops", display = "MSBuild Directory.Build.props File", type = "MSBuild/props" },
-    { value = "packagesprops", display = "MSBuild Directory.Packages.props File", type = "MSBuild/props" },
-    { value = "buildtargets", display = "MSBuild Directory.Build.targets File", type = "MSBuild/props" },
-    { value = "apicontroller", display = "Api Controller", type = "Code" },
-    { value = "interface", display = "Interface", type = "Code" },
-    { value = "class", display = "Class", type = "Code" },
-    { value = "mvccontroller", display = "MVC Controller", type = "Code" },
-    { value = "viewimports", display = "MVC ViewImports", type = "Code" },
-    { value = "viewstart", display = "MVC ViewStart", type = "Code" },
-    { value = "razorcomponent", display = "Razor Component", type = "Code" },
-    { value = "page", display = "Razor Page", type = "Code" },
-    { value = "view", display = "Razor View", type = "Code" },
-    { value = "nunit-test", display = "NUnit 3 Test Item", type = "Test/NUnit" },
-    { value = "gitignore", display = "Dotnet Gitignore File", type = "Config" },
-    { value = "tool-manifest", display = "Dotnet Local Tool Manifest File", type = "Config" },
-    { value = "editorconfig", display = "EditorConfig File", type = "Config" },
-    { value = "globaljson", display = "Global.json File", type = "Config" },
-    { value = "nugetconfig", display = "NuGet Config", type = "Config" },
-    { value = "webconfig", display = "Web Config", type = "Config" },
-    { value = "solution", display = "Solution", type = "Config" },
+    { value = "buildprops", display = "MSBuild Directory.Build.props File", type = "MSBuild/props", predefined_file_name = "Directory.Build.props" },
+    { value = "packagesprops", display = "MSBuild Directory.Packages.props File", type = "MSBuild/props", predefnied_file_name = "Directory.Packages.props" },
+    { value = "buildtargets", display = "MSBuild Directory.Build.targets File", type = "MSBuild/props", predefined_file_name = "Directory.Build.targets" },
+    { value = "apicontroller", display = "Api Controller", type = "Code", extension = ".cs" },
+    { value = "interface", display = "Interface", type = "Code", extension = ".cs" },
+    { value = "class", display = "Class", type = "Code", extension = ".cs" },
+    { value = "mvccontroller", display = "MVC Controller", type = "Code", extension = ".cs" },
+    { value = "viewimports", display = "MVC ViewImports", type = "Code", extension = ".cshtml" },
+    { value = "viewstart", display = "MVC ViewStart", type = "Code", extension = ".cshtml" },
+    { value = "razorcomponent", display = "Razor Component", type = "Code", extension = ".razor" },
+    { value = "page", display = "Razor Page", type = "Code", extension = ".cshtml" },
+    { value = "view", display = "Razor View", type = "Code", extension = ".cshtml" },
+    { value = "nunit-test", display = "NUnit 3 Test Item", type = "Test/NUnit", extension = ".cs" },
+    { value = "gitignore", display = "Dotnet Gitignore File", type = "Config", file_name = ".gitignore" },
+    { value = "tool-manifest", display = "Dotnet Local Tool Manifest File", type = "Config", predefined_file_name = "dotnet-tools.json" },
+    { value = "editorconfig", display = "EditorConfig File", type = "Config", predefined_file_name = ".editorconfig" },
+    { value = "globaljson", display = "Global.json File", type = "Config", predefined_file_name = "global.json" },
+    { value = "nugetconfig", display = "NuGet Config", type = "Config", predefined_file_name = "nuget.config" },
+    { value = "webconfig", display = "Web Config", type = "Config", predefined_file_name = "web.config" },
+    { value = "solution", display = "Solution", type = "Config", extension = ".sln" },
   }, "Type")
 
   assert(template)
 
+  path = path or "."
   local args = ""
+  local file_name = ""
 
-  if template.type == "Code" then
+  if template.predefined_file_name ~= nil then
+    file_name = template.predefined_file_name
+  else
     local name = name_input_sync()
-    args = string.format("-n %s", name)
-  elseif template.type == "Config" then
-    local name = name_input_sync()
-    args = string.format("-n %s", name)
-  elseif template.type == "Test/NUnit" then
-    local name = name_input_sync()
+    if not name or name:match("^%s*$") then
+      logger.error("No name provided")
+      return
+    end
+    file_name = name .. template.extension
     args = string.format("-n %s", name)
   end
 
