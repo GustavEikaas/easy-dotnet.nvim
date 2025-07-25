@@ -285,7 +285,10 @@ M.create_new_item = function(path, cb)
         vim.print(stdout)
         logger.error("Command failed")
       end
-      if cb then cb() end
+      if cb then
+        local file_path = vim.fs.normalize(vim.fs.joinpath(path, file_name))
+        cb(file_path)
+      end
     end,
   })
 end
