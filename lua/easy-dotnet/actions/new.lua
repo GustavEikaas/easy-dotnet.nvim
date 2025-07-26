@@ -234,7 +234,7 @@ M.create_new_item = function(path, cb)
   path = path or "."
   local template = require("easy-dotnet.picker").pick_sync(nil, {
     { value = "buildprops", display = "MSBuild Directory.Build.props File", type = "MSBuild/props", predefined_file_name = "Directory.Build.props" },
-    { value = "packagesprops", display = "MSBuild Directory.Packages.props File", type = "MSBuild/props", predefnied_file_name = "Directory.Packages.props" },
+    { value = "packagesprops", display = "MSBuild Directory.Packages.props File", type = "MSBuild/props", predefined_file_name = "Directory.Packages.props" },
     { value = "buildtargets", display = "MSBuild Directory.Build.targets File", type = "MSBuild/props", predefined_file_name = "Directory.Build.targets" },
     { value = "apicontroller", display = "Api Controller", type = "Code", extension = ".cs" },
     { value = "interface", display = "Interface", type = "Code", extension = ".cs" },
@@ -246,7 +246,7 @@ M.create_new_item = function(path, cb)
     { value = "page", display = "Razor Page", type = "Code", extension = ".cshtml" },
     { value = "view", display = "Razor View", type = "Code", extension = ".cshtml" },
     { value = "nunit-test", display = "NUnit 3 Test Item", type = "Test/NUnit", extension = ".cs" },
-    { value = "gitignore", display = "Dotnet Gitignore File", type = "Config", file_name = ".gitignore" },
+    { value = "gitignore", display = "Dotnet Gitignore File", type = "Config", predefined_file_name = ".gitignore" },
     { value = "tool-manifest", display = "Dotnet Local Tool Manifest File", type = "Config", predefined_file_name = "dotnet-tools.json" },
     { value = "editorconfig", display = "EditorConfig File", type = "Config", predefined_file_name = ".editorconfig" },
     { value = "globaljson", display = "Global.json File", type = "Config", predefined_file_name = "global.json" },
@@ -259,7 +259,7 @@ M.create_new_item = function(path, cb)
 
   path = path or "."
   local args = ""
-  local file_name = ""
+  local file_name
 
   if template.predefined_file_name ~= nil then
     file_name = template.predefined_file_name
