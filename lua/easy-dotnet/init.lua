@@ -4,6 +4,7 @@ local constants = require("easy-dotnet.constants")
 local commands = require("easy-dotnet.commands")
 local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
+local mgr = require("easy-dotnet.default-manager")
 
 local M = {}
 local function wrap(callback)
@@ -272,4 +273,17 @@ end
 
 M.package_completion_source = require("easy-dotnet.csproj-mappings").package_completion_cmp
 
+vim.api.nvim_create_autocmd("User", {
+  pattern = "RoslynInitialized",
+  callback = function()
+    local sln = vim.g.roslyn_nvim_selected_solution
+
+    mgr.set_default_solution(nil, sln)
+    mgr.set_default_project({ name = "solution" }, sln, "build")
+    mgr.set_default_project({ name = "solution" }, sln, "watch")
+    mgr.set_default_project({ name = "solution" }, sln, "run")
+
+    vim.notify("Easy dotnet solution auto-selected", vim.log.levels.INFO, { title = "easy-dotnet.nvim" })
+  end,
+})
 return M
