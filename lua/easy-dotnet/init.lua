@@ -16,9 +16,9 @@ local function wrap(callback)
     else
       -- If not, create a new coroutine and resume it
       local co = coroutine.create(callback)
-      local s = ...
+      local args = { ... }
       local handle = function()
-        local success, err = coroutine.resume(co, s)
+        local success, err = coroutine.resume(co, unpack(args))
         if not success then print("Coroutine failed: " .. err) end
       end
       handle()
