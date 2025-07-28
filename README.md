@@ -58,6 +58,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
     - [Integrating with neo-tree](#integrating-with-neo-tree)
     - [Integrating with mini.files](#integrating-with-mini-files)
+    - [Integrating with snacks.explorer](#integrating-with-snacks-explorer)
 14. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
@@ -706,6 +707,44 @@ Adding the following autocmd to your config will allow for creating files using 
     })
 ```
 
+### Integrating with snacks explorer
+
+```lua
+  {
+    "folke/snacks.nvim",
+    ---@type snacks.Config
+    opts = {
+      picker = {
+        sources = {
+          explorer = {
+            win = {
+              list = {
+                keys = {
+                  ["A"] = "explorer_add_dotnet",
+                },
+              },
+            },
+            actions = {
+              explorer_add_dotnet = function(picker)
+                local dir = picker:dir()
+                local tree = require("snacks.explorer.tree")
+                local actions = require("snacks.explorer.actions")
+                local easydotnet = require("easy-dotnet")
+
+                easydotnet.create_new_item(dir, function(item_path)
+                  tree:open(dir)
+                  tree:refresh(dir)
+                  actions.update(picker, { target = item_path })
+                end)
+              end,
+            },
+          },
+        },
+      },
+    },
+  },
+
+```
 
 ## EntityFramework
 Common EntityFramework commands have been added mainly to reduce the overhead of writing `--project .. --startup-project ..`. 
