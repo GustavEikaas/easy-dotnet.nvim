@@ -707,7 +707,7 @@ Adding the following autocmd to your config will allow for creating files using 
     })
 ```
 
-### Integrating with snacks.explorer
+### Integrating with snacks explorer
 
 ```lua
   {
