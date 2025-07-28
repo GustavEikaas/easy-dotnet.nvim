@@ -1,4 +1,5 @@
 local tuple = require("easy-dotnet.netcoredbg.tuple")
+local dict = require("easy-dotnet.netcoredbg.dictionaries")
 
 local M = {
   ---@type table<number, table<string, string | "pending">>
@@ -15,16 +16,6 @@ local function generate_list_types()
   return results
 end
 
-local function generate_dict_types()
-  local results = {}
-  for _, key in ipairs(primitives) do
-    for _, val in ipairs(primitives) do
-      table.insert(results, "System.Collections.Generic.Dictionary<" .. key .. ", " .. val .. ">")
-    end
-  end
-  return results
-end
-
 local function generate_array_types()
   local results = {}
   for _, primitive in ipairs(primitives) do
@@ -35,7 +26,6 @@ end
 
 local arr_primitives = generate_array_types()
 local list_primitives = generate_list_types()
-local dict_primitives = generate_dict_types()
 
 local anon_like = {
   "<>f__AnonymousType0<string, int>",
@@ -130,9 +120,9 @@ local function pretty_print_var_ref(var_ref, var_type, cb)
     elseif tuple.is_tuple(var_type) then
       local tuple_value = tuple.extract(vars)
       cb("(" .. table.concat(tuple_value, ", ") .. ")")
-    elseif vim.tbl_contains(dict_primitives, var_type) then
-      local dict = require("easy-dotnet.netcoredbg.dictionaries").extract(vars)
-      cb(vim.inspect(dict, { newline = "" }))
+    elseif dict.is_dictionary(var_type) then
+      local dict_value = require("easy-dotnet.netcoredbg.dictionaries").extract(vars)
+      cb(vim.inspect(dict_value, { newline = "" }))
     else
       -- Default: treat as flat array/list
       local pretty = table.concat(vim.tbl_map(function(c) return c.value end, vars), ", ")
@@ -167,7 +157,7 @@ function M.resolve(id, var_name, var_type, cb)
   if
     (
       tuple.is_tuple(var_type)
-      or vim.tbl_contains(dict_primitives, var_type)
+      or dict.is_dictionary(var_type)
       or vim.tbl_contains(anon_like, var_type)
       or vim.tbl_contains(list_primitives, var_type)
       or vim.tbl_contains(arr_primitives, var_type)

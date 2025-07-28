@@ -1,9 +1,15 @@
 local M = {}
 
+function M.is_dictionary(className)
+  className = vim.trim(className)
+  if type(className) ~= "string" then return false end
+  return className:match("^System%.Collections%.Generic%.Dictionary") ~= nil
+end
+
 ---Extracts key-value pairs from a C# Dictionary
 ---
 ---Finds a `_count` entry to limit the number of extracted pairs.
----Returns a Lua table 
+---Returns a Lua table
 ---If a value is missing, it will be represented as the string `"null"`.
 ---
 ---@param vars table[] A list of variable tables to extract from.
