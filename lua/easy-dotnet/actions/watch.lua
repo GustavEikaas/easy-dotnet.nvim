@@ -55,7 +55,7 @@ M.run_project_picker = function(term, use_default, args)
     return
   end
 
-  local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(i) return i.runnable == true end)
+  local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(i) return i.runnable == true and not i.is_net_framework end)
 
   if #projects == 0 then
     logger.error(error_messages.no_runnable_projects_found)
