@@ -62,7 +62,6 @@ end
 
 local function pretty_print_var_ref(var_ref, var_type, cb)
   fetch_variables(var_ref, 2, function(vars)
-    vim.print(vars)
     if list.is_list(var_type) then
       local list_value = list.extract(vars)
       local pretty_list = table.concat(list_value, ", ")
@@ -82,7 +81,16 @@ local function pretty_print_var_ref(var_ref, var_type, cb)
     else
       -- Default: treat as flat array/list
       vim.print("DEFAULT")
-      local pretty = table.concat(vim.tbl_map(function(c) return string.format("%s: %s", c.name, c.value) end, vars), ", ")
+      local pretty = table.concat(
+        vim.tbl_map(function(c)
+          if c.name:match("^%[%d+%]$") then
+            return c.value
+          else
+            return string.format("%s: %s", c.name, c.value)
+          end
+        end, vars),
+        ", "
+      )
       cb(pretty)
     end
   end)
