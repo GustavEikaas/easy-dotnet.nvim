@@ -60,12 +60,53 @@ local function fetch_variables(variables_reference, depth, callback)
   end)
 end
 
+---Converts a list of DAP variables into a Lua table.
+---Numeric-looking keys like [0], [1] go into array part.
+---Named keys go into map part.
+---
+---@param vars table[] # List of DAP variable tables with .name and .value
+---@return table # A Lua table with mixed array and map-style keys
+local function vars_to_table(vars)
+  local result = {}
+
+  for _, c in ipairs(vars) do
+    local index = c.name:match("^%[(%d+)%]$")
+    if index then
+      table.insert(result, c.value)
+    else
+      result[c.name] = c.value
+    end
+  end
+
+  return result
+end
+
+function M.extract(vars, var_type)
+  if list.is_list(var_type) then
+    local list_value = list.extract(vars)
+    return list_value
+  elseif anon.is_anon(var_type) then
+    local anon_table = anon.extract(vars)
+    return anon_table
+  elseif tuple.is_tuple(var_type) then
+    local tuple_value = tuple.extract(vars)
+    return tuple_value
+  elseif dict.is_dictionary(var_type) then
+    local dict_value = dict.extract(vars)
+    return dict_value
+  elseif record.is_record(vars) then
+    local record_table = record.extract(vars)
+    return record_table
+  else
+    return vars_to_table(vars)
+  end
+end
+
 local function pretty_print_var_ref(var_ref, var_type, cb)
   fetch_variables(var_ref, 2, function(vars)
     if list.is_list(var_type) then
       local list_value = list.extract(vars)
-      local pretty_list = table.concat(list_value, ", ")
-      cb(pretty_list)
+      cb(vim.inspect(list_value, { newline = "", indent = " " }))
     elseif anon.is_anon(var_type) then
       local anon_table = anon.extract(vars)
       cb(vim.inspect(anon_table, { newline = "" }))

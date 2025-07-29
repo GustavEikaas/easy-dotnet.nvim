@@ -22,7 +22,13 @@ function M.extract(vars)
     elseif entry.name == "_items" and entry.children then
       for i = 1, size do
         local child = entry.children[i]
-        if child then table.insert(sliced, child.value) end
+        if child then
+          if child.children then
+            table.insert(sliced, require("easy-dotnet.netcoredbg.init").extract(child.children, child.type))
+          else
+            table.insert(sliced, child.value)
+          end
+        end
       end
     end
   end
