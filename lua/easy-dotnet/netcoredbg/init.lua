@@ -1,38 +1,14 @@
 local tuple = require("easy-dotnet.netcoredbg.tuple")
 local list = require("easy-dotnet.netcoredbg.list")
 local dict = require("easy-dotnet.netcoredbg.dictionaries")
+local anon = require("easy-dotnet.netcoredbg.anon")
 
 local M = {
   ---@type table<number, table<string, string | "pending">>
   pretty_cache = {},
 }
 
-local primitives = require("easy-dotnet.netcoredbg.primitives")
-
-local function generate_list_types()
-  local results = {}
-  for _, primitive in ipairs(primitives) do
-    table.insert(results, "System.Collections.Generic.List<" .. primitive .. ">")
-  end
-  return results
-end
-
-local function generate_array_types()
-  local results = {}
-  for _, primitive in ipairs(primitives) do
-    table.insert(results, primitive .. "[]")
-  end
-  return results
-end
-
-local arr_primitives = generate_array_types()
-local list_primitives = generate_list_types()
-
-local anon_like = {
-  "<>f__AnonymousType0<string, int>",
-}
-
-function M.fetch_variables(variables_reference, depth, callback)
+local function fetch_variables(variables_reference, depth, callback)
   local dap = require("dap")
   local session = dap.session()
   if not session then
@@ -64,7 +40,7 @@ function M.fetch_variables(variables_reference, depth, callback)
       }
 
       if var.variablesReference ~= 0 and depth > 0 then
-        M.fetch_variables(var.variablesReference, depth - 1, function(child_vars)
+        fetch_variables(var.variablesReference, depth - 1, function(child_vars)
           entry.children = child_vars
           pending = pending - 1
           if pending == 0 then
@@ -84,19 +60,19 @@ function M.fetch_variables(variables_reference, depth, callback)
 end
 
 local function pretty_print_var_ref(var_ref, var_type, cb)
-  M.fetch_variables(var_ref, 2, function(vars)
+  fetch_variables(var_ref, 2, function(vars)
     if list.is_list(var_type) then
       local list_value = list.extract(vars)
-      local pretty = table.concat(list_value, ", ")
-      cb(pretty)
-    elseif vim.tbl_contains(anon_like, var_type) then
-      local entries = vim.tbl_map(function(v) return string.format("%s: %s", v.name, v.value) end, vars)
-      cb(table.concat(entries, ", "))
+      local pretty_list = table.concat(list_value, ", ")
+      cb(pretty_list)
+    elseif anon.is_anon(var_type) then
+      local anon_table = anon.extract(vars)
+      cb(vim.inspect(anon_table, { newline = "" }))
     elseif tuple.is_tuple(var_type) then
       local tuple_value = tuple.extract(vars)
       cb("(" .. table.concat(tuple_value, ", ") .. ")")
     elseif dict.is_dictionary(var_type) then
-      local dict_value = require("easy-dotnet.netcoredbg.dictionaries").extract(vars)
+      local dict_value = dict.extract(vars)
       cb(vim.inspect(dict_value, { newline = "" }))
     else
       -- Default: treat as flat array/list
@@ -130,10 +106,7 @@ function M.resolve(id, var_name, var_type, cb)
 
   if cache[var_name] and cache[var_name] ~= "pending" then return cache[var_name] end
 
-  if
-    (tuple.is_tuple(var_type) or dict.is_dictionary(var_type) or vim.tbl_contains(anon_like, var_type) or vim.tbl_contains(list_primitives, var_type) or vim.tbl_contains(arr_primitives, var_type))
-    and cache[var_name] ~= "pending"
-  then
+  if cache[var_name] ~= "pending" then
     cache[var_name] = "pending"
     dap.session():request("evaluate", { expression = var_name, context = "hover" }, function(err, response)
       if err or not response or not response.variablesReference then
