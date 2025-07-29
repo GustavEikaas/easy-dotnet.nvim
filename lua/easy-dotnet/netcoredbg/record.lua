@@ -1,13 +1,10 @@
 local M = {}
 
-function M.is_class_like(vars)
+function M.is_record(vars)
   for _, entry in ipairs(vars) do
     if entry.value == "{System.RuntimeType}" and entry.children then
       for _, value in ipairs(entry.children) do
-        if value.name == "IsClass" then
-          print("it is a class like")
-          return value.value == "true"
-        end
+        if value.name == "IsClass" then return value.value == "true" end
       end
     end
   end

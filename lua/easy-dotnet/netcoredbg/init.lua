@@ -2,7 +2,7 @@ local tuple = require("easy-dotnet.netcoredbg.tuple")
 local list = require("easy-dotnet.netcoredbg.list")
 local dict = require("easy-dotnet.netcoredbg.dictionaries")
 local anon = require("easy-dotnet.netcoredbg.anon")
-local class = require("easy-dotnet.netcoredbg.class")
+local record = require("easy-dotnet.netcoredbg.record")
 
 local M = {
   ---@type table<number, table<string, string | "pending">>
@@ -62,6 +62,7 @@ end
 
 local function pretty_print_var_ref(var_ref, var_type, cb)
   fetch_variables(var_ref, 2, function(vars)
+    vim.print(vars)
     if list.is_list(var_type) then
       local list_value = list.extract(vars)
       local pretty_list = table.concat(list_value, ", ")
@@ -75,13 +76,13 @@ local function pretty_print_var_ref(var_ref, var_type, cb)
     elseif dict.is_dictionary(var_type) then
       local dict_value = dict.extract(vars)
       cb(vim.inspect(dict_value, { newline = "" }))
-    elseif class.is_class_like(vars) then
-      local class_table = class.extract(vars)
-      cb(vim.inspect(class_table, { newline = "" }))
+    elseif record.is_record(vars) then
+      local record_table = record.extract(vars)
+      cb(vim.inspect(record_table, { newline = "" }))
     else
       -- Default: treat as flat array/list
       vim.print("DEFAULT")
-      local pretty = table.concat(vim.tbl_map(function(c) return c.value end, vars), ", ")
+      local pretty = table.concat(vim.tbl_map(function(c) return string.format("%s: %s", c.name, c.value) end, vars), ", ")
       cb(pretty)
     end
   end)
