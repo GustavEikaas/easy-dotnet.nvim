@@ -1,4 +1,5 @@
 local tuple = require("easy-dotnet.netcoredbg.tuple")
+local list = require("easy-dotnet.netcoredbg.list")
 local dict = require("easy-dotnet.netcoredbg.dictionaries")
 
 local M = {
@@ -31,7 +32,7 @@ local anon_like = {
   "<>f__AnonymousType0<string, int>",
 }
 
-local function fetch_variables(variables_reference, depth, callback)
+function M.fetch_variables(variables_reference, depth, callback)
   local dap = require("dap")
   local session = dap.session()
   if not session then
@@ -63,7 +64,7 @@ local function fetch_variables(variables_reference, depth, callback)
       }
 
       if var.variablesReference ~= 0 and depth > 0 then
-        fetch_variables(var.variablesReference, depth - 1, function(child_vars)
+        M.fetch_variables(var.variablesReference, depth - 1, function(child_vars)
           entry.children = child_vars
           pending = pending - 1
           if pending == 0 then
@@ -83,37 +84,11 @@ local function fetch_variables(variables_reference, depth, callback)
 end
 
 local function pretty_print_var_ref(var_ref, var_type, cb)
-  fetch_variables(var_ref, 2, function(vars)
-    -- vars is list of child variables of the evaluated variable
-
-    -- Detect if it's a List<string> backing object:
-    -- Try to find the backing array field (_items or Items)
-    local backing_array_var = nil
-    local size = nil
-    for _, v in ipairs(vars) do
-      if size and backing_array_var then break end
-
-      if v.name == "_items" or v.name == "Items" or v.name == "_array" then
-        backing_array_var = v
-      elseif v.name == "_size" then
-        size = tonumber(v.value)
-      end
-    end
-
-    if backing_array_var and backing_array_var.variablesReference and backing_array_var.variablesReference ~= 0 then
-      fetch_variables(backing_array_var.variablesReference, 1, function(array_elements)
-        local effective_elements = array_elements
-        if size and size > 0 and size <= #array_elements then
-          effective_elements = {}
-          for i = 1, size do
-            table.insert(effective_elements, array_elements[i])
-          end
-        end
-
-        local pretty = table.concat(vim.tbl_map(function(c) return c.value end, effective_elements), ", ")
-        cb(pretty)
-      end)
-    -- Handle AnonymousType0<string, any> as key-value structure
+  M.fetch_variables(var_ref, 2, function(vars)
+    if list.is_list(var_type) then
+      local list_value = list.extract(vars)
+      local pretty = table.concat(list_value, ", ")
+      cb(pretty)
     elseif vim.tbl_contains(anon_like, var_type) then
       local entries = vim.tbl_map(function(v) return string.format("%s: %s", v.name, v.value) end, vars)
       cb(table.concat(entries, ", "))
@@ -125,6 +100,7 @@ local function pretty_print_var_ref(var_ref, var_type, cb)
       cb(vim.inspect(dict_value, { newline = "" }))
     else
       -- Default: treat as flat array/list
+      vim.print("DEFAULT")
       local pretty = table.concat(vim.tbl_map(function(c) return c.value end, vars), ", ")
       cb(pretty)
     end
@@ -155,13 +131,8 @@ function M.resolve(id, var_name, var_type, cb)
   if cache[var_name] and cache[var_name] ~= "pending" then return cache[var_name] end
 
   if
-    (
-      tuple.is_tuple(var_type)
-      or dict.is_dictionary(var_type)
-      or vim.tbl_contains(anon_like, var_type)
-      or vim.tbl_contains(list_primitives, var_type)
-      or vim.tbl_contains(arr_primitives, var_type)
-    ) and cache[var_name] ~= "pending"
+    (tuple.is_tuple(var_type) or dict.is_dictionary(var_type) or vim.tbl_contains(anon_like, var_type) or vim.tbl_contains(list_primitives, var_type) or vim.tbl_contains(arr_primitives, var_type))
+    and cache[var_name] ~= "pending"
   then
     cache[var_name] = "pending"
     dap.session():request("evaluate", { expression = var_name, context = "hover" }, function(err, response)

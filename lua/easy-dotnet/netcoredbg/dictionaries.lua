@@ -1,9 +1,9 @@
 local M = {}
 
-function M.is_dictionary(className)
-  className = vim.trim(className)
-  if type(className) ~= "string" then return false end
-  return className:match("^System%.Collections%.Generic%.Dictionary") ~= nil
+function M.is_dictionary(class_name)
+  class_name = vim.trim(class_name)
+  if type(class_name) ~= "string" then return false end
+  return class_name:match("^System%.Collections%.Generic%.Dictionary") ~= nil
 end
 
 ---Extracts key-value pairs from a C# Dictionary
