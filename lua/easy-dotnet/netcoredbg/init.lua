@@ -162,7 +162,11 @@ function M.resolve(id, var_name, var_type, cb)
 
   if cache[var_name] ~= "pending" then
     cache[var_name] = "pending"
-    dap.session():request("evaluate", { expression = var_name, context = "hover" }, function(err, response)
+
+    local eval_expr = var_name
+    if var_type and var_type:match("^System%.Linq%.Enumerable%.") then eval_expr = "(" .. var_name .. ").ToArray()" end
+
+    dap.session():request("evaluate", { expression = eval_expr, context = "hover" }, function(err, response)
       if err or not response or not response.variablesReference then
         cache[var_name] = nil
         vim.schedule(function() vim.notify("No variable reference found for: " .. var_name) end)
