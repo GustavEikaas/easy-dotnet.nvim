@@ -2,6 +2,7 @@ local tuple = require("easy-dotnet.netcoredbg.tuple")
 local list = require("easy-dotnet.netcoredbg.list")
 local dict = require("easy-dotnet.netcoredbg.dictionaries")
 local anon = require("easy-dotnet.netcoredbg.anon")
+local class = require("easy-dotnet.netcoredbg.class")
 
 local M = {
   ---@type table<number, table<string, string | "pending">>
@@ -74,6 +75,9 @@ local function pretty_print_var_ref(var_ref, var_type, cb)
     elseif dict.is_dictionary(var_type) then
       local dict_value = dict.extract(vars)
       cb(vim.inspect(dict_value, { newline = "" }))
+    elseif class.is_class_like(vars) then
+      local class_table = class.extract(vars)
+      cb(vim.inspect(class_table, { newline = "" }))
     else
       -- Default: treat as flat array/list
       vim.print("DEFAULT")
