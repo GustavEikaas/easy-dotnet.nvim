@@ -60,6 +60,7 @@ end
 ---@field mtp_discover fun(self: DotnetClient, request: MtpDiscoverRequest, cb?: fun(res: RPC_Response)) # Request test discovery for MTP
 ---@field outdated_packages fun(self: DotnetClient, target_path: string, cb?: fun(res: OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
 ---@field roslyn_bootstrap_file fun(self: DotnetClient, file_path: string, type: "Class" | "Interface" | "Record", prefer_file_scoped: boolean, cb?: fun(success: true)): integer | false
+---@field roslyn_scope_variables fun(self: DotnetClient, file_path: string, fully_qualified_name: string, line: number, cb?: fun(success: true)): integer | false
 ---@field get_state fun(self: DotnetClient): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
 ---@field _initializing boolean? # True while initialization is in progress
 ---@field _initialized boolean? # True once initialization is complete
@@ -420,6 +421,15 @@ function M:roslyn_bootstrap_file(file_path, type, prefer_file_scoped, cb)
     local crash = handle_rpc_error(response)
     if crash then return end
     if cb then cb(response.result.success) end
+  end)
+  return id
+end
+
+function M:roslyn_scope_variables(file_path, fully_qualified_name, line, cb)
+  local id = self._client.request("roslyn/scope-variables", { sourceFilePath = file_path, fullyQualifiedMethod = fully_qualified_name, lineNumber = line }, function(response)
+    local crash = handle_rpc_error(response)
+    if crash then return end
+    if cb then cb(response.result) end
   end)
   return id
 end

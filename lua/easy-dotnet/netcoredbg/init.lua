@@ -4,9 +4,24 @@ local dict = require("easy-dotnet.netcoredbg.dictionaries")
 local anon = require("easy-dotnet.netcoredbg.anon")
 local record = require("easy-dotnet.netcoredbg.record")
 
+---@class Variable
+---@field name string The variable's name.
+---@field value string A one-line or multi-line string representing the variable.
+---@field type? string The type of the variable, shown in the UI on hover.
+---@field variablesReference integer Reference ID for child variables (0 = none).
+
+---@class ResolvedVariable
+---@field formatted_value string
+---@field value table | string
+---@field type string
+---@field vars Variable[]
+---@field variablesReference integer
+
 local M = {
-  ---@type table<number, table<string, string | "pending">>
-  pretty_cache = {},
+  ---@type table<integer, table<string, ResolvedVariable | "pending">>
+  variable_cache = {},
+  ---@type table<integer, table<string, (fun(value: ResolvedVariable))[]>>
+  pending_callbacks = {},
 }
 
 local function fetch_variables(variables_reference, depth, callback)
@@ -60,6 +75,15 @@ local function fetch_variables(variables_reference, depth, callback)
   end)
 end
 
+---@param val NavigationProperty | string
+local function is_nav_property(val) return type(val) ~= "string" and val.variablesReference ~= nil end
+
+---@class NavigationProperty
+---@field name string
+---@field type string
+---@field value string
+---@field variablesReference integer
+
 ---Converts a list of DAP variables into a Lua table.
 ---Numeric-looking keys like [0], [1] go into array part.
 ---Named keys go into map part.
@@ -72,9 +96,17 @@ local function vars_to_table(vars)
   for _, c in ipairs(vars) do
     local index = c.name:match("^%[(%d+)%]$")
     if index then
-      table.insert(result, c.value)
+      if c.variablesReference == 0 then
+        table.insert(result, c.value)
+      else
+        table.insert(result, c)
+      end
     else
-      result[c.name] = c.value
+      if c.variablesReference == 0 then
+        result[c.name] = c.value
+      else
+        result[c.name] = c
+      end
     end
   end
 
@@ -102,88 +134,141 @@ function M.extract(vars, var_type)
   end
 end
 
-local function pretty_print_var_ref(var_ref, var_type, cb)
-  fetch_variables(var_ref, 2, function(vars)
-    if list.is_list(var_type) then
-      local list_value = list.extract(vars)
-      cb(vim.inspect(list_value, { newline = "", indent = " " }))
-    elseif anon.is_anon(var_type) then
-      local anon_table = anon.extract(vars)
-      cb(vim.inspect(anon_table, { newline = "" }))
-    elseif tuple.is_tuple(var_type) then
-      local tuple_value = tuple.extract(vars)
-      cb("(" .. table.concat(tuple_value, ", ") .. ")")
-    elseif dict.is_dictionary(var_type) then
-      local dict_value = dict.extract(vars)
-      cb(vim.inspect(dict_value, { newline = "" }))
-    elseif record.is_record(vars) then
-      local record_table = record.extract(vars)
-      cb(vim.inspect(record_table, { newline = "" }))
-    else
-      -- Default: treat as flat array/list
-      vim.print("DEFAULT")
-      local pretty = table.concat(
-        vim.tbl_map(function(c)
-          if c.name:match("^%[%d+%]$") then
-            return c.value
-          else
-            return string.format("%s: %s", c.name, c.value)
-          end
-        end, vars),
-        ", "
-      )
-      cb(pretty)
+---@param val ResolvedVariable
+local function pretty_print_var_ref(val)
+  if list.is_list(val.type) then
+    local list_value = list.extract(val.vars)
+    return vim.inspect(list_value, { newline = "", indent = " " })
+  elseif anon.is_anon(val.type) then
+    local anon_table = anon.extract(val.vars)
+    return vim.inspect(anon_table, { newline = "" })
+  elseif tuple.is_tuple(val.type) then
+    local tuple_value = tuple.extract(val.vars)
+    return ("(" .. table.concat(tuple_value, ", ") .. ")")
+  elseif dict.is_dictionary(val.type) then
+    local dict_value = dict.extract(val.vars)
+    return (vim.inspect(dict_value, { newline = "" }))
+  elseif record.is_record(val.vars) then
+    local record_table = record.extract(val.vars)
+    return (vim.inspect(record_table, { newline = "" }))
+  else
+    -- Default: treat as flat array/list
+    vim.print("DEFAULT")
+    local pretty = table.concat(
+      vim.tbl_map(function(c)
+        if c.name:match("^%[%d+%]$") then
+          return c.value
+        else
+          return string.format("%s: %s", c.name, c.value)
+        end
+      end, val.vars),
+      ", "
+    )
+    return pretty
+  end
+end
+
+---@param stack_frame_id integer
+---@param vars_reference integer
+---@param var_type string
+---@param cb fun(value: ResolvedVariable): nil
+---@return false | nil
+function M.resolve_by_vars_reference(stack_frame_id, vars_reference, var_type, cb)
+  M.variable_cache[stack_frame_id] = M.variable_cache[stack_frame_id] or {}
+  M.pending_callbacks[stack_frame_id] = M.pending_callbacks[stack_frame_id] or {}
+  local cache = M.variable_cache[stack_frame_id]
+  local callback_queue = M.pending_callbacks[stack_frame_id]
+  callback_queue[vars_reference] = callback_queue[vars_reference] or {}
+
+  if cache[vars_reference] and cache[vars_reference] ~= "pending" then return cb(cache[vars_reference]) end
+
+  if cache[vars_reference] == "pending" then
+    table.insert(callback_queue[vars_reference], cb)
+    return
+  end
+
+  cache[vars_reference] = "pending"
+  callback_queue[vars_reference] = { cb }
+
+  ---@param children table<Variable>
+  fetch_variables(vars_reference, 0, function(children)
+    local lua_type = M.extract(children, var_type)
+
+    ---@type ResolvedVariable
+    local value = {
+      formatted_value = "",
+      vars = children,
+      type = var_type,
+      value = lua_type,
+      variablesReference = vars_reference,
+    }
+    value.formatted_value = pretty_print_var_ref(value)
+    cache[vars_reference] = value
+
+    for _, f in ipairs(callback_queue[vars_reference]) do
+      f(value)
     end
+    callback_queue[vars_reference] = nil
   end)
 end
 
---- Resolves and pretty-prints a debugger variable by name and type.
----
---- If the result has already been cached (per `id`), it is returned immediately.
---- Otherwise, it will evaluate the variable using the DAP session and invoke the callback (if provided).
----
---- @param id number The stack frame `id` used to scope the cache.
---- @param var_name string The evaluated name passed to the debugger.
----                        Typically set via `variable.evaluateName` or `variable.name`.
---- @param var_type string The variable type, e.g., `"System.Collections.Generic.List<string>"`.
---- @param cb fun(result: string|false)? Optional callback function to receive the result.
----                                      - If successful: receives a formatted string.
----                                      - If failed/unhandled: receives `false`.
---- @return string|false|nil If cached, returns the cached result immediately (string or false).
----                          If not cached and a callback is used, returns nil and calls the callback asynchronously.
-function M.resolve(id, var_name, var_type, cb)
+---@param stack_frame_id integer
+---@param var_name string
+---@param cb fun(value: ResolvedVariable): nil
+---@return false | nil
+function M.resolve_by_var_name(stack_frame_id, var_name, cb)
   local dap = require("dap")
 
-  M.pretty_cache[id] = M.pretty_cache[id] or {}
+  M.variable_cache[stack_frame_id] = M.variable_cache[stack_frame_id] or {}
+  M.pending_callbacks[stack_frame_id] = M.pending_callbacks[stack_frame_id] or {}
+  local cache = M.variable_cache[stack_frame_id]
+  local callback_queue = M.pending_callbacks[stack_frame_id]
+  callback_queue[var_name] = callback_queue[var_name] or {}
 
-  local cache = M.pretty_cache[id]
+  if cache[var_name] and cache[var_name] ~= "pending" then return cb(cache[var_name]) end
 
-  if cache[var_name] and cache[var_name] ~= "pending" then return cache[var_name] end
-
-  if cache[var_name] ~= "pending" then
-    cache[var_name] = "pending"
-
-    local eval_expr = var_name
-    if var_type and var_type:match("^System%.Linq%.Enumerable%.") then eval_expr = "(" .. var_name .. ").ToArray()" end
-
-    dap.session():request("evaluate", { expression = eval_expr, context = "hover" }, function(err, response)
-      if err or not response or not response.variablesReference then
-        cache[var_name] = nil
-        vim.schedule(function() vim.notify("No variable reference found for: " .. var_name) end)
-        if cb then cb(false) end
-        return
-      end
-
-      pretty_print_var_ref(response.variablesReference, var_type, function(pretty_str)
-        cache[var_name] = pretty_str
-        if cb then return cb(pretty_str) end
-      end)
-    end)
-  else
-    return false
+  if cache[var_name] == "pending" then
+    table.insert(callback_queue[var_name], cb)
+    return
   end
 
-  return "pending"
+  cache[var_name] = "pending"
+  callback_queue[var_name] = { cb }
+
+  local eval_expr = var_name
+  --TODO: implement another way
+  -- if var_type and var_type:match("^System%.Linq%.Enumerable%.") then eval_expr = "(" .. var_name .. ").ToArray()" end
+
+  dap.session():request("evaluate", { expression = eval_expr, context = "hover" }, function(err, response)
+    if err or not response or not response.variablesReference then
+      cache[var_name] = nil
+      callback_queue[var_name] = nil
+      error("No variable reference found for: " .. var_name)
+    end
+
+    ---@param children table<Variable>
+    fetch_variables(response.variablesReference, 0, function(children)
+      local lua_type = M.extract(children, response.type)
+
+      ---@type ResolvedVariable
+      local value = {
+        formatted_value = "",
+        vars = children,
+        type = response.type,
+        value = lua_type,
+        variablesReference = response.variablesReference,
+      }
+      value.formatted_value = pretty_print_var_ref(value)
+      cache[var_name] = value
+
+      for _, f in ipairs(callback_queue[var_name]) do
+        f(value)
+      end
+      callback_queue[var_name] = nil
+    end)
+  end)
 end
+
+M.register_listener = require("easy-dotnet.netcoredbg.dap-listener").register_listener
 
 return M
