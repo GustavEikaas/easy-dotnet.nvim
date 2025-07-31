@@ -11,21 +11,25 @@ local state = {
 }
 
 -- Recursively flatten variable tree into display lines
-local function build_lines(vars, indent)
+local function build_lines(vars, indent, line_counter)
   indent = indent or ""
+  line_counter = line_counter or { count = 0 }
   local lines = {}
+
   for _, var in ipairs(vars) do
     local prefix = var.variablesReference and var.variablesReference > 0 and (var.expanded and "▼ " or "▶ ") or "• "
     local label = indent .. prefix .. var.name .. ": " .. (var.loading and "Loading..." or var.value or "")
-    local line_index = #lines + 1
+
+    line_counter.count = line_counter.count + 1
     table.insert(lines, label)
-    state.line_to_var[#state.lines + line_index] = var
+    state.line_to_var[line_counter.count] = var
 
     if var.expanded and var.children then
-      local sub = build_lines(var.children, indent .. "  ")
+      local sub = build_lines(var.children, indent .. "  ", line_counter)
       vim.list_extend(lines, sub)
     end
   end
+
   return lines
 end
 
@@ -44,6 +48,7 @@ function M.toggle_under_cursor(window)
   local cursor = vim.api.nvim_win_get_cursor(window.win)
   local line = cursor[1]
   local var = state.line_to_var[line]
+
   if not var or not var.variablesReference or var.variablesReference == 0 then return end
 
   -- Collapse
@@ -68,17 +73,15 @@ function M.toggle_under_cursor(window)
   netcoredbg.resolve_by_vars_reference(state.current_frame_id, var.variablesReference, var.type, function(children)
     vim.print(children)
     vim.schedule(function()
-      var.children = vim.tbl_map(
-        function(child)
-          return {
-            name = child.name,
-            value = child.value,
-            variablesReference = child.variablesReference,
-            type = child.type,
-          }
-        end,
-        children.vars
-      )
+      var.children = vim.tbl_map(function(child)
+        return {
+          name = child.name,
+          value = child.value,
+          variablesReference = child.variablesReference,
+          type = child.type,
+          expanded = false, -- Initialize expanded state
+        }
+      end, children.vars)
       var.loading = false
       redraw(window)
     end)
@@ -103,10 +106,11 @@ function M.show(varlist, frame_id)
     varlist
   )
 
-  local lines = build_lines(state.root_vars)
-  state.lines = lines
+  -- Build initial lines and populate line_to_var mapping
+  state.line_to_var = {}
+  state.lines = build_lines(state.root_vars)
 
-  local float = Window.new_float():pos_center():write_buf(lines):create()
+  local float = Window.new_float():pos_center():write_buf(state.lines):create()
   M._current_window = float
 
   vim.keymap.set("n", "<CR>", function() M.toggle_under_cursor(float) end, { buffer = float.buf, noremap = true, silent = true })

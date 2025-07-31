@@ -39,7 +39,10 @@ function M.register_listener()
       local current_line = vim.api.nvim_win_get_cursor(0)[1]
       for key, value in pairs(cache) do
         if value.roslyn.lineStart == current_line and curr_frame ~= nil then
-          require("easy-dotnet.netcoredbg").resolve_by_var_name(curr_frame.id, key, function(res) require("easy-dotnet.netcoredbg.debugger-float").show(res.vars, curr_frame.id) end)
+          require("easy-dotnet.netcoredbg").resolve_by_var_name(curr_frame.id, key, function(res)
+            vim.print(res)
+            require("easy-dotnet.netcoredbg.debugger-float").show(res.vars, curr_frame.id)
+          end)
         end
       end
     end, { silent = true, buffer = bufnr })
