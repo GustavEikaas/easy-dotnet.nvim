@@ -5,13 +5,32 @@ local ns = require("easy-dotnet.constants").ns_id
 
 local function redraw(cache, bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+
+  local sorted = {}
   for _, value in pairs(cache) do
-    if value.roslyn and value.netcoredbg then
-      vim.api.nvim_buf_set_extmark(bufnr, ns, value.roslyn.lineStart - 1, 0, {
-        virt_text = { { " " .. (value.resolved and value.resolved.pretty or value.netcoredbg.value .. " (loading)"), "Question" } },
-        virt_text_pos = "eol",
-      })
+    if value.roslyn and value.netcoredbg then table.insert(sorted, value) end
+  end
+
+  table.sort(sorted, function(a, b)
+    if a.roslyn.lineStart == b.roslyn.lineStart then
+      return a.roslyn.columnStart < b.roslyn.columnStart
+    else
+      return a.roslyn.lineStart < b.roslyn.lineStart
     end
+  end)
+
+  local grouped = {}
+  for _, val in ipairs(sorted) do
+    local line = val.roslyn.lineStart
+    grouped[line] = grouped[line] or {}
+    table.insert(grouped[line], " " .. (val.resolved and val.resolved.pretty or val.netcoredbg.value .. " (loading)"))
+  end
+
+  for line, texts in pairs(grouped) do
+    vim.api.nvim_buf_set_extmark(bufnr, ns, line - 1, 0, {
+      virt_text = { { table.concat(texts, "  "), "Question" } },
+      virt_text_pos = "eol",
+    })
   end
 end
 
@@ -80,10 +99,16 @@ function M.register_listener()
 
       vim.keymap.set("n", "T", function()
         local current_line = vim.api.nvim_win_get_cursor(0)[1]
+        local matches = {}
         for key, value in pairs(cache) do
-          if value.roslyn and value.roslyn.lineStart == current_line and curr_frame ~= nil then
-            require("easy-dotnet.netcoredbg").resolve_by_var_name(curr_frame.id, key, function(res) require("easy-dotnet.netcoredbg.debugger-float").show(res.value, curr_frame.id) end)
-          end
+          if value.roslyn and value.roslyn.lineStart == current_line and curr_frame ~= nil then table.insert(matches, { display = key, value = value }) end
+        end
+        if #matches == 0 then
+          return
+        else
+          require("easy-dotnet.picker").picker(nil, matches, function(val)
+            require("easy-dotnet.netcoredbg").resolve_by_var_name(curr_frame.id, val.display, function(res) require("easy-dotnet.netcoredbg.debugger-float").show(res.value, curr_frame.id) end)
+          end, "Pick variable", true, true)
         end
       end, { silent = true, buffer = bufnr })
 
