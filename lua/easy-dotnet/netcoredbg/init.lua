@@ -156,9 +156,10 @@ local function pretty_print_var_ref(val, cb)
   elseif record.is_record(val.vars) then
     local record_table = record.extract(val.vars)
     cb(vim.inspect(record_table, { newline = "" }))
+  elseif val.value.HasBeenThrown == "true" then
+    cb("󱐋 " .. val.value.Message)
   else
     -- Default: treat as flat array/list
-    vim.print("DEFAULT")
     local pretty = table.concat(
       vim.tbl_map(function(c)
         if c.name:match("^%[%d+%]$") then

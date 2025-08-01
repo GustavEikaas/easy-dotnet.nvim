@@ -53,21 +53,18 @@ function M.toggle_under_cursor(window)
 
   if not var or not var.variablesReference or var.variablesReference == 0 then return end
 
-  -- Collapse
   if var.expanded then
     var.expanded = false
     redraw(window)
     return
   end
 
-  -- Already loaded → expand
   if var.children then
     var.expanded = true
     redraw(window)
     return
   end
 
-  -- Async load and expand
   var.loading = true
   var.expanded = true
   redraw(window)
@@ -75,8 +72,6 @@ function M.toggle_under_cursor(window)
   netcoredbg.resolve_by_vars_reference(state.current_frame_id, var.variablesReference, var.type, function(children)
     netcoredbg.extract(children.vars, children.type, function(converted_value)
       if is_list(converted_value) then
-        --key pair value
-
         var.children = vim.tbl_map(
           function(r)
             return {
@@ -101,8 +96,6 @@ function M.toggle_under_cursor(window)
           })
         end
         var.children = root_vars
-
-        --key pair value
       end
 
       var.loading = false
