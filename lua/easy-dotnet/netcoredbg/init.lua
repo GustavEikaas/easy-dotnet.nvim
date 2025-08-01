@@ -1,4 +1,5 @@
 local tuple = require("easy-dotnet.netcoredbg.value_converters.tuple")
+local queue = require("easy-dotnet.netcoredbg.value_converters.queue")
 local list = require("easy-dotnet.netcoredbg.value_converters.list")
 local dict = require("easy-dotnet.netcoredbg.value_converters.dictionaries")
 local concurrent_dict = require("easy-dotnet.netcoredbg.value_converters.concurrent_dictionary")
@@ -114,6 +115,8 @@ function M.extract(vars, var_type, cb)
     return dict_value
   elseif concurrent_dict.is_concurrent_dictionary(var_type) then
     concurrent_dict.extract(vars, cb)
+  elseif queue.is_queue(var_type) then
+    queue.extract(vars, cb)
   else
     return vars_to_table(vars, cb)
   end
@@ -173,6 +176,8 @@ local function pretty_print_var_ref(val, cb)
     dict.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif concurrent_dict.is_concurrent_dictionary(val.type) then
     concurrent_dict.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
+  elseif queue.is_queue(val.type) then
+    queue.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif val.value.HasBeenThrown == "true" then
     cb("󱐋 " .. val.value.Message)
   else
