@@ -1,8 +1,6 @@
 local tuple = require("easy-dotnet.netcoredbg.value_converters.tuple")
 local list = require("easy-dotnet.netcoredbg.value_converters.list")
 local dict = require("easy-dotnet.netcoredbg.value_converters.dictionaries")
-local anon = require("easy-dotnet.netcoredbg.value_converters.anon")
-local record = require("easy-dotnet.netcoredbg.value_converters.record")
 
 ---@class Variable
 ---@field name string The variable's name.
@@ -107,52 +105,73 @@ function M.extract(vars, var_type, cb)
   if list.is_list(var_type) then
     local list_value = list.extract(vars, cb)
     return list_value
-  elseif anon.is_anon(var_type) then
-    local anon_table = anon.extract(vars, cb)
-    return anon_table
   elseif tuple.is_tuple(var_type) then
-    local tuple_value = tuple.extract(vars)
+    local tuple_value = tuple.extract(vars, cb)
     return tuple_value
   elseif dict.is_dictionary(var_type) then
     local dict_value = dict.extract(vars, cb)
     return dict_value
-  elseif record.is_record(vars) then
-    local record_table = record.extract(vars)
-    return record_table
   else
     return vars_to_table(vars, cb)
   end
+end
+
+local banned_fields = {
+  "EqualityContract",
+}
+
+local function format_catchall(val, cb)
+  local max_items = 5
+  local max_chars = 60
+
+  local vars = val.vars or {}
+
+  -- Partition into list vs record entries
+  local list_items = vim.iter(vars):filter(function(c) return c.name:match("^%[%d+%]$") end):map(function(c) return tostring(c.value):gsub("\n", ""):gsub("%s+", " ") end):totable()
+
+  local is_list = #list_items > 0
+
+  local preview, count
+
+  if is_list then
+    count = #list_items
+    preview = vim.iter(list_items):take(max_items):totable()
+  else
+    local kv_items = vim
+      .iter(vars)
+      :filter(function(c) return not c.name:match("^%[%d+%]$") and not vim.list_contains(banned_fields, c.name) end)
+      :map(function(c) return string.format("%s: %s", c.name, tostring(c.value):gsub("\n", ""):gsub("%s+", " ")) end)
+      :totable()
+    count = #kv_items
+    preview = vim.iter(kv_items):take(max_items):totable()
+  end
+
+  -- Join and format
+  local joined = table.concat(preview, ", ")
+  local too_long = count > max_items or #joined > max_chars
+
+  local formatted
+  if is_list then
+    formatted = string.format("[%d] - [%s%s]", count, joined, too_long and ", ..." or "")
+  else
+    formatted = string.format("{%s%s}", joined, too_long and ", ..." or "")
+  end
+
+  cb(formatted)
 end
 
 ---@param val ResolvedVariable
 local function pretty_print_var_ref(val, cb)
   if list.is_list(val.type) then
     list.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
-  elseif anon.is_anon(val.type) then
-    anon.extract(val.vars, function(anon_table) cb(vim.inspect(anon_table, { newline = "" })) end)
   elseif tuple.is_tuple(val.type) then
-    local tuple_value = tuple.extract(val.vars)
-    cb("(" .. table.concat(tuple_value, ", ") .. ")")
+    tuple.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif dict.is_dictionary(val.type) then
     dict.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
-  elseif record.is_record(val.vars) then
-    local record_table = record.extract(val.vars)
-    cb(vim.inspect(record_table, { newline = "" }))
   elseif val.value.HasBeenThrown == "true" then
     cb("󱐋 " .. val.value.Message)
   else
-    -- Default: treat as flat array/list
-    local pretty = table.concat(
-      vim.tbl_map(function(c)
-        if c.name:match("^%[%d+%]$") then
-          return c.value
-        else
-          return string.format("%s: %s", c.name, c.value)
-        end
-      end, val.vars),
-      ", "
-    )
-    cb(pretty)
+    format_catchall(val, function(p) cb(p) end)
   end
 end
 
