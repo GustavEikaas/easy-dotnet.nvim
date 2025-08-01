@@ -2,6 +2,7 @@ local M = {}
 
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local ns = require("easy-dotnet.constants").ns_id
+local hi = require("easy-dotnet.constants").highlights.EasyDotnetDebuggerFloatVariable
 
 local function redraw(cache, bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
@@ -28,7 +29,7 @@ local function redraw(cache, bufnr)
 
   for line, texts in pairs(grouped) do
     vim.api.nvim_buf_set_extmark(bufnr, ns, line - 1, 0, {
-      virt_text = { { table.concat(texts, "  "), "Question" } },
+      virt_text = { { table.concat(texts, "  "), hi } },
       virt_text_pos = "eol",
     })
   end
