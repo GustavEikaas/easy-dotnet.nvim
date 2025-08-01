@@ -26,29 +26,24 @@ local function append_redraw(virt, payload, type, bufnr, identifier)
 end
 
 local function open_or_switch_to_file(filepath)
-  -- Normalize path
   local normalized_path = vim.fn.fnamemodify(filepath, ":p")
 
-  -- Check if buffer is already loaded
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_loaded(bufnr) then
       local buf_path = vim.api.nvim_buf_get_name(bufnr)
       if vim.fn.fnamemodify(buf_path, ":p") == normalized_path then
-        -- Switch to the buffer's window if it's visible
         for _, win in ipairs(vim.api.nvim_list_wins()) do
           if vim.api.nvim_win_get_buf(win) == bufnr then
             vim.api.nvim_set_current_win(win)
             return bufnr
           end
         end
-        -- Otherwise just switch to the buffer
         vim.api.nvim_set_current_buf(bufnr)
         return bufnr
       end
     end
   end
 
-  -- Buffer not found, open file
   vim.cmd("edit " .. vim.fn.fnameescape(filepath))
   return vim.api.nvim_get_current_buf()
 end
@@ -84,7 +79,6 @@ function M.register_listener()
       local cache = {}
 
       vim.keymap.set("n", "T", function()
-        --TODO: clear on dap exit
         local current_line = vim.api.nvim_win_get_cursor(0)[1]
         for key, value in pairs(cache) do
           if value.roslyn and value.roslyn.lineStart == current_line and curr_frame ~= nil then
