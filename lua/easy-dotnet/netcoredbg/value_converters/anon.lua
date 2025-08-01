@@ -6,14 +6,14 @@ function M.is_anon(class_name)
   return class_name:match("^<>f__AnonymousType0") ~= nil
 end
 
-M.extract = function(vars)
+M.extract = function(vars, cb)
   local result = {}
 
   for _, entry in ipairs(vars) do
     result[entry.name] = entry.value
   end
 
-  return result
+  cb(result)
 end
 
 return M

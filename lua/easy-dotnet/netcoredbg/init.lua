@@ -1,14 +1,15 @@
-local tuple = require("easy-dotnet.netcoredbg.tuple")
-local list = require("easy-dotnet.netcoredbg.list")
-local dict = require("easy-dotnet.netcoredbg.dictionaries")
-local anon = require("easy-dotnet.netcoredbg.anon")
-local record = require("easy-dotnet.netcoredbg.record")
+local tuple = require("easy-dotnet.netcoredbg.value_converters.tuple")
+local list = require("easy-dotnet.netcoredbg.value_converters.list")
+local dict = require("easy-dotnet.netcoredbg.value_converters.dictionaries")
+local anon = require("easy-dotnet.netcoredbg.value_converters.anon")
+local record = require("easy-dotnet.netcoredbg.value_converters.record")
 
 ---@class Variable
 ---@field name string The variable's name.
 ---@field value string A one-line or multi-line string representing the variable.
 ---@field type? string The type of the variable, shown in the UI on hover.
 ---@field variablesReference integer Reference ID for child variables (0 = none).
+---@field children? table<Variable>
 
 ---@class ResolvedVariable
 ---@field formatted_value string
@@ -24,7 +25,7 @@ local M = {
   pending_callbacks = {},
 }
 
-local function fetch_variables(variables_reference, depth, callback)
+function M.fetch_variables(variables_reference, depth, callback)
   local dap = require("dap")
   local session = dap.session()
   if not session then
@@ -56,7 +57,7 @@ local function fetch_variables(variables_reference, depth, callback)
       }
 
       if var.variablesReference ~= 0 and depth > 0 then
-        fetch_variables(var.variablesReference, depth - 1, function(child_vars)
+        M.fetch_variables(var.variablesReference, depth - 1, function(child_vars)
           entry.children = child_vars
           pending = pending - 1
           if pending == 0 then
@@ -90,7 +91,7 @@ local function is_nav_property(val) return type(val) ~= "string" and val.variabl
 ---
 ---@param vars table[] # List of DAP variable tables with .name and .value
 ---@return table # A Lua table with mixed array and map-style keys
-local function vars_to_table(vars)
+local function vars_to_table(vars, cb)
   local result = {}
 
   for _, c in ipairs(vars) do
@@ -109,48 +110,52 @@ local function vars_to_table(vars)
       end
     end
   end
-
-  return result
+  cb(result)
 end
 
-function M.extract(vars, var_type)
+function M.extract(vars, var_type, cb)
   if list.is_list(var_type) then
-    local list_value = list.extract(vars)
+    local list_value = list.extract(vars, cb)
     return list_value
   elseif anon.is_anon(var_type) then
-    local anon_table = anon.extract(vars)
+    local anon_table = anon.extract(vars, cb)
     return anon_table
   elseif tuple.is_tuple(var_type) then
     local tuple_value = tuple.extract(vars)
     return tuple_value
   elseif dict.is_dictionary(var_type) then
-    local dict_value = dict.extract(vars)
+    local dict_value = dict.extract(vars, cb)
     return dict_value
   elseif record.is_record(vars) then
     local record_table = record.extract(vars)
     return record_table
   else
-    return vars_to_table(vars)
+    return vars_to_table(vars, cb)
   end
 end
 
 ---@param val ResolvedVariable
-local function pretty_print_var_ref(val)
+local function pretty_print_var_ref(val, cb)
   if list.is_list(val.type) then
-    local list_value = list.extract(val.vars)
-    return vim.inspect(list_value, { newline = "", indent = " " })
+    list.extract(val.vars, function(c)
+      cb(vim.inspect(vim.tbl_map(function(r) return r.value end, c), { newline = "", indent = " " }))
+    end)
   elseif anon.is_anon(val.type) then
-    local anon_table = anon.extract(val.vars)
-    return vim.inspect(anon_table, { newline = "" })
+    anon.extract(val.vars, function(anon_table) cb(vim.inspect(anon_table, { newline = "" })) end)
   elseif tuple.is_tuple(val.type) then
     local tuple_value = tuple.extract(val.vars)
-    return ("(" .. table.concat(tuple_value, ", ") .. ")")
+    cb("(" .. table.concat(tuple_value, ", ") .. ")")
   elseif dict.is_dictionary(val.type) then
-    local dict_value = dict.extract(val.vars)
-    return (vim.inspect(dict_value, { newline = "" }))
+    dict.extract(val.vars, function(dict_value)
+      --TODO: format as pretty string
+      --type table<string,Variable>
+      --for key, value in pairs
+      --key and value.value
+      cb(vim.inspect(dict_value, { newline = "" }))
+    end)
   elseif record.is_record(val.vars) then
     local record_table = record.extract(val.vars)
-    return (vim.inspect(record_table, { newline = "" }))
+    cb(vim.inspect(record_table, { newline = "" }))
   else
     -- Default: treat as flat array/list
     vim.print("DEFAULT")
@@ -164,7 +169,7 @@ local function pretty_print_var_ref(val)
       end, val.vars),
       ", "
     )
-    return pretty
+    cb(pretty)
   end
 end
 
@@ -174,6 +179,9 @@ end
 ---@param cb fun(value: ResolvedVariable): nil
 ---@return false | nil
 function M.resolve_by_vars_reference(stack_frame_id, vars_reference, var_type, cb)
+  if stack_frame_id == nil then error("Stack frame id cannot be nil") end
+  if vars_reference == nil then error("vars ref  id cannot be nil") end
+
   M.variable_cache[stack_frame_id] = M.variable_cache[stack_frame_id] or {}
   M.pending_callbacks[stack_frame_id] = M.pending_callbacks[stack_frame_id] or {}
   local cache = M.variable_cache[stack_frame_id]
@@ -191,24 +199,26 @@ function M.resolve_by_vars_reference(stack_frame_id, vars_reference, var_type, c
   callback_queue[vars_reference] = { cb }
 
   ---@param children table<Variable>
-  fetch_variables(vars_reference, 0, function(children)
-    local lua_type = M.extract(children, var_type)
+  M.fetch_variables(vars_reference, 0, function(children)
+    M.extract(children, var_type, function(lua_type)
+      ---@type ResolvedVariable
+      local value = {
+        formatted_value = "",
+        vars = children,
+        type = var_type,
+        value = lua_type,
+        variablesReference = vars_reference,
+      }
+      pretty_print_var_ref(value, function(res)
+        value.formatted_value = res
+        cache[vars_reference] = value
 
-    ---@type ResolvedVariable
-    local value = {
-      formatted_value = "",
-      vars = children,
-      type = var_type,
-      value = lua_type,
-      variablesReference = vars_reference,
-    }
-    value.formatted_value = pretty_print_var_ref(value)
-    cache[vars_reference] = value
-
-    for _, f in ipairs(callback_queue[vars_reference]) do
-      f(value)
-    end
-    callback_queue[vars_reference] = nil
+        for _, f in ipairs(callback_queue[vars_reference]) do
+          f(value)
+        end
+        callback_queue[vars_reference] = nil
+      end)
+    end)
   end)
 end
 
@@ -247,28 +257,31 @@ function M.resolve_by_var_name(stack_frame_id, var_name, cb)
     end
 
     ---@param children table<Variable>
-    fetch_variables(response.variablesReference, 0, function(children)
-      local lua_type = M.extract(children, response.type)
+    M.fetch_variables(response.variablesReference, 0, function(children)
+      M.extract(children, response.type, function(lua_type)
+        ---@type ResolvedVariable
+        local value = {
+          formatted_value = "",
+          vars = children,
+          type = response.type,
+          value = lua_type,
+          variablesReference = response.variablesReference,
+        }
+        pretty_print_var_ref(value, function(res)
+          value.formatted_value = res
 
-      ---@type ResolvedVariable
-      local value = {
-        formatted_value = "",
-        vars = children,
-        type = response.type,
-        value = lua_type,
-        variablesReference = response.variablesReference,
-      }
-      value.formatted_value = pretty_print_var_ref(value)
-      cache[var_name] = value
+          cache[var_name] = value
 
-      for _, f in ipairs(callback_queue[var_name]) do
-        f(value)
-      end
-      callback_queue[var_name] = nil
+          for _, f in ipairs(callback_queue[var_name]) do
+            f(value)
+          end
+          callback_queue[var_name] = nil
+        end)
+      end)
     end)
   end)
 end
 
-M.register_listener = require("easy-dotnet.netcoredbg.dap-listener").register_listener
+M.register_dap_variables_viewer = require("easy-dotnet.netcoredbg.dap-listener").register_listener
 
 return M

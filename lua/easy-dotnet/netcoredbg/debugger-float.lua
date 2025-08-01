@@ -43,6 +43,8 @@ function M.redraw()
   if M._current_window then redraw(M._current_window) end
 end
 
+local function is_list(tbl) return type(tbl) == "table" and tbl[1] ~= nil end
+
 -- Expand/collapse variable at cursor
 function M.toggle_under_cursor(window)
   local cursor = vim.api.nvim_win_get_cursor(window.win)
@@ -71,17 +73,38 @@ function M.toggle_under_cursor(window)
   redraw(window)
 
   netcoredbg.resolve_by_vars_reference(state.current_frame_id, var.variablesReference, var.type, function(children)
-    vim.print(children)
-    vim.schedule(function()
-      var.children = vim.tbl_map(function(child)
-        return {
-          name = child.name,
-          value = child.value,
-          variablesReference = child.variablesReference,
-          type = child.type,
-          expanded = false, -- Initialize expanded state
-        }
-      end, children.vars)
+    netcoredbg.extract(children.vars, children.type, function(converted_value)
+      if is_list(converted_value) then
+        --key pair value
+
+        var.children = vim.tbl_map(
+          function(r)
+            return {
+              name = r.name,
+              type = r.type,
+              value = r.value,
+              variablesReference = r.variablesReference,
+              expanded = false,
+            }
+          end,
+          converted_value
+        )
+      else
+        local root_vars = {}
+        for key, value in pairs(converted_value) do
+          table.insert(root_vars, {
+            name = key,
+            value = value.value or value,
+            type = value.type,
+            variablesReference = value.variablesReference,
+            expanded = false,
+          })
+        end
+        var.children = root_vars
+
+        --key pair value
+      end
+
       var.loading = false
       redraw(window)
     end)
@@ -93,29 +116,25 @@ end
 ---@param frame_id number Frame ID to use for async resolution
 function M.show(varlist, frame_id)
   state.current_frame_id = frame_id
-  state.root_vars = vim.tbl_map(
-    function(v)
-      return {
-        name = v.name,
-        value = v.value,
-        variablesReference = v.variablesReference,
-        type = v.type,
-        expanded = false,
-      }
-    end,
-    varlist
-  )
 
-  -- Build initial lines and populate line_to_var mapping
-  state.line_to_var = {}
-  state.lines = build_lines(state.root_vars)
+  local root_vars = {}
+  for key, value in pairs(varlist) do
+    table.insert(root_vars, {
+      name = key,
+      value = value.value or value,
+      type = value.type,
+      variablesReference = value.variablesReference,
+      expanded = false,
+    })
+  end
 
-  local float = Window.new_float():pos_center():write_buf(state.lines):create()
+  state.root_vars = root_vars
+
+  local float = Window.new_float():pos_center():create()
   M._current_window = float
+  M.redraw()
 
   vim.keymap.set("n", "<CR>", function() M.toggle_under_cursor(float) end, { buffer = float.buf, noremap = true, silent = true })
-
-  vim.keymap.set("n", "q", function() float:close() end, { buffer = float.buf, noremap = true, silent = true })
 
   return float
 end

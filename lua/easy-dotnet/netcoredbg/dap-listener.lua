@@ -28,6 +28,7 @@ end
 function M.register_listener()
   local curr_frame = nil
   require("dap").listeners.after.event_stopped["easy-dotnet-scopes"] = function(session, body)
+    vim.print(body.reason)
     ---@diagnostic disable-next-line: undefined-field
     if session.adapter.command ~= "netcoredbg" then return end
 
@@ -38,10 +39,10 @@ function M.register_listener()
       --TODO: clear on dap exit
       local current_line = vim.api.nvim_win_get_cursor(0)[1]
       for key, value in pairs(cache) do
-        if value.roslyn.lineStart == current_line and curr_frame ~= nil then
+        if value.roslyn and value.roslyn.lineStart == current_line and curr_frame ~= nil then
           require("easy-dotnet.netcoredbg").resolve_by_var_name(curr_frame.id, key, function(res)
-            vim.print(res)
-            require("easy-dotnet.netcoredbg.debugger-float").show(res.vars, curr_frame.id)
+            vim.print(res.value)
+            require("easy-dotnet.netcoredbg.debugger-float").show(res.value, curr_frame.id)
           end)
         end
       end
@@ -77,6 +78,11 @@ function M.register_listener()
             if err3 then return end
             for _, value in ipairs(response3.variables) do
               append_redraw(cache, value, "netcoredbg", bufnr, value.evaluateName)
+              if value.evaluateName == "$exception" then
+                local current_line = vim.api.nvim_win_get_cursor(0)[1]
+                append_redraw(cache, { lineStart = current_line }, "roslyn", bufnr, value.evaluateName)
+                return
+              end
 
               require("easy-dotnet.netcoredbg").resolve_by_var_name(frame_id, value.evaluateName, function(res)
                 cache[value.evaluateName].resolved = { pretty = res.formatted_value }
