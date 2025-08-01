@@ -127,22 +127,14 @@ end
 ---@param val ResolvedVariable
 local function pretty_print_var_ref(val, cb)
   if list.is_list(val.type) then
-    list.extract(val.vars, function(c)
-      cb(vim.inspect(vim.tbl_map(function(r) return r.value end, c), { newline = "", indent = " " }))
-    end)
+    list.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif anon.is_anon(val.type) then
     anon.extract(val.vars, function(anon_table) cb(vim.inspect(anon_table, { newline = "" })) end)
   elseif tuple.is_tuple(val.type) then
     local tuple_value = tuple.extract(val.vars)
     cb("(" .. table.concat(tuple_value, ", ") .. ")")
   elseif dict.is_dictionary(val.type) then
-    dict.extract(val.vars, function(dict_value)
-      --TODO: format as pretty string
-      --type table<string,Variable>
-      --for key, value in pairs
-      --key and value.value
-      cb(vim.inspect(dict_value, { newline = "" }))
-    end)
+    dict.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif record.is_record(val.vars) then
     local record_table = record.extract(val.vars)
     cb(vim.inspect(record_table, { newline = "" }))

@@ -2,6 +2,28 @@ local M = {}
 
 local index_to_number = function(r) return tonumber(r:match("%[(%d+)%]")) or 0 end
 
+local function to_pretty_string(c)
+  local max_elements = 5
+  local max_chars = 50
+
+  local all_unresolved = vim.iter(c):all(function(r) return r.variablesReference ~= 0 end)
+
+  if all_unresolved and #c > 0 then return (string.format("[%d] - [%s...]", #c, c[1].value)) end
+
+  local values = {}
+  for i, r in ipairs(c) do
+    if i > max_elements then break end
+    local v = r.value
+    if r.variablesReference == 0 then v = vim.inspect(v):gsub("\n", ""):gsub("%s+", " ") end
+    table.insert(values, v)
+  end
+
+  local preview_str = "[" .. table.concat(values, ", ") .. "]"
+  if #c > max_elements or #preview_str > max_chars then preview_str = preview_str:gsub("]$", ", ...]") end
+
+  return (string.format("[%d] - %s", #values, preview_str))
+end
+
 ---Converts a List-like DAP variable into a Lua array.
 ---
 ---Used with NetCoreDbg DAP variables representing .NET collections like `List<T>`.
@@ -31,7 +53,6 @@ function M.extract(vars, cb)
     local added = 0
     ---@param r Variable[]
     require("easy-dotnet.netcoredbg").fetch_variables(var_ref, 1, function(r)
-      --Items in list is not sorted correctly
       table.sort(r, function(a, b)
         local a_index = index_to_number(a.name)
         local b_index = index_to_number(b.name)
@@ -44,7 +65,7 @@ function M.extract(vars, cb)
         added = added + 1
       end
 
-      cb(result)
+      cb(result, to_pretty_string(result))
     end)
   end
 end
