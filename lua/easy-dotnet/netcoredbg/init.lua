@@ -247,29 +247,54 @@ function M.resolve_by_var_name(stack_frame_id, var_name, cb)
       error("No variable reference found for: " .. var_name)
     end
 
-    ---@param children table<Variable>
-    M.fetch_variables(response.variablesReference, 0, function(children)
-      M.extract(children, response.type, function(lua_type)
-        ---@type ResolvedVariable
-        local value = {
-          formatted_value = "",
-          vars = children,
+    if response.variablesReference == 0 then
+      --TODO: its a primitive
+
+      ---@type ResolvedVariable
+      local value = {
+        formatted_value = response.result,
+        vars = {},
+        type = response.type,
+        value = { [eval_expr] = {
+          name = eval_expr,
+          value = response.result,
           type = response.type,
-          value = lua_type,
-          variablesReference = response.variablesReference,
-        }
-        pretty_print_var_ref(value, function(res)
-          value.formatted_value = res
+          variablesReference = 0,
+        } },
+        variablesReference = response.variablesReference,
+      }
 
-          cache[var_name] = value
+      cache[var_name] = value
 
-          for _, f in ipairs(callback_queue[var_name]) do
-            f(value)
-          end
-          callback_queue[var_name] = nil
+      for _, f in ipairs(callback_queue[var_name]) do
+        f(value)
+      end
+      callback_queue[var_name] = nil
+    else
+      ---@param children table<Variable>
+      M.fetch_variables(response.variablesReference, 0, function(children)
+        M.extract(children, response.type, function(lua_type)
+          ---@type ResolvedVariable
+          local value = {
+            formatted_value = "",
+            vars = children,
+            type = response.type,
+            value = lua_type,
+            variablesReference = response.variablesReference,
+          }
+          pretty_print_var_ref(value, function(res)
+            value.formatted_value = res
+
+            cache[var_name] = value
+
+            for _, f in ipairs(callback_queue[var_name]) do
+              f(value)
+            end
+            callback_queue[var_name] = nil
+          end)
         end)
       end)
-    end)
+    end
   end)
 end
 
