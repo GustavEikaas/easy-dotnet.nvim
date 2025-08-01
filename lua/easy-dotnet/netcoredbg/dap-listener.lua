@@ -88,7 +88,7 @@ function M.register_listener()
       end, { silent = true, buffer = bufnr })
 
       client:initialize(function()
-        client:roslyn_scope_variables(file, "", frame.line, function(variable_locations)
+        client:roslyn_scope_variables(file, frame.line, function(variable_locations)
           for _, value in ipairs(variable_locations) do
             append_redraw(cache, value, "roslyn", bufnr, value.identifier)
           end
