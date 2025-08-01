@@ -1,6 +1,7 @@
 local tuple = require("easy-dotnet.netcoredbg.value_converters.tuple")
 local list = require("easy-dotnet.netcoredbg.value_converters.list")
 local dict = require("easy-dotnet.netcoredbg.value_converters.dictionaries")
+local concurrent_dict = require("easy-dotnet.netcoredbg.value_converters.concurrent_dictionary")
 
 ---@class Variable
 ---@field name string The variable's name.
@@ -111,6 +112,8 @@ function M.extract(vars, var_type, cb)
   elseif dict.is_dictionary(var_type) then
     local dict_value = dict.extract(vars, cb)
     return dict_value
+  elseif concurrent_dict.is_concurrent_dictionary(var_type) then
+    concurrent_dict.extract(vars, cb)
   else
     return vars_to_table(vars, cb)
   end
@@ -168,6 +171,8 @@ local function pretty_print_var_ref(val, cb)
     tuple.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif dict.is_dictionary(val.type) then
     dict.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
+  elseif concurrent_dict.is_concurrent_dictionary(val.type) then
+    concurrent_dict.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif val.value.HasBeenThrown == "true" then
     cb("󱐋 " .. val.value.Message)
   else
