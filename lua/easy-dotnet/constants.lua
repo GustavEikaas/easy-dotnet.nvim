@@ -21,6 +21,8 @@ M.highlights = {
   EasyDotnetTestRunnerPassed = "EasyDotnetTestRunnerPassed",
   EasyDotnetTestRunnerFailed = "EasyDotnetTestRunnerFailed",
   EasyDotnetTestRunnerRunning = "EasyDotnetTestRunnerRunning",
+  --
+  EasyDotnetDebuggerFloatVariable = "EasyDotnetDebuggerFloatVariable",
 }
 
 M.signs = {
