@@ -108,6 +108,7 @@ end
 ---@param varlist table[] List of DAP-style variables
 ---@param frame_id number Frame ID to use for async resolution
 function M.show(varlist, frame_id)
+  if M._current_window then M.close() end
   state.current_frame_id = frame_id
 
   local root_vars = {}
@@ -130,6 +131,13 @@ function M.show(varlist, frame_id)
   vim.keymap.set("n", "<CR>", function() M.toggle_under_cursor(float) end, { buffer = float.buf, noremap = true, silent = true })
 
   return float
+end
+
+function M.close()
+  if M._current_window then
+    M._current_window:close()
+    M._current_window = nil
+  end
 end
 
 return M

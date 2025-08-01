@@ -76,21 +76,11 @@ function M.fetch_variables(variables_reference, depth, callback)
   end)
 end
 
----@param val NavigationProperty | string
-local function is_nav_property(val) return type(val) ~= "string" and val.variablesReference ~= nil end
-
----@class NavigationProperty
----@field name string
----@field type string
----@field value string
----@field variablesReference integer
-
 ---Converts a list of DAP variables into a Lua table.
 ---Numeric-looking keys like [0], [1] go into array part.
 ---Named keys go into map part.
 ---
 ---@param vars table[] # List of DAP variable tables with .name and .value
----@return table # A Lua table with mixed array and map-style keys
 local function vars_to_table(vars, cb)
   local result = {}
 

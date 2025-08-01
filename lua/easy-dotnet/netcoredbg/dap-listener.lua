@@ -96,7 +96,7 @@ function M.register_listener()
       client:initialize(function()
         client:roslyn_scope_variables(file, "", frame.line, function(variable_locations)
           for _, value in ipairs(variable_locations) do
-            if value.lineStart < orig_line then append_redraw(cache, value, "roslyn", bufnr, value.identifier) end
+            append_redraw(cache, value, "roslyn", bufnr, value.identifier)
           end
         end)
       end)
@@ -127,6 +127,7 @@ function M.register_listener()
   end
 
   require("dap").listeners.after.event_exited["easy-dotnet-cleanup"] = function()
+    require("easy-dotnet.netcoredbg.debugger-float").close()
     require("easy-dotnet.netcoredbg").variable_cache = {}
     require("easy-dotnet.netcoredbg").pending_callbacks = {}
     for bufnr, original in pairs(keymap_backup) do

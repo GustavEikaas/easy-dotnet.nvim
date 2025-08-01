@@ -65,6 +65,7 @@ local M = {
 ---| "mtp/run"
 ---| "outdated/packages"
 ---| "roslyn/bootstrap-file"
+---| "roslyn/scope-variables"
 ---| "$/enumerator/next"
 
 local connection = nil
