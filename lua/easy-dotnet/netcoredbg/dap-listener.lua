@@ -101,7 +101,7 @@ function M.register_listener()
         local current_line = vim.api.nvim_win_get_cursor(0)[1]
         local matches = {}
         for key, value in pairs(cache) do
-          if value.roslyn and value.roslyn.lineStart == current_line and curr_frame ~= nil then table.insert(matches, { display = key, value = value }) end
+          if value.netcoredbg and value.roslyn and value.roslyn.lineStart == current_line and curr_frame ~= nil then table.insert(matches, { display = key, value = value }) end
         end
         if #matches == 0 then
           return
