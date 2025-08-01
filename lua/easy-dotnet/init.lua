@@ -253,7 +253,6 @@ M.setup = function(opts)
   register_legacy_functions()
   wrap(background_scanning)(merged_opts)
   wrap(auto_install_easy_dotnet)()
-
 end
 
 M.create_new_item = wrap(function(...) require("easy-dotnet.actions.new").create_new_item(...) end)
