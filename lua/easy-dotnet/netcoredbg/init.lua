@@ -1,8 +1,9 @@
+local list = require("easy-dotnet.netcoredbg.value_converters.list")
+local readonly_list = require("easy-dotnet.netcoredbg.value_converters.readonly_list")
 local tuple = require("easy-dotnet.netcoredbg.value_converters.tuple")
 local hashset = require("easy-dotnet.netcoredbg.value_converters.hashset")
 local queue = require("easy-dotnet.netcoredbg.value_converters.queue")
 local stack = require("easy-dotnet.netcoredbg.value_converters.stack")
-local list = require("easy-dotnet.netcoredbg.value_converters.list")
 local dict = require("easy-dotnet.netcoredbg.value_converters.dictionaries")
 local readonly_dict = require("easy-dotnet.netcoredbg.value_converters.readonly_dictionary")
 local concurrent_dict = require("easy-dotnet.netcoredbg.value_converters.concurrent_dictionary")
@@ -126,6 +127,8 @@ function M.extract(vars, var_type, cb)
     hashset.extract(vars, cb)
   elseif readonly_dict.is_readonly_dictionary(var_type) then
     readonly_dict.extract(vars, cb)
+  elseif readonly_list.is_readonly_list(var_type) then
+    readonly_list.extract(vars, cb)
   else
     return vars_to_table(vars, cb)
   end
@@ -193,6 +196,8 @@ local function pretty_print_var_ref(val, cb)
     hashset.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif readonly_dict.is_readonly_dictionary(val.type) then
     readonly_dict.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
+  elseif readonly_list.is_readonly_list(val.type) then
+    readonly_list.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif val.value.HasBeenThrown == "true" then
     cb("󱐋 " .. val.value.Message)
   else
