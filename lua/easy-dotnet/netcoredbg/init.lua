@@ -1,4 +1,5 @@
 local list = require("easy-dotnet.netcoredbg.value_converters.list")
+local imm_list = require("easy-dotnet.netcoredbg.value_converters.immutable_list")
 local readonly_list = require("easy-dotnet.netcoredbg.value_converters.readonly_list")
 local tuple = require("easy-dotnet.netcoredbg.value_converters.tuple")
 local hashset = require("easy-dotnet.netcoredbg.value_converters.hashset")
@@ -129,6 +130,8 @@ function M.extract(vars, var_type, cb)
     readonly_dict.extract(vars, cb)
   elseif readonly_list.is_readonly_list(var_type) then
     readonly_list.extract(vars, cb)
+  elseif imm_list.is_immutable_list(var_type) then
+    imm_list.extract(vars, cb)
   else
     return vars_to_table(vars, cb)
   end
@@ -198,6 +201,8 @@ local function pretty_print_var_ref(val, cb)
     readonly_dict.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif readonly_list.is_readonly_list(val.type) then
     readonly_list.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
+  elseif imm_list.is_immutable_list(val.type) then
+    imm_list.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif val.value.HasBeenThrown == "true" then
     cb("󱐋 " .. val.value.Message)
   else
