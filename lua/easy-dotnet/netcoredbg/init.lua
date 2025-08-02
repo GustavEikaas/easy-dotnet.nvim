@@ -1,7 +1,10 @@
 local tuple = require("easy-dotnet.netcoredbg.value_converters.tuple")
+local hashset = require("easy-dotnet.netcoredbg.value_converters.hashset")
 local queue = require("easy-dotnet.netcoredbg.value_converters.queue")
+local stack = require("easy-dotnet.netcoredbg.value_converters.stack")
 local list = require("easy-dotnet.netcoredbg.value_converters.list")
 local dict = require("easy-dotnet.netcoredbg.value_converters.dictionaries")
+local readonly_dict = require("easy-dotnet.netcoredbg.value_converters.readonly_dictionary")
 local concurrent_dict = require("easy-dotnet.netcoredbg.value_converters.concurrent_dictionary")
 
 ---@class Variable
@@ -117,6 +120,12 @@ function M.extract(vars, var_type, cb)
     concurrent_dict.extract(vars, cb)
   elseif queue.is_queue(var_type) then
     queue.extract(vars, cb)
+  elseif stack.is_stack(var_type) then
+    stack.extract(vars, cb)
+  elseif hashset.is_hashset(var_type) then
+    hashset.extract(vars, cb)
+  elseif readonly_dict.is_readonly_dictionary(var_type) then
+    readonly_dict.extract(vars, cb)
   else
     return vars_to_table(vars, cb)
   end
@@ -178,6 +187,12 @@ local function pretty_print_var_ref(val, cb)
     concurrent_dict.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif queue.is_queue(val.type) then
     queue.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
+  elseif stack.is_stack(val.type) then
+    stack.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
+  elseif hashset.is_hashset(val.type) then
+    hashset.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
+  elseif readonly_dict.is_readonly_dictionary(val.type) then
+    readonly_dict.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif val.value.HasBeenThrown == "true" then
     cb("󱐋 " .. val.value.Message)
   else
