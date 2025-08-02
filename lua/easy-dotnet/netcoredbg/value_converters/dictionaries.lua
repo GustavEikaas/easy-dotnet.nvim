@@ -1,0 +1,75 @@
+local M = {}
+
+function M.is_dictionary(class_name)
+  class_name = vim.trim(class_name)
+  if type(class_name) ~= "string" then return false end
+  return class_name:match("^System%.Collections%.Generic%.Dictionary") ~= nil
+end
+
+---Extracts key-value pairs from a C# Dictionary
+---
+---Finds a `_count` entry to limit the number of extracted pairs.
+---Returns a Lua table
+---If a value is missing, it will be represented as the string `"null"`.
+---
+---@param vars table[] A list of variable tables to extract from.
+M.extract = function(vars, cb)
+  local max_count = 0
+  local var_ref = 0
+
+  for _, entry in ipairs(vars) do
+    if entry.name == "_count" and tonumber(entry.value) then
+      max_count = tonumber(entry.value) or 0
+    elseif entry.name == "_entries" then
+      var_ref = tonumber(entry.variablesReference) or 0
+    end
+  end
+
+  if var_ref == 0 then
+    cb({}, "{}")
+    return
+  end
+
+  local netcoredbg = require("easy-dotnet.netcoredbg")
+
+  netcoredbg.fetch_variables(var_ref, 1, function(entries)
+    local result = {}
+    local added = 0
+
+    for i, entry in ipairs(entries) do
+      if added >= max_count then break end
+      if entry.children then
+        local key_var = nil
+        local value_var = nil
+
+        for _, child in ipairs(entry.children) do
+          if child.name == "key" then
+            key_var = vim.deepcopy(child)
+            key_var.name = "Key"
+          elseif child.name == "value" or child.name == "Value" then
+            value_var = vim.deepcopy(child)
+            value_var.name = "Value"
+          end
+        end
+
+        if key_var then
+          table.insert(result, {
+            name = tostring(i),
+            type = "easy_dotnet_kv_wrapper",
+            value = "",
+            variablesReference = 999999,
+            children = {
+              key_var,
+              value_var,
+            },
+          })
+          added = added + 1
+        end
+      end
+    end
+
+    cb(result, require("easy-dotnet.netcoredbg.pretty_printers.kv-pair-list").pretty_print(result))
+  end)
+end
+
+return M

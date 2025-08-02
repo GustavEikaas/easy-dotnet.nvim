@@ -71,6 +71,7 @@ local function define_highlights()
     underline = false,
   })
 
+  --Testrunner
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerSolution, { link = "Question" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerProject, { link = "Character" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerTest, { link = "Normal" })
@@ -80,6 +81,8 @@ local function define_highlights()
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerPassed, { link = "DiagnosticOk" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerFailed, { link = "DiagnosticError" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
+  --Debugger
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerFloatVariable, { link = "Question" })
 end
 
 local register_legacy_functions = function()
