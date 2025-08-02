@@ -1,3 +1,4 @@
+local constants = require("easy-dotnet.constants")
 local M = {}
 
 function M.is_exception(vars)
@@ -21,7 +22,7 @@ function M.extract(vars, cb)
     end
   end
 
-  cb(exception, exception.message.value or "??")
+  cb(exception, "󱐋 " .. (exception.message.value or "??"), constants.highlights.EasyDotnetDebuggerVirtualException)
 end
 
 return M

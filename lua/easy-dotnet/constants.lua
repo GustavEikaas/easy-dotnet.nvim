@@ -23,6 +23,8 @@ M.highlights = {
   EasyDotnetTestRunnerRunning = "EasyDotnetTestRunnerRunning",
   --
   EasyDotnetDebuggerFloatVariable = "EasyDotnetDebuggerFloatVariable",
+  EasyDotnetDebuggerVirtualException = "EasyDotnetDebuggerVirtualException",
+  EasyDotnetDebuggerVirtualVariable = "EasyDotnetDebuggerVirtualVariable",
 }
 
 M.signs = {

@@ -162,10 +162,11 @@ function M.resolve_by_vars_reference(stack_frame_id, vars_reference, var_type, c
 
   ---@param children table<Variable>
   M.fetch_variables(vars_reference, 0, function(children)
-    M.extract(children, var_type, function(lua_type, res)
+    M.extract(children, var_type, function(lua_type, res, hi)
       ---@type ResolvedVariable
       local value = {
         formatted_value = "",
+        hi = hi,
         vars = children,
         type = var_type,
         value = lua_type,
@@ -243,10 +244,11 @@ function M.resolve_by_var_name(stack_frame_id, var_name, cb)
     else
       ---@param children table<Variable>
       M.fetch_variables(response.variablesReference, 0, function(children)
-        M.extract(children, response.type, function(lua_type, res)
+        M.extract(children, response.type, function(lua_type, res, hi)
           ---@type ResolvedVariable
           local value = {
             formatted_value = "",
+            hi = hi,
             vars = children,
             type = response.type,
             value = lua_type,
