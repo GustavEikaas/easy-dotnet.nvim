@@ -41,28 +41,6 @@ local function traverse_node(var, cb, acc)
   end
 end
 
-local function to_pretty_string(c)
-  local max_elements = 5
-  local max_chars = 50
-
-  local all_unresolved = vim.iter(c):all(function(r) return r.variablesReference ~= 0 end)
-
-  if all_unresolved and #c > 0 then return (string.format("[%d] - [%s...]", #c, c[1].value)) end
-
-  local values = {}
-  for i, r in ipairs(c) do
-    if i > max_elements then break end
-    local v = r.value
-    if r.variablesReference == 0 then v = vim.inspect(v):gsub("\n", ""):gsub("%s+", " ") end
-    table.insert(values, v)
-  end
-
-  local preview_str = "[" .. table.concat(values, ", ") .. "]"
-  if #c > max_elements or #preview_str > max_chars then preview_str = preview_str:gsub("]$", ", ...]") end
-
-  return (string.format("[%d] - %s", #values, preview_str))
-end
-
 --- Extract the internal list from ImmutableList<T> and delegate to list extractor
 ---@param vars table
 ---@param cb function
@@ -89,7 +67,7 @@ function M.extract(vars, cb)
         table.insert(values, v.value)
       end
 
-      cb(values, to_pretty_string(values))
+      cb(values, require("easy-dotnet.netcoredbg.pretty_printers.list").pretty_print(values))
     end, {})
   end)
 end
