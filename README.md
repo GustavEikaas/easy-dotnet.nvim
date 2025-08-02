@@ -820,18 +820,18 @@ Check out [debugging-setup](./docs/debugging.md) for specific details
 
 <!--hl start-->
 
-| Highlight group                  | Default            |
-| -------------------------------- | ------------------ |
-| **EasyDotnetTestRunnerSolution** | *Question*         |
-| **EasyDotnetTestRunnerProject**  | *Character*        |
-| **EasyDotnetTestRunnerTest**     | *Normal*           |
-| **EasyDotnetTestRunnerSubcase**  | *Conceal*           |
-| **EasyDotnetTestRunnerDir**      | *Directory*        |
-| **EasyDotnetTestRunnerPackage**  | *Include*          |
-| **EasyDotnetTestRunnerPassed**   | *DiagnosticOk*     |
-| **EasyDotnetTestRunnerFailed**   | *DiagnosticError*  |
-| **EasyDotnetTestRunnerRunning**  | *DiagnosticWarn*   |
-
+| Highlight group                     | Default            |
+| ----------------------------------- | ------------------ |
+| **EasyDotnetTestRunnerSolution**    | *Question*         |
+| **EasyDotnetTestRunnerProject**     | *Character*        |
+| **EasyDotnetTestRunnerTest**        | *Normal*           |
+| **EasyDotnetTestRunnerSubcase**     | *Conceal*           |
+| **EasyDotnetTestRunnerDir**         | *Directory*        |
+| **EasyDotnetTestRunnerPackage**     | *Include*          |
+| **EasyDotnetTestRunnerPassed**      | *DiagnosticOk*     |
+| **EasyDotnetTestRunnerFailed**      | *DiagnosticError*  |
+| **EasyDotnetTestRunnerRunning**     | *DiagnosticWarn*   |
+| **EasyDotnetDebuggerFloatVariable** | *Question*         |
 <!-- hl-end -->
 
 </details>
