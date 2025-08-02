@@ -91,25 +91,15 @@ end
 local function vars_to_table(vars, cb)
   local result = {}
 
-  local is_complex = vim.iter(vars):any(function(r) return r.variablesReference ~= 0 end)
-
   for _, c in ipairs(vars) do
     local index = c.name:match("^%[(%d+)%]$")
     if index then
-      if is_complex then
-        table.insert(result, c)
-      else
-        table.insert(result, c.value)
-      end
+      table.insert(result, c)
     else
-      if is_complex then
-        result[c.name] = c
-      else
-        result[c.name] = c.value
-      end
+      result[c.name] = c
     end
   end
-  cb(result)
+  cb(result, require("easy-dotnet.netcoredbg.pretty_printers.catch-all").pretty_print(result))
 end
 
 function M.extract(vars, var_type, cb)
@@ -145,82 +135,6 @@ function M.extract(vars, var_type, cb)
   end
 end
 
-local banned_fields = {
-  "EqualityContract",
-}
-
-local function format_catchall(val, cb)
-  local max_items = 5
-  local max_chars = 60
-
-  local vars = val.vars or {}
-
-  local list_items = vim.iter(vars):filter(function(c) return c.name:match("^%[%d+%]$") end):map(function(c) return c.value end):totable()
-
-  local is_list = #list_items > 0
-
-  local preview, count
-
-  if is_list then
-    count = #list_items
-    preview = vim.iter(list_items):take(max_items):totable()
-  else
-    local kv_items = vim
-      .iter(vars)
-      :filter(function(c) return not c.name:match("^%[%d+%]$") and not vim.list_contains(banned_fields, c.name) end)
-      :map(function(c) return string.format("%s: %s", c.name, tostring(c.value):gsub("\n", ""):gsub("%s+", " ")) end)
-      :totable()
-    count = #kv_items
-    preview = vim.iter(kv_items):take(max_items):totable()
-  end
-
-  -- Join and format
-  local joined = table.concat(preview, ", ")
-  local too_long = count > max_items or #joined > max_chars
-
-  local formatted
-  if is_list then
-    formatted = string.format("[%d] - [%s%s]", count, joined, too_long and ", ..." or "")
-  else
-    formatted = string.format("{%s%s}", joined, too_long and ", ..." or "")
-  end
-
-  cb(formatted)
-end
-
----@param val ResolvedVariable
-local function pretty_print_var_ref(val, cb)
-  if list.is_list(val.type) then
-    list.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
-  elseif exception.is_exception(val.vars) then
-    exception.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
-  elseif tuple.is_tuple(val.type) then
-    tuple.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
-  elseif dict.is_dictionary(val.type) then
-    dict.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
-  elseif concurrent_dict.is_concurrent_dictionary(val.type) then
-    concurrent_dict.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
-  elseif queue.is_queue(val.type) then
-    queue.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
-  elseif stack.is_stack(val.type) then
-    stack.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
-  elseif hashset.is_hashset(val.type) then
-    hashset.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
-  elseif readonly_dict.is_readonly_dictionary(val.type) then
-    readonly_dict.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
-  elseif readonly_list.is_readonly_list(val.type) then
-    readonly_list.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
-  elseif imm_list.is_immutable_list(val.type) then
-    imm_list.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
-  elseif sorted_list.is_sorted_list(val.type) then
-    sorted_list.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
-  elseif val.value.HasBeenThrown == "true" then
-    cb("󱐋 " .. val.value.Message)
-  else
-    format_catchall(val, function(p) cb(p) end)
-  end
-end
-
 ---@param stack_frame_id integer
 ---@param vars_reference integer
 ---@param var_type string
@@ -248,7 +162,7 @@ function M.resolve_by_vars_reference(stack_frame_id, vars_reference, var_type, c
 
   ---@param children table<Variable>
   M.fetch_variables(vars_reference, 0, function(children)
-    M.extract(children, var_type, function(lua_type)
+    M.extract(children, var_type, function(lua_type, res)
       ---@type ResolvedVariable
       local value = {
         formatted_value = "",
@@ -257,15 +171,14 @@ function M.resolve_by_vars_reference(stack_frame_id, vars_reference, var_type, c
         value = lua_type,
         variablesReference = vars_reference,
       }
-      pretty_print_var_ref(value, function(res)
-        value.formatted_value = res
-        cache[vars_reference] = value
 
-        for _, f in ipairs(callback_queue[vars_reference]) do
-          f(value)
-        end
-        callback_queue[vars_reference] = nil
-      end)
+      value.formatted_value = res
+      cache[vars_reference] = value
+
+      for _, f in ipairs(callback_queue[vars_reference]) do
+        f(value)
+      end
+      callback_queue[vars_reference] = nil
     end)
   end)
 end
@@ -330,7 +243,7 @@ function M.resolve_by_var_name(stack_frame_id, var_name, cb)
     else
       ---@param children table<Variable>
       M.fetch_variables(response.variablesReference, 0, function(children)
-        M.extract(children, response.type, function(lua_type)
+        M.extract(children, response.type, function(lua_type, res)
           ---@type ResolvedVariable
           local value = {
             formatted_value = "",
@@ -339,16 +252,14 @@ function M.resolve_by_var_name(stack_frame_id, var_name, cb)
             value = lua_type,
             variablesReference = response.variablesReference,
           }
-          pretty_print_var_ref(value, function(res)
-            value.formatted_value = res
 
-            cache[var_name] = value
+          value.formatted_value = res
+          cache[var_name] = value
 
-            for _, f in ipairs(callback_queue[var_name]) do
-              f(value)
-            end
-            callback_queue[var_name] = nil
-          end)
+          for _, f in ipairs(callback_queue[var_name]) do
+            f(value)
+          end
+          callback_queue[var_name] = nil
         end)
       end)
     end
