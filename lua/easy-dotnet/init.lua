@@ -63,6 +63,7 @@ local function present_command_picker()
 end
 
 local function define_highlights()
+  --TODO: stop polluting global namespace
   vim.api.nvim_set_hl(0, "EasyDotnetPackage", {
     fg = "#000000",
     bg = "#ffffff",
