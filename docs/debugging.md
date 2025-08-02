@@ -144,7 +144,7 @@ Out of the box, the following .NET types are recognized and automatically pretti
 * `List<T>`
 * `Queue<T>`
 * `Stack<T>`
-* `Tuple<>` (including nested tuples)
+* `Tuple<>` 
 * `Dictionary<K,V>`
 * `ConcurrentDictionary<K,V>`
 * `ReadOnlyDictionary<K,V>`

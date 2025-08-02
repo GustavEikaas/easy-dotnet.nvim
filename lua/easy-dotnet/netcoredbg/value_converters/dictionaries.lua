@@ -38,9 +38,7 @@ M.extract = function(vars, cb)
 
     for i, entry in ipairs(entries) do
       if added >= max_count then break end
-      if not entry.children then
-        -- Skip invalid entry
-      else
+      if entry.children then
         local key_var = nil
         local value_var = nil
 
