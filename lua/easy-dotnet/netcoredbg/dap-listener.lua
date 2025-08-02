@@ -2,7 +2,7 @@ local M = {}
 
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local ns = require("easy-dotnet.constants").ns_id
-local hi = require("easy-dotnet.constants").highlights.EasyDotnetDebuggerFloatVariable
+local hi = require("easy-dotnet.constants").highlights.EasyDotnetDebuggerVirtualVariable
 
 local function redraw(cache, bufnr)
   vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
@@ -25,11 +25,12 @@ local function redraw(cache, bufnr)
     local line = val.roslyn.lineStart
     grouped[line] = grouped[line] or {}
     table.insert(grouped[line], " " .. (val.resolved and val.resolved.pretty or val.netcoredbg.value .. " (loading)"))
+    grouped[line].hi = val.resolved and val.resolved.hi or hi
   end
 
   for line, texts in pairs(grouped) do
     vim.api.nvim_buf_set_extmark(bufnr, ns, line - 1, 0, {
-      virt_text = { { table.concat(texts, "  "), hi } },
+      virt_text = { { table.concat(texts, "  "), texts.hi } },
       virt_text_pos = "eol",
     })
   end
@@ -136,7 +137,7 @@ function M.register_listener()
               if value.evaluateName == "$exception" then append_redraw(cache, { lineStart = orig_line }, "roslyn", bufnr, value.evaluateName) end
 
               require("easy-dotnet.netcoredbg").resolve_by_var_name(frame_id, value.evaluateName, function(res)
-                cache[value.evaluateName].resolved = { pretty = res.formatted_value }
+                cache[value.evaluateName].resolved = { pretty = res.formatted_value, hi = res.hi }
                 redraw(cache, bufnr)
               end)
             end

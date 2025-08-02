@@ -84,6 +84,8 @@ local function define_highlights()
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
   --Debugger
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerFloatVariable, { link = "Question" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerVirtualVariable, { link = "Question" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerVirtualException, { link = "DiagnosticError" })
 end
 
 local register_legacy_functions = function()
