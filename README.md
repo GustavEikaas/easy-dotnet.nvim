@@ -67,10 +67,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
     - [Requirements](#requirements-2)
     - [Support matrix](#support-matrix)
 16. [Nvim-dap configuration](#nvim-dap-configuration)
-    - [Debugging](#debugging)
-    - [Nvim-dap setup](#nvim-dap-setup)
-    - [Debugging with launch profiles](#debugging-with-launch-profiles)
-18. [Troubleshooting](#troubleshooting)
+17. [Troubleshooting](#troubleshooting)
 
 ## Features
 
@@ -810,27 +807,6 @@ and parsers for `sql`, `json` and `xml`, so make sure you have these parsers ins
 While its out of the scope of this plugin to setup dap, we do provide a few helpful functions/widgets to make it easier.
 
 Check out [debugging-setup](./docs/debugging.md) for specific details
-
-### Debugging with launch-profiles
-
-The default profile being chosen must be named the same as your project.
-The file is expected to be in the Properties/launchsettings.json relative to your .csproject file
-If you want to be prompted to select a profile, remember to pass false as the last flag to `get_environment_variables`
-```json
-{
-  "profiles": {
-    "NeovimDebugProject.Api": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": true,
-      "launchUrl": "swagger",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "applicationUrl": "https://localhost:7073;http://localhost:7071"
-    }
-}
-```
 
 ## Troubleshooting
 

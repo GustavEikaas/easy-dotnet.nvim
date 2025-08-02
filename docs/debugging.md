@@ -9,7 +9,7 @@ This guide describes how to integrate .NET Core debugging in Neovim using nvim-d
     * [Debugging](#debugging)
     * [Configuration](#configuration)
     * [Variables Viewer](#variables-viewer)
-
+    * [Debugging with launch-profiles](#debugging-with-launch-profiles)
 
 ## Debugging
 To start debugging do the following. Ensure you have configured the code below
@@ -173,3 +173,24 @@ Easy preview of variables while debugging, unwraps complex types
 Let's you view and expand more complex variables. With automatic unwrapping
 ![image](https://github.com/user-attachments/assets/4e4c2cff-687b-4715-b5a8-b7ca67f7955b)
 
+
+## Debugging with launch-profiles
+
+The default profile being chosen must be named the same as your project.
+The file is expected to be in the Properties/launchsettings.json relative to your .csproject file
+If you want to be prompted to select a profile, remember to pass false as the last flag to `get_environment_variables`
+```json
+{
+  "profiles": {
+    "NeovimDebugProject.Api": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:7073;http://localhost:7071"
+    }
+}
+```
