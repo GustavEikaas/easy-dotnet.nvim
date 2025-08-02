@@ -1,3 +1,4 @@
+local exception = require("easy-dotnet.netcoredbg.value_converters.exception")
 local list = require("easy-dotnet.netcoredbg.value_converters.list")
 local sorted_list = require("easy-dotnet.netcoredbg.value_converters.sorted_list")
 local imm_list = require("easy-dotnet.netcoredbg.value_converters.immutable_list")
@@ -115,6 +116,8 @@ function M.extract(vars, var_type, cb)
   if list.is_list(var_type) then
     local list_value = list.extract(vars, cb)
     return list_value
+  elseif exception.is_exception(vars) then
+    exception.extract(vars, cb)
   elseif tuple.is_tuple(var_type) then
     local tuple_value = tuple.extract(vars, cb)
     return tuple_value
@@ -152,8 +155,7 @@ local function format_catchall(val, cb)
 
   local vars = val.vars or {}
 
-  -- Partition into list vs record entries
-  local list_items = vim.iter(vars):filter(function(c) return c.name:match("^%[%d+%]$") end):map(function(c) return tostring(c.value):gsub("\n", ""):gsub("%s+", " ") end):totable()
+  local list_items = vim.iter(vars):filter(function(c) return c.name:match("^%[%d+%]$") end):map(function(c) return c.value end):totable()
 
   local is_list = #list_items > 0
 
@@ -190,6 +192,8 @@ end
 local function pretty_print_var_ref(val, cb)
   if list.is_list(val.type) then
     list.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
+  elseif exception.is_exception(val.vars) then
+    exception.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif tuple.is_tuple(val.type) then
     tuple.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif dict.is_dictionary(val.type) then
