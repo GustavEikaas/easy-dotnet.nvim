@@ -6,35 +6,6 @@ function M.is_concurrent_dictionary(class_name)
   return class_name:match("^System%.Collections%.Concurrent%.ConcurrentDictionary") ~= nil
 end
 
-local function format_dict(dict)
-  local max_items = 5
-  local max_chars = 50
-
-  local preview = {}
-  local count = 0
-  local unresolved_count = 0
-  local first_unresolved_value = nil
-
-  for key, item in pairs(dict) do
-    count = count + 1
-
-    if item.variablesReference ~= 0 then
-      unresolved_count = unresolved_count + 1
-      if not first_unresolved_value then first_unresolved_value = item.value end
-    elseif #preview < max_items then
-      local val = vim.inspect(item.value):gsub("\n", ""):gsub("%s+", " ")
-      table.insert(preview, string.format("%s = %s", key, val))
-    end
-  end
-
-  if unresolved_count == count and first_unresolved_value then return string.format("[%d] - [%s%s]", count, first_unresolved_value, count > 1 and "..." or "") end
-
-  local preview_str = "[" .. table.concat(preview, ", ") .. "]"
-  if count > max_items or #preview_str > max_chars then preview_str = preview_str:gsub("]$", ", ...]") end
-
-  return string.format("[%d] - %s", count, preview_str)
-end
-
 ---Extracts key-value pairs from a C# Dictionary
 ---
 ---Finds a `_count` entry to limit the number of extracted pairs.
