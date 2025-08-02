@@ -128,6 +128,7 @@ function M.show(varlist, frame_id)
       type = value.type,
       variablesReference = value.variablesReference,
       expanded = false,
+      children = value.children,
     })
   end
 

@@ -81,18 +81,28 @@ M.extract = function(vars, cb)
         if bucket.children then
           for _, node in ipairs(bucket.children) do
             if node.name == "_node" and node.children then
-              local key, value = nil, nil
+              local key_var, value_var = nil, nil
+
               for _, kv in ipairs(node.children) do
                 if kv.name == "_key" then
-                  key = kv.value
+                  key_var = kv
                 elseif kv.name == "_value" then
-                  value = kv
+                  value_var = kv
                 end
               end
 
-              if key then
-                result[key] = value ~= nil and value or "null"
+              if key_var then
                 added = added + 1
+                table.insert(result, {
+                  name = added,
+                  type = "easy_dotnet_kv_wrapper",
+                  variablesReference = 999999,
+                  value = "",
+                  children = {
+                    vim.tbl_extend("force", key_var, { name = "Key" }),
+                    vim.tbl_extend("force", value_var, { name = "Value" }),
+                  },
+                })
                 break
               end
             end
@@ -100,7 +110,7 @@ M.extract = function(vars, cb)
         end
       end
 
-      cb(result, format_dict(result))
+      cb(result, require("easy-dotnet.netcoredbg.pretty_printers.kv-pair-list").pretty_print(result))
     end)
   end)
 

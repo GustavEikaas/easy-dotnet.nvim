@@ -1,4 +1,5 @@
 local list = require("easy-dotnet.netcoredbg.value_converters.list")
+local sorted_list = require("easy-dotnet.netcoredbg.value_converters.sorted_list")
 local imm_list = require("easy-dotnet.netcoredbg.value_converters.immutable_list")
 local readonly_list = require("easy-dotnet.netcoredbg.value_converters.readonly_list")
 local tuple = require("easy-dotnet.netcoredbg.value_converters.tuple")
@@ -89,19 +90,21 @@ end
 local function vars_to_table(vars, cb)
   local result = {}
 
+  local is_complex = vim.iter(vars):any(function(r) return r.variablesReference ~= 0 end)
+
   for _, c in ipairs(vars) do
     local index = c.name:match("^%[(%d+)%]$")
     if index then
-      if c.variablesReference == 0 then
-        table.insert(result, c.value)
-      else
+      if is_complex then
         table.insert(result, c)
+      else
+        table.insert(result, c.value)
       end
     else
-      if c.variablesReference == 0 then
-        result[c.name] = c.value
-      else
+      if is_complex then
         result[c.name] = c
+      else
+        result[c.name] = c.value
       end
     end
   end
@@ -132,6 +135,8 @@ function M.extract(vars, var_type, cb)
     readonly_list.extract(vars, cb)
   elseif imm_list.is_immutable_list(var_type) then
     imm_list.extract(vars, cb)
+  elseif sorted_list.is_sorted_list(var_type) then
+    sorted_list.extract(vars, cb)
   else
     return vars_to_table(vars, cb)
   end
@@ -203,6 +208,8 @@ local function pretty_print_var_ref(val, cb)
     readonly_list.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif imm_list.is_immutable_list(val.type) then
     imm_list.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
+  elseif sorted_list.is_sorted_list(val.type) then
+    sorted_list.extract(val.vars, function(_, pretty_string) cb(pretty_string) end)
   elseif val.value.HasBeenThrown == "true" then
     cb("󱐋 " .. val.value.Message)
   else
