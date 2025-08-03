@@ -1,4 +1,5 @@
 local exception = require("easy-dotnet.netcoredbg.value_converters.exception")
+local enumerable = require("easy-dotnet.netcoredbg.value_converters.enumerable")
 local list = require("easy-dotnet.netcoredbg.value_converters.list")
 local sorted_list = require("easy-dotnet.netcoredbg.value_converters.sorted_list")
 local imm_list = require("easy-dotnet.netcoredbg.value_converters.immutable_list")
@@ -88,50 +89,52 @@ end
 ---Named keys go into map part.
 ---
 ---@param vars table[] # List of DAP variable tables with .name and .value
-local function vars_to_table(vars, cb)
+local function vars_to_table(var_path, vars, cb)
   local result = {}
 
   for _, c in ipairs(vars) do
     local index = c.name:match("^%[(%d+)%]$")
     if index then
+      c.var_path = var_path .. c.name
       table.insert(result, c)
     else
+      c.var_path = var_path .. "." .. c.name
       result[c.name] = c
     end
   end
   cb(result, require("easy-dotnet.netcoredbg.pretty_printers.catch-all").pretty_print(result))
 end
 
-function M.extract(vars, var_type, cb)
+function M.extract(vars, var_path, var_type, cb)
   if list.is_list(var_type) then
-    local list_value = list.extract(vars, cb)
+    local list_value = list.extract(var_path, vars, cb)
     return list_value
+  elseif enumerable.is_enumerable(var_type) then
+    enumerable.extract(vars, cb)
   elseif exception.is_exception(vars) then
-    exception.extract(vars, cb)
+    exception.extract(var_path, vars, cb)
   elseif tuple.is_tuple(var_type) then
-    local tuple_value = tuple.extract(vars, cb)
-    return tuple_value
+    tuple.extract(var_path, vars, cb)
   elseif dict.is_dictionary(var_type) then
-    local dict_value = dict.extract(vars, cb)
-    return dict_value
+    dict.extract(var_path, vars, cb)
   elseif concurrent_dict.is_concurrent_dictionary(var_type) then
-    concurrent_dict.extract(vars, cb)
+    concurrent_dict.extract(var_path, vars, cb)
   elseif queue.is_queue(var_type) then
-    queue.extract(vars, cb)
+    queue.extract(var_path, vars, cb)
   elseif stack.is_stack(var_type) then
-    stack.extract(vars, cb)
+    stack.extract(var_path, vars, cb)
   elseif hashset.is_hashset(var_type) then
-    hashset.extract(vars, cb)
+    hashset.extract(var_path, vars, cb)
   elseif readonly_dict.is_readonly_dictionary(var_type) then
-    readonly_dict.extract(vars, cb)
+    readonly_dict.extract(var_path, vars, cb)
   elseif readonly_list.is_readonly_list(var_type) then
-    readonly_list.extract(vars, cb)
+    readonly_list.extract(var_path, vars, cb)
   elseif imm_list.is_immutable_list(var_type) then
-    imm_list.extract(vars, cb)
+    imm_list.extract(var_path, vars, cb)
   elseif sorted_list.is_sorted_list(var_type) then
-    sorted_list.extract(vars, cb)
+    sorted_list.extract(var_path, vars, cb)
   else
-    return vars_to_table(vars, cb)
+    return vars_to_table(var_path, vars, cb)
   end
 end
 
@@ -140,7 +143,8 @@ end
 ---@param var_type string
 ---@param cb fun(value: ResolvedVariable): nil
 ---@return false | nil
-function M.resolve_by_vars_reference(stack_frame_id, vars_reference, var_type, cb)
+function M.resolve_by_vars_reference(stack_frame_id, vars_reference, var_path, var_type, cb)
+  vim.print("resolving ", (var_path and var_path or "TODO;" .. var_type))
   if stack_frame_id == nil then error("Stack frame id cannot be nil") end
   if vars_reference == nil then error("vars ref  id cannot be nil") end
 
@@ -162,7 +166,8 @@ function M.resolve_by_vars_reference(stack_frame_id, vars_reference, var_type, c
 
   ---@param children table<Variable>
   M.fetch_variables(vars_reference, 0, function(children)
-    M.extract(children, var_type, function(lua_type, res, hi)
+    vim.print(var_path)
+    M.extract(children, var_path, var_type, function(lua_type, res, hi)
       ---@type ResolvedVariable
       local value = {
         formatted_value = "",
@@ -226,6 +231,7 @@ function M.resolve_by_var_name(stack_frame_id, var_name, cb)
         formatted_value = response.result,
         vars = {},
         type = response.type,
+        var_path = var_name,
         value = { [eval_expr] = {
           name = eval_expr,
           value = response.result,
@@ -244,10 +250,12 @@ function M.resolve_by_var_name(stack_frame_id, var_name, cb)
     else
       ---@param children table<Variable>
       M.fetch_variables(response.variablesReference, 0, function(children)
-        M.extract(children, response.type, function(lua_type, res, hi)
+        vim.print(var_name)
+        M.extract(children, var_name, response.type, function(lua_type, res, hi)
           ---@type ResolvedVariable
           local value = {
             formatted_value = "",
+            var_path = var_name,
             hi = hi,
             vars = children,
             type = response.type,

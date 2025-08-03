@@ -13,7 +13,7 @@ end
 ---If a value is missing, it will be represented as the string `"null"`.
 ---
 ---@param vars table[] A list of variable tables to extract from.
-M.extract = function(vars, cb)
+M.extract = function(var_path, vars, cb)
   local max_count = 0
   local var_ref = 0
 
@@ -45,9 +45,11 @@ M.extract = function(vars, cb)
         for _, child in ipairs(entry.children) do
           if child.name == "key" then
             key_var = vim.deepcopy(child)
+            key_var.var_path = var_path .. "._entries" .. entry.name .. "." .. child.name
             key_var.name = "Key"
           elseif child.name == "value" or child.name == "Value" then
             value_var = vim.deepcopy(child)
+            value_var.var_path = var_path .. "._entries" .. entry.name .. "." .. child.name
             value_var.name = "Value"
           end
         end

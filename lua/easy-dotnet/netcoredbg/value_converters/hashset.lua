@@ -9,7 +9,7 @@ end
 
 ---@param vars table[] Fields from the HashSet<T> object
 ---@param cb fun(result: table[], preview: string)
-M.extract = function(vars, cb)
+M.extract = function(var_path, vars, cb)
   local entries = nil
   local count = 0
 
@@ -36,6 +36,10 @@ M.extract = function(vars, cb)
         return vim.iter(r.children):find(function(child) return child.name == "Value" end)
       end)
       :totable()
+
+    for i, value in ipairs(result) do
+      value.var_path = var_path .. "._entries" .. "[" .. (i - 1) .. "]" .. "." .. value.name
+    end
 
     cb(result, require("easy-dotnet.netcoredbg.pretty_printers.list").pretty_print(result))
   end)
