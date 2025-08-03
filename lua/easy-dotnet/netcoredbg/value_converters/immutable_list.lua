@@ -5,7 +5,7 @@ local M = {}
 ---@return boolean
 M.is_immutable_list = function(class_name) return type(class_name) == "string" and class_name:match("^System%.Collections%.Immutable%.ImmutableList") ~= nil end
 
-local function traverse_node(var, cb, acc)
+local function traverse_node(var_path, var, cb, acc)
   local netcoredbg = require("easy-dotnet.netcoredbg")
   acc = acc or {}
 
@@ -25,17 +25,20 @@ local function traverse_node(var, cb, acc)
   end
 
   local function process_current_and_right()
-    if value_var and not is_empty then table.insert(acc, { value = value_var }) end
+    if value_var and not is_empty then
+      value_var.var_path = var_path .. ".Value"
+      table.insert(acc, { value = value_var })
+    end
 
     if right_ref and right_ref ~= 0 then
-      netcoredbg.fetch_variables(right_ref, 0, function(right_children) traverse_node(right_children, cb, acc) end)
+      netcoredbg.fetch_variables(right_ref, 0, function(right_children) traverse_node(var_path .. "._right", right_children, cb, acc) end)
     else
       cb(acc)
     end
   end
 
   if left_ref and left_ref ~= 0 then
-    netcoredbg.fetch_variables(left_ref, 0, function(left_children) traverse_node(left_children, process_current_and_right, acc) end)
+    netcoredbg.fetch_variables(left_ref, 0, function(left_children) traverse_node(var_path .. "._left", left_children, process_current_and_right, acc) end)
   else
     process_current_and_right()
   end
@@ -44,7 +47,7 @@ end
 --- Extract the internal list from ImmutableList<T> and delegate to list extractor
 ---@param vars table
 ---@param cb function
-function M.extract(vars, cb)
+function M.extract(var_path, vars, cb)
   local netcoredbg = require("easy-dotnet.netcoredbg")
   local root_ref
 
@@ -60,8 +63,10 @@ function M.extract(vars, cb)
     return
   end
 
+  local inner_var_path = var_path .. "._root"
+
   netcoredbg.fetch_variables(root_ref, 0, function(root_children)
-    traverse_node(root_children, function(acc)
+    traverse_node(inner_var_path, root_children, function(acc)
       local values = {}
       for _, v in ipairs(acc) do
         table.insert(values, v.value)

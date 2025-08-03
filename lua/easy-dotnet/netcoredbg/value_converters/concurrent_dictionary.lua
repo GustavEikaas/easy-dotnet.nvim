@@ -14,7 +14,7 @@ end
 ---
 ---@param vars table[] The top-level fields of the ConcurrentDictionary
 ---@param cb fun(result: table<string, Variable>, preview: string)
-M.extract = function(vars, cb)
+M.extract = function(var_path, vars, cb)
   local tables_ref = nil
 
   for _, entry in ipairs(vars) do
@@ -56,8 +56,10 @@ M.extract = function(vars, cb)
 
               for _, kv in ipairs(node.children) do
                 if kv.name == "_key" then
+                  kv.var_path = var_path .. "._tables._buckets" .. bucket.name .. "." .. node.name .. "." .. kv.name
                   key_var = kv
                 elseif kv.name == "_value" then
+                  kv.var_path = var_path .. "._tables._buckets" .. bucket.name .. "." .. node.name .. "." .. kv.name
                   value_var = kv
                 end
               end

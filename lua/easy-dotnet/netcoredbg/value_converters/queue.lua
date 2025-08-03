@@ -9,7 +9,7 @@ end
 
 ---@param vars table[] Fields from the Queue<T> object
 ---@param cb fun(result: table, preview: string)
-M.extract = function(vars, cb)
+M.extract = function(var_path, vars, cb)
   local array_ref = nil
   local size = nil
 
@@ -37,6 +37,7 @@ M.extract = function(vars, cb)
 
     for _, children_ref in ipairs(children) do
       if added >= size then break end
+      children_ref.var_path = var_path .. "._array" .. children_ref.name
       table.insert(result, children_ref)
       added = added + 1
     end

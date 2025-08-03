@@ -9,7 +9,7 @@ end
 
 ---@param vars table[] Fields from the HashSet<T> object
 ---@param cb fun(result: table[], preview: string)
-M.extract = function(vars, cb)
+M.extract = function(var_path, vars, cb)
   local entries = nil
   local count = 0
 
@@ -29,11 +29,18 @@ M.extract = function(vars, cb)
   require("easy-dotnet.netcoredbg").fetch_variables(entries, 1, function(slot_entries)
     table.sort(slot_entries, function(a, b) return index_to_number(a.name) < index_to_number(b.name) end)
 
+    local i = 0
     local result = vim
       .iter(slot_entries)
       :slice(1, count)
       :map(function(r)
         return vim.iter(r.children):find(function(child) return child.name == "Value" end)
+      end)
+      :map(function(item)
+        i = i + 1
+        return vim.tbl_extend("force", item, {
+          var_path = string.format("%s._entries[%d].%s", var_path, i - 1, item.name),
+        })
       end)
       :totable()
 

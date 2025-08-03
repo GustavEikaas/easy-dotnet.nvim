@@ -5,10 +5,11 @@ function M.is_exception(vars)
   return vim.iter(vars):any(function(r) return r.name == "HasBeenThrown" and r.value == "true" end)
 end
 
-function M.extract(vars, cb)
+function M.extract(var_path, vars, cb)
   local exception = {}
 
   for _, value in ipairs(vars) do
+    value.var_path = var_path .. "." .. value.name
     if value.name == "_message" then
       exception["message"] = value
     elseif value.name == "_innerException" then

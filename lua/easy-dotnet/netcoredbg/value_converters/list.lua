@@ -13,7 +13,7 @@ local index_to_number = function(r) return tonumber(r:match("%[(%d+)%]")) or 0 e
 ---
 ---@param vars table # The top-level DAP variable representing the list object
 ---@param cb function
-function M.extract(vars, cb)
+function M.extract(var_path, vars, cb)
   local max_count = 0
   local var_ref = nil
 
@@ -38,6 +38,7 @@ function M.extract(vars, cb)
       end)
 
       for _, children_ref in ipairs(r) do
+        children_ref.var_path = var_path .. "._items" .. children_ref.name
         if added >= max_count then break end
         table.insert(result, children_ref)
         added = added + 1

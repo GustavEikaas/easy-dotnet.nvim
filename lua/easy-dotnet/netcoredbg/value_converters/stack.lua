@@ -10,7 +10,7 @@ end
 
 ---@param vars table[] Fields from the Stack<T> object
 ---@param cb fun(result: table, preview: string)
-M.extract = function(vars, cb)
+M.extract = function(var_path, vars, cb)
   local array_ref = nil
   local size = 0
 
@@ -34,7 +34,16 @@ M.extract = function(vars, cb)
 
     table.sort(result, function(a, b) return index_to_number(a.name) > index_to_number(b.name) end)
 
-    cb(result, require("easy-dotnet.netcoredbg.pretty_printers.list").pretty_print(result))
+    local items = vim
+      .iter(result)
+      :map(function(item)
+        return vim.tbl_extend("force", item, {
+          var_path = var_path .. "._array" .. item.name,
+        })
+      end)
+      :totable()
+
+    cb(items, require("easy-dotnet.netcoredbg.pretty_printers.list").pretty_print(result))
   end)
 
   return {}

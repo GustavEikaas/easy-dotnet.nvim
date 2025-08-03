@@ -78,38 +78,42 @@ function M.toggle_under_cursor(window)
   var.expanded = true
   redraw(window)
 
-  netcoredbg.resolve_by_vars_reference(state.current_frame_id, var.variablesReference, var.type, function(children)
-    netcoredbg.extract(children.vars, children.type, function(converted_value)
-      if is_list(converted_value) then
-        var.children = vim.tbl_map(
-          function(r)
-            return {
-              name = r.name,
-              type = r.type,
-              value = r.value,
-              variablesReference = r.variablesReference,
-              expanded = false,
-            }
-          end,
-          converted_value
-        )
-      else
-        local root_vars = {}
-        for key, value in pairs(converted_value) do
-          table.insert(root_vars, {
-            name = key,
-            value = value.value or value,
-            type = value.type,
-            variablesReference = value.variablesReference,
-            expanded = false,
-          })
-        end
-        var.children = root_vars
-      end
+  netcoredbg.resolve_by_vars_reference(state.current_frame_id, var.variablesReference, var.var_path, var.type, function(children)
+    ---@type table
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local converted_value = children.value
 
-      var.loading = false
-      redraw(window)
-    end)
+    if is_list(converted_value) then
+      var.children = vim.tbl_map(
+        function(r)
+          return {
+            name = r.name,
+            type = r.type,
+            value = r.value,
+            var_path = r.var_path,
+            variablesReference = r.variablesReference,
+            expanded = false,
+          }
+        end,
+        converted_value
+      )
+    else
+      local root_vars = {}
+      for key, value in pairs(converted_value) do
+        table.insert(root_vars, {
+          name = key,
+          value = value.value or value,
+          type = value.type,
+          var_path = value.var_path,
+          variablesReference = value.variablesReference,
+          expanded = false,
+        })
+      end
+      var.children = root_vars
+    end
+
+    var.loading = false
+    redraw(window)
   end)
 end
 
@@ -126,6 +130,7 @@ function M.show(varlist, frame_id)
       name = key,
       value = value.value or value,
       type = value.type,
+      var_path = value.var_path,
       variablesReference = value.variablesReference,
       expanded = false,
       children = value.children,

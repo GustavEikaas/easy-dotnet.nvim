@@ -13,7 +13,7 @@ local index_to_number = function(r) return tonumber(r:match("%[(%d+)%]")) or 0 e
 ---
 ---@param vars table # The top-level DAP variable representing the list object
 ---@param cb function
-function M.extract(vars, cb)
+function M.extract(var_path, vars, cb)
   local max_count = 0
   local keys_ref = nil
   local values_ref = nil
@@ -42,6 +42,7 @@ function M.extract(vars, cb)
       local s = vim.iter(r):slice(1, max_count):totable()
 
       for i, value in ipairs(s) do
+        value.var_path = var_path .. ".keys" .. value.name
         value.name = "Key"
         table.insert(result, {
           name = i,
@@ -63,6 +64,7 @@ function M.extract(vars, cb)
 
         local sliced_values = vim.iter(values):slice(1, max_count):totable()
         for index, value in ipairs(sliced_values) do
+          value.var_path = var_path .. ".values" .. value.name
           value.name = "Value"
           table.insert(result[index].children, value)
         end
