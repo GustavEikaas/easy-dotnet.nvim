@@ -211,7 +211,7 @@ function M.resolve_by_var_name(stack_frame_id, var_name, cb)
   --TODO: implement another way
   -- if var_type and var_type:match("^System%.Linq%.Enumerable%.") then eval_expr = "(" .. var_name .. ").ToArray()" end
 
-  dap.session():request("evaluate", { expression = eval_expr, context = "hover" }, function(err, response)
+  dap.session():request("evaluate", { frameId = stack_frame_id, expression = eval_expr, context = "hover" }, function(err, response)
     if err or not response or not response.variablesReference then
       cache[var_name] = nil
       callback_queue[var_name] = nil

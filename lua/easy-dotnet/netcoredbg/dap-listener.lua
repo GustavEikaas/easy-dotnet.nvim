@@ -36,7 +36,7 @@ local function redraw(cache, bufnr)
   end
 end
 
----@param type "roslyn" | "netcoredbg"
+---@param type "roslyn" | "netcoredbg" | "frame"
 local function append_redraw(virt, payload, type, bufnr, identifier)
   local curr = virt[identifier]
   curr = curr or {}
@@ -69,26 +69,65 @@ local function open_or_switch_to_file(filepath)
   return vim.api.nvim_get_current_buf()
 end
 
+---@param frame dap.StackFrame
+---@param session dap.Session
+---@param bufnr integer
+---@param cache table
+local function query_stack_frame(frame, session, bufnr, cache)
+  local orig_line = frame.line
+  local file = frame.source.path
+  if not file then return end
+  client:initialize(function()
+    client:roslyn_scope_variables(file, frame.line, function(variable_locations)
+      for _, value in ipairs(variable_locations) do
+        append_redraw(cache, value, "roslyn", bufnr, value.identifier)
+      end
+    end)
+  end)
+
+  local frame_id = frame.id
+
+  session:request("scopes", { frameId = frame_id }, function(err2, response2)
+    if err2 then return end
+
+    for _, scope in ipairs(response2.scopes) do
+      local variables_reference = scope.variablesReference
+
+      session:request("variables", { variablesReference = variables_reference }, function(err3, response3)
+        if err3 then return end
+        for _, value in ipairs(response3.variables) do
+          append_redraw(cache, { frame_id = frame_id }, "frame", bufnr, value.evaluateName)
+          append_redraw(cache, value, "netcoredbg", bufnr, value.evaluateName)
+          if value.evaluateName == "$exception" then append_redraw(cache, { lineStart = orig_line }, "roslyn", bufnr, value.evaluateName) end
+
+          require("easy-dotnet.netcoredbg").resolve_by_var_name(frame_id, value.evaluateName, function(res)
+            cache[value.evaluateName].resolved = { pretty = res.formatted_value, hi = res.hi }
+            redraw(cache, bufnr)
+          end)
+        end
+      end)
+    end
+  end)
+end
+
 function M.register_listener()
   local keymap_backup = {}
-  local curr_frame = nil
 
   require("dap").listeners.after.event_stopped["easy-dotnet-scopes"] = function(session, body)
     ---@diagnostic disable-next-line: undefined-field
     if session.adapter.command ~= "netcoredbg" then return end
-    local orig_line = vim.api.nvim_win_get_cursor(0)[1]
 
     session:request("stackTrace", { threadId = body.threadId }, function(err1, response1)
       if err1 then return end
 
       local frame = response1.stackFrames[1]
       if not frame then return end
-      orig_line = frame.line
-      curr_frame = frame
 
       local file = frame.source.path
       local bufnr = open_or_switch_to_file(file)
       if not file then error("StackFrame file cannot be nil") end
+
+      local cache = {}
 
       local existing = vim.fn.maparg("T", "n", false, true)
       if existing and existing.buffer == bufnr then
@@ -97,53 +136,29 @@ function M.register_listener()
         keymap_backup[bufnr] = false
       end
 
-      local cache = {}
-
       vim.keymap.set("n", "T", function()
         local current_line = vim.api.nvim_win_get_cursor(0)[1]
         local matches = {}
         for key, value in pairs(cache) do
-          if value.netcoredbg and value.roslyn and value.roslyn.lineStart == current_line and curr_frame ~= nil then table.insert(matches, { display = key, value = value }) end
+          if value.netcoredbg and value.roslyn and value.roslyn.lineStart == current_line then table.insert(matches, { display = key, value = value }) end
         end
         if #matches == 0 then
           return
         else
           require("easy-dotnet.picker").picker(nil, matches, function(val)
-            require("easy-dotnet.netcoredbg").resolve_by_var_name(curr_frame.id, val.display, function(res) require("easy-dotnet.netcoredbg.debugger-float").show(res.value, curr_frame.id) end)
+            require("easy-dotnet.netcoredbg").resolve_by_var_name(
+              val.value.frame.frame_id,
+              val.display,
+              function(res) require("easy-dotnet.netcoredbg.debugger-float").show(res.value, val.value.frame.frame_id) end
+            )
           end, "Pick variable", true, true)
         end
       end, { silent = true, buffer = bufnr })
 
-      client:initialize(function()
-        client:roslyn_scope_variables(file, frame.line, function(variable_locations)
-          for _, value in ipairs(variable_locations) do
-            append_redraw(cache, value, "roslyn", bufnr, value.identifier)
-          end
-        end)
-      end)
+      query_stack_frame(frame, session, bufnr, cache)
 
-      local frame_id = frame.id
-
-      session:request("scopes", { frameId = frame_id }, function(err2, response2)
-        if err2 then return end
-
-        for _, scope in ipairs(response2.scopes) do
-          local variables_reference = scope.variablesReference
-
-          session:request("variables", { variablesReference = variables_reference }, function(err3, response3)
-            if err3 then return end
-            for _, value in ipairs(response3.variables) do
-              append_redraw(cache, value, "netcoredbg", bufnr, value.evaluateName)
-              if value.evaluateName == "$exception" then append_redraw(cache, { lineStart = orig_line }, "roslyn", bufnr, value.evaluateName) end
-
-              require("easy-dotnet.netcoredbg").resolve_by_var_name(frame_id, value.evaluateName, function(res)
-                cache[value.evaluateName].resolved = { pretty = res.formatted_value, hi = res.hi }
-                redraw(cache, bufnr)
-              end)
-            end
-          end)
-        end
-      end)
+      local frame2 = response1.stackFrames[2]
+      if frame2 and frame2.source and frame2.source.path == file then query_stack_frame(frame2, session, bufnr, cache) end
     end)
   end
 
