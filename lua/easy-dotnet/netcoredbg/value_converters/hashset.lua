@@ -29,17 +29,20 @@ M.extract = function(var_path, vars, cb)
   require("easy-dotnet.netcoredbg").fetch_variables(entries, 1, function(slot_entries)
     table.sort(slot_entries, function(a, b) return index_to_number(a.name) < index_to_number(b.name) end)
 
+    local i = 0
     local result = vim
       .iter(slot_entries)
       :slice(1, count)
       :map(function(r)
         return vim.iter(r.children):find(function(child) return child.name == "Value" end)
       end)
+      :map(function(item)
+        i = i + 1
+        return vim.tbl_extend("force", item, {
+          var_path = string.format("%s._entries[%d].%s", var_path, i - 1, item.name),
+        })
+      end)
       :totable()
-
-    for i, value in ipairs(result) do
-      value.var_path = var_path .. "._entries" .. "[" .. (i - 1) .. "]" .. "." .. value.name
-    end
 
     cb(result, require("easy-dotnet.netcoredbg.pretty_printers.list").pretty_print(result))
   end)

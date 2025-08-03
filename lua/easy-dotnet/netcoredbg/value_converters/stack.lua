@@ -34,11 +34,16 @@ M.extract = function(var_path, vars, cb)
 
     table.sort(result, function(a, b) return index_to_number(a.name) > index_to_number(b.name) end)
 
-    for _, value in ipairs(result) do
-      value.var_path = var_path .. "._array" .. value.name
-    end
+    local items = vim
+      .iter(result)
+      :map(function(item)
+        return vim.tbl_extend("force", item, {
+          var_path = var_path .. "._array" .. item.name,
+        })
+      end)
+      :totable()
 
-    cb(result, require("easy-dotnet.netcoredbg.pretty_printers.list").pretty_print(result))
+    cb(items, require("easy-dotnet.netcoredbg.pretty_printers.list").pretty_print(result))
   end)
 
   return {}
