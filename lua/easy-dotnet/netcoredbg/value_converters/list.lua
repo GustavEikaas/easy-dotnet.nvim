@@ -39,7 +39,6 @@ function M.extract(var_path, vars, cb)
 
       for _, children_ref in ipairs(r) do
         children_ref.var_path = var_path .. "._items" .. children_ref.name
-        vim.print(children_ref.var_path)
         if added >= max_count then break end
         table.insert(result, children_ref)
         added = added + 1

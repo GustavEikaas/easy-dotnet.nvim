@@ -141,7 +141,6 @@ end
 ---@param cb fun(value: ResolvedVariable): nil
 ---@return false | nil
 function M.resolve_by_vars_reference(stack_frame_id, vars_reference, var_path, var_type, cb)
-  vim.print("resolving ", (var_path and var_path or "TODO;" .. var_type))
   if stack_frame_id == nil then error("Stack frame id cannot be nil") end
   if vars_reference == nil then error("vars ref  id cannot be nil") end
 
@@ -163,7 +162,6 @@ function M.resolve_by_vars_reference(stack_frame_id, vars_reference, var_path, v
 
   ---@param children table<Variable>
   M.fetch_variables(vars_reference, 0, function(children)
-    vim.print(var_path)
     M.extract(children, var_path, var_type, function(lua_type, res, hi)
       ---@type ResolvedVariable
       local value = {
@@ -247,7 +245,6 @@ function M.resolve_by_var_name(stack_frame_id, var_name, cb)
     else
       ---@param children table<Variable>
       M.fetch_variables(response.variablesReference, 0, function(children)
-        vim.print(var_name)
         M.extract(children, var_name, response.type, function(lua_type, res, hi)
           ---@type ResolvedVariable
           local value = {
