@@ -1,5 +1,4 @@
 local exception = require("easy-dotnet.netcoredbg.value_converters.exception")
-local enumerable = require("easy-dotnet.netcoredbg.value_converters.enumerable")
 local list = require("easy-dotnet.netcoredbg.value_converters.list")
 local sorted_list = require("easy-dotnet.netcoredbg.value_converters.sorted_list")
 local imm_list = require("easy-dotnet.netcoredbg.value_converters.immutable_list")
@@ -109,8 +108,6 @@ function M.extract(vars, var_path, var_type, cb)
   if list.is_list(var_type) then
     local list_value = list.extract(var_path, vars, cb)
     return list_value
-  elseif enumerable.is_enumerable(var_type) then
-    enumerable.extract(vars, cb)
   elseif exception.is_exception(vars) then
     exception.extract(var_path, vars, cb)
   elseif tuple.is_tuple(var_type) then
