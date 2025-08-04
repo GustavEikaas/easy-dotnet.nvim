@@ -1,4 +1,5 @@
 local exception = require("easy-dotnet.netcoredbg.value_converters.exception")
+local guid = require("easy-dotnet.netcoredbg.value_converters.guid")
 local list = require("easy-dotnet.netcoredbg.value_converters.list")
 local sorted_list = require("easy-dotnet.netcoredbg.value_converters.sorted_list")
 local imm_list = require("easy-dotnet.netcoredbg.value_converters.immutable_list")
@@ -104,10 +105,12 @@ local function vars_to_table(var_path, vars, cb)
   cb(result, require("easy-dotnet.netcoredbg.pretty_printers.catch-all").pretty_print(result))
 end
 
-function M.extract(vars, var_path, var_type, cb)
+function M.extract(stack_frame, vars, var_path, var_type, cb)
   if list.is_list(var_type) then
     local list_value = list.extract(var_path, vars, cb)
     return list_value
+  elseif guid.is_guid(var_type) then
+    guid.extract(stack_frame, var_path, cb)
   elseif exception.is_exception(vars) then
     exception.extract(var_path, vars, cb)
   elseif tuple.is_tuple(var_type) then
@@ -162,7 +165,7 @@ function M.resolve_by_vars_reference(stack_frame_id, vars_reference, var_path, v
 
   ---@param children table<Variable>
   M.fetch_variables(vars_reference, 0, function(children)
-    M.extract(children, var_path, var_type, function(lua_type, res, hi)
+    M.extract(stack_frame_id, children, var_path, var_type, function(lua_type, res, hi)
       ---@type ResolvedVariable
       local value = {
         formatted_value = "",
@@ -245,7 +248,7 @@ function M.resolve_by_var_name(stack_frame_id, var_name, cb)
     else
       ---@param children table<Variable>
       M.fetch_variables(response.variablesReference, 0, function(children)
-        M.extract(children, var_name, response.type, function(lua_type, res, hi)
+        M.extract(stack_frame_id, children, var_name, response.type, function(lua_type, res, hi)
           ---@type ResolvedVariable
           local value = {
             formatted_value = "",
