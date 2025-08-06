@@ -159,6 +159,7 @@ Out of the box, the following .NET types are recognized and automatically pretti
 * `System.TimeSpan`
 * `System.Enum`
 * `System.Version`
+* `System.RuntimeType`
 * `System.Uri`
 * `System.Exception`
 * `System.Guid`
