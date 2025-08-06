@@ -7,6 +7,7 @@ local M = {}
 ---@type ValueConverter[]
 M.value_converters = {
   require("easy-dotnet.netcoredbg.value_converters.exception"),
+  require("easy-dotnet.netcoredbg.value_converters.type"),
   require("easy-dotnet.netcoredbg.value_converters.enum"),
   require("easy-dotnet.netcoredbg.value_converters.date"),
   require("easy-dotnet.netcoredbg.value_converters.uri"),
