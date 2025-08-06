@@ -1,4 +1,3 @@
-
 ---@type ValueConverter
 return {
   satisfies_type = function(class_name)
