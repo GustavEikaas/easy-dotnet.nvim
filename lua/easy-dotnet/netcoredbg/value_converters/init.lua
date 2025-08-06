@@ -29,6 +29,19 @@ M.value_converters = {
   require("easy-dotnet.netcoredbg.value_converters.json_array"),
 }
 
+function M.simple_unwrap(unwrap_key, frame_id, vars, var_path, cb)
+  local var = nil
+  for _, property in ipairs(vars) do
+    if property.name == unwrap_key then var = property end
+  end
+  if not var then error("Failed to unwrap " .. var_path .. "." .. unwrap_key) end
+  if var and var.variablesReference ~= 0 then
+    require("easy-dotnet.netcoredbg").resolve_by_vars_reference(frame_id, var.variablesReference, var_path .. "." .. unwrap_key, var.type, function(value) cb(value.value, value.formatted_value) end)
+  else
+    cb({ var }, var.value)
+  end
+end
+
 ---Converts a list of DAP variables into a Lua table.
 ---Numeric-looking keys like [0], [1] go into array part.
 ---Named keys go into map part.

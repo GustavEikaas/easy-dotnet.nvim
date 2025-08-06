@@ -1,3 +1,4 @@
+local unwrap_key = "Dictionary"
 ---@type ValueConverter
 return {
   satisfies_type = function(class_name)
@@ -9,17 +10,17 @@ return {
     local var_ref = nil
 
     for _, property in ipairs(vars) do
-      if property.name == "Dictionary" then var_ref = property end
+      if property.name == unwrap_key then var_ref = property end
     end
 
-    if not var_ref then error("failed to get _dictionary from JsonObject") end
+    if not var_ref then error(string.format("Failed to get %s from JsonObject", unwrap_key)) end
 
     local netcoredbg = require("easy-dotnet.netcoredbg")
 
     netcoredbg.fetch_variables(
       var_ref.variablesReference,
       0,
-      function(entries) require("easy-dotnet.netcoredbg.value_converters.dictionaries").extract(frame_id, entries, var_path .. "._dictionary", var_ref.type, cb) end
+      function(entries) require("easy-dotnet.netcoredbg.value_converters.dictionaries").extract(frame_id, entries, var_path .. "." .. unwrap_key, var_ref.type, cb) end
     )
   end,
 }
