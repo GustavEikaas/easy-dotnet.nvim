@@ -188,6 +188,7 @@ Easy preview of variables while debugging, unwraps complex types
 
 ## Variable explorer
 Let's you view and expand more complex variables. With automatic unwrapping
+* Default keybind: `T`
 ![image](https://github.com/user-attachments/assets/4e4c2cff-687b-4715-b5a8-b7ca67f7955b)
 
 
