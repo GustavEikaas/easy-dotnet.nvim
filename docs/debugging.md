@@ -152,6 +152,11 @@ Out of the box, the following .NET types are recognized and automatically pretti
 * `System.Collections.Generic.HashSet`
 * `System.Collections.Generic.Queue`
 * `System.Collections.Generic.Stack`
+* `System.DateOnly`
+* `System.DateTime`
+* `System.DateTimeOffset`
+* `System.TimeOnly`
+* `System.TimeSpan`
 * `System.Enum`
 * `System.Exception`
 * `System.Guid`

@@ -3,7 +3,11 @@ return {
   satisfies_type = function(class_name)
     class_name = vim.trim(class_name)
     if type(class_name) ~= "string" then return false end
-    return class_name:match("^System%.DateTime$") ~= nil
+    return class_name:match("^System%.DateOnly$") ~= nil
+      or class_name:match("^System%.DateTime$") ~= nil
+      or class_name:match("^System%.DateTimeOffset$") ~= nil
+      or class_name:match("^System%.TimeOnly$") ~= nil
+      or class_name:match("^System%.TimeSpan$") ~= nil
   end,
   extract = function(frame_id, vars, var_path, _, cb)
     local dap = require("dap")
