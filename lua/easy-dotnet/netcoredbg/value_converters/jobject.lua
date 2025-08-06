@@ -13,11 +13,7 @@ function M.extract(var_path, vars, cb)
   local netcoredbg = require("easy-dotnet.netcoredbg")
   netcoredbg.fetch_variables(var_ref, 1, function(entries)
     for _, value in ipairs(entries) do
-      if value.name == "_dictionary" then
-        require("easy-dotnet.netcoredbg.value_converters.dictionaries").extract(var_path .. "._properties._dictionary", value.children, function(val, pretty)
-          cb(val, pretty)
-        end)
-      end
+      if value.name == "_dictionary" then require("easy-dotnet.netcoredbg.value_converters.dictionaries").extract(var_path .. "._properties._dictionary", value.children, cb) end
     end
   end)
 end

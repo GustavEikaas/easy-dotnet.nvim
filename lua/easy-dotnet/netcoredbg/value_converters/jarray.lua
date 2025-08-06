@@ -11,11 +11,7 @@ function M.extract(var_path, vars, cb)
 
   if var_ref then
     ---@param r Variable[]
-    require("easy-dotnet.netcoredbg").fetch_variables(var_ref, 0, function(r) require("easy-dotnet.netcoredbg.value_converters.list").extract(var_path .. "._values", r, function (r, c)
-      vim.print(r)
-      cb(r,c)
-      
-    end) end)
+    require("easy-dotnet.netcoredbg").fetch_variables(var_ref, 0, function(r) require("easy-dotnet.netcoredbg.value_converters.list").extract(var_path .. "._values", r, cb) end)
   end
 end
 

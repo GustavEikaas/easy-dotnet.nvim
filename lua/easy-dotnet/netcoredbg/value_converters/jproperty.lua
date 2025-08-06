@@ -9,13 +9,9 @@ function M.extract(frame_id, var_path, vars, cb)
   end
   if not var then error("failed to unwrap " .. var_path .. ".Value") end
   if var and var.variablesReference ~= 0 then
-    require("easy-dotnet.netcoredbg").resolve_by_vars_reference(frame_id, var.variablesReference, var_path .. ".Value", var.type, function(value)
-      vim.print("RESOLVING", value.value)
-      cb(value.value, "")
-    end)
+    require("easy-dotnet.netcoredbg").resolve_by_vars_reference(frame_id, var.variablesReference, var_path .. ".Value", var.type, function(value) cb(value.value, "") end)
   else
-    vim.print("PRIM", var)
-    cb({ var.value }, "")
+    cb({ var }, var.value)
   end
 end
 
