@@ -8,6 +8,7 @@ local M = {}
 M.value_converters = {
   require("easy-dotnet.netcoredbg.value_converters.exception"),
   require("easy-dotnet.netcoredbg.value_converters.enum"),
+  require("easy-dotnet.netcoredbg.value_converters.date_time"),
   require("easy-dotnet.netcoredbg.value_converters.jobject"),
   require("easy-dotnet.netcoredbg.value_converters.jarray"),
   require("easy-dotnet.netcoredbg.value_converters.jvalue"),
@@ -48,7 +49,7 @@ end
 ---Named keys go into map part.
 ---
 ---@param vars table[] # List of DAP variable tables with .name and .value
-local function vars_to_table(var_path, vars, cb)
+function M.vars_to_table(var_path, vars, cb)
   local result = {}
 
   for _, c in ipairs(vars) do
