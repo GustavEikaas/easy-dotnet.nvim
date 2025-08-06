@@ -36,7 +36,7 @@ return {
           local value_var = nil
 
           for _, child in ipairs(entry.children) do
-            if child.name == "key" or child.name == 'Key' then
+            if child.name == "key" or child.name == "Key" then
               key_var = vim.deepcopy(child)
               key_var.var_path = var_path .. "._entries" .. entry.name .. "." .. child.name
             elseif child.name == "value" or child.name == "Value" then
