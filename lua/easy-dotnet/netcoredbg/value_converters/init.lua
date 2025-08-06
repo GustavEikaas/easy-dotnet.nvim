@@ -8,6 +8,7 @@ local M = {}
 M.value_converters = {
   require("easy-dotnet.netcoredbg.value_converters.exception"),
   require("easy-dotnet.netcoredbg.value_converters.enum"),
+  require("easy-dotnet.netcoredbg.value_converters.date"),
   require("easy-dotnet.netcoredbg.value_converters.jobject"),
   require("easy-dotnet.netcoredbg.value_converters.jarray"),
   require("easy-dotnet.netcoredbg.value_converters.jvalue"),
@@ -48,7 +49,7 @@ end
 ---Named keys go into map part.
 ---
 ---@param vars table[] # List of DAP variable tables with .name and .value
-local function vars_to_table(var_path, vars, cb)
+function M.vars_to_table(var_path, vars, cb)
   local result = {}
 
   for _, c in ipairs(vars) do
@@ -80,7 +81,7 @@ M.extract = function(stack_frame_id, vars, var_path, var_type, cb)
   elseif #matches == 1 then
     matches[1].extract(stack_frame_id, vars, var_path, var_type, cb)
   else
-    vars_to_table(var_path, vars, cb)
+    M.vars_to_table(var_path, vars, cb)
   end
 end
 
