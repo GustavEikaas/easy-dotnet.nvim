@@ -158,6 +158,7 @@ Out of the box, the following .NET types are recognized and automatically pretti
 * `System.TimeOnly`
 * `System.TimeSpan`
 * `System.Enum`
+* `System.Version`
 * `System.Exception`
 * `System.Guid`
 * `System.Tuple<>`
