@@ -141,17 +141,28 @@ This dramatically improves the debugging experience for C# and F# developers usi
 
 Out of the box, the following .NET types are recognized and automatically prettified:
 
-* `List<T>`
-* `Queue<T>`
-* `Stack<T>`
-* `Tuple<>` 
-* `Dictionary<K,V>`
-* `ConcurrentDictionary<K,V>`
-* `ReadOnlyDictionary<K,V>`
-* `HashSet<T>`
-* `ImmutableList<T>`
-* `ReadOnlyList<T>`
-* `SortedList<K,V>`
+* `System.Collections.ObjectModel.ReadOnlyCollection`
+* `System.Collections.Generic.List`
+* `System.Collections.Generic.SortedList`
+* `System.Collections.Immutable.ImmutableList`
+* `System.Collections.Concurrent.ConcurrentDictionary`
+* `System.Collections.Generic.Dictionary`
+* `System.Collections.Generic.OrderedDictionary`
+* `System.Collections.ObjectModel.ReadOnlyDictionary`
+* `System.Collections.Generic.HashSet`
+* `System.Collections.Generic.Queue`
+* `System.Collections.Generic.Stack`
+* `System.Enum`
+* `System.Exception`
+* `System.Guid`
+* `System.Tuple<>`
+* `System.Text.Json.JsonElement`
+* `System.Text.Json.Nodes.JsonArray`
+* `System.Text.Json.Nodes.JsonObject`
+* `Newtonsoft.Json.Linq.JArray`
+* `Newtonsoft.Json.Linq.JObject`
+* `Newtonsoft.Json.Linq.JProperty`
+* `Newtonsoft.Json.Linq.JValue`
 
 ## 🛠 How to Enable
 
