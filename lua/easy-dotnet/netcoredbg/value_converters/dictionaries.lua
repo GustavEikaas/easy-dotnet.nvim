@@ -16,6 +16,7 @@ end
 M.extract = function(var_path, vars, cb)
   local max_count = 0
   local var_ref = 0
+  local is_complex_keys = false
 
   for _, entry in ipairs(vars) do
     if entry.name == "_count" and tonumber(entry.value) then
@@ -46,7 +47,6 @@ M.extract = function(var_path, vars, cb)
           if child.name == "key" then
             key_var = vim.deepcopy(child)
             key_var.var_path = var_path .. "._entries" .. entry.name .. "." .. child.name
-            key_var.name = "Key"
           elseif child.name == "value" or child.name == "Value" then
             value_var = vim.deepcopy(child)
             value_var.var_path = var_path .. "._entries" .. entry.name .. "." .. child.name
@@ -55,22 +55,32 @@ M.extract = function(var_path, vars, cb)
         end
 
         if key_var then
-          table.insert(result, {
-            name = tostring(i),
-            type = "easy_dotnet_kv_wrapper",
-            value = "",
-            variablesReference = 999999,
-            children = {
-              key_var,
-              value_var,
-            },
-          })
+          if key_var.variablesReference ~= 0 then
+            is_complex_keys = true
+            key_var.name = "Key"
+            table.insert(result, {
+              name = tostring(i),
+              type = "easy_dotnet_kv_wrapper",
+              value = "",
+              variablesReference = 999999,
+              children = {
+                key_var,
+                value_var,
+              },
+            })
+          else
+            key_var.name = key_var.value
+            result[key_var.name] = value_var
+          end
           added = added + 1
         end
       end
     end
 
-    cb(result, require("easy-dotnet.netcoredbg.pretty_printers.kv-pair-list").pretty_print(result))
+    cb(
+      result,
+      is_complex_keys and require("easy-dotnet.netcoredbg.pretty_printers.kv-pair-list").pretty_print(result) or require("easy-dotnet.netcoredbg.pretty_printers.catch-all").pretty_print(result)
+    )
   end)
 end
 

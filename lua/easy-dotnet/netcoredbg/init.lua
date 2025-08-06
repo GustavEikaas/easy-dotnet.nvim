@@ -1,4 +1,8 @@
 local exception = require("easy-dotnet.netcoredbg.value_converters.exception")
+local jobject = require("easy-dotnet.netcoredbg.value_converters.jobject")
+local jarray = require("easy-dotnet.netcoredbg.value_converters.jarray")
+local jvalue = require("easy-dotnet.netcoredbg.value_converters.jvalue")
+local jproperty = require("easy-dotnet.netcoredbg.value_converters.jproperty")
 local guid = require("easy-dotnet.netcoredbg.value_converters.guid")
 local list = require("easy-dotnet.netcoredbg.value_converters.list")
 local sorted_list = require("easy-dotnet.netcoredbg.value_converters.sorted_list")
@@ -111,6 +115,14 @@ function M.extract(stack_frame, vars, var_path, var_type, cb)
     return list_value
   elseif guid.is_guid(var_type) then
     guid.extract(stack_frame, var_path, cb)
+  elseif jarray.is_jarray(var_type) then
+    jarray.extract(var_path, vars, cb)
+  elseif jobject.is_jobject(var_type) then
+    jobject.extract(var_path, vars, cb)
+  elseif jvalue.is_jvalue(var_type) then
+    jvalue.extract(stack_frame, var_path, vars, cb)
+  elseif jproperty.is_jproperty(var_type) then
+    jproperty.extract(stack_frame, var_path, vars, cb)
   elseif exception.is_exception(vars) then
     exception.extract(var_path, vars, cb)
   elseif tuple.is_tuple(var_type) then
