@@ -46,7 +46,6 @@ M.extract = function(var_path, vars, cb)
           if child.name == "key" then
             key_var = vim.deepcopy(child)
             key_var.var_path = var_path .. "._entries" .. entry.name .. "." .. child.name
-            key_var.name = "Key"
           elseif child.name == "value" or child.name == "Value" then
             value_var = vim.deepcopy(child)
             value_var.var_path = var_path .. "._entries" .. entry.name .. "." .. child.name
@@ -55,16 +54,22 @@ M.extract = function(var_path, vars, cb)
         end
 
         if key_var then
-          table.insert(result, {
-            name = tostring(i),
-            type = "easy_dotnet_kv_wrapper",
-            value = "",
-            variablesReference = 999999,
-            children = {
-              key_var,
-              value_var,
-            },
-          })
+          if key_var.variablesReference ~= 0 then
+            key_var.name = "Key"
+            table.insert(result, {
+              name = tostring(i),
+              type = "easy_dotnet_kv_wrapper",
+              value = "",
+              variablesReference = 999999,
+              children = {
+                key_var,
+                value_var,
+              },
+            })
+          else
+            key_var.name = key_var.value
+            result[key_var.name] = value_var
+          end
           added = added + 1
         end
       end

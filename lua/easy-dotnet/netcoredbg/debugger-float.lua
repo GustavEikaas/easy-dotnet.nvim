@@ -93,6 +93,7 @@ function M.toggle_under_cursor(window)
             var_path = r.var_path,
             variablesReference = r.variablesReference,
             expanded = false,
+            children = r.children,
           }
         end,
         converted_value
@@ -107,6 +108,7 @@ function M.toggle_under_cursor(window)
           var_path = value.var_path,
           variablesReference = value.variablesReference,
           expanded = false,
+          children = value.children,
         })
       end
       var.children = root_vars
