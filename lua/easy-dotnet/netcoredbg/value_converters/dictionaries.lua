@@ -3,7 +3,7 @@ return {
   satisfies_type = function(class_name)
     class_name = vim.trim(class_name)
     if type(class_name) ~= "string" then return false end
-    return class_name:match("^System%.Collections%.Generic%.Dictionary") ~= nil
+    return class_name:match("^System%.Collections%.Generic%.Dictionary") ~= nil or class_name:match("^System%.Collections%.Generic%.OrderedDictionary") ~= nil
   end,
   extract = function(_, vars, var_path, _, cb)
     local max_count = 0
@@ -36,7 +36,7 @@ return {
           local value_var = nil
 
           for _, child in ipairs(entry.children) do
-            if child.name == "key" then
+            if child.name == "key" or child.name == "Key" then
               key_var = vim.deepcopy(child)
               key_var.var_path = var_path .. "._entries" .. entry.name .. "." .. child.name
             elseif child.name == "value" or child.name == "Value" then
