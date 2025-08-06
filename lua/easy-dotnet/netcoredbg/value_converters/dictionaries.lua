@@ -16,6 +16,7 @@ end
 M.extract = function(var_path, vars, cb)
   local max_count = 0
   local var_ref = 0
+  local is_complex_keys = false
 
   for _, entry in ipairs(vars) do
     if entry.name == "_count" and tonumber(entry.value) then
@@ -55,6 +56,7 @@ M.extract = function(var_path, vars, cb)
 
         if key_var then
           if key_var.variablesReference ~= 0 then
+            is_complex_keys = true
             key_var.name = "Key"
             table.insert(result, {
               name = tostring(i),
@@ -75,7 +77,10 @@ M.extract = function(var_path, vars, cb)
       end
     end
 
-    cb(result, require("easy-dotnet.netcoredbg.pretty_printers.kv-pair-list").pretty_print(result))
+    cb(
+      result,
+      is_complex_keys and require("easy-dotnet.netcoredbg.pretty_printers.kv-pair-list").pretty_print(result) or require("easy-dotnet.netcoredbg.pretty_printers.catch-all").pretty_print(result)
+    )
   end)
 end
 
