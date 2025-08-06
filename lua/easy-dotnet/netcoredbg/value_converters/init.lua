@@ -23,6 +23,10 @@ M.value_converters = {
   require("easy-dotnet.netcoredbg.value_converters.dictionaries"),
   require("easy-dotnet.netcoredbg.value_converters.readonly_dictionary"),
   require("easy-dotnet.netcoredbg.value_converters.concurrent_dictionary"),
+  require("easy-dotnet.netcoredbg.value_converters.json_object"),
+  require("easy-dotnet.netcoredbg.value_converters.json_element"),
+  require("easy-dotnet.netcoredbg.value_converters.json_value_of_element"),
+  require("easy-dotnet.netcoredbg.value_converters.json_array"),
 }
 
 ---Converts a list of DAP variables into a Lua table.
