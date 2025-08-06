@@ -9,6 +9,7 @@ M.value_converters = {
   require("easy-dotnet.netcoredbg.value_converters.exception"),
   require("easy-dotnet.netcoredbg.value_converters.enum"),
   require("easy-dotnet.netcoredbg.value_converters.date"),
+  require("easy-dotnet.netcoredbg.value_converters.uri"),
   require("easy-dotnet.netcoredbg.value_converters.version"),
   require("easy-dotnet.netcoredbg.value_converters.jobject"),
   require("easy-dotnet.netcoredbg.value_converters.jarray"),
