@@ -24,14 +24,14 @@ M.nuget_search = function()
   local results = {}
   client:initialize(function()
     require("fzf-lua").fzf_live(function(prompt)
-      return function(add_item, finished)
-        local res = nuget_search_rpc(prompt, client)
+      return coroutine.wrap(function(add_item, finished)
+        local res = nuget_search_rpc(prompt[1], client)
         results = res
         for _, r in ipairs(res) do
           add_item(r.display)
         end
         finished()
-      end
+      end)
     end, {
       actions = {
         ["default"] = function(selected)
