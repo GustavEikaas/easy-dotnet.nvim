@@ -256,7 +256,7 @@ local function remove_project_keymap(ref)
     key = "r",
     handler = function()
       local cleanup = M.append_job("Removing project reference")
-      vim.fn.jobstart(string.format("dotnet remove %s reference %s ", M.project.path, ref), {
+      vim.fn.jobstart({ "dotnet", "remove", M.project.path, "reference", ref }, {
         on_exit = function(_, code)
           cleanup()
           if code ~= 0 then
