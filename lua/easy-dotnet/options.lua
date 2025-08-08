@@ -157,6 +157,10 @@ local M = {
     auto_bootstrap_namespace = {
       type = "block_scoped",
       enabled = true,
+      use_clipboard_json  = {
+        behavior = "auto", --'auto' | 'prompt' | 'never',
+        register = "+",
+      },
     },
     -- choose which picker to use with the plugin
     -- possible values are "telescope" | "fzf" | "snacks" | "basic"

@@ -11,6 +11,18 @@ end
 
 ---@alias BootstrapNamespaceMode "file_scoped" | "block_scoped"
 
+local function is_key_value_table(tbl)
+  if type(tbl) ~= "table" then return false end
+
+  local i = 0
+  for k, _ in pairs(tbl) do
+    i = i + 1
+    if type(k) ~= "number" or k ~= i then return true end
+  end
+
+  return false
+end
+
 ---@param mode BootstrapNamespaceMode
 local function auto_bootstrap_namespace(bufnr, mode)
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
@@ -35,13 +47,27 @@ local function auto_bootstrap_namespace(bufnr, mode)
     vim.cmd("checktime")
   end
 
+  local from_json = function(clipboard) client:roslyn_bootstrap_file_json(curr_file, clipboard, mode == "file_scoped", on_finished) end
+  local default = function() client:roslyn_bootstrap_file(curr_file, type_keyword, mode == "file_scoped", on_finished) end
+
   client:initialize(function()
-    local clipboard = vim.fn.getreg("+")
-    local is_valid_json = pcall(vim.fn.json_decode, clipboard)
-    if is_valid_json then
-      client:roslyn_bootstrap_file_json(curr_file, clipboard, mode == "file_scoped", on_finished)
+    local opt = require("easy-dotnet.options").get_option("auto_bootstrap_namespace")
+    local clipboard = vim.fn.getreg(opt.use_clipboard_json.register)
+    local is_valid_json, res = pcall(vim.fn.json_decode, clipboard)
+    local is_table = is_valid_json and (type(res) == "table" and is_key_value_table(res))
+
+    if is_table and opt.use_clipboard_json.behavior == "auto" then
+      from_json(clipboard)
+    elseif is_table and opt.use_clipboard_json.behavior == "prompt" then
+      require("easy-dotnet.picker").picker(nil, { { display = "Yes", value = true }, { display = "No", value = false } }, function(choice)
+        if choice.value == true then
+          from_json(clipboard)
+        else
+          default()
+        end
+      end, "Bootstrap file from json in clipboard?", false, true)
     else
-      client:roslyn_bootstrap_file(curr_file, type_keyword, mode == "file_scoped", on_finished)
+      default()
     end
   end)
 end

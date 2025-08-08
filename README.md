@@ -212,6 +212,10 @@ Although not *required* by the plugin, it is highly recommended to install one o
           --block_scoped, file_scoped
           type = "block_scoped",
           enabled = true
+          use_clipboard_json = {
+            behavior = "auto", --'auto' | 'prompt' | 'never',
+            register = "+", -- which register to check
+          },
       },
       -- choose which picker to use with the plugin
       -- possible values are "telescope" | "fzf" | "snacks" | "basic"
