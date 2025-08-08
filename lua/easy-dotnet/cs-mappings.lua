@@ -30,11 +30,19 @@ local function auto_bootstrap_namespace(bufnr, mode)
   })
 
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  local on_finished = function()
+    vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+    vim.cmd("checktime")
+  end
+
   client:initialize(function()
-    client:roslyn_bootstrap_file(curr_file, type_keyword, mode == "file_scoped", function()
-      vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-      vim.cmd("checktime")
-    end)
+    local clipboard = vim.fn.getreg("+")
+    local is_valid_json = pcall(vim.fn.json_decode, clipboard)
+    if is_valid_json then
+      client:roslyn_bootstrap_file_json(curr_file, clipboard, mode == "file_scoped", on_finished)
+    else
+      client:roslyn_bootstrap_file(curr_file, type_keyword, mode == "file_scoped", on_finished)
+    end
   end)
 end
 
