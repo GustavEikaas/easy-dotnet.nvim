@@ -165,7 +165,9 @@ local function get_solutions_async(cb)
     depth = 5,
     silent = true,
     on_exit = function(output)
-      vim.schedule(function() wrap(cb)(output) end)
+      vim.schedule(function()
+        coroutine.wrap(function() cb(output) end)()
+      end)
     end,
   })
 end
