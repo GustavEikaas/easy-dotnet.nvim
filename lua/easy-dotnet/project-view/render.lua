@@ -301,7 +301,7 @@ local function stringify_project_header()
   table.insert(args, { "Package References: (a)dd (r)emove", "Character" })
 
   if not M.package_refs then
-    table.insert(args, { "  None", "Question" })
+    table.insert(args, { "  None", "Question", { add_package_keymap()} })
   else
     for _, ref in ipairs(M.package_refs) do
       table.insert(args, { string.format("  %s", ref), "Question", { add_package_keymap(), remove_package_keymap(ref), open_package_browser_keymap(ref) } })
