@@ -231,6 +231,11 @@ Although not *required* by the plugin, it is highly recommended to install one o
           end
         end,
       },
+      debugger = {
+        mappings = {
+          open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
+        },
+      }
     })
 
     -- Example command

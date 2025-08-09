@@ -129,14 +129,15 @@ function M.register_listener()
 
       local cache = {}
 
-      local existing = vim.fn.maparg("T", "n", false, true)
+      local opt = require("easy-dotnet.options").options.debugger.mappings.open_variable_viewer
+      local existing = vim.fn.maparg(opt.lhs, "n", false, true)
       if existing and existing.buffer == bufnr then
         keymap_backup[bufnr] = existing
       elseif vim.api.nvim_buf_is_loaded(bufnr) then
         keymap_backup[bufnr] = false
       end
 
-      vim.keymap.set("n", "T", function()
+      vim.keymap.set("n", opt.lhs, function()
         local current_line = vim.api.nvim_win_get_cursor(0)[1]
         local matches = {}
         for key, value in pairs(cache) do
@@ -153,7 +154,7 @@ function M.register_listener()
             )
           end, "Pick variable", true, true)
         end
-      end, { silent = true, buffer = bufnr })
+      end, { silent = true, buffer = bufnr, desc = opt.desc })
 
       query_stack_frame(frame, session, bufnr, cache)
 
@@ -163,6 +164,8 @@ function M.register_listener()
   end
 
   require("dap").listeners.after.event_exited["easy-dotnet-cleanup"] = function()
+    ---@type Keymap
+    local opt = require("easy-dotnet.options").options.debugger.mappings.open_variable_viewer
     require("easy-dotnet.netcoredbg.debugger-float").close()
     require("easy-dotnet.netcoredbg").variable_cache = {}
     require("easy-dotnet.netcoredbg").pending_callbacks = {}
@@ -170,10 +173,10 @@ function M.register_listener()
       if vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_is_loaded(bufnr) then
         vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
         if original == false then
-          pcall(vim.keymap.del, "n", "T", { buffer = bufnr })
+          pcall(vim.keymap.del, "n", opt.lhs, { buffer = bufnr })
         else
           if original.rhs then
-            vim.keymap.set("n", "T", original.rhs, {
+            vim.keymap.set("n", opt.lhs, original.rhs, {
               noremap = original.noremap == 1,
               expr = original.expr == 1,
               silent = original.silent == 1,
