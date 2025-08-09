@@ -178,6 +178,11 @@ local M = {
         return function(finished_event) spinner:stop_spinner(finished_event.result.msg, finished_event.result.level) end
       end,
     },
+    debugger = {
+      mappings = {
+        open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
+      },
+    },
   },
 }
 
