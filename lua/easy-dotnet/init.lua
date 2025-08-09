@@ -180,6 +180,8 @@ local function background_scanning(merged_opts)
   end
 end
 
+vim.api.nvim_create_user_command("AB", function() background_scanning(require("easy-dotnet.options").options) end, { nargs = "?", complete = complete_command })
+
 local is_installed = constants.get_data_directory() .. "/easy_dotnet_installed"
 
 local function auto_install_easy_dotnet()
