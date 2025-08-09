@@ -178,7 +178,7 @@ local M = {
       mappings = {
         open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
       },
-    }
+    },
   },
 }
 
