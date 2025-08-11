@@ -125,7 +125,6 @@ function M.preload_msbuild_properties(project_file_path, on_finished, target_fra
   local start_time = os.clock()
   client:initialize(function()
     client:msbuild_query_properties({ targetPath = project_file_path, targetFramework = target_framework }, function(properties)
-      vim.print(properties)
       if not properties then error("Server returned nil result for " .. project_file_path) end
       -- msbuild_cache[cache_key] = properties
       if not target_framework and properties.isMultiTarget and #properties.targetFrameworks > 1 then
