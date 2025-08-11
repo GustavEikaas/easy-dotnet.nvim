@@ -158,7 +158,7 @@ local M = {
       type = "block_scoped",
       enabled = true,
       use_clipboard_json = {
-        behavior = "auto", --'auto' | 'prompt' | 'never',
+        behavior = "prompt", --'auto' | 'prompt' | 'never',
         register = "+",
       },
     },
