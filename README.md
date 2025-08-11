@@ -78,7 +78,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 - Test runner: Test runner similiar to the one you find in Rider.
 - Outdated command: Makes checking outdated packages a breeze using virtual text
 - (csproj/fsproj) mappings: Keymappings for .csproj and .fsproj files are automatically available
-- Auto bootstrap namespace: Automatically inserts namespace when opening a newly created `.cs` file
+- Auto bootstrap namespace: Automatically inserts namespace and class/interface when opening a newly created `.cs` file. (also checks clipboard for json to create class from)
 - Create dotnet templates like with `dotnet new`, automatically adding them to the current solution
 - Package autocomplete inside .csproj and .fsproj files [Check it out](#package-autocomplete)
 - [Rider-like](https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments)
@@ -212,6 +212,10 @@ Although not *required* by the plugin, it is highly recommended to install one o
           --block_scoped, file_scoped
           type = "block_scoped",
           enabled = true
+          use_clipboard_json = {
+            behavior = "prompt", --'auto' | 'prompt' | 'never',
+            register = "+", -- which register to check
+          },
       },
       -- choose which picker to use with the plugin
       -- possible values are "telescope" | "fzf" | "snacks" | "basic"
