@@ -148,8 +148,7 @@ end
 ---@param node TestNode
 local function run_tests(node, win)
   if not win.options.noBuild then
-    local project = require("easy-dotnet.parsers.csproj-parse").get_project_from_project_file(node.cs_project_path)
-    local build_success = runner.request_build(project.path)
+    local build_success = runner.request_build(node.cs_project_path)
     if not build_success then
       logger.error("Failed to build project")
       return
