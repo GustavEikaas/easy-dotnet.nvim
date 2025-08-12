@@ -147,6 +147,13 @@ end
 
 ---@param node TestNode
 local function run_tests(node, win)
+  if not win.options.noBuild then
+    local build_success = runner.request_build(node.cs_project_path)
+    if not build_success then
+      logger.error("Failed to build project")
+      return
+    end
+  end
   if node.is_MTP then
     M.MTP_Run(node, win)
     return
@@ -308,7 +315,7 @@ M.keymaps = function()
     [keymap.run_all.lhs] = {
       handle = function(_, win)
         win.traverse(win.tree, function(node)
-          if node.type == "csproject" then run_tests(node, win) end
+          if node.type == "csproject" then coroutine.wrap(function() run_tests(node, win) end)() end
         end)
       end,
       desc = keymap.run_all.desc,
@@ -318,18 +325,18 @@ M.keymaps = function()
       handle = function(node, win)
         if node.type == "sln" then
           for _, value in pairs(node.children) do
-            run_tests(value, win)
+            coroutine.wrap(function() run_tests(value, win) end)()
           end
         elseif node.type == "csproject" then
-          run_tests(node, win)
+          coroutine.wrap(function() run_tests(node, win) end)()
         elseif node.type == "namespace" then
-          run_tests(node, win)
+          coroutine.wrap(function() run_tests(node, win) end)()
         elseif node.type == "test_group" then
-          run_tests(node, win)
+          coroutine.wrap(function() run_tests(node, win) end)()
         elseif node.type == "subcase" then
-          run_tests(node, win)
+          coroutine.wrap(function() run_tests(node, win) end)()
         elseif node.type == "test" then
-          run_tests(node, win)
+          coroutine.wrap(function() run_tests(node, win) end)()
         else
           logger.warn("Unknown line type " .. node.type)
           return
