@@ -213,7 +213,7 @@ M.new = function()
   if template.type == "project" then
     vim.cmd("startinsert")
     --TODO: telescope
-    vim.ui.input({ prompt = string.format("Enter name for %s", template.display) }, function(input)
+    vim.ui.input({ prompt = string.format("Enter name for %s:", template.display) }, function(input)
       if input == nil then
         logger.error("No name provided")
         return
