@@ -69,6 +69,9 @@ end
 ---@field roslyn_bootstrap_file fun(self: DotnetClient, file_path: string, type: "Class" | "Interface" | "Record", prefer_file_scoped: boolean, cb?: fun(success: true)): integer | false
 ---@field roslyn_bootstrap_file_json fun(self: DotnetClient, file_path: string, json_data: string, prefer_file_scoped: boolean, cb?: fun(success: true)): integer | false
 ---@field roslyn_scope_variables fun(self: DotnetClient, file_path: string, line: number, cb?: fun(variables: VariableLocation[])): integer | false
+---@field template_list fun(self: DotnetClient, cb?: fun(variables: DotnetNewTemplate[])): integer | false
+---@field template_parameters fun(self: DotnetClient, identity: string, cb?: fun(variables: DotnetNewParameter[])): integer | false
+---@field template_instantiate fun(self: DotnetClient, identity: string, name: string, output_path: string, params: table<string,string>, cb?: fun()): integer | false
 ---@field get_state fun(self: DotnetClient): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
 ---@field _initializing boolean? # True while initialization is in progress
 ---@field _initialized boolean? # True once initialization is complete
@@ -444,6 +447,45 @@ end
 
 function M:roslyn_scope_variables(file_path, line, cb)
   local id = self._client:request_enumerate("roslyn/scope-variables", { sourceFilePath = file_path, lineNumber = line }, nil, function(response) cb(response) end, handle_rpc_error)
+  return id
+end
+
+---@class DotnetNewTemplate
+---@field displayName string
+---@field identity string
+---@field type string|nil
+
+function M:template_list(cb)
+  local id = self._client:request_enumerate("template/list", {}, nil, function(response) cb(response) end, handle_rpc_error)
+  return id
+end
+
+---@alias DotnetNewParameterDataType
+---| '"text"'
+---| '"bool"'
+---| '"choice"'
+---| '"string"'
+
+---@class DotnetNewParameter
+---@field name string
+---@field defaultValue string|nil
+---@field defaultIfOptionWithoutValue string|nil
+---@field dataType DotnetNewParameterDataType
+---@field description string|nil
+---@field isRequired boolean
+---@field choices table<string, string>|nil
+
+function M:template_parameters(identity, cb)
+  local id = self._client:request_enumerate("template/parameters", { identity = identity }, nil, function(response) cb(response) end, handle_rpc_error)
+  return id
+end
+
+function M:template_instantiate(identity, name, output_path, params, cb)
+  local id = self._client.request("template/instantiate", { identity = identity, name = name, outputPath = output_path, parameters = params }, function(response)
+    local crash = handle_rpc_error(response)
+    if crash then return end
+    if cb then cb() end
+  end)
   return id
 end
 
