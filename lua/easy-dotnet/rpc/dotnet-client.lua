@@ -481,6 +481,7 @@ function M:template_parameters(identity, cb)
 end
 
 function M:template_instantiate(identity, name, output_path, params, cb)
+  if #vim.tbl_keys(params) == 0 then params["_"] = "" end
   local id = self._client.request("template/instantiate", { identity = identity, name = name, outputPath = output_path, parameters = params }, function(response)
     local crash = handle_rpc_error(response)
     if crash then return end

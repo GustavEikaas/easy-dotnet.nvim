@@ -55,7 +55,7 @@ function M.start(cb)
           local pipe_name = vim.trim(pipename)
           local full_pipe_path
           if extensions.isWindows() then
-            full_pipe_path = [[\\.\pipe\EasyDotnet_N5rU2UxfR0yErd7S1VrhZQ]]
+            full_pipe_path = [[\\.\pipe\]] .. pipe_name
           elseif extensions.isDarwin() then
             full_pipe_path = os.getenv("TMPDIR") .. "CoreFxPipe_" .. pipe_name
           else
