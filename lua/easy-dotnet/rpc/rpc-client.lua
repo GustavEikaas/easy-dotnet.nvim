@@ -67,6 +67,9 @@ local M = {
 ---| "roslyn/bootstrap-file"
 ---| "roslyn/scope-variables"
 ---| "json-code-gen"
+---| "template/list"
+---| "template/parameters"
+---| "template/instantiate"
 ---| "$/enumerator/next"
 
 local connection = nil
