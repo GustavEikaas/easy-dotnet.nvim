@@ -238,85 +238,8 @@ M.clean = {
   passthrough = true,
 }
 
-local function handle_choices(params, done)
-  local selected_params = {}
-
-  local function process_param(param_list)
-    if #param_list == 0 then
-      if done then done(selected_params) end
-      return
-    end
-
-    local param = param_list[1]
-    local prompt = param.name
-    if not param.isRequired then prompt = prompt .. " (optional)" end
-
-    if param.dataType == "bool" then
-      local default_bool = (param.defaultValue == "true")
-
-      local options = vim
-        .iter({
-          { display = "yes", value = true },
-          { display = "no", value = false },
-        })
-        :map(function(opt)
-          return {
-            display = opt.display .. (opt.value == default_bool and " (default)" or ""),
-            value = opt.value,
-          }
-        end)
-        :totable()
-
-      table.sort(options, function(a, b) return a.value == default_bool and b.value ~= default_bool end)
-
-      require("easy-dotnet.picker").picker(nil, options, function(bool_val)
-        selected_params[param.name] = bool_val.value
-        process_param({ unpack(param_list, 2) })
-      end, prompt, false, true)
-    elseif param.dataType == "text" or param.dataType == "string" then
-      vim.ui.input({ prompt = prompt, default = param.defaultValue or "" }, function(input)
-        selected_params[param.name] = input or ""
-        process_param({ unpack(param_list, 2) })
-      end)
-    elseif param.dataType == "choice" then
-      local choices = {}
-      for key, va in pairs(param.choices or {}) do
-        table.insert(choices, { display = va, value = key })
-      end
-      require("easy-dotnet.picker").picker(nil, choices, function(choice_val)
-        selected_params[param.name] = choice_val.value
-        process_param({ unpack(param_list, 2) })
-      end, prompt, true, true)
-    end
-  end
-
-  process_param(params)
-end
-
 M.new = {
-  handle = function()
-    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-    client:initialize(function()
-      client:template_list(function(templates)
-        ---@param value DotnetNewTemplate
-        local choices = vim.tbl_map(function(value)
-          return {
-            value = value,
-            display = value.displayName,
-          }
-        end, templates)
-        require("easy-dotnet.picker").picker(nil, choices, function(selection)
-          ---@type DotnetNewTemplate
-          local val = selection.value
-          client:template_parameters(val.identity, function(params)
-            handle_choices(params, function(res)
-              client:template_instantiate(val.identity, "Weeey", vim.fn.getcwd(), res)
-            end)
-          end)
-        end, "New", false, true)
-      end)
-    end)
-  end,
+  handle = function() require("easy-dotnet.actions.new").new() end,
 }
 
 M.reset = {
