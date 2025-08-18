@@ -1,18 +1,22 @@
 local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
-local options = require("easy-dotnet.options")
 local M = {}
 
-local function sln_add_project(sln_path, project)
+local function sln_add_project(sln_path, project, cb)
   vim.fn.jobstart(string.format("dotnet sln %s add %s", sln_path, project), {
     stdout_buffered = true,
     on_exit = function(_, b)
-      if b ~= 0 then logger.error("Failed to link project to solution") end
+      if b ~= 0 then
+        logger.error("Failed to link project to solution")
+      else
+        cb()
+      end
     end,
   })
 end
 
 local make_project_name = function(name, sln_name)
+  local options = require("easy-dotnet.options")
   if options.get_option("new").project.prefix == "sln" then return sln_name .. "." .. name end
   return name
 end
@@ -33,7 +37,7 @@ local function get_dotnet_new_args(name)
   }
 end
 
-local function create_and_link_project(name, type)
+local function get_project_name_and_output(name)
   local args = get_dotnet_new_args(name)
   if args == nil then
     --No sln
@@ -42,188 +46,115 @@ local function create_and_link_project(name, type)
       output = ".",
     }
   end
-  vim.fn.jobstart(string.format("dotnet new %s -n %s -o %s", type, args.project_name, args.output), {
-    stdout_buffered = true,
-    on_exit = function(_, code)
-      if code ~= 0 then
-        logger.error("Failed to create project")
-      else
-        logger.info("Project created")
-        if args.sln_path ~= nil then sln_add_project(args.sln_path, args.output) end
-      end
-    end,
-  })
+  return args
 end
 
-local function create_config_file(type)
-  local sln_parse = require("easy-dotnet.parsers.sln-parse")
-  local sln_path = sln_parse.find_solution_file()
+local function handle_choices(params, done)
+  local selected_params = {}
 
-  local folder_path = sln_path ~= nil and vim.fs.dirname(sln_path) or nil
-  local output_arg = folder_path ~= nil and string.format("-o %s", folder_path) or ""
-  vim.fn.jobstart(string.format("dotnet new %s %s", type, output_arg), {
-    stdout_buffered = true,
-    on_exit = function(_, code)
-      if code ~= 0 then
-        logger.error("Command failed")
-      else
-        logger.info("Config file created")
+  local function process_param(param_list)
+    if #param_list == 0 then
+      if done then done(selected_params) end
+      return
+    end
+
+    local param = param_list[1]
+    local prompt = param.name
+    if not param.isRequired then prompt = prompt .. " (optional)" end
+
+    if param.dataType == "bool" then
+      local default_bool = (param.defaultValue == "true")
+
+      local options = vim
+        .iter({
+          { display = "yes", value = true },
+          { display = "no", value = false },
+        })
+        :map(function(opt)
+          return {
+            display = opt.display .. (opt.value == default_bool and " (default)" or ""),
+            value = opt.value,
+          }
+        end)
+        :totable()
+
+      table.sort(options, function(a, b) return a.value == default_bool and b.value ~= default_bool end)
+
+      require("easy-dotnet.picker").picker(nil, options, function(bool_val)
+        selected_params[param.name] = bool_val.value
+        process_param({ unpack(param_list, 2) })
+      end, prompt, false, true)
+    elseif param.dataType == "text" or param.dataType == "string" then
+      vim.ui.input({ prompt = prompt, default = param.defaultValue or "" }, function(input)
+        selected_params[param.name] = input or ""
+        process_param({ unpack(param_list, 2) })
+      end)
+    elseif param.dataType == "choice" then
+      local choices = {}
+      for key, va in pairs(param.choices or {}) do
+        table.insert(choices, { display = va, value = key })
       end
-    end,
-  })
+      require("easy-dotnet.picker").picker(nil, choices, function(choice_val)
+        selected_params[param.name] = choice_val.value
+        process_param({ unpack(param_list, 2) })
+      end, prompt, true, true)
+    end
+  end
+
+  process_param(params)
 end
 
-local templates = {
-  {
-    display = "Solution file",
-    type = "config",
-    run = function() create_config_file("sln") end,
-  },
-  {
-    display = "nuget.config",
-    type = "config",
-    run = function() create_config_file("nugetconfig") end,
-  },
-  {
-    display = ".gitignore",
-    type = "config",
-    run = function()
-      vim.fn.jobstart(string.format("dotnet new gitignore", type), {
-        stdout_buffered = true,
-        on_exit = function(_, code)
-          if code ~= 0 then
-            logger.error("Command failed")
-          else
-            logger.info(".gitignore file created")
-          end
-        end,
-      })
-    end,
-  },
-  {
-    display = "global.json file",
-    type = "config",
-    run = function() create_config_file("globaljson") end,
-  },
-  {
-    display = ".editorconfig file",
-    type = "config",
-    run = function() create_config_file("editorconfig") end,
-  },
-  {
-    display = "xUnit Test Project",
-    type = "project",
-    run = function(name) create_and_link_project(name, "xunit") end,
-  },
-  {
-    display = "NUnit Test Project",
-    type = "project",
-    run = function(name) create_and_link_project(name, "nunit") end,
-  },
-  {
-    display = "Blazor",
-    type = "project",
-    run = function(name) create_and_link_project(name, "blazor") end,
-  },
-  {
-    display = "ASP.NET Core with React.js",
-    type = "project",
-    run = function(name) create_and_link_project(name, "react") end,
-  },
-  {
-    display = "ASP.NET Core with Angular",
-    type = "project",
-    run = function(name) create_and_link_project(name, "angular") end,
-  },
-  {
-    display = "ASP.NET Core Web API",
-    type = "project",
-    run = function(name) create_and_link_project(name, "webapi") end,
-  },
-  {
-    display = "ASP.NET Core Web API F#",
-    type = "project",
-    run = function(name) create_and_link_project(name, "webapi --language F#") end,
-  },
-  {
-    display = "ASP.NET Core Empty",
-    type = "project",
-    run = function(name) create_and_link_project(name, "web") end,
-  },
-  {
-    display = "ASP.NET Core Empty F#",
-    type = "project",
-    run = function(name) create_and_link_project(name, "web --language F#") end,
-  },
-  {
-    display = "ASP.NET Core gRPC Service",
-    type = "project",
-    run = function(name) create_and_link_project(name, "grpc") end,
-  },
-  {
-    display = "Console app",
-    type = "project",
-    run = function(name) create_and_link_project(name, "console") end,
-  },
-  {
-    display = "Console app F#",
-    type = "project",
-    run = function(name) create_and_link_project(name, "console --language F#") end,
-  },
-  {
-    display = "Class library",
-    type = "project",
-    run = function(name) create_and_link_project(name, "classlib") end,
-  },
-  {
-    display = "Class library F#",
-    type = "project",
-    run = function(name) create_and_link_project(name, "classlib --language F#") end,
-  },
-  {
-    display = "ASP.NET Core Web API (native AOT)",
-    type = "project",
-    run = function(name) create_and_link_project(name, "webapiaot") end,
-  },
-  {
-    display = "ASP.NET Core Web App (Model-View-Controller)",
-    type = "project",
-    run = function(name) create_and_link_project(name, "mvc") end,
-  },
-  {
-    display = "ASP.NET Core Web App (Razor Pages)",
-    type = "project",
-    run = function(name) create_and_link_project(name, "razor") end,
-  },
-  {
-    display = "Blazor server",
-    type = "project",
-    run = function(name) create_and_link_project(name, "blazorserver") end,
-  },
-  {
-    display = "Blazor WebAssembly Standalone App",
-    type = "project",
-    run = function(name) create_and_link_project(name, "blazorwasm") end,
-  },
+local no_name_templates = {
+  "Microsoft.Standard.QuickStarts.DirectoryProps",
+  "Microsoft.Standard.QuickStarts.DirectoryTargets",
+  "Microsoft.Standard.QuickStarts.DirectoryPackages",
+  "Microsoft.Standard.QuickStarts.EditorConfigFile",
+  "Microsoft.Standard.QuickStarts.GitignoreFile",
+  "Microsoft.Standard.QuickStarts.GlobalJsonFile",
+  "Microsoft.Standard.QuickStarts.Nuget.Config",
+  "Microsoft.Standard.QuickStarts.Web.Config",
+  "Microsoft.Standard.QuickStarts.ToolManifestFile",
 }
 
-M.new = function()
-  local picker = require("easy-dotnet.picker")
-  local template = picker.pick_sync(nil, templates, "Select type")
-  if template.type == "project" then
-    vim.cmd("startinsert")
-    --TODO: telescope
-    vim.ui.input({ prompt = string.format("Enter name for %s:", template.display) }, function(input)
-      if input == nil then
-        logger.error("No name provided")
-        return
-      end
-      vim.cmd("stopinsert")
-      coroutine.wrap(function() template.run(input) end)()
+local function prompt_parameters(identity, client, name, cwd, cb)
+  client:template_parameters(identity, function(params)
+    handle_choices(params, function(res)
+      client:template_instantiate(identity, name or "", cwd or vim.fn.getcwd(), res, function()
+        if cb then cb() end
+      end)
     end)
-  else
-    template.run()
-  end
+  end)
+end
+
+function M.new()
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  client:initialize(function()
+    client:template_list(function(templates)
+      ---@param value DotnetNewTemplate
+      local choices = vim.tbl_map(function(value)
+        return {
+          value = value,
+          display = value.displayName,
+        }
+      end, templates)
+      require("easy-dotnet.picker").picker(nil, choices, function(selection)
+        ---@type DotnetNewTemplate
+        local val = selection.value
+        if val.type == "project" then
+          vim.ui.input({ prompt = "Select name" }, function(input)
+            local args = get_project_name_and_output(input)
+            prompt_parameters(val.identity, client, args.project_name, args.output, function() sln_add_project(args.sln_path, args.output) end)
+          end)
+        elseif not vim.tbl_contains(no_name_templates, selection.value.identity) then
+          vim.ui.input({ prompt = "Select name" }, function(input)
+            prompt_parameters(val.identity, client, input, nil, function() print("Success") end)
+          end)
+        else
+          prompt_parameters(val.identity, client, nil, nil, function() print("Success") end)
+        end
+      end, "New", false, true)
+    end)
+  end)
 end
 
 local function name_input_sync() return vim.fn.input("Enter name:") end
