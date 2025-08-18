@@ -108,6 +108,12 @@ local no_name_templates = {
   "Microsoft.Standard.QuickStarts.DirectoryProps",
   "Microsoft.Standard.QuickStarts.DirectoryTargets",
   "Microsoft.Standard.QuickStarts.DirectoryPackages",
+  "Microsoft.Standard.QuickStarts.EditorConfigFile",
+  "Microsoft.Standard.QuickStarts.GitignoreFile",
+  "Microsoft.Standard.QuickStarts.GlobalJsonFile",
+  "Microsoft.Standard.QuickStarts.Nuget.Config",
+  "Microsoft.Standard.QuickStarts.Web.Config",
+  "Microsoft.Standard.QuickStarts.ToolManifestFile",
 }
 
 local function prompt_parameters(identity, client, name, cwd, cb)
