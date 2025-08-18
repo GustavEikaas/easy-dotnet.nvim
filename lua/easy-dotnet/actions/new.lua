@@ -1,6 +1,5 @@
 local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
-local options = require("easy-dotnet.options")
 local M = {}
 
 local function sln_add_project(sln_path, project, cb)
@@ -17,6 +16,7 @@ local function sln_add_project(sln_path, project, cb)
 end
 
 local make_project_name = function(name, sln_name)
+  local options = require("easy-dotnet.options")
   if options.get_option("new").project.prefix == "sln" then return sln_name .. "." .. name end
   return name
 end
