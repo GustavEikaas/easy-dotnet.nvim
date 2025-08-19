@@ -211,7 +211,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
       auto_bootstrap_namespace = {
           --block_scoped, file_scoped
           type = "block_scoped",
-          enabled = true
+          enabled = true,
           use_clipboard_json = {
             behavior = "prompt", --'auto' | 'prompt' | 'never',
             register = "+", -- which register to check
@@ -837,5 +837,6 @@ Check out [debugging-setup](./docs/debugging.md) for specific details
 <!-- hl-end -->
 
 </details>
+
 
 
