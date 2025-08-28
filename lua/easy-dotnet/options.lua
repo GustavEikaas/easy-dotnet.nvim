@@ -192,7 +192,7 @@ local function merge_tables(default_options, user_options) return vim.tbl_deep_e
 local function handle_auto_bootstrap_namespace(a)
   if type(a.auto_bootstrap_namespace) ~= "table" then a.auto_bootstrap_namespace = {
     type = "block_scoped",
-    enabled = a.auto_bootstrap_namespace == true,
+    enabled = true,
   } end
 end
 
