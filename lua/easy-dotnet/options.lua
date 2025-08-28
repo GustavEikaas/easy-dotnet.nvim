@@ -153,6 +153,10 @@ local M = {
         prefix = "sln",
       },
     },
+    server = {
+      ---@type nil | "Off" | "Critical" | "Error" | "Warning" | "Information" | "Verbose" | "All"
+      log_level = nil,
+    },
     enable_filetypes = true,
     auto_bootstrap_namespace = {
       type = "block_scoped",
