@@ -217,6 +217,10 @@ Although not *required* by the plugin, it is highly recommended to install one o
             register = "+", -- which register to check
           },
       },
+      server = {
+          ---@type nil | "Off" | "Critical" | "Error" | "Warning" | "Information" | "Verbose" | "All"
+          log_level = nil,
+      },
       -- choose which picker to use with the plugin
       -- possible values are "telescope" | "fzf" | "snacks" | "basic"
       -- if no picker is specified, the plugin will determine
