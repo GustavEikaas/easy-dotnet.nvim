@@ -12,6 +12,9 @@ local error_messages = require("easy-dotnet.error-messages")
 local default_manager = require("easy-dotnet.default-manager")
 local polyfills = require("easy-dotnet.polyfills")
 
+---@param project DotnetProject
+local function build_msbuild_command(project) return string.format("msbuild %s /verbosity:minimal /p:configuration=debug /m", project.path) end
+
 local function select_project(solution_file_path, cb, use_default)
   local default = default_manager.check_default_project(solution_file_path, "build")
   if default ~= nil and use_default == true then return cb(default) end
@@ -42,7 +45,12 @@ local function csproj_fallback(term)
     logger.error(error_messages.no_project_definition_found)
     return
   end
-  picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i) term(i.path, "build", "") end, "Build project(s)")
+
+  --BUG: actually resolve if its .net framework
+
+  ---@type DotnetActionContext
+  local ctx = { command = string.format("dotnet build %s", csproj_path), is_net_framework = false }
+  picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i) term(i.path, "build", "", ctx) end, "Build project(s)")
 end
 
 ---@param term function | nil
@@ -52,13 +60,18 @@ M.build_project_picker = function(term, use_default, args)
   use_default = use_default or false
   args = args or ""
 
-  local solutionFilePath = sln_parse.find_solution_file()
-  if solutionFilePath == nil then
+  local solution_file_path = sln_parse.find_solution_file()
+  if solution_file_path == nil then
     csproj_fallback(term)
     return
   end
 
-  select_project(solutionFilePath, function(project) term(project.path, "build", args) end, use_default)
+  select_project(solution_file_path, function(project)
+    local cmd = not project.is_net_framework and string.format("dotnet build %s %s", project.path, args) or build_msbuild_command(project)
+    ---@type DotnetActionContext
+    local context = { command = cmd, is_net_framework = project.is_net_framework }
+    term(project.path, "build", args, context)
+  end, use_default)
 end
 
 local qf_title = "easy-dotnet"
@@ -159,7 +172,7 @@ M.build_project_quickfix = function(use_default, dotnet_args)
 
   select_project(solutionFilePath, function(project)
     if project == nil then return end
-    local command = string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", project.path, log_path, dotnet_args or "")
+    local command = project.is_net_framework and string.format("msbuild %s", project.path) or string.format("dotnet build %s /flp:v=q /flp:logfile=%s %s", project.path, log_path, dotnet_args or "")
     execute_build_quickfix_command(command, log_path)
   end, use_default)
 end
@@ -168,12 +181,13 @@ M.build_solution = function(term, args)
   term = term or require("easy-dotnet.options").options.terminal
   args = args or ""
 
-  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
-  if solutionFilePath == nil then
+  local solution_file_path = sln_parse.find_solution_file() or csproj_parse.find_project_file()
+  if solution_file_path == nil then
     logger.error(error_messages.no_project_definition_found)
     return
   end
-  term(solutionFilePath, "build", args or "")
+  local ctx = { command = string.format("dotnet build %s %s", solution_file_path, args), is_net_framework = false }
+  term(solution_file_path, "build", args or "", ctx)
 end
 
 M.build_solution_quickfix = function(dotnet_args)
