@@ -128,6 +128,53 @@ return {
 }
 ```
 
+You could also compute all the lauch profiles for a project at start up with something like
+```lua
+coroutine.resume(coroutine.create(function()
+
+  local sln_file = sln_parse.find_solution_file()
+  local cs_configs = {}
+
+  if sln_file ~= nil then
+    local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(sln_file, function(project)
+      return project.runnable
+      end)
+
+        for _, project in pairs(projects) do
+          local project_dll = project.get_dll_path()
+          local project_profiles = debug.get_launch_profiles(vim.fs.dirname(project.path))
+
+          if project_profiles ~= nil then
+            local profile_names = polyfills.tbl_keys(project_profiles)
+            for _, profile_name in pairs(profile_names) do
+              local config_cs = {
+                type = "coreclr",
+                name = project.name .. " - " .. profile_name,
+                request = "launch",
+                env = function()
+                  local project_profile = project_profiles[profile_name]
+                  project_profile.environmentVariables["ASPNETCORE_URLS"] = project_profile.applicationUrl
+                  return project_profile.environmentVariables
+                end,
+                program = function()
+                  local co = coroutine.running()
+                  rebuild_project(co, project.path)
+                  return project_dll
+                end,
+                cwd = vim.fs.dirname(project.path),
+              }
+
+              table.insert(cs_configs, config_cs)
+            end
+          end
+        end
+    end
+
+    dap.configurations.cs = cs_configs
+end))
+```
+
+
 
 ## Variables viewer
 
