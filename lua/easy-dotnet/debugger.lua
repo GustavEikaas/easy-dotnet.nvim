@@ -106,8 +106,7 @@ local function select_profile(profiles, result)
   return result.profiles[profile_name.value]
 end
 
-M.get_environment_variables = function(project_name, relative_project_path, autoselect)
-  if autoselect == nil then autoselect = true end
+M.get_launchProfiles = function(relative_project_path)
   local launch_settings_path = polyfills.fs.joinpath(relative_project_path, "Properties", "launchSettings.json")
 
   local stat = vim.loop.fs_stat(launch_settings_path)
@@ -119,9 +118,21 @@ M.get_environment_variables = function(project_name, relative_project_path, auto
     return nil, "Error parsing JSON: " .. result
   end
 
-  local profiles = polyfills.tbl_keys(result.profiles)
+  return result.profiles
+end
 
-  local launchProfile = (not autoselect and #profiles > 0) and select_profile(profiles, result) or result.profiles[project_name]
+M.get_environment_variables = function(project_name, relative_project_path, autoselect)
+  if autoselect == nil then autoselect = true end
+
+  local launchProfiles = M.get_launchProfiles(relative_project_path)
+
+  if launchProfiles == nil then
+    return nil
+  end
+
+  local profiles = polyfills.tbl_keys(launchProfiles)
+
+  local launchProfile = (not autoselect and #profiles > 0) and select_profile(profiles, launchProfiles) or launchProfiles[project_name]
 
   if launchProfile == nil then return nil end
 
