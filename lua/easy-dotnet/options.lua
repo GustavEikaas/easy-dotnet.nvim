@@ -153,6 +153,10 @@ local M = {
         prefix = "sln",
       },
     },
+    server = {
+      ---@type nil | "Off" | "Critical" | "Error" | "Warning" | "Information" | "Verbose" | "All"
+      log_level = nil,
+    },
     enable_filetypes = true,
     auto_bootstrap_namespace = {
       type = "block_scoped",
@@ -190,9 +194,9 @@ local function merge_tables(default_options, user_options) return vim.tbl_deep_e
 
 --- Auto_bootstrap namespace can be either true or table with config
 local function handle_auto_bootstrap_namespace(a)
-  if type(a.auto_bootstrap_namespace) ~= "table" then a.auto_bootstrap_namespace = {
+  if type(a.auto_bootstrap_namespace) == "boolean" then a.auto_bootstrap_namespace = {
     type = "block_scoped",
-    enabled = a.auto_bootstrap_namespace == true,
+    enabled = a.auto_bootstrap_namespace,
   } end
 end
 
