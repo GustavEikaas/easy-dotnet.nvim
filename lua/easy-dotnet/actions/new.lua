@@ -141,12 +141,12 @@ function M.new()
         ---@type DotnetNewTemplate
         local val = selection.value
         if val.type == "project" then
-          vim.ui.input({ prompt = "Select name" }, function(input)
+          vim.ui.input({ prompt = "Enter name:" }, function(input)
             local args = get_project_name_and_output(input)
             prompt_parameters(val.identity, client, args.project_name, args.output, function() sln_add_project(args.sln_path, args.output) end)
           end)
         elseif not vim.tbl_contains(no_name_templates, selection.value.identity) then
-          vim.ui.input({ prompt = "Select name" }, function(input)
+          vim.ui.input({ prompt = "Enter name:" }, function(input)
             prompt_parameters(val.identity, client, input, nil, function() print("Success") end)
           end)
         else
