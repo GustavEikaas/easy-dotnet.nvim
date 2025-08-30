@@ -148,7 +148,7 @@ end
 ---@param node TestNode
 local function run_tests(node, win)
   if not win.options.noBuild then
-    local build_success = runner.request_build(node.cs_project_path)
+    local build_success = runner.request_build(node.cs_project_path, node.framework)
     if not build_success then
       logger.error("Failed to build project")
       return

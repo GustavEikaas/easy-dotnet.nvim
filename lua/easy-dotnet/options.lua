@@ -87,6 +87,7 @@ end
 local M = {
   ---@type Options
   options = {
+    use_visual_studio = true,
     ---@type function | string
     get_sdk_path = get_sdk_path,
     ---@param path string

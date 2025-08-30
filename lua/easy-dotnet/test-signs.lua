@@ -92,7 +92,7 @@ local function run_test_from_buffer()
   if requires_rebuild and first_node then
     local on_finished = job.register_job({ name = "Building...", on_error_text = "Build failed", on_success_text = "Built successfully" })
 
-    local res = runner.request_build(first_node.cs_project_path)
+    local res = runner.request_build(first_node.cs_project_path, first_node.framework)
     if res then reset_buf_mtime(curr_file) end
     on_finished(res)
   end

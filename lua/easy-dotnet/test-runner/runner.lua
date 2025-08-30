@@ -71,11 +71,11 @@ local M = {
 
 ---@param project_path string path to csproject file
 ---@return boolean indicating success
-function M.request_build(project_path)
+function M.request_build(project_path, targetFramework)
   local co = coroutine.running()
   local success = false
 
-  M.client:msbuild_build({ targetPath = project_path, configuration = nil }, function(response)
+  M.client:msbuild_build({ targetPath = project_path, targetFramework = targetFramework, configuration = nil }, function(response)
     success = response.result.success == true
     coroutine.resume(co)
   end)
