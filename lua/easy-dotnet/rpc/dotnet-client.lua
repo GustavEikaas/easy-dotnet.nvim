@@ -324,7 +324,7 @@ end
 ---@field targetFramework? string
 
 function M:msbuild_query_properties(request, cb)
-  local id = self._client.request("msbuild/query-properties", { request = request }, function(response)
+  local id = self._client.request("msbuild/project-properties", { request = request }, function(response)
     local crash = handle_rpc_error(response)
     if crash then return end
     if cb then cb(response) end
