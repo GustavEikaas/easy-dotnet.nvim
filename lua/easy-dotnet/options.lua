@@ -154,6 +154,7 @@ local M = {
       },
     },
     server = {
+      use_visual_studio = false,
       ---@type nil | "Off" | "Critical" | "Error" | "Warning" | "Information" | "Verbose" | "All"
       log_level = nil,
     },

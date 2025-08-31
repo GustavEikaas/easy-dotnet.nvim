@@ -166,10 +166,12 @@ end
 
 function M:_initialize(cb)
   local finished = jobs.register_job({ name = "Initializing...", on_success_text = "Client initialized" })
+  local use_visual_studio = require("easy-dotnet.options").options.server.use_visual_studio == true
   self._client.request("initialize", {
     request = {
       clientInfo = { name = "EasyDotnet", version = "1.0.0" },
       projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()) },
+      options = { useVisualStudio = use_visual_studio },
     },
   }, function(response)
     local crash = handle_rpc_error(response)
