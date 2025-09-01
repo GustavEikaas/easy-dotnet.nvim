@@ -157,6 +157,7 @@ local M = {
       use_visual_studio = false,
       ---@type nil | "Off" | "Critical" | "Error" | "Warning" | "Information" | "Verbose" | "All"
       log_level = nil,
+      use_visual_studio = false,
     },
     enable_filetypes = true,
     auto_bootstrap_namespace = {

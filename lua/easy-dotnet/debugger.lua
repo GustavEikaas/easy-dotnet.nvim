@@ -106,8 +106,7 @@ local function select_profile(profiles, result)
   return result.profiles[profile_name.value]
 end
 
-M.get_environment_variables = function(project_name, relative_project_path, autoselect)
-  if autoselect == nil then autoselect = true end
+M.get_launch_profiles = function(relative_project_path)
   local launch_settings_path = polyfills.fs.joinpath(relative_project_path, "Properties", "launchSettings.json")
 
   local stat = vim.loop.fs_stat(launch_settings_path)
@@ -119,15 +118,25 @@ M.get_environment_variables = function(project_name, relative_project_path, auto
     return nil, "Error parsing JSON: " .. result
   end
 
-  local profiles = polyfills.tbl_keys(result.profiles)
+  return result.profiles
+end
 
-  local launchProfile = (not autoselect and #profiles > 0) and select_profile(profiles, result) or result.profiles[project_name]
+M.get_environment_variables = function(project_name, relative_project_path, autoselect)
+  if autoselect == nil then autoselect = true end
 
-  if launchProfile == nil then return nil end
+  local launch_profiles = M.get_launch_profiles(relative_project_path)
+
+  if launch_profiles == nil then return nil end
+
+  local profiles = polyfills.tbl_keys(launch_profiles)
+
+  local launch_profile = (not autoselect and #profiles > 0) and select_profile(profiles, launch_profiles) or launch_profiles[project_name]
+
+  if launch_profile == nil then return nil end
 
   --TODO: Is there more env vars in launchsetttings.json?
-  launchProfile.environmentVariables["ASPNETCORE_URLS"] = launchProfile.applicationUrl
-  return launchProfile.environmentVariables
+  launch_profile.environmentVariables["ASPNETCORE_URLS"] = launch_profile.applicationUrl
+  return launch_profile.environmentVariables
 end
 
 M.get_dll_for_solution_project = function(default)
