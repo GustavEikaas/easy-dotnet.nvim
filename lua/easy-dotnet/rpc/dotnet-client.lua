@@ -166,10 +166,12 @@ end
 
 function M:_initialize(cb)
   local finished = jobs.register_job({ name = "Initializing...", on_success_text = "Client initialized" })
+  local use_visual_studio = require("easy-dotnet.options").options.server.use_visual_studio == true
   self._client.request("initialize", {
     request = {
       clientInfo = { name = "EasyDotnet", version = "1.0.0" },
       projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()) },
+      options = { useVisualStudio = use_visual_studio },
     },
   }, function(response)
     local crash = handle_rpc_error(response)
@@ -197,15 +199,37 @@ end
 
 function M:nuget_restore(targetPath, cb)
   local finished = jobs.register_job({ name = "Restoring packages...", on_error_text = "Failed to restore nuget packages", on_success_text = "Nuget packages restored" })
-  self._client.request("msbuild/restore", { targetPath = targetPath }, function(response)
+  self._client.request("nuget/restore", { targetPath = targetPath }, function(response)
     local crash = handle_rpc_error(response)
     if crash then
       finished(false)
       return
     end
-    --TODO: check response body for success info
-    finished(true)
-    if cb then cb(response) end
+    local result = response.result or {}
+    local pending = 2
+
+    local function done()
+      if pending == 0 then
+        finished(result.success)
+        if cb then cb(result) end
+      end
+    end
+
+    if result.warnings and result.warnings.token then
+      self._client:request_property_enumerate(response.result.warnings.token, nil, function(warnings)
+        response.result.warnings = warnings
+        pending = pending - 1
+        done()
+      end)
+    end
+
+    if result.errors and result.errors.token then
+      self._client:request_property_enumerate(response.result.errors.token, nil, function(errors)
+        response.result.errors = errors
+        pending = pending - 1
+        done()
+      end)
+    end
   end)
 end
 
