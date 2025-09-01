@@ -126,9 +126,7 @@ M.get_environment_variables = function(project_name, relative_project_path, auto
 
   local launch_profiles = M.get_launch_profiles(relative_project_path)
 
-  if launch_profiles == nil then
-    return nil
-  end
+  if launch_profiles == nil then return nil end
 
   local profiles = polyfills.tbl_keys(launch_profiles)
 
