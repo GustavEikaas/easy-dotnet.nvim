@@ -260,8 +260,8 @@ end
 function M:request_property_enumerate(token, on_yield, on_finished, on_error)
   local all_results = {}
 
-  local function handle_next(token)
-    self._enumerable_next(token, function(res)
+  local function handle_next(enumerable_token)
+    self._enumerable_next(enumerable_token, function(res)
       if res.error and on_error then on_error(res) end
       if res.result then
         if #res.result.values > 0 then
@@ -269,7 +269,7 @@ function M:request_property_enumerate(token, on_yield, on_finished, on_error)
           if on_yield then on_yield(res.result.values) end
         end
         if res.result.finished == false then
-          handle_next(token)
+          handle_next(enumerable_token)
         else
           if on_finished then on_finished(all_results) end
         end
