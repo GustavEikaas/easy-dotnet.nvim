@@ -19,6 +19,15 @@ local M = {}
 ---@field generatePackageOnBuild boolean Whether to generate nuget package on build
 ---@field isPackable boolean is nuget package
 ---@field nugetVersion string | nil nuget package version
+---@field isWebProject boolean
+---@field isWorkerProject boolean
+---@field isNetFramework boolean
+---@field useIISExpress boolean
+---@field projectName string
+---@field language "csharp" \ "fsharp" \ "unknown"
+---@field runCommand string
+---@field buildCommand string
+---@field testCommand string
 
 ---@class DotnetProject
 ---@field language "csharp" | "fsharp"
@@ -180,8 +189,8 @@ M.get_project_from_project_file = function(project_file_path)
     local display = extract_project_name(project_file_path)
     local name = display
     local language = project_file_path:match("%.csproj$") and "csharp" or project_file_path:match("%.fsproj$") and "fsharp" or "unknown"
-    local is_web_project = M.is_web_project(lines)
-    local is_worker_project = M.is_worker_project(lines)
+    local is_web_project = msbuild_props.isWebProject
+    local is_worker_project = msbuild_props.isWorkerProject
     local is_console_project = string.lower(msbuild_props.outputType) == "exe"
     local is_test_project = msbuild_props.isTestProject or M.is_directly_referencing_test_packages(lines)
     local is_test_platform_project = msbuild_props.testingPlatformDotnetTestSupport
@@ -213,7 +222,7 @@ M.get_project_from_project_file = function(project_file_path)
       language = language,
       name = name,
       version = version,
-      runnable = is_web_project or is_worker_project or is_console_project or is_win_project,
+      runnable = is_web_project or is_worker_project or is_console_project or is_win_project or msbuild_props.useIISExpress,
       secrets = maybe_secret_guid,
       --TODO: consolidate method and property, support multi target frameworks where targetPath would be nil
       get_dll_path = function()
@@ -287,14 +296,6 @@ M.is_directly_referencing_test_packages = function(project_file_lines)
 
   return false
 end
-
----@param project_file_lines string[]
----@return boolean
-M.is_web_project = function(project_file_lines) return extract_from_lines(project_file_lines, '<Project%s+Sdk="Microsoft.NET.Sdk.Web"') end
-
----@param project_file_lines string[]
----@return boolean
-M.is_worker_project = function(project_file_lines) return extract_from_lines(project_file_lines, '<Project%s+Sdk="Microsoft.NET.Sdk.Worker"') end
 
 M.find_csproj_file = function()
   local file = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.csproj$", depth = 3 })
