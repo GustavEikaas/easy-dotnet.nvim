@@ -15,6 +15,7 @@ local M = {
 ---@field connect fun(cb: fun()): nil
 ---@field request fun(method: DotnetPipeMethod, params: table, callback: fun(result: RPC_Response), options?: RpcRequestOptions): integer|false
 ---@field request_enumerate fun(self: StreamJsonRpc, method: DotnetPipeMethod, params: table, on_yield: fun(result: table)|nil, on_finished: fun(results: table[])|nil, on_error: fun(res: RPC_Response)|nil): integer|false
+---@field request_property_enumerate fun(self: StreamJsonRpc, token: string, on_yield: fun(result: table)|nil, on_finished: fun(results: table[])|nil, on_error: fun(res: RPC_Response)|nil): nil
 ---@field notify fun(method: string, params: table): boolean
 ---@field cancel fun(id: integer): nil
 ---@field disconnect fun(): boolean
@@ -49,7 +50,7 @@ local M = {
 ---@alias DotnetPipeMethod
 ---| "initialize"
 ---| "msbuild/build"
----| "msbuild/restore"
+---| "nuget/restore"
 ---| "msbuild/pack"
 ---| "user-secrets/init"
 ---| "msbuild/query-properties"
@@ -254,6 +255,29 @@ function M:request_enumerate(method, params, on_yield, on_finished, on_error)
       error("Response was not an enumerable")
     end
   end)
+end
+
+function M:request_property_enumerate(token, on_yield, on_finished, on_error)
+  local all_results = {}
+
+  local function handle_next(enumerable_token)
+    self._enumerable_next(enumerable_token, function(res)
+      if res.error and on_error then on_error(res) end
+      if res.result then
+        if #res.result.values > 0 then
+          vim.list_extend(all_results, res.result.values)
+          if on_yield then on_yield(res.result.values) end
+        end
+        if res.result.finished == false then
+          handle_next(enumerable_token)
+        else
+          if on_finished then on_finished(all_results) end
+        end
+      end
+    end)
+  end
+
+  handle_next(token)
 end
 
 function M.cancel(id)
