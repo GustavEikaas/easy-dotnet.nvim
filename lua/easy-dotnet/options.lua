@@ -154,7 +154,8 @@ local M = {
       },
     },
     server = {
-      use_visual_studio = false,
+      --TODO: revert
+      use_visual_studio = true,
       ---@type nil | "Off" | "Critical" | "Error" | "Warning" | "Information" | "Verbose" | "All"
       log_level = nil,
     },
