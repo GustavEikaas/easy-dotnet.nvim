@@ -173,4 +173,44 @@ function M.add_gutter_test_signs()
   end
 end
 
+---@class EasyDotnetTestResult
+---@field passed integer Number of passed tests
+---@field failed integer Number of failed tests
+---@field skipped integer Number of skipped tests
+---@field running integer Number of currently running tests
+
+---Get aggregated test results for a specific test node in a file.
+---
+---This function queries the internal test runner state and returns the
+---counts of passed, failed, skipped, or running tests for a given file
+---and line number. Returns `nil` if no results are available.
+---
+---@param file_path string Absolute path to the file containing the test(s)
+---@param line_number integer The line number of the test or test group
+---@return EasyDotnetTestResult | nil res Aggregated results or `nil` if not found
+M.get_test_results = function(file_path, line_number)
+  local options = require("easy-dotnet.test-runner.render").options
+  local res = { passed = 0, failed = 0, skipped = 0, running = 0 }
+
+  ---@param node TestNode
+  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, file_path) and line_number == node.line_number then
+      if node.icon then
+        if node.icon == options.icons.failed then
+          res.failed = res.failed + 1
+        elseif node.icon == options.icons.skipped then
+          res.skipped = res.skipped + 1
+        elseif node.icon == "<Running>" then
+          res.running = res.running + 1
+        elseif node.icon == options.icons.passed then
+          res.passed = res.passed + 1
+        end
+      end
+    end
+  end)
+
+  local any_results = vim.iter(vim.tbl_values(res)):any(function(r) return r > 0 end)
+  return any_results and res or nil
+end
+
 return M
