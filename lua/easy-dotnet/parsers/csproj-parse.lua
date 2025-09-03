@@ -93,16 +93,6 @@ M.get_project_references_from_projects = function(project_path)
   return projects
 end
 
----Extracts the project name from a path
----@param path string
----@return string
-local function extract_project_name(path)
-  local filename = vim.fs.basename(path)
-  if filename == nil then return "Unknown" end
-  local name = filename:gsub("%.csproj$", ""):gsub("%.fsproj$", "")
-  return name
-end
-
 ---@type table<string, MsbuildProperties | {pending: true, waiters: fun(MsbuildProperties)[]}>
 local msbuild_cache = {}
 
@@ -186,9 +176,9 @@ end
 M.get_project_from_project_file = function(project_file_path)
   local result = file_cache.get(project_file_path, function(lines)
     local msbuild_props = M.get_or_wait_or_set_cached_value(project_file_path)
-    local display = extract_project_name(project_file_path)
+    local display = msbuild_props.projectName
     local name = display
-    local language = project_file_path:match("%.csproj$") and "csharp" or project_file_path:match("%.fsproj$") and "fsharp" or "unknown"
+    local language = msbuild_props.language
     local is_web_project = msbuild_props.isWebProject
     local is_worker_project = msbuild_props.isWorkerProject
     local is_console_project = string.lower(msbuild_props.outputType) == "exe"
