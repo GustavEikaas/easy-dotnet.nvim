@@ -172,7 +172,7 @@ function M:_initialize(cb)
   local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
   self._client.request("initialize", {
     request = {
-      clientInfo = { name = "EasyDotnet", version = "1.0.0" },
+      clientInfo = { name = "EasyDotnet", version = "2.0.0" },
       projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
       options = { useVisualStudio = use_visual_studio },
     },
