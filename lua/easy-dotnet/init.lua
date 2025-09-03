@@ -290,4 +290,6 @@ end
 
 M.package_completion_source = require("easy-dotnet.csproj-mappings").package_completion_cmp
 
+M.get_test_results = require("easy-dotnet.test-signs").get_test_results
+
 return M
