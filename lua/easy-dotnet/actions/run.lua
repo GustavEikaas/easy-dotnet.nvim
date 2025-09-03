@@ -18,7 +18,8 @@ local function run_project(project, args, term)
   args = args or ""
   local arg = ""
   if project.type == "project_framework" then arg = arg .. " --framework " .. project.msbuild_props.targetFramework end
-  term(project.path, "run", arg .. " " .. args)
+  local cmd = project.msbuild_props.runCommand
+  term(project.path, "run", arg .. " " .. args, { cmd = cmd })
 end
 
 local pick_project_without_solution = function()

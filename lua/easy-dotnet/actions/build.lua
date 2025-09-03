@@ -22,8 +22,12 @@ local function select_project(solution_file_path, cb, use_default)
     logger.error(error_messages.no_projects_found)
     return
   end
+
+  local cmd = require("easy-dotnet.options").get_option("server").use_visual_studio
+      and string.format("& '%s' %s %s", require("easy-dotnet.rpc.rpc").global_rpc_client.initialized_msbuild_path, solution_file_path, "")
+    or string.format("dotnet restore %s %s", solution_file_path, "")
   local choices = {
-    { path = solution_file_path, display = "Solution", name = "Solution" },
+    { path = solution_file_path, display = "Solution", name = "Solution", msbuild_props = { buildCommand = cmd } },
   }
 
   for _, project in ipairs(projects) do
@@ -42,7 +46,11 @@ local function csproj_fallback(term)
     logger.error(error_messages.no_project_definition_found)
     return
   end
-  picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i) term(i.path, "build", "") end, "Build project(s)")
+
+  picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i)
+    local cmd = i.msbuild_props.buildCommand
+    term(i.path, "build", "", { cmd = cmd })
+  end, "Build project(s)")
 end
 
 ---@param term function | nil
@@ -58,7 +66,10 @@ M.build_project_picker = function(term, use_default, args)
     return
   end
 
-  select_project(solutionFilePath, function(project) term(project.path, "build", args) end, use_default)
+  select_project(solutionFilePath, function(project)
+    local cmd = project.msbuild_props.buildCommand
+    term(project.path, "build", args, { cmd = cmd })
+  end, use_default)
 end
 
 local qf_title = "easy-dotnet"
@@ -168,12 +179,15 @@ M.build_solution = function(term, args)
   term = term or require("easy-dotnet.options").options.terminal
   args = args or ""
 
-  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
-  if solutionFilePath == nil then
+  local solution_file_path = sln_parse.find_solution_file() or csproj_parse.find_project_file()
+  if solution_file_path == nil then
     logger.error(error_messages.no_project_definition_found)
     return
   end
-  term(solutionFilePath, "build", args or "")
+  local cmd = require("easy-dotnet.options").get_option("server").use_visual_studio
+      and string.format("& '%s' %s %s", require("easy-dotnet.rpc.rpc").global_rpc_client.initialized_msbuild_path, solution_file_path, args)
+    or string.format("dotnet restore %s %s", solution_file_path, args)
+  term(solution_file_path, "build", args or "", { cmd = cmd })
 end
 
 M.build_solution_quickfix = function(dotnet_args)

@@ -46,6 +46,7 @@ end
 
 ---@class DotnetClient
 ---@field new fun(self: DotnetClient): DotnetClient # Constructor
+---@field initialized_msbuild_path string
 ---@field _client StreamJsonRpc # Underlying StreamJsonRpc client used for communication
 ---@field _server DotnetServer # Manages the .NET named pipe server process
 ---@field initialize fun(self: DotnetClient, cb: fun()): nil # Starts the dotnet server and connects the JSON-RPC client
@@ -182,6 +183,7 @@ function M:_initialize(cb)
       return
     end
     finished(true)
+    M.initialized_msbuild_path = response.result.toolPaths.msBuildPath
     if cb then cb(response) end
   end)
 end
