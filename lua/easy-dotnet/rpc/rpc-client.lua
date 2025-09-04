@@ -116,52 +116,44 @@ local function handle_server_notification(decoded)
   end)
 end
 
-local function dump_to_file(obj, filepath)
-  local serialized = vim.inspect(obj)
-  local f = io.open(filepath, "w")
-  if not f then error("Could not open file: " .. filepath) end
-  f:write(serialized)
-  f:close()
-end
+local function read_loop()
+  local buffer = ""
 
-local buffer = ""
+  local function process_buffer()
+    while true do
+      local header_end = buffer:find("\r\n\r\n", 1, true)
+      if not header_end then return end
 
-local function process_buffer()
-  while true do
-    local header_end = buffer:find("\r\n\r\n", 1, true)
-    if not header_end then return end
-
-    local header_section = buffer:sub(1, header_end - 1)
-    local content_length = header_section:match("Content%-Length:%s*(%d+)")
-    if not content_length then
-      vim.notify("Missing Content-Length header", vim.log.levels.WARN)
-      buffer = buffer:sub(header_end + 4)
-      return
-    end
-
-    content_length = tonumber(content_length)
-    local body_start = header_end + 4
-    local body_end = body_start + content_length - 1
-
-    if #buffer < body_end then return end
-
-    local body = buffer:sub(body_start, body_end)
-    buffer = buffer:sub(body_end + 1)
-
-    local ok, decoded = pcall(vim.json.decode, body)
-    if ok and decoded then
-      if decoded.id then
-        handle_response(decoded)
-      elseif decoded.method then
-        handle_server_notification(decoded)
+      local header_section = buffer:sub(1, header_end - 1)
+      local content_length = header_section:match("Content%-Length:%s*(%d+)")
+      if not content_length then
+        vim.notify("Missing Content-Length header", vim.log.levels.WARN)
+        buffer = buffer:sub(header_end + 4)
+        return
       end
-    else
-      vim.notify("Malformed JSON: " .. body, vim.log.levels.WARN)
+
+      content_length = tonumber(content_length)
+      local body_start = header_end + 4
+      local body_end = body_start + content_length - 1
+
+      if #buffer < body_end then return end
+
+      local body = buffer:sub(body_start, body_end)
+      buffer = buffer:sub(body_end + 1)
+
+      local ok, decoded = pcall(vim.json.decode, body)
+      if ok and decoded then
+        if decoded.id then
+          handle_response(decoded)
+        elseif decoded.method then
+          handle_server_notification(decoded)
+        end
+      else
+        vim.notify("Malformed JSON: " .. body, vim.log.levels.WARN)
+      end
     end
   end
-end
 
-local function read_loop()
   connection:read_start(function(err, data)
     if err then
       vim.schedule(function() vim.notify("Pipe read error: " .. err, vim.log.levels.ERROR) end)
