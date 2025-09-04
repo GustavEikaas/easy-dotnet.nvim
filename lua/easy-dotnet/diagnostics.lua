@@ -2,27 +2,6 @@ local M = {}
 
 local diagnostic_ns = vim.api.nvim_create_namespace("easy-dotnet-diagnostics")
 
-local autocmd_setup = false
-local function setup_lsp_integration()
-  if autocmd_setup then return end
-  autocmd_setup = true
-
-  vim.api.nvim_create_autocmd({ "LspAttach", "InsertLeave" }, {
-    group = vim.api.nvim_create_augroup("easy-dotnet-diagnostics-lsp", { clear = true }),
-    pattern = { "*.cs", "*.fs" },
-    callback = function()
-      vim.defer_fn(function()
-        local clients = vim.lsp.get_clients({ name = "roslyn" })
-        if not clients or #clients == 0 then return end
-
-        local buffers = vim.lsp.get_buffers_by_client_id(clients[1].id)
-        for _, buf in ipairs(buffers) do
-          vim.lsp.util._refresh("textDocument/diagnostic", { bufnr = buf })
-        end
-      end, 100)
-    end,
-  })
-end
 
 local function get_or_create_buffer(filename)
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
@@ -66,7 +45,6 @@ function M.populate_diagnostics(diagnostics_response, filter_func)
     return
   end
 
-  setup_lsp_integration()
 
   local roslyn_clients = vim.lsp.get_clients({ name = "roslyn" })
   local ns = diagnostic_ns
