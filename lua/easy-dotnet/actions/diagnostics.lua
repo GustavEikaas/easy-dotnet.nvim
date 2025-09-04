@@ -40,19 +40,20 @@ function M.get_workspace_diagnostics(severity_filter)
 
     local all_items = {}
 
-    for _, project in ipairs(projects) do
-      table.insert(all_items, {
-        display = "Project: " .. vim.fn.fnamemodify(project, ":t"),
-        value = project,
-        type = "project",
-      })
-    end
-
+    -- Add solutions first to prioritize them in the picker
     for _, solution in ipairs(solutions) do
       table.insert(all_items, {
         display = "Solution: " .. vim.fn.fnamemodify(solution, ":t"),
         value = solution,
         type = "solution",
+      })
+    end
+
+    for _, project in ipairs(projects) do
+      table.insert(all_items, {
+        display = "Project: " .. vim.fn.fnamemodify(project, ":t"),
+        value = project,
+        type = "project",
       })
     end
 
