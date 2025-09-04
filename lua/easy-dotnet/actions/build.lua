@@ -46,8 +46,9 @@ local function csproj_fallback(term)
     logger.error(error_messages.no_project_definition_found)
     return
   end
+  local project = csproj_parse.get_project_from_project_file(csproj_path)
 
-  picker.picker(nil, { { name = csproj_path, display = csproj_path, path = csproj_path } }, function(i)
+  picker.picker(nil, { project }, function(i)
     local cmd = i.msbuild_props.buildCommand
     term(i.path, "build", "", { cmd = cmd })
   end, "Build project(s)")
