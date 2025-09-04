@@ -328,7 +328,9 @@ end
 
 ---@class BuildRequest
 ---@field targetPath string
+---@field targetFramework? string
 ---@field configuration? string
+---@field buildArgs? string
 
 ---@class Diagnostic
 ---@field code string

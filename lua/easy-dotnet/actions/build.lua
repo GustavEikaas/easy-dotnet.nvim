@@ -47,7 +47,7 @@ local function populate_quickfix_from_list(diagnostics)
   vim.cmd("copen")
 end
 
-local function rpc_build_quickfix(target_path)
+local function rpc_build_quickfix(target_path, args)
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 
   if M.pending == true then
@@ -62,7 +62,7 @@ local function rpc_build_quickfix(target_path)
 
   client:initialize(function()
     M.pending = true
-    client:msbuild_build({ targetPath = target_path }, function(res)
+    client:msbuild_build({ targetPath = target_path, buildArgs = args }, function(res)
       M.pending = false
       if res.success then
         close_quickfix_list()
@@ -86,7 +86,7 @@ local function select_project(solution_file_path, cb, use_default)
 
   local cmd = require("easy-dotnet.options").get_option("server").use_visual_studio
       and string.format("& '%s' %s %s", require("easy-dotnet.rpc.rpc").global_rpc_client.initialized_msbuild_path, solution_file_path, "")
-    or string.format("dotnet restore %s %s", solution_file_path, "")
+    or string.format("dotnet build %s %s", solution_file_path, "")
   local choices = {
     { path = solution_file_path, display = "Solution", name = "Solution", msbuild_props = { buildCommand = cmd } },
   }
@@ -135,7 +135,6 @@ M.build_project_picker = function(term, use_default, args)
 end
 
 ---@param use_default boolean
----@param dotnet_args string | nil
 M.build_project_quickfix = function(use_default, dotnet_args)
   use_default = use_default or false
   dotnet_args = dotnet_args or ""
@@ -147,13 +146,13 @@ M.build_project_quickfix = function(use_default, dotnet_args)
       logger.error(messages.no_project_definition_found)
       return
     end
-    rpc_build_quickfix(csproj)
+    rpc_build_quickfix(csproj, dotnet_args)
     return
   end
 
   select_project(solutionFilePath, function(project)
     if project == nil then return end
-    rpc_build_quickfix(project.path)
+    rpc_build_quickfix(project.path, dotnet_args)
   end, use_default)
 end
 
@@ -181,7 +180,7 @@ M.build_solution_quickfix = function(dotnet_args)
     return
   end
 
-  rpc_build_quickfix(solution_file_path)
+  rpc_build_quickfix(solution_file_path, dotnet_args)
 end
 
 return M
