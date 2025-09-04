@@ -76,7 +76,7 @@ function M.request_build(project_path)
   local success = false
 
   M.client:msbuild_build({ targetPath = project_path, configuration = nil }, function(response)
-    success = response.result.success == true
+    success = response.success == true
     coroutine.resume(co)
   end)
   coroutine.yield()

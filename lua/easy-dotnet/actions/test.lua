@@ -8,7 +8,10 @@ local sln_parse = parsers.sln_parser
 
 local pick_project_without_solution = function()
   local csproject_path = csproj_parse.find_project_file()
-  if not csproject_path then logger.error(error_messages.no_projects_found) end
+  if not csproject_path then
+    logger.error(error_messages.no_projects_found)
+    return
+  end
   local project = csproj_parse.get_project_from_project_file(csproject_path)
   local project_framework = picker.pick_sync(nil, project.get_all_runtime_definitions(), "Run project")
   return project_framework
@@ -75,7 +78,8 @@ local function test_project(project, args, term)
 
   local arg = ""
   if project.type == "project_framework" then arg = arg .. " --framework " .. project.msbuild_props.targetFramework end
-  term(project.path, "test", arg .. " " .. args)
+  local cmd = project.msbuild_props.testCommand
+  term(project.path, "test", arg .. " " .. args, { cmd = cmd })
 end
 
 ---@param term function

@@ -15,7 +15,8 @@ M.restore = function(term, args)
     return
   end
 
-  term(project, "restore", args)
+  local cmd = require("easy-dotnet.options").options.server.use_visual_studio == true and string.format("nuget restore %s %s", project, args) or string.format("dotnet restore %s %s", project, args)
+  term(project, "restore", args, { cmd = cmd })
 end
 
 return M
