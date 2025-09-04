@@ -45,29 +45,33 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 9. [Project view](#project-view)
    - [Features](#features-1)
    - [Keymaps](#keymaps-1)
-10. [Outdated](#outdated)
+10. [Workspace Diagnostics](#workspace-diagnostics)
+    - [Commands](#commands-1)
+    - [Configuration](#configuration)
+    - [Features](#features-2)
+11. [Outdated](#outdated)
     - [Requirements](#requirements-1)
-11. [Add](#add)
+12. [Add](#add)
     - [Add package](#add-package)
-12. [Project mappings](#project-mappings)
+13. [Project mappings](#project-mappings)
     - [Add reference](#add-reference)
     - [Package autocomplete](#package-autocomplete)
-13. [New](#new)
+14. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
     - [Integrating with neo-tree](#integrating-with-neo-tree)
     - [Integrating with mini.files](#integrating-with-mini-files)
     - [Integrating with snacks.explorer](#integrating-with-snacks-explorer)
-14. [EntityFramework](#entityframework)
+15. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
-15. [Language injections](#language-injections)
+16. [Language injections](#language-injections)
     - [Showcase](#showcase)
     - [Requirements](#requirements-2)
     - [Support matrix](#support-matrix)
-16. [Nvim-dap configuration](#nvim-dap-configuration)
-17. [Troubleshooting](#troubleshooting)
+17. [Nvim-dap configuration](#nvim-dap-configuration)
+18. [Troubleshooting](#troubleshooting)
 
 ## Features
 
@@ -244,7 +248,11 @@ Although not *required* by the plugin, it is highly recommended to install one o
         mappings = {
           open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
         },
-      }
+      },
+      diagnostics = {
+        default_severity = "error",
+        setqflist = false,
+      },
     })
 
     -- Example command
@@ -342,7 +350,9 @@ require("lualine").setup {
 | `dotnet.get_environment_variables(project_name, project_path, use_default_launch_profile: boolean)` | Returns the environment variables from the `launchSetting.json` file                                         |
 | `dotnet.reset()`                              | Deletes all files persisted by `easy-dotnet.nvim`. Use this if unable to pick a different solution or project |
 ||
-| `dotnet.diagnostics.get_workspace_diagnostics(severity_filter)` | Get workspace diagnostics for errors or warnings. Severity filter can be `"error"` or `"warning"` |
+| `diagnostics.get_workspace_diagnostics()`     | Get workspace diagnostics using configured default severity                                                 |
+| `diagnostics.get_workspace_diagnostics("error")` | Get workspace diagnostics for errors only                                                                |
+| `diagnostics.get_workspace_diagnostics("warning")` | Get workspace diagnostics for errors and warnings                                                       |
 
 ```lua
 local dotnet = require("easy-dotnet")
@@ -386,7 +396,12 @@ dotnet.watch()
 dotnet.watch_default()
 dotnet.secrets()                                                          
 dotnet.clean()                                                           
-dotnet.restore()                   
+dotnet.restore()
+
+local diagnostics = require("easy-dotnet.actions.diagnostics")
+diagnostics.get_workspace_diagnostics()
+diagnostics.get_workspace_diagnostics("error") 
+diagnostics.get_workspace_diagnostics("warning")
 ```
 
 ### Vim commands
@@ -433,8 +448,9 @@ Dotnet solution select
 Dotnet solution add
 Dotnet solution remove
 Dotnet outdated
-Dotnet diagnostics error
-Dotnet diagnostics warning  -- Shows both warnings and errors
+Dotnet diagnostic
+Dotnet diagnostic errors
+Dotnet diagnostic warnings
 checkhealth easy-dotnet
 
 -- Internal 
@@ -535,6 +551,40 @@ Keymaps are region-specific and work based on context (e.g., when hovering over 
 - `a`: Add package reference.
 - `r`: Remove package reference.
 - `<C-b>`: View package in browser.
+
+## Workspace Diagnostics
+
+Analyze your entire solution or individual projects for compilation errors and warnings using Roslyn diagnostics.
+
+### Commands
+
+- `Dotnet diagnostic` - Uses the configured default severity (errors by default)
+- `Dotnet diagnostic errors` - Shows only compilation errors  
+- `Dotnet diagnostic warnings` - Shows both errors and warnings
+
+### Configuration
+
+```lua
+require("easy-dotnet").setup({
+  diagnostics = {
+    default_severity = "error",  -- "error" or "warning" (default: "error")
+    setqflist = false,           -- Populate quickfix list automatically (default: false)
+  },
+})
+```
+
+### Features
+
+- **Solution/Project Selection**: When multiple projects or solutions are available, you'll be prompted to select which one to analyze
+- **Roslyn Integration**: Uses the Roslyn Language Server Protocol for accurate diagnostics
+- **Neovim Diagnostics Integration**: Results are populated into Neovim's built-in diagnostic system, allowing you to:
+  - Navigate between diagnostics using `:lua vim.diagnostic.goto_next()` and `:lua vim.diagnostic.goto_prev()`
+  - View diagnostics in the quickfix list using `:lua vim.diagnostic.setqflist()` (or automatically if configured)
+  - See inline diagnostic messages
+  - View with trouble (requires [trouble.nvim](https://github.com/folke/trouble.nvim))
+  - View with snacks diagnostic picker (requires [snacks.nvim](https://github.com/folke/snacks.nvim))
+
+The diagnostics will appear in Neovim's diagnostic system, allowing you to navigate through them using your standard diagnostic keymaps. If you have trouble.nvim or snacks.nvim configured, the diagnostics will automatically be available in their respective interfaces.
 
 ## Outdated
 

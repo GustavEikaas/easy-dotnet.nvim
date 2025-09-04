@@ -525,7 +525,7 @@ function M:get_workspace_diagnostics(project_path, include_warnings, cb)
   local id = self._client:request_enumerate(
     "roslyn/get-workspace-diagnostics",
     {
-      projectPath = project_path,
+      targetPath = project_path,
       includeWarnings = include_warnings,
     },
     nil,

@@ -2,7 +2,6 @@ local M = {}
 
 local diagnostic_ns = vim.api.nvim_create_namespace("easy-dotnet-diagnostics")
 
-
 local function get_or_create_buffer(filename)
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_get_name(buf) == filename then return buf end
@@ -45,7 +44,6 @@ function M.populate_diagnostics(diagnostics_response, filter_func)
     return
   end
 
-
   local roslyn_clients = vim.lsp.get_clients({ name = "roslyn" })
   local ns = diagnostic_ns
 
@@ -79,6 +77,9 @@ function M.populate_diagnostics(diagnostics_response, filter_func)
   local total_count = #diagnostics
   local filtered_count = vim.tbl_count(grouped_diagnostics)
   vim.notify(string.format("Populated %d diagnostics across %d files", total_count, filtered_count), vim.log.levels.INFO)
+
+  local options = require("easy-dotnet.options").options
+  if options.diagnostics and options.diagnostics.setqflist then vim.diagnostic.setqflist() end
 end
 
 return M

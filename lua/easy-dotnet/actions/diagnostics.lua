@@ -20,11 +20,18 @@ local function get_severity_params(severity_filter)
 end
 
 local function execute_diagnostics_request(selected_item, include_warnings)
+  if not selected_item or not selected_item.value or selected_item.value == "" then
+    vim.notify("Invalid project/solution path", vim.log.levels.ERROR)
+    return
+  end
   rpc.global_rpc_client:get_workspace_diagnostics(selected_item.value, include_warnings, function(response) diagnostics.populate_diagnostics(response, get_default_filter()) end)
 end
 
----@param severity_filter "error"|"warning"
+---@param severity_filter? "error"|"warning"
 function M.get_workspace_diagnostics(severity_filter)
+  -- Use configured default if no severity filter is provided
+  if not severity_filter then severity_filter = require("easy-dotnet.options").options.diagnostics.default_severity end
+
   local include_warnings = get_severity_params(severity_filter)
 
   rpc.global_rpc_client:initialize(function()
