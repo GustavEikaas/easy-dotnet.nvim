@@ -69,6 +69,7 @@ end
 ---@field roslyn_bootstrap_file fun(self: DotnetClient, file_path: string, type: "Class" | "Interface" | "Record", prefer_file_scoped: boolean, cb?: fun(success: true)): integer | false
 ---@field roslyn_bootstrap_file_json fun(self: DotnetClient, file_path: string, json_data: string, prefer_file_scoped: boolean, cb?: fun(success: true)): integer | false
 ---@field roslyn_scope_variables fun(self: DotnetClient, file_path: string, line: number, cb?: fun(variables: VariableLocation[])): integer | false
+---@field get_workspace_diagnostics fun(self: DotnetClient, project_path: string, include_warnings: boolean, cb?: fun(res: RPC_Response)): integer | false
 ---@field template_list fun(self: DotnetClient, cb?: fun(variables: DotnetNewTemplate[])): integer | false
 ---@field template_parameters fun(self: DotnetClient, identity: string, cb?: fun(variables: DotnetNewParameter[])): integer | false
 ---@field template_instantiate fun(self: DotnetClient, identity: string, name: string, output_path: string, params: table<string,string>, cb?: fun()): integer | false
@@ -511,6 +512,27 @@ function M:template_instantiate(identity, name, output_path, params, cb)
     if crash then return end
     if cb then cb() end
   end)
+  return id
+end
+
+function M:get_workspace_diagnostics(project_path, include_warnings, cb)
+  local finished = jobs.register_job({ 
+    name = "Getting workspace diagnostics...", 
+    on_error_text = "Failed to get diagnostics", 
+    on_success_text = "Diagnostics retrieved" 
+  })
+  
+  local id = self._client:request_enumerate("roslyn/get-workspace-diagnostics", { 
+    projectPath = project_path, 
+    includeWarnings = include_warnings
+  }, nil, function(response)
+    finished(true)
+    if cb then cb(response) end
+  end, function(error_response)
+    handle_rpc_error(error_response)
+    finished(false)
+  end)
+  
   return id
 end
 

@@ -76,6 +76,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 - User Secrets Management: Edit, create, and preview .NET user secrets directly within Neovim.
 - Debugging Helpers: While easy-dotnet.nvim doesn't set up DAP (Debugger Adapter Protocol) for you, it provides useful helper functions for debugging. These include resolving the DLL you are debugging and rebuilding before launching DAP, ensuring a smooth debugging experience.
 - Test runner: Test runner similiar to the one you find in Rider.
+- Workspace diagnostics: Get diagnostic errors and warnings from your entire solution or individual projects
 - Outdated command: Makes checking outdated packages a breeze using virtual text
 - (csproj/fsproj) mappings: Keymappings for .csproj and .fsproj files are automatically available
 - Auto bootstrap namespace: Automatically inserts namespace and class/interface when opening a newly created `.cs` file. (also checks clipboard for json to create class from)
@@ -340,6 +341,8 @@ require("lualine").setup {
 | `dotnet.get_debug_dll()`                      | Returns the DLL from the `bin/debug` folder                                                                 |
 | `dotnet.get_environment_variables(project_name, project_path, use_default_launch_profile: boolean)` | Returns the environment variables from the `launchSetting.json` file                                         |
 | `dotnet.reset()`                              | Deletes all files persisted by `easy-dotnet.nvim`. Use this if unable to pick a different solution or project |
+||
+| `dotnet.diagnostics.get_workspace_diagnostics(severity_filter)` | Get workspace diagnostics for errors or warnings. Severity filter can be `"error"` or `"warning"` |
 
 ```lua
 local dotnet = require("easy-dotnet")
@@ -430,6 +433,8 @@ Dotnet solution select
 Dotnet solution add
 Dotnet solution remove
 Dotnet outdated
+Dotnet diagnostics error
+Dotnet diagnostics warning  -- Shows both warnings and errors
 checkhealth easy-dotnet
 
 -- Internal 
