@@ -516,23 +516,29 @@ function M:template_instantiate(identity, name, output_path, params, cb)
 end
 
 function M:get_workspace_diagnostics(project_path, include_warnings, cb)
-  local finished = jobs.register_job({ 
-    name = "Getting workspace diagnostics...", 
-    on_error_text = "Failed to get diagnostics", 
-    on_success_text = "Diagnostics retrieved" 
+  local finished = jobs.register_job({
+    name = "Getting workspace diagnostics...",
+    on_error_text = "Failed to get diagnostics",
+    on_success_text = "Diagnostics retrieved",
   })
-  
-  local id = self._client:request_enumerate("roslyn/get-workspace-diagnostics", { 
-    projectPath = project_path, 
-    includeWarnings = include_warnings
-  }, nil, function(response)
-    finished(true)
-    if cb then cb(response) end
-  end, function(error_response)
-    handle_rpc_error(error_response)
-    finished(false)
-  end)
-  
+
+  local id = self._client:request_enumerate(
+    "roslyn/get-workspace-diagnostics",
+    {
+      projectPath = project_path,
+      includeWarnings = include_warnings,
+    },
+    nil,
+    function(response)
+      finished(true)
+      if cb then cb(response) end
+    end,
+    function(error_response)
+      handle_rpc_error(error_response)
+      finished(false)
+    end
+  )
+
   return id
 end
 
