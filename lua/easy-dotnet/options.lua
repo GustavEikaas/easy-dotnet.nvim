@@ -8,9 +8,14 @@ local polyfills = require("easy-dotnet.polyfills")
 ---@field enable_filetypes boolean
 ---@field picker PickerType
 ---@field notifications Notifications
+---@field diagnostics DiagnosticsOptions
 
 ---@class Notifications
 ---@field handler fun(start_event: JobEvent): fun(finished_event: JobEvent)
+
+---@class DiagnosticsOptions
+---@field default_severity "error" | "warning"
+---@field setqflist boolean
 
 ---@class TestRunnerIcons
 ---@field passed string
@@ -187,6 +192,10 @@ local M = {
       mappings = {
         open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
       },
+    },
+    diagnostics = {
+      default_severity = "error",
+      setqflist = false,
     },
   },
 }

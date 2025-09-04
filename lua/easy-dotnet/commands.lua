@@ -367,4 +367,16 @@ M._server = {
   },
 }
 
+M.diagnostic = {
+  handle = function() require("easy-dotnet.actions.diagnostics").get_workspace_diagnostics() end,
+  subcommands = {
+    errors = {
+      handle = function() require("easy-dotnet.actions.diagnostics").get_workspace_diagnostics("error") end,
+    },
+    warnings = {
+      handle = function() require("easy-dotnet.actions.diagnostics").get_workspace_diagnostics("warning") end,
+    },
+  },
+}
+
 return M

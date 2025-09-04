@@ -292,4 +292,6 @@ M.package_completion_source = require("easy-dotnet.csproj-mappings").package_com
 
 M.get_test_results = require("easy-dotnet.test-signs").get_test_results
 
+M.diagnostics = require("easy-dotnet.actions.diagnostics")
+
 return M
