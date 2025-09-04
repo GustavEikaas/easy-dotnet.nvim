@@ -57,7 +57,7 @@ end
 ---@field nuget_get_package_versions fun(self: DotnetClient, packageId: string, sources?: string[], include_prerelease?: boolean, cb?: fun(res: string[])) # Request a NuGet restore
 ---@field nuget_push fun(self: DotnetClient, packages: string[], source: string, cb?: fun(success: boolean)) # Request a NuGet restore
 ---@field msbuild_pack fun(self: DotnetClient, targetPath: string, configuration?: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
----@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
+---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: BuildResult)): integer|false # Request msbuild
 ---@field msbuild_query_properties fun(self: DotnetClient, request: QueryProjectPropertiesRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
 ---@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: ProjectSecretInitResponse), options?: RpcRequestOptions): integer|false # Request adding package
@@ -330,6 +330,19 @@ end
 ---@field targetPath string
 ---@field configuration? string
 
+---@class Diagnostic
+---@field code string
+---@field columnNumber integer
+---@field filePath string
+---@field lineNumber integer
+---@field message string
+---@field type "error" | "warning"
+
+---@class BuildResult
+---@field errors Diagnostic[]
+---@field warnings Diagnostic[]
+---@field success boolean
+
 function M:msbuild_build(request, cb)
   local finished = jobs.register_job({ name = "Building...", on_error_text = "Build failed", on_success_text = "Built successfully" })
   local id = self._client.request("msbuild/build", { request = request }, function(response)
@@ -338,10 +351,31 @@ function M:msbuild_build(request, cb)
       finished(false)
       return
     end
-    --TODO: check response body for success info
-    --TODO: open qf list
-    finished(true)
-    if cb then cb(response) end
+    local result = response.result or {}
+    local pending = 2
+
+    local function done()
+      if pending == 0 then
+        finished(result.success)
+        if cb then cb(result) end
+      end
+    end
+
+    if result.warnings and result.warnings.token then
+      self._client:request_property_enumerate(response.result.warnings.token, nil, function(warnings)
+        response.result.warnings = warnings
+        pending = pending - 1
+        done()
+      end)
+    end
+
+    if result.errors and result.errors.token then
+      self._client:request_property_enumerate(response.result.errors.token, nil, function(errors)
+        response.result.errors = errors
+        pending = pending - 1
+        done()
+      end)
+    end
   end)
 
   return id
