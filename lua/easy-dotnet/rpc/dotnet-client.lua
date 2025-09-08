@@ -282,7 +282,6 @@ function M:nuget_get_package_versions(package, sources, include_prerelease, cb)
     handle_rpc_error(res)
     finished(false)
   end)
-  vim.print("id", id)
   return id
 end
 
