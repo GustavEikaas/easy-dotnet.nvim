@@ -27,6 +27,7 @@ end
 local function auto_bootstrap_namespace(bufnr, mode)
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
+  if not vim.startswith(curr_file, vim.fn.getcwd()) then return end
   if not is_buffer_empty(bufnr) then return end
 
   local file_name = vim.fn.fnamemodify(curr_file, ":t:r")
