@@ -179,26 +179,27 @@ function M:get_state()
 end
 
 function M:_initialize(cb)
-  local finished = jobs.register_job({ name = "Initializing...", on_success_text = "Client initialized" })
-  local use_visual_studio = require("easy-dotnet.options").options.server.use_visual_studio == true
-  --TODO: ensure no prompting of user, also get canonical file path
-  local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
-  self._client.request("initialize", {
-    request = {
-      clientInfo = { name = "EasyDotnet", version = "2.0.0" },
-      projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
-      options = { useVisualStudio = use_visual_studio },
-    },
-  }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then
-      finished(false)
-      return
-    end
-    finished(true)
-    M.initialized_msbuild_path = response.result.toolPaths.msBuildPath
-    if cb then cb(response) end
-  end)
+  coroutine.wrap(function()
+    local finished = jobs.register_job({ name = "Initializing...", on_success_text = "Client initialized" })
+    local use_visual_studio = require("easy-dotnet.options").options.server.use_visual_studio == true
+    local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
+    self._client.request("initialize", {
+      request = {
+        clientInfo = { name = "EasyDotnet", version = "2.0.0" },
+        projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
+        options = { useVisualStudio = use_visual_studio },
+      },
+    }, function(response)
+      local crash = handle_rpc_error(response)
+      if crash then
+        finished(false)
+        return
+      end
+      finished(true)
+      M.initialized_msbuild_path = response.result.toolPaths.msBuildPath
+      if cb then cb(response) end
+    end)
+  end)()
 end
 
 function M:nuget_push(packages, source, cb)
