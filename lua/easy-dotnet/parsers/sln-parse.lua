@@ -262,7 +262,11 @@ M.find_solution_file = function(no_cache)
   end
   if #opts == 0 then return nil end
   local selection = require("easy-dotnet.picker").pick_sync(nil, opts, "Pick solution file")
-  return selection and selection.value or nil
+
+  if selection.value then
+    require("easy-dotnet.default-manager").set_default_solution(nil, selection.value)
+    return selection.value
+  end
 end
 
 return M

@@ -53,25 +53,27 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
     - [Requirements](#requirements-1)
 12. [Add](#add)
     - [Add package](#add-package)
-13. [Project mappings](#project-mappings)
+13. [.NET Framework](#.net-framework)
+    - [Requirements](#requirements-2)
+14. [Project mappings](#project-mappings)
     - [Add reference](#add-reference)
     - [Package autocomplete](#package-autocomplete)
-14. [New](#new)
+15. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
     - [Integrating with neo-tree](#integrating-with-neo-tree)
     - [Integrating with mini.files](#integrating-with-mini-files)
     - [Integrating with snacks.explorer](#integrating-with-snacks-explorer)
-15. [EntityFramework](#entityframework)
+16. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
-16. [Language injections](#language-injections)
+17. [Language injections](#language-injections)
     - [Showcase](#showcase)
-    - [Requirements](#requirements-2)
+    - [Requirements](#requirements-3)
     - [Support matrix](#support-matrix)
-17. [Nvim-dap configuration](#nvim-dap-configuration)
-18. [Troubleshooting](#troubleshooting)
+18. [Nvim-dap configuration](#nvim-dap-configuration)
+19. [Troubleshooting](#troubleshooting)
 
 ## Features
 
@@ -144,10 +146,6 @@ Although not *required* by the plugin, it is highly recommended to install one o
     local dotnet = require("easy-dotnet")
     -- Options are not required
     dotnet.setup({
-      --Optional function to return the path for the dotnet sdk (e.g C:/ProgramFiles/dotnet/sdk/8.0.0)
-      -- easy-dotnet will resolve the path automatically if this argument is omitted, for a performance improvement you can add a function that returns a hardcoded string
-      -- You should define this function to return a hardcoded path for a performance improvement 🚀
-      get_sdk_path = get_sdk_path,
       ---@type TestRunnerOptions
       test_runner = {
         ---@type "split" | "vsplit" | "float" | "buf"
@@ -670,13 +668,21 @@ return {
 }
 ```
 
-
 ![image](https://github.com/user-attachments/assets/81809aa8-704b-4481-9445-3985ddef6c98)
 
 >[!NOTE]
 >Latest is added as a snippet to make it easier to select the latest version
 
 ![image](https://github.com/user-attachments/assets/2b59735f-941e-44d2-93cf-76b13ac3e76f)
+
+
+## .NET Framework
+Basic support for .NET framework has been achieved. This means basic functionality like `build/run/test/test-runner` should work. If you find something not working feel free to file an issue.
+
+### Requirements
+- `choco install nuget.commandline`
+- Visual studio installation
+- `options.server.use_visual_studio == true`
 
 ## New
 Create dotnet templates as with `dotnet new <templatename>`
