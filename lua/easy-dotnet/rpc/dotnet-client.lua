@@ -405,7 +405,6 @@ function M:msbuild_query_properties(request, cb)
     local crash = handle_rpc_error(response)
     if crash then return end
     if cb then cb(response) end
-    vim.print(response)
   end)
 
   return id
@@ -428,7 +427,28 @@ function M:test_discover(request, cb) self._client:request_enumerate("test/disco
 ---@field configuration string
 ---@field filter? table<RunRequestNode>
 
-function M:test_run(request, cb) self._client:request_enumerate("test/run", request, nil, cb, handle_rpc_error) end
+function M:test_run(request, cb)
+  self._client:request_enumerate("test/run", request, nil, function(res)
+    local pending = #res
+
+    local function done()
+      if pending == 0 then
+        if cb then cb(res) end
+      end
+    end
+    done()
+
+    for _, value in ipairs(res) do
+      if value.stackTrace and value.stackTrace.token then
+        self._client:request_property_enumerate(value.stackTrace.token, nil, function(trace)
+          value.stackTrace = trace
+          pending = pending - 1
+          done()
+        end)
+      end
+    end
+  end, handle_rpc_error)
+end
 
 ---@class SolutionFileProjectResponse
 ---@field ProjectName string
