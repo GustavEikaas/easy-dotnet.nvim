@@ -37,6 +37,20 @@ end
 ---@field id string
 ---@field filePath string
 
+--- @class RPC_TestRunResult
+--- @field id string
+--- @field stackTrace string[] | nil
+--- @field message string | nil
+--- @field outcome TestResult
+
+---@class RPC_DiscoveredTest
+---@field id string
+---@field namespace? string
+---@field name string
+---@field displayName string
+---@field filePath string
+---@field lineNumber? integer
+
 ---@class VariableLocation
 ---@field columnEnd integer
 ---@field columnStart integer
@@ -62,10 +76,8 @@ end
 ---@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: ProjectSecretInitResponse), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), options?: RpcRequestOptions): integer|false # Request adding package
----@field vstest_discover fun(self: DotnetClient, request: VSTestDiscoverRequest, cb?: fun(res: RPC_Response)) # Request test discovery for vstest
----@field vstest_run fun(self: DotnetClient, request: VSTestRunRequest, cb?: fun(res: RPC_Response)) # Request running multiple tests for vstest
----@field mtp_run fun(self: DotnetClient, request: MtpRunRequest, cb?: fun(res: RPC_Response)) # Request running multiple tests for MTP
----@field mtp_discover fun(self: DotnetClient, request: MtpDiscoverRequest, cb?: fun(res: RPC_Response)) # Request test discovery for MTP
+---@field test_run fun(self: DotnetClient, request: RPC_TestRunRequest, cb?: fun(res: RPC_TestRunResult)) # Request running multiple tests for MTP
+---@field test_discover fun(self: DotnetClient, request: RPC_TestDiscoverRequest, cb?: fun(res: RPC_DiscoveredTest[])) # Request test discovery for MTP
 ---@field outdated_packages fun(self: DotnetClient, target_path: string, cb?: fun(res: OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
 ---@field roslyn_bootstrap_file fun(self: DotnetClient, file_path: string, type: "Class" | "Interface" | "Record", prefer_file_scoped: boolean, cb?: fun(success: true)): integer | false
 ---@field roslyn_bootstrap_file_json fun(self: DotnetClient, file_path: string, json_data: string, prefer_file_scoped: boolean, cb?: fun(success: true)): integer | false
@@ -393,62 +405,30 @@ function M:msbuild_query_properties(request, cb)
     local crash = handle_rpc_error(response)
     if crash then return end
     if cb then cb(response) end
+    vim.print(response)
   end)
 
   return id
 end
 
----@class VSTestDiscoverRequest
----@field vsTestPath string
----@field dllPath string
+function M:test_discover(request, cb) self._client:request_enumerate("test/discover", request, nil, cb, handle_rpc_error) end
 
-function M:vstest_discover(request, cb)
-  self._client.request("vstest/discover", request, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response) end
-  end)
-end
-
----@class MtpDiscoverRequest
----@field testExecutablePath string
-
-function M:mtp_discover(request, cb)
-  self._client.request("mtp/discover", request, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response) end
-  end)
-end
-
----@class VSTestRunRequest
----@field vsTestPath string
----@field dllPath string
----@field testIds string[]?
-
-function M:vstest_run(request, cb)
-  self._client.request("vstest/run", request, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response) end
-  end)
-end
+---@class RPC_TestDiscoverRequest
+---@field projectPath string
+---@field targetFrameworkMoniker string
+---@field configuration string
 
 ---@class RunRequestNode
 ---@field uid string Unique test run identifier
 ---@field displayName string Human-readable name for the run
 
----@class MtpRunRequest
----@field testExecutablePath string
+---@class RPC_TestRunRequest
+---@field projectPath string
+---@field targetFrameworkMoniker string
+---@field configuration string
 ---@field filter? table<RunRequestNode>
 
-function M:mtp_run(request, cb)
-  self._client.request("mtp/run", request, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response) end
-  end)
-end
+function M:test_run(request, cb) self._client:request_enumerate("test/run", request, nil, cb, handle_rpc_error) end
 
 ---@class SolutionFileProjectResponse
 ---@field ProjectName string

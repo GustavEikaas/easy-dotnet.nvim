@@ -3,7 +3,6 @@ local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
 local error_messages = require("easy-dotnet.error-messages")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local logger = require("easy-dotnet.logger")
-local extensions = require("easy-dotnet.extensions")
 
 ---@class TestRunnerModule
 ---@field sdk_path string | nil
@@ -14,14 +13,6 @@ local M = {
   sdk_path = nil,
   client = require("easy-dotnet.rpc.rpc").global_rpc_client,
 }
-
----@class RPC_DiscoveredTest
----@field id string
----@field namespace? string
----@field name string
----@field displayName string
----@field filePath string
----@field lineNumber? integer
 
 ---@class BuildJob
 ---@field state "pending" | "success" | "error"
@@ -250,21 +241,6 @@ local function create_test_node_from_dotnet_project(dotnet_project, solution_fil
   }
 end
 
----@param file string
----@return RPC_DiscoveredTest[]
-local function json_decode_out_file(file)
-  local ok, contents = pcall(vim.fn.readfile, file)
-
-  if not ok then
-    logger.warn("File does not exist ")
-    contents = { "[]" }
-  end
-  if #contents == 1 and contents[1] == "[]" then return {} end
-  pcall(vim.loop.fs_unlink, file)
-  ---@type RPC_DiscoveredTest[]
-  return vim.tbl_map(function(line) return vim.fn.json_decode(line) end, contents)
-end
-
 local function register_rpc_discovered_tests(tests, project, options)
   if #tests == 0 then
     win.tree.children[project.name] = nil
@@ -306,9 +282,7 @@ end
 ---@param project_node TestNode
 ---@param options table
 local function handle_rpc_response(project_node, options)
-  ---@param response RPC_Response
-  return function(response)
-    local tests = json_decode_out_file(response.result.outFile)
+  return function(tests)
     register_rpc_discovered_tests(tests, project_node, options)
 
     project_node.job = nil
@@ -318,10 +292,9 @@ end
 
 ---@param project DotnetProject
 ---@param options table
----@param sdk_path string
 ---@param solution_file_path string
-local function start_vstest_discovery(project, options, sdk_path, solution_file_path)
-  local project_node = create_test_node_from_dotnet_project(project, solution_file_path, options, function() start_vstest_discovery(project, options, sdk_path, solution_file_path) end)
+local function start_test_discovery(project, options, solution_file_path)
+  local project_node = create_test_node_from_dotnet_project(project, solution_file_path, options, function() start_test_discovery(project, options, solution_file_path) end)
   win.tree.children[project_node.name] = project_node
 
   project_node.job = { name = "build", state = "pending" }
@@ -336,32 +309,7 @@ local function start_vstest_discovery(project, options, sdk_path, solution_file_
   project_node.job = { name = "discover", state = "pending" }
   win.refreshTree()
 
-  local vstest_dll = vim.fs.joinpath(sdk_path, "vstest.console.dll")
-  M.client:vstest_discover({ vsTestPath = vstest_dll, dllPath = project.get_dll_path() }, handle_rpc_response(project_node, options))
-end
-
----@param project DotnetProject
-local function start_MTP_discovery_for_project(project, options, solution_file_path)
-  ---@type TestNode
-  local project_node = create_test_node_from_dotnet_project(project, solution_file_path, options, function() start_MTP_discovery_for_project(project, options, solution_file_path) end)
-  project_node.job = { state = "pending", name = "build" }
-  win.tree.children[project_node.name] = project_node
-  win.refreshTree()
-
-  local success = M.request_build(project.path)
-  if not success then
-    project_node.job = { name = "build", state = "error" }
-    return
-  end
-
-  project_node.job = { name = "discover", state = "pending" }
-  win.refreshTree()
-
-  local absolute_dll_path = project.get_dll_path()
-
-  local testPath = absolute_dll_path:gsub("%.dll", extensions.isWindows() and "." .. project.msbuild_props.outputType:lower() or "")
-
-  M.client:mtp_discover({ testExecutablePath = testPath }, handle_rpc_response(project_node, options))
+  M.client:test_discover({ projectPath = project.path, configuration = "Debug", targetFrameworkMoniker = project_node.framework }, handle_rpc_response(project_node, options))
 end
 
 local function refresh_runner(options, solution_file_path)
@@ -397,24 +345,10 @@ local function refresh_runner(options, solution_file_path)
 
   local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(project) return project.isTestProject end)
 
-  ---@param i DotnetProject
-  local vs_test_projects = vim.tbl_filter(function(i) return not i.isTestPlatformProject end, test_projects)
-
-  local mtp_projects = vim.tbl_filter(function(i) return i.isTestPlatformProject end, test_projects)
-
-  for _, value in ipairs(mtp_projects) do
+  for _, value in ipairs(test_projects) do
     M.client:initialize(function()
-      coroutine.wrap(function() start_MTP_discovery_for_project(value, options, solution_file_path) end)()
+      coroutine.wrap(function() start_test_discovery(value, options, solution_file_path) end)()
     end)
-  end
-  if #vs_test_projects > 0 then
-    local sdk_path = M.sdk_path or require("easy-dotnet.options").options.get_sdk_path()
-    M.sdk_path = sdk_path
-    for _, value in ipairs(vs_test_projects) do
-      M.client:initialize(function()
-        coroutine.wrap(function() start_vstest_discovery(value, options, sdk_path, solution_file_path) end)()
-      end)
-    end
   end
   win.refreshTree()
 end
