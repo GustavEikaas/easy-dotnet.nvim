@@ -1,7 +1,9 @@
 local polyfills = require("easy-dotnet.polyfills")
-local cli = require("easy-dotnet.dotnet_cli")
 
-local M = {}
+local M = {
+  include_pending = nil,
+  version_pending = nil,
+}
 
 function M.new() return setmetatable({}, { __index = M }) end
 
@@ -14,6 +16,7 @@ function M:enabled()
 end
 
 function M:get_completions(ctx, callback)
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   local transformed_callback = function(items)
     callback({
       context = ctx,
@@ -33,40 +36,45 @@ function M:get_completions(ctx, callback)
 
   if inside_include then
     local search_term = inside_include:gsub('%Include="', "")
-    local command = cli.package_search(search_term, true, false, 5)
-    vim.fn.jobstart(string.format('%s | jq ".searchResult | .[] | .packages | .[] | .id"', command), {
-      stdout_buffered = true,
-      on_stdout = function(_, data)
-        local items = polyfills.tbl_map(function(i)
-          local word = i:gsub("\r", ""):gsub("\n", ""):gsub('"', "")
-          return { label = word, dup = 0, insertText = word, documentation = "", kind = 11 }
-        end, data)
+
+    if M.include_pending then
+      client._client.cancel(M.include_pending)
+      M.include_pending = nil
+    end
+    client:initialize(function()
+      M.include_pending = client:nuget_search(search_term, nil, function(res)
+        local items = polyfills.tbl_map(function(value)
+          local label = string.format("%s (%s)", value.id, value.source)
+          return { label = label, dup = 0, insertText = value.id, documentation = "", kind = 11 }
+        end, res)
         transformed_callback(items)
-      end,
-    })
+      end)
+    end)
+
     return
   elseif inside_version then
+    if M.version_pending then
+      client._client.cancel(M.version_pending)
+      M.version_pending = nil
+    end
     local package_name = current_line:match('Include="([^"]+)"')
-    local command = cli.package_search(package_name, true, true)
-    vim.fn.jobstart(string.format('%s | jq ".searchResult[].packages[].version"', command), {
-      stdout_buffered = true,
-      on_stdout = function(_, data)
+    client:initialize(function()
+      M.version_pending = client:nuget_get_package_versions(package_name, nil, false, function(res)
         local index = 0
         local latest = nil
-        local last_index = #data - 1
+        local last_index = #res - 1
         local items = polyfills.tbl_map(function(i)
           index = index + 1
-          local label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', "")
           local cmp_item = {
-            label = label,
-            insertText = label,
+            label = i,
+            insertText = i,
             documentation = "",
             dup = 0,
             kind = 11,
           }
           if index == last_index then latest = cmp_item.label end
           return cmp_item
-        end, data)
+        end, res)
         if latest then
           table.insert(items, {
             label = "latest",
@@ -77,8 +85,8 @@ function M:get_completions(ctx, callback)
           })
         end
         transformed_callback(items)
-      end,
-    })
+      end)
+    end)
     return
   end
 

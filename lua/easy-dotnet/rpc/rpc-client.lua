@@ -254,7 +254,7 @@ function M:request_enumerate(method, params, on_yield, on_finished, on_error)
     end)
   end
 
-  self.request(method, params, function(response)
+  local id = self.request(method, params, function(response)
     if response.error and on_error then on_error(response) end
     if response.result and response.result.token then
       handle_next(response.result.token)
@@ -262,6 +262,8 @@ function M:request_enumerate(method, params, on_yield, on_finished, on_error)
       error("Response was not an enumerable")
     end
   end)
+
+  return id
 end
 
 function M:request_property_enumerate(token, on_yield, on_finished, on_error)

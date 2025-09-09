@@ -67,8 +67,8 @@ end
 ---@field stop fun(self: DotnetClient, cb: fun()): nil # Stops the dotnet server
 ---@field restart fun(self: DotnetClient, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
 ---@field nuget_restore fun(self: DotnetClient, targetPath: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
----@field nuget_search fun(self: DotnetClient, searchTerm: string, sources?: string[], cb?: fun(res: NugetPackageMetadata[])) # Request a NuGet restore
----@field nuget_get_package_versions fun(self: DotnetClient, packageId: string, sources?: string[], include_prerelease?: boolean, cb?: fun(res: string[])) # Request a NuGet restore
+---@field nuget_search fun(self: DotnetClient, searchTerm: string, sources?: string[], cb?: fun(res: NugetPackageMetadata[])): integer | false # Request a NuGet restore
+---@field nuget_get_package_versions fun(self: DotnetClient, packageId: string, sources?: string[], include_prerelease?: boolean, cb?: fun(res: string[])): integer | false # Request a NuGet restore
 ---@field nuget_push fun(self: DotnetClient, packages: string[], source: string, cb?: fun(success: boolean)) # Request a NuGet restore
 ---@field msbuild_pack fun(self: DotnetClient, targetPath: string, configuration?: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
 ---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: BuildResult)): integer|false # Request msbuild
@@ -280,25 +280,26 @@ end
 ---@field isListed boolean
 
 function M:nuget_search(prompt, sources, cb)
-  self._client.request("nuget/search-packages", { searchTerm = prompt, sources = sources }, function(response)
+  local id = self._client:request_enumerate("nuget/search-packages", { searchTerm = prompt, sources = sources }, nil, function(response)
     local crash = handle_rpc_error(response)
     if crash then return end
-    if cb then cb(handle_file_result(response.result.outFile)) end
-  end)
+    if cb then cb(response) end
+  end, handle_rpc_error)
+
+  return id
 end
 
 function M:nuget_get_package_versions(package, sources, include_prerelease, cb)
   local finished = jobs.register_job({ name = "Getting versions for " .. package, on_error_text = string.format("Failed to get versions for %s", package) })
   include_prerelease = include_prerelease or false
-  self._client.request("nuget/get-package-versions", { packageId = package, includePrerelease = include_prerelease, sources = sources }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then
-      finished(false)
-      return
-    end
+  local id = self._client:request_enumerate("nuget/get-package-versions", { packageId = package, includePrerelease = include_prerelease, sources = sources }, nil, function(response)
     finished(true)
-    cb(response.result)
+    cb(response)
+  end, function(res)
+    handle_rpc_error(res)
+    finished(false)
   end)
+  return id
 end
 
 function M:msbuild_pack(target_path, configuration, cb)
