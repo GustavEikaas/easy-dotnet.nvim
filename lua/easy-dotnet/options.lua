@@ -1,4 +1,3 @@
-local polyfills = require("easy-dotnet.polyfills")
 ---@class Options
 ---@field test_runner TestRunnerOptions
 ---@field csproj_mappings boolean

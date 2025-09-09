@@ -33,14 +33,6 @@ local function ensure_nvim_dep_installed(pkg, advice, required)
   end
 end
 
-local function measure_function(cb)
-  local start_time = os.clock()
-  local res = cb()
-  local end_time = os.clock()
-  local elapsed_time = end_time - start_time
-  return elapsed_time, res
-end
-
 local function check_coreclr_configured()
   local success, s = pcall(function() return require("dap") end)
   if not success or not s then
