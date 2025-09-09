@@ -5,12 +5,10 @@ local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local logger = require("easy-dotnet.logger")
 
 ---@class TestRunnerModule
----@field sdk_path string | nil
 ---@field client DotnetClient
 
 ---@type TestRunnerModule
 local M = {
-  sdk_path = nil,
   client = require("easy-dotnet.rpc.rpc").global_rpc_client,
 }
 

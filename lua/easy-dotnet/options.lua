@@ -1,6 +1,5 @@
 local polyfills = require("easy-dotnet.polyfills")
 ---@class Options
----@field get_sdk_path fun(): string
 ---@field test_runner TestRunnerOptions
 ---@field csproj_mappings boolean
 ---@field fsproj_mappings boolean
@@ -60,22 +59,6 @@ local polyfills = require("easy-dotnet.polyfills")
 
 ---@alias PickerType nil | "telescope" | "fzf" | "snacks" | "basic"
 
-local function get_sdk_path()
-  local sdk_version = vim.trim(vim.fn.system("dotnet --version"))
-  local sdk_list = vim.trim(vim.fn.system("dotnet --list-sdks"))
-  local base = nil
-  for line in sdk_list:gmatch("[^\n]+") do
-    if line:find(sdk_version, 1, true) then
-      local path = line:match("%[(.-)%]")
-      if not path then error("no sdk path found calling dotnet --list-sdks " .. (path or "empty")) end
-      base = vim.fs.normalize(path)
-      break
-    end
-  end
-  local sdk_path = polyfills.fs.joinpath(base, sdk_version)
-  return sdk_path
-end
-
 local function get_secret_path(secret_guid)
   local path
   local home_dir = vim.fn.expand("~")
@@ -92,8 +75,6 @@ end
 local M = {
   ---@type Options
   options = {
-    ---@type function | string
-    get_sdk_path = get_sdk_path,
     ---@param path string
     ---@param action "test"|"restore"|"build"|"run"|"watch"
     ---@param args string
