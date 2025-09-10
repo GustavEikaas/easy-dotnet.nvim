@@ -480,7 +480,14 @@ end
 ---@field upgradeSeverity "None" | "Patch" | "Minor" | "Major" | "Unknown"
 
 function M:outdated_packages(target_path, cb)
-  local id = self._client:request_enumerate("outdated/packages", { targetPath = target_path, includeTransitive = false }, nil, cb, handle_rpc_error)
+  local on_job_finished = require("easy-dotnet.ui-modules.jobs").register_job({ name = "Checking package references", on_success_text = "Outdated packages checked", on_error_text = "Checking package references failed" })
+  local id = self._client:request_enumerate("outdated/packages", { targetPath = target_path, includeTransitive = false }, nil, function(results)
+    on_job_finished(true)
+    cb(results)
+  end, function(res)
+    handle_rpc_error(res)
+    on_job_finished(false)
+  end)
   return id
 end
 
