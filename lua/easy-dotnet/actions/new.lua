@@ -9,7 +9,7 @@ local function sln_add_project(sln_path, project, cb)
       if b ~= 0 then
         logger.error("Failed to link project to solution")
       else
-        if cb then cb() end
+        cb()
       end
     end,
   })
@@ -138,22 +138,20 @@ function M.new()
         }
       end, templates)
       require("easy-dotnet.picker").picker(nil, choices, function(selection)
-        coroutine.wrap(function()
-          ---@type DotnetNewTemplate
-          local val = selection.value
-          if val.type == "project" then
-            vim.ui.input({ prompt = "Enter name:" }, function(input)
-              local args = get_project_name_and_output(input)
-              prompt_parameters(val.identity, client, args.project_name, args.output, function() sln_add_project(args.sln_path, args.output) end)
-            end)
-          elseif not vim.tbl_contains(no_name_templates, selection.value.identity) then
-            vim.ui.input({ prompt = "Enter name:" }, function(input)
-              prompt_parameters(val.identity, client, input, nil, function() print("Success") end)
-            end)
-          else
-            prompt_parameters(val.identity, client, nil, nil, function() print("Success") end)
-          end
-        end)()
+        ---@type DotnetNewTemplate
+        local val = selection.value
+        if val.type == "project" then
+          vim.ui.input({ prompt = "Enter name:" }, function(input)
+            local args = get_project_name_and_output(input)
+            prompt_parameters(val.identity, client, args.project_name, args.output, function() sln_add_project(args.sln_path, args.output) end)
+          end)
+        elseif not vim.tbl_contains(no_name_templates, selection.value.identity) then
+          vim.ui.input({ prompt = "Enter name:" }, function(input)
+            prompt_parameters(val.identity, client, input, nil, function() print("Success") end)
+          end)
+        else
+          prompt_parameters(val.identity, client, nil, nil, function() print("Success") end)
+        end
       end, "New", false, true)
     end)
   end)
