@@ -251,17 +251,6 @@ function M:nuget_restore(targetPath, cb)
   end)
 end
 
-local function handle_file_result(file)
-  local contents = vim.fn.readfile(file)
-  if #contents == 1 and vim.trim(contents[1]) == "[]" then return {} end
-
-  local result = vim.tbl_map(vim.fn.json_decode, contents)
-
-  pcall(vim.loop.fs_unlink, file)
-
-  return result
-end
-
 ---@class NugetPackageMetadata
 ---@field source string
 ---@field id string
