@@ -133,7 +133,6 @@ M.check = function()
   ensure_dep_installed({ "dotnet", "-h" })
   ensure_dep_installed({ "dotnet", "easydotnet", "-v" }, "dotnet tool install --global EasyDotnet")
   ensure_dep_installed({ "jq" })
-  ensure_dep_installed({ "dotnet", "outdated", "-h" }, "dotnet tool install --global dotnet-outdated-tool")
   ensure_dep_installed({ "dotnet", "ef" }, "dotnet tool install --global dotnet-ef")
   ensure_dep_installed({ "netcoredbg", "--version" }, "https://github.com/samsung/netcoredbg")
 
