@@ -99,10 +99,10 @@ local function run_test_from_buffer()
 
   for _, node in ipairs(handlers) do
     if node.is_MTP and node.line_number == vim.api.nvim_win_get_cursor(0)[1] then
-      keymaps.MTP_Run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
+      keymaps.test_run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
       M.add_gutter_test_signs()
     elseif not node.is_MTP and (node.line_number - 1 == vim.api.nvim_win_get_cursor(0)[1] or node.line_number - 1 == get_nearest_method_line()) then
-      keymaps.VsTest_Run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
+      keymaps.test_run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
       M.add_gutter_test_signs()
     end
   end
