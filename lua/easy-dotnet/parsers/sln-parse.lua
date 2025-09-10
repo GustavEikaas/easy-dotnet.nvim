@@ -1,15 +1,8 @@
 local polyfills = require("easy-dotnet.polyfills")
+local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local logger = require("easy-dotnet.logger")
 local cache = require("easy-dotnet.modules.file-cache")
 local M = {}
-
-local function generate_absolute_path_for_project(path, slnpath)
-  assert(path, "path cannot be nil")
-  local base = vim.fs.normalize(vim.fn.getcwd())
-  local dir = vim.fs.normalize(vim.fs.dirname(slnpath))
-  local res = vim.fs.normalize(polyfills.fs.joinpath(base, dir, vim.fs.normalize(path)))
-  return res
-end
 
 M.find_project_files = function()
   local csfiles = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.csproj$", depth = 3 })
@@ -122,35 +115,24 @@ M.get_projects_and_frameworks_flattened_from_sln = function(solution_file_path, 
 end
 
 ---@param project_paths string[]
----@param solution_file_path string
 ---@return DotnetProject[]
-local function get_all_projects_from_paths(project_paths, solution_file_path)
+local function get_all_projects_from_paths(project_paths)
   return polyfills.tbl_map(function(proj_path)
     local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
-    local project_file_path = generate_absolute_path_for_project(proj_path, solution_file_path)
-    local project = csproj_parser.get_project_from_project_file(project_file_path)
+    local project = csproj_parser.get_project_from_project_file(proj_path)
     return project
   end, project_paths)
 end
 
----Extracts .csproj and .fsproj paths from stdout lines.
----@param stdout string|string[] Output from dotnet sln list
----@return string[] project_paths A list of trimmed project paths ending in `.csproj` or `.fsproj`.
-local function get_project_paths_from_stdout(stdout)
-  return polyfills.iter(stdout):map(function(i) return vim.trim(i) end):filter(function(t) return t:match("%.csproj$") or t:match("%.fsproj$") end):totable()
-end
-
 --- Preload MSBuild properties for multiple project paths, with optional coroutine suspension.
 ---@param project_lines string[] List of project paths
----@param solution_file_path string Path to the .sln or .slnx file
-local function preload_msbuild_async_or_sync(project_lines, solution_file_path)
+local function preload_msbuild_async_or_sync(project_lines)
   if #project_lines == 0 then return end
   local co = coroutine.running()
   local remaining = #project_lines
 
   for _, proj_path in ipairs(project_lines) do
-    local project_file_path = generate_absolute_path_for_project(proj_path, solution_file_path)
-    require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(project_file_path, function()
+    require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(proj_path, function()
       remaining = remaining - 1
       if remaining == 0 then
         if co then coroutine.resume(co) end
@@ -170,35 +152,20 @@ end
 function M.get_projects_from_sln_async(solution_file_path, filter_fn)
   ---@type string[]
   local project_lines = cache.get(solution_file_path, function()
-    local project_lines
     local co = coroutine.running()
     assert(co, "get_projects_from_sln_async must be called within a coroutine")
 
-    local stdout
-    local stderr
-    local cmd = require("easy-dotnet.dotnet_cli").list_projects(solution_file_path)
-    vim.fn.jobstart(cmd, {
-      stdout_buffered = true,
-      stderr_buffered = true,
-      on_stdout = function(_, data) stdout = data end,
-      on_stderr = function(_, data) stderr = data end,
-      on_exit = function(_, code)
-        if code == 0 then
-          project_lines = get_project_paths_from_stdout(stdout)
-        else
-          error("Command failed: " .. cmd)
-          vim.print(stderr)
-        end
-        coroutine.resume(co)
-      end,
-    })
-    coroutine.yield()
-    return project_lines
+    client:initialize(function()
+      client:solution_list_projects(solution_file_path, function(res)
+        coroutine.resume(co, vim.tbl_map(function(value) return value.absolutePath end, res))
+      end)
+    end)
+    return coroutine.yield()
   end)
 
-  preload_msbuild_async_or_sync(project_lines, solution_file_path)
+  preload_msbuild_async_or_sync(project_lines)
 
-  local projects = get_all_projects_from_paths(project_lines, solution_file_path)
+  local projects = get_all_projects_from_paths(project_lines)
   if filter_fn then return vim.tbl_filter(filter_fn, projects) end
 
   return projects
@@ -211,19 +178,20 @@ end
 ---@param filter_fn? fun(project: DotnetProject): boolean Optional predicate to filter projects.
 ---@return DotnetProject[]: A list of DotnetProject objects from the solution, optionally filtered.
 function M.get_projects_from_sln(solution_file_path, filter_fn)
+  local co = coroutine.running()
   ---@type string[]
   local result = cache.get(solution_file_path, function()
-    local cmd = require("easy-dotnet.dotnet_cli").list_projects(solution_file_path)
-    local stdout = vim.fn.systemlist(cmd)
-
-    if vim.v.shell_error ~= 0 then error("Command failed: " .. cmd) end
-
-    local project_lines = get_project_paths_from_stdout(stdout)
+    client:initialize(function()
+      client:solution_list_projects(solution_file_path, function(res)
+        coroutine.resume(co, vim.tbl_map(function(value) return value.absolutePath end, res))
+      end)
+    end)
+    local project_lines = coroutine.yield()
     return project_lines
   end)
 
-  preload_msbuild_async_or_sync(result, solution_file_path)
-  local projects = get_all_projects_from_paths(result, solution_file_path)
+  preload_msbuild_async_or_sync(result)
+  local projects = get_all_projects_from_paths(result)
 
   if filter_fn then return vim.tbl_filter(filter_fn, projects) end
 
