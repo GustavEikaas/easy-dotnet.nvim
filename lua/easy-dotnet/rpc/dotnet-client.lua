@@ -491,12 +491,7 @@ end
 ---@field upgradeSeverity "None" | "Patch" | "Minor" | "Major" | "Unknown"
 
 function M:outdated_packages(target_path, cb)
-  local id = self._client.request("outdated/packages", { targetPath = target_path, includeTransitive = false }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    local packages = handle_file_result(response.result.outFile)
-    if cb then cb(packages) end
-  end)
+  local id = self._client:request_enumerate("outdated/packages", { targetPath = target_path, includeTransitive = false }, nil, cb, handle_rpc_error)
   return id
 end
 
