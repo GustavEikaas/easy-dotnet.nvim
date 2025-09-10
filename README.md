@@ -50,11 +50,10 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
     - [Configuration](#configuration)
     - [Features](#features-2)
 11. [Outdated](#outdated)
-    - [Requirements](#requirements-1)
 12. [Add](#add)
     - [Add package](#add-package)
 13. [.NET Framework](#.net-framework)
-    - [Requirements](#requirements-2)
+    - [Requirements](#requirements-1)
 14. [Project mappings](#project-mappings)
     - [Add reference](#add-reference)
     - [Package autocomplete](#package-autocomplete)
@@ -70,7 +69,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
     - [Migrations](#migrations)
 17. [Language injections](#language-injections)
     - [Showcase](#showcase)
-    - [Requirements](#requirements-3)
+    - [Requirements](#requirements-2)
     - [Support matrix](#support-matrix)
 18. [Nvim-dap configuration](#nvim-dap-configuration)
 19. [Troubleshooting](#troubleshooting)
@@ -598,9 +597,6 @@ Supports the following filetypes
 
 
 ![image](https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113)
-
-### Requirements
-This functionality relies on dotnet-outdated-tool, install using `dotnet tool install -g dotnet-outdated-tool`
 
 ## Add
 
