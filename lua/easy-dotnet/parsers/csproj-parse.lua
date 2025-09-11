@@ -146,6 +146,13 @@ function M.preload_msbuild_properties(project_file_path, on_finished, target_fra
   end)
 end
 
+function M.invalidate(project_file_path, target_framework)
+  local cache_key = build_cache_key(project_file_path, target_framework)
+  local cached = msbuild_cache[cache_key]
+  if type(cached) == "table" then msbuild_cache[cache_key] = nil end
+  file_cache.invalidate(project_file_path)
+end
+
 --- Coroutine-friendly get: yields until properties are available
 ---@param project_file_path string
 ---@param target_framework string|nil
