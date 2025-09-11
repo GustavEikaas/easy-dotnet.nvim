@@ -45,30 +45,34 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 9. [Project view](#project-view)
    - [Features](#features-1)
    - [Keymaps](#keymaps-1)
-10. [Outdated](#outdated)
-    - [Requirements](#requirements-1)
-11. [Add](#add)
+10. [Workspace Diagnostics](#workspace-diagnostics)
+    - [Commands](#commands-1)
+    - [Configuration](#configuration)
+    - [Features](#features-2)
+11. [Outdated](#outdated)
+12. [Add](#add)
     - [Add package](#add-package)
-12. [Project mappings](#project-mappings)
+13. [.NET Framework](#.net-framework)
+    - [Requirements](#requirements-1)
+14. [Project mappings](#project-mappings)
     - [Add reference](#add-reference)
     - [Package autocomplete](#package-autocomplete)
-13. [New](#new)
+15. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
     - [Integrating with neo-tree](#integrating-with-neo-tree)
-14. [EntityFramework](#entityframework)
+    - [Integrating with mini.files](#integrating-with-mini-files)
+    - [Integrating with snacks.explorer](#integrating-with-snacks-explorer)
+16. [EntityFramework](#entityframework)
     - [Database](#database)
     - [Migrations](#migrations)
-15. [Language injections](#language-injections)
+17. [Language injections](#language-injections)
     - [Showcase](#showcase)
     - [Requirements](#requirements-2)
     - [Support matrix](#support-matrix)
-16. [Nvim-dap configuration](#nvim-dap-configuration)
-    - [Debugging](#debugging)
-    - [Nvim-dap setup](#nvim-dap-setup)
-    - [Debugging with launch profiles](#debugging-with-launch-profiles)
-18. [Troubleshooting](#troubleshooting)
+18. [Nvim-dap configuration](#nvim-dap-configuration)
+19. [Troubleshooting](#troubleshooting)
 
 ## Features
 
@@ -77,9 +81,10 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 - User Secrets Management: Edit, create, and preview .NET user secrets directly within Neovim.
 - Debugging Helpers: While easy-dotnet.nvim doesn't set up DAP (Debugger Adapter Protocol) for you, it provides useful helper functions for debugging. These include resolving the DLL you are debugging and rebuilding before launching DAP, ensuring a smooth debugging experience.
 - Test runner: Test runner similiar to the one you find in Rider.
+- Workspace diagnostics: Get diagnostic errors and warnings from your entire solution or individual projects
 - Outdated command: Makes checking outdated packages a breeze using virtual text
 - (csproj/fsproj) mappings: Keymappings for .csproj and .fsproj files are automatically available
-- Auto bootstrap namespace: Automatically inserts namespace when opening a newly created `.cs` file
+- Auto bootstrap namespace: Automatically inserts namespace and class/interface when opening a newly created `.cs` file. (also checks clipboard for json to create class from)
 - Create dotnet templates like with `dotnet new`, automatically adding them to the current solution
 - Package autocomplete inside .csproj and .fsproj files [Check it out](#package-autocomplete)
 - [Rider-like](https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments)
@@ -140,14 +145,14 @@ Although not *required* by the plugin, it is highly recommended to install one o
     local dotnet = require("easy-dotnet")
     -- Options are not required
     dotnet.setup({
-      --Optional function to return the path for the dotnet sdk (e.g C:/ProgramFiles/dotnet/sdk/8.0.0)
-      -- easy-dotnet will resolve the path automatically if this argument is omitted, for a performance improvement you can add a function that returns a hardcoded string
-      -- You should define this function to return a hardcoded path for a performance improvement 🚀
-      get_sdk_path = get_sdk_path,
       ---@type TestRunnerOptions
       test_runner = {
-        ---@type "split" | "float" | "buf"
+        ---@type "split" | "vsplit" | "float" | "buf"
         viewmode = "float",
+        ---@type number|nil
+        vsplit_width = nil,
+        ---@type string|nil "topleft" | "topright" 
+        vsplit_pos = nil,
         enable_buffer_test_execution = true, --Experimental, run tests directly from buffer
         noBuild = true,
           icons = {
@@ -187,25 +192,16 @@ Although not *required* by the plugin, it is highly recommended to install one o
       },
       ---@param action "test" | "restore" | "build" | "run"
       terminal = function(path, action, args)
+        args = args or ""
         local commands = {
-          run = function()
-            return string.format("dotnet run --project %s %s", path, args)
-          end,
-          test = function()
-            return string.format("dotnet test %s %s", path, args)
-          end,
-          restore = function()
-            return string.format("dotnet restore %s %s", path, args)
-          end,
-          build = function()
-            return string.format("dotnet build %s %s", path, args)
-          end,
-          watch = function ()
-            return string.format("dotnet watch --project %s %s", path, args)
-          end
+          run = function() return string.format("dotnet run --project %s %s", path, args) end,
+          test = function() return string.format("dotnet test %s %s", path, args) end,
+          restore = function() return string.format("dotnet restore %s %s", path, args) end,
+          build = function() return string.format("dotnet build %s %s", path, args) end,
+          watch = function() return string.format("dotnet watch --project %s %s", path, args) end,
         }
-
-        local command = commands[action]() .. "\r"
+        local command = commands[action]()
+        if require("easy-dotnet.extensions").isWindows() == true then command = command .. "\r" end
         vim.cmd("vsplit")
         vim.cmd("term " .. command)
       end,
@@ -217,7 +213,15 @@ Although not *required* by the plugin, it is highly recommended to install one o
       auto_bootstrap_namespace = {
           --block_scoped, file_scoped
           type = "block_scoped",
-          enabled = true
+          enabled = true,
+          use_clipboard_json = {
+            behavior = "prompt", --'auto' | 'prompt' | 'never',
+            register = "+", -- which register to check
+          },
+      },
+      server = {
+          ---@type nil | "Off" | "Critical" | "Error" | "Warning" | "Information" | "Verbose" | "All"
+          log_level = nil,
       },
       -- choose which picker to use with the plugin
       -- possible values are "telescope" | "fzf" | "snacks" | "basic"
@@ -236,6 +240,15 @@ Although not *required* by the plugin, it is highly recommended to install one o
             spinner:stop_spinner(finished_event.result.text, finished_event.result.level)
           end
         end,
+      },
+      debugger = {
+        mappings = {
+          open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
+        },
+      },
+      diagnostics = {
+        default_severity = "error",
+        setqflist = false,
       },
     })
 
@@ -333,6 +346,10 @@ require("lualine").setup {
 | `dotnet.get_debug_dll()`                      | Returns the DLL from the `bin/debug` folder                                                                 |
 | `dotnet.get_environment_variables(project_name, project_path, use_default_launch_profile: boolean)` | Returns the environment variables from the `launchSetting.json` file                                         |
 | `dotnet.reset()`                              | Deletes all files persisted by `easy-dotnet.nvim`. Use this if unable to pick a different solution or project |
+||
+| `diagnostics.get_workspace_diagnostics()`     | Get workspace diagnostics using configured default severity                                                 |
+| `diagnostics.get_workspace_diagnostics("error")` | Get workspace diagnostics for errors only                                                                |
+| `diagnostics.get_workspace_diagnostics("warning")` | Get workspace diagnostics for errors and warnings                                                       |
 
 ```lua
 local dotnet = require("easy-dotnet")
@@ -376,7 +393,12 @@ dotnet.watch()
 dotnet.watch_default()
 dotnet.secrets()                                                          
 dotnet.clean()                                                           
-dotnet.restore()                   
+dotnet.restore()
+
+local diagnostics = require("easy-dotnet.actions.diagnostics")
+diagnostics.get_workspace_diagnostics()
+diagnostics.get_workspace_diagnostics("error") 
+diagnostics.get_workspace_diagnostics("warning")
 ```
 
 ### Vim commands
@@ -423,6 +445,9 @@ Dotnet solution select
 Dotnet solution add
 Dotnet solution remove
 Dotnet outdated
+Dotnet diagnostic
+Dotnet diagnostic errors
+Dotnet diagnostic warnings
 checkhealth easy-dotnet
 
 -- Internal 
@@ -524,6 +549,40 @@ Keymaps are region-specific and work based on context (e.g., when hovering over 
 - `r`: Remove package reference.
 - `<C-b>`: View package in browser.
 
+## Workspace Diagnostics
+
+Analyze your entire solution or individual projects for compilation errors and warnings using Roslyn diagnostics.
+
+### Commands
+
+- `Dotnet diagnostic` - Uses the configured default severity (errors by default)
+- `Dotnet diagnostic errors` - Shows only compilation errors  
+- `Dotnet diagnostic warnings` - Shows both errors and warnings
+
+### Configuration
+
+```lua
+require("easy-dotnet").setup({
+  diagnostics = {
+    default_severity = "error",  -- "error" or "warning" (default: "error")
+    setqflist = false,           -- Populate quickfix list automatically (default: false)
+  },
+})
+```
+
+### Features
+
+- **Solution/Project Selection**: When multiple projects or solutions are available, you'll be prompted to select which one to analyze
+- **Roslyn Integration**: Uses the Roslyn Language Server Protocol for accurate diagnostics
+- **Neovim Diagnostics Integration**: Results are populated into Neovim's built-in diagnostic system, allowing you to:
+  - Navigate between diagnostics using `:lua vim.diagnostic.goto_next()` and `:lua vim.diagnostic.goto_prev()`
+  - View diagnostics in the quickfix list using `:lua vim.diagnostic.setqflist()` (or automatically if configured)
+  - See inline diagnostic messages
+  - View with trouble (requires [trouble.nvim](https://github.com/folke/trouble.nvim))
+  - View with snacks diagnostic picker (requires [snacks.nvim](https://github.com/folke/snacks.nvim))
+
+The diagnostics will appear in Neovim's diagnostic system, allowing you to navigate through them using your standard diagnostic keymaps. If you have trouble.nvim or snacks.nvim configured, the diagnostics will automatically be available in their respective interfaces.
+
 ## Outdated
 
 Run the command `Dotnet outdated` in one of the supported filetypes, virtual text with packages latest version will appear
@@ -538,9 +597,6 @@ Supports the following filetypes
 
 
 ![image](https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113)
-
-### Requirements
-This functionality relies on dotnet-outdated-tool, install using `dotnet tool install -g dotnet-outdated-tool`
 
 ## Add
 
@@ -608,13 +664,21 @@ return {
 }
 ```
 
-
 ![image](https://github.com/user-attachments/assets/81809aa8-704b-4481-9445-3985ddef6c98)
 
 >[!NOTE]
 >Latest is added as a snippet to make it easier to select the latest version
 
 ![image](https://github.com/user-attachments/assets/2b59735f-941e-44d2-93cf-76b13ac3e76f)
+
+
+## .NET Framework
+Basic support for .NET framework has been achieved. This means basic functionality like `build/run/test/test-runner` should work. If you find something not working feel free to file an issue.
+
+### Requirements
+- `choco install nuget.commandline`
+- Visual studio installation
+- `options.server.use_visual_studio == true`
 
 ## New
 Create dotnet templates as with `dotnet new <templatename>`
@@ -674,6 +738,71 @@ Adding the following configuration to your neo-tree will allow for creating file
           }
         },
       })
+```
+
+### Integrating with mini files
+
+Adding the following autocmd to your config will allow for creating files using dotnet templates
+
+```lua
+    vim.api.nvim_create_autocmd("User", {
+      pattern = "MiniFilesBufferCreate",
+      callback = function(args)
+        local buf_id = args.data.buf_id
+        vim.keymap.set("n", "<leader>a", function()
+          local entry = require("mini.files").get_fs_entry()
+          if entry == nil then
+            vim.notify("No fd entry in mini files", vim.log.levels.WARN)
+            return
+          end
+          local target_dir = entry.path
+          if entry.fs_type == "file" then
+            target_dir = vim.fn.fnamemodify(entry.path, ":h")
+          end
+          require("easy-dotnet").create_new_item(target_dir)
+        end, { buffer = buf_id, desc = "Create file from dotnet template" })
+      end,
+    })
+```
+
+### Integrating with snacks explorer
+
+```lua
+  {
+    "folke/snacks.nvim",
+    ---@type snacks.Config
+    opts = {
+      picker = {
+        sources = {
+          explorer = {
+            win = {
+              list = {
+                keys = {
+                  ["A"] = "explorer_add_dotnet",
+                },
+              },
+            },
+            actions = {
+              explorer_add_dotnet = function(picker)
+                local dir = picker:dir()
+                local easydotnet = require("easy-dotnet")
+
+                easydotnet.create_new_item(dir, function(item_path)
+                  local tree = require("snacks.explorer.tree")
+                  local actions = require("snacks.explorer.actions")
+                  tree:open(dir)
+                  tree:refresh(dir)
+                  actions.update(picker, { target = item_path })
+                  picker:focus()
+                end)
+              end,
+            },
+          },
+        },
+      },
+    },
+  },
+
 ```
 
 ## EntityFramework
@@ -737,165 +866,9 @@ and parsers for `sql`, `json` and `xml`, so make sure you have these parsers ins
 
 ## Nvim-dap configuration
 
-While its out of the scope of this plugin to setup dap, we do provide a few helpful functions to make it easier.
+While its out of the scope of this plugin to setup dap, we do provide a few helpful functions/widgets to make it easier.
 
-### Debugging
-To start debugging do the following. Ensure you have configured the code below
-
-Dont start the project before doing this, debugger has to start it for you
-
-1. Open any `.cs` file in the project
-2. Set a breakpoint with `<leader>b`
-3. Press `<F5>`
-4. Select the project you want to debug (if your breakpoint is in a library you have to select the entry point project)
-5. Wait for breakpoint to be hit
-6. You can now `<F10>` step over, `<F11>` step into, `<F5>` continue and more (see code)
-
-### Nvim-dap setup
-
-```lua
-local function rebuild_project(co, path)
-  local spinner = require("easy-dotnet.ui-modules.spinner").new()
-  spinner:start_spinner "Building"
-  vim.fn.jobstart(string.format("dotnet build %s", path), {
-    on_exit = function(_, return_code)
-      if return_code == 0 then
-        spinner:stop_spinner "Built successfully"
-      else
-        spinner:stop_spinner("Build failed with exit code " .. return_code, vim.log.levels.ERROR)
-        error "Build failed"
-      end
-      coroutine.resume(co)
-    end,
-  })
-  coroutine.yield()
-end
-
-return {
-  "mfussenegger/nvim-dap",
-  enabled = true,
-  config = function()
-    local dap = require "dap"
-    local dotnet = require "easy-dotnet"
-    local dapui = require "dapui"
-    dap.set_log_level "TRACE"
-
-    dap.listeners.before.attach.dapui_config = function()
-      dapui.open()
-    end
-    dap.listeners.before.launch.dapui_config = function()
-      dapui.open()
-    end
-    dap.listeners.before.event_terminated.dapui_config = function()
-      dapui.close()
-    end
-    dap.listeners.before.event_exited.dapui_config = function()
-      dapui.close()
-    end
-
-
-    vim.keymap.set("n", "q", function()
-      dap.close()
-      dapui.close()
-    end, {})
-
-    vim.keymap.set("n", "<F5>", dap.continue, {})
-    vim.keymap.set("n", "<F10>", dap.step_over, {})
-    vim.keymap.set("n", "<leader>dO", dap.step_over, {})
-    vim.keymap.set("n", "<leader>dC", dap.run_to_cursor, {})
-    vim.keymap.set("n", "<leader>dr", dap.repl.toggle, {})
-    vim.keymap.set("n", "<leader>dj", dap.down, {})
-    vim.keymap.set("n", "<leader>dk", dap.up, {})
-    vim.keymap.set("n", "<F11>", dap.step_into, {})
-    vim.keymap.set("n", "<F12>", dap.step_out, {})
-    vim.keymap.set("n", "<leader>b", dap.toggle_breakpoint, {})
-    vim.keymap.set("n", "<F2>", require("dap.ui.widgets").hover, {})
-
-    local function file_exists(path)
-      local stat = vim.loop.fs_stat(path)
-      return stat and stat.type == "file"
-    end
-
-    local debug_dll = nil
-
-    local function ensure_dll()
-      if debug_dll ~= nil then
-        return debug_dll
-      end
-local dll = dotnet.get_debug_dll()
-      debug_dll = dll
-      return dll
-    end
-
-    for _, value in ipairs { "cs", "fsharp" } do
-      dap.configurations[value] = {
-        {
-          type = "coreclr",
-          name = "Program",
-          request = "launch",
-          env = function()
-            local dll = ensure_dll()
-            local vars = dotnet.get_environment_variables(dll.project_name, dll.absolute_project_path)
-            return vars or nil
-          end,
-          program = function()
-            local dll = ensure_dll()
-            local co = coroutine.running()
-            rebuild_project(co, dll.project_path)
-            if not file_exists(dll.target_path) then
-              error("Project has not been built, path: " .. dll.target_path)
-            end
-            return dll.target_path
-          end,
-          cwd = function()
-            local dll = ensure_dll()
-            return dll.absolute_project_path
-          end,
-        },
-      }
-
-      dap.listeners.before["event_terminated"]["easy-dotnet"] = function()
-        debug_dll = nil
-      end
-
-      dap.adapters.coreclr = {
-        type = "executable",
-        command = "netcoredbg",
-        args = { "--interpreter=vscode" },
-      }
-    end
-  end,
-  dependencies = {
-    { "nvim-neotest/nvim-nio", },
-    {
-      "rcarriga/nvim-dap-ui",
-      config = function()
-        require("dapui").setup()
-      end,
-    },
-  },
-}
-```
-### Debugging with launch-profiles
-
-The default profile being chosen must be named the same as your project.
-The file is expected to be in the Properties/launchsettings.json relative to your .csproject file
-If you want to be prompted to select a profile, remember to pass false as the last flag to `get_environment_variables`
-```json
-{
-  "profiles": {
-    "NeovimDebugProject.Api": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": true,
-      "launchUrl": "swagger",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "applicationUrl": "https://localhost:7073;http://localhost:7071"
-    }
-}
-```
+Check out [debugging-setup](./docs/debugging.md) for specific details
 
 ## Troubleshooting
 
@@ -909,45 +882,23 @@ If you want to be prompted to select a profile, remember to pass false as the la
 
 <!--hl start-->
 
-| Highlight group                  | Default            |
-| -------------------------------- | ------------------ |
-| **EasyDotnetTestRunnerSolution** | *Question*         |
-| **EasyDotnetTestRunnerProject**  | *Character*        |
-| **EasyDotnetTestRunnerTest**     | *Normal*           |
-| **EasyDotnetTestRunnerSubcase**  | *Conceal*           |
-| **EasyDotnetTestRunnerDir**      | *Directory*        |
-| **EasyDotnetTestRunnerPackage**  | *Include*          |
-| **EasyDotnetTestRunnerPassed**   | *DiagnosticOk*     |
-| **EasyDotnetTestRunnerFailed**   | *DiagnosticError*  |
-| **EasyDotnetTestRunnerRunning**  | *DiagnosticWarn*   |
-
+| Highlight group                         | Default            |
+| --------------------------------------- | ------------------ |
+| **EasyDotnetTestRunnerSolution**        | *Question*         |
+| **EasyDotnetTestRunnerProject**         | *Character*        |
+| **EasyDotnetTestRunnerTest**            | *Normal*           |
+| **EasyDotnetTestRunnerSubcase**         | *Conceal*           |
+| **EasyDotnetTestRunnerDir**             | *Directory*        |
+| **EasyDotnetTestRunnerPackage**         | *Include*          |
+| **EasyDotnetTestRunnerPassed**          | *DiagnosticOk*     |
+| **EasyDotnetTestRunnerFailed**          | *DiagnosticError*  |
+| **EasyDotnetTestRunnerRunning**         | *DiagnosticWarn*   |
+| **EasyDotnetDebuggerFloatVariable**     | *Question*         |
+| **EasyDotnetDebuggerVirtualVariable**   | *Question*         |
+| **EasyDotnetDebuggerVirtualException**  | *DiagnosticError*         |
 <!-- hl-end -->
 
 </details>
 
-
-## Signs
-
-<details>
-<summary>Click to see all signs</summary>
-
-<!--sign start-->
-
-  ```lua
-  --override example
-  vim.fn.sign_define("EasyDotnetTestSign", { text = "", texthl = "Character" })
-  ```
-
-| Sign                           | Highlight                    |
-| ------------------------------ | ---------------------------- |
-| **EasyDotnetTestSign**         | Character                    |
-| **EasyDotnetTestPassed**       | EasyDotnetTestRunnerPassed   |
-| **EasyDotnetTestFailed**       | EasyDotnetTestRunnerFailed   |
-| **EasyDotnetTestSkipped**      | (none)                       |
-| **EasyDotnetTestError**        | EasyDotnetTestRunnerFailed   |
-
-<!-- sign-end -->
-
-</details>
 
 

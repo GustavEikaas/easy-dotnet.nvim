@@ -33,14 +33,6 @@ local function ensure_nvim_dep_installed(pkg, advice, required)
   end
 end
 
-local function measure_function(cb)
-  local start_time = os.clock()
-  local res = cb()
-  local end_time = os.clock()
-  local elapsed_time = end_time - start_time
-  return elapsed_time, res
-end
-
 local function check_coreclr_configured()
   local success, s = pcall(function() return require("dap") end)
   if not success or not s then
@@ -141,7 +133,6 @@ M.check = function()
   ensure_dep_installed({ "dotnet", "-h" })
   ensure_dep_installed({ "dotnet", "easydotnet", "-v" }, "dotnet tool install --global EasyDotnet")
   ensure_dep_installed({ "jq" })
-  ensure_dep_installed({ "dotnet", "outdated", "-h" }, "dotnet tool install --global dotnet-outdated-tool")
   ensure_dep_installed({ "dotnet", "ef" }, "dotnet tool install --global dotnet-ef")
   ensure_dep_installed({ "netcoredbg", "--version" }, "https://github.com/samsung/netcoredbg")
 
@@ -158,7 +149,6 @@ M.check = function()
   check_coreclr_configured()
 
   vim.health.start("easy-dotnet configuration")
-  local config = require("easy-dotnet.options").options
   local selected_picker = require("easy-dotnet.options").get_option("picker")
   if selected_picker == "telescope" then
     ensure_nvim_dep_installed("telescope", { "This is selected in your config but is not installed", "A fallback will be used instead", "https://github.com/nvim-telescope/telescope.nvim" }, true)
@@ -168,11 +158,6 @@ M.check = function()
     ensure_nvim_dep_installed("snacks", { "This is selected in your config but is not installed", "A fallback will be used instead", "https://github.com/folke/snacks.nvim" }, true)
   end
 
-  local sdk_path_time, path = measure_function(config.get_sdk_path)
-  vim.health.ok("sdk_path: " .. path)
-  if sdk_path_time > 1 then
-    vim.health.warn(string.format("options.get_sdk_path took %d seconds", sdk_path_time), "You should add get_sdk_path to your options for a performance improvement🚀. Check readme")
-  end
   check_cmp()
   vim.health.start("User config")
   vim.health.info(vim.inspect(require("easy-dotnet.options").orig_config))

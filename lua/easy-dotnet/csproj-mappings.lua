@@ -1,4 +1,7 @@
-local M = {}
+local M = {
+  include_pending = nil,
+  version_pending = nil,
+}
 
 local picker = require("easy-dotnet.picker")
 local polyfills = require("easy-dotnet.polyfills")
@@ -56,8 +59,9 @@ local function attach_mappings()
       local bufnr = vim.api.nvim_get_current_buf()
       local curr_project_path = vim.api.nvim_buf_get_name(bufnr)
 
-      -- adds a project reference
-      vim.keymap.set("n", "<leader>ar", function() M.add_project_reference(curr_project_path) end, { buffer = bufnr })
+      vim.keymap.set("n", "<leader>ar", function()
+        coroutine.wrap(function() M.add_project_reference(curr_project_path) end)()
+      end, { buffer = bufnr })
     end,
   })
 end
@@ -72,29 +76,36 @@ M.package_completion_cmp = {
 
     local inside_include = before_cursor:match(package_completion_pattern)
     local inside_version = before_cursor:match(version_completion_pattern)
+
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
     if inside_include then
       local search_term = inside_include:gsub('%Include="', "")
-      local command = cli.package_search(search_term, true, false, 5)
-      vim.fn.jobstart(string.format('%s | jq ".searchResult | .[] | .packages | .[] | .id"', command), {
-        stdout_buffered = true,
-        on_stdout = function(_, data)
-          local items = polyfills.tbl_map(function(i) return { label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', ""), kind = 18 } end, data)
+      if M.include_pending then
+        client._client.cancel(M.include_pending)
+        M.include_pending = nil
+      end
+      client:initialize(function()
+        M.include_pending = client:nuget_search(search_term, nil, function(res)
+          local items = polyfills.tbl_map(function(value) return { label = value.id, kind = 18 } end, res)
           callback({ items = items, isIncomplete = true })
-        end,
-      })
+        end)
+      end)
     elseif inside_version then
       local package_name = current_line:match('Include="([^"]+)"')
-      local command = cli.package_search(package_name, true, true)
-      vim.fn.jobstart(string.format('%s | jq ".searchResult[].packages[].version"', command), {
-        stdout_buffered = true,
-        on_stdout = function(_, data)
+
+      if M.version_pending then
+        client._client.cancel(M.version_pending)
+        M.version_pending = nil
+      end
+      client:initialize(function()
+        M.version_pending = client:nuget_get_package_versions(package_name, nil, false, function(res)
           local index = 0
           local latest = nil
-          local last_index = #data - 1
+          local last_index = #res - 1
           local items = polyfills.tbl_map(function(i)
             index = index + 1
             local cmp_item = {
-              label = i:gsub("\r", ""):gsub("\n", ""):gsub('"', ""),
+              label = i,
               deprecated = true,
               sortText = "",
               preselect = index == last_index,
@@ -102,8 +113,7 @@ M.package_completion_cmp = {
             }
             if index == last_index then latest = cmp_item.label end
             return cmp_item
-          end, data)
-
+          end, res)
           if latest then table.insert(items, {
             label = "latest",
             insertText = latest,
@@ -111,8 +121,8 @@ M.package_completion_cmp = {
             preselect = true,
           }) end
           callback({ items = items, isIncomplete = false })
-        end,
-      })
+        end)
+      end)
     end
   end,
 

@@ -10,9 +10,12 @@ local M = {
 ---@field on_cancel? fun(): nil  -- optional callback for cancellation
 
 ---@class StreamJsonRpc
+---@field _enumerable_next fun (token: integer, cb): nil
 ---@field setup fun(opts: { pipe_path: string, debug?: boolean }): StreamJsonRpc
 ---@field connect fun(cb: fun()): nil
 ---@field request fun(method: DotnetPipeMethod, params: table, callback: fun(result: RPC_Response), options?: RpcRequestOptions): integer|false
+---@field request_enumerate fun(self: StreamJsonRpc, method: DotnetPipeMethod, params: table, on_yield: fun(result: table)|nil, on_finished: fun(results: table[])|nil, on_error: fun(res: RPC_Response)|nil): integer|false
+---@field request_property_enumerate fun(self: StreamJsonRpc, token: string, on_yield: fun(result: table)|nil, on_finished: fun(results: table[])|nil, on_error: fun(res: RPC_Response)|nil): nil
 ---@field notify fun(method: string, params: table): boolean
 ---@field cancel fun(id: integer): nil
 ---@field disconnect fun(): boolean
@@ -47,22 +50,26 @@ local M = {
 ---@alias DotnetPipeMethod
 ---| "initialize"
 ---| "msbuild/build"
----| "msbuild/restore"
+---| "nuget/restore"
 ---| "msbuild/pack"
 ---| "user-secrets/init"
----| "msbuild/query-properties"
+---| "msbuild/project-properties"
 ---| "msbuild/add-package-reference"
 ---| "solution/list-projects"
 ---| "nuget/push"
 ---| "nuget/get-package-versions"
 ---| "nuget/search-packages"
 ---| "nuget/list-sources"
----| "vstest/discover"
----| "vstest/run"
----| "mtp/discover"
----| "mtp/run"
+---| "test/discover"
+---| "test/run"
 ---| "outdated/packages"
 ---| "roslyn/bootstrap-file"
+---| "roslyn/scope-variables"
+---| "json-code-gen"
+---| "template/list"
+---| "template/parameters"
+---| "template/instantiate"
+---| "$/enumerator/next"
 
 local connection = nil
 local is_connected = false
@@ -108,42 +115,51 @@ local function handle_server_notification(decoded)
 end
 
 local function read_loop()
+  local buffer = ""
+
+  local function process_buffer()
+    while true do
+      local header_end = buffer:find("\r\n\r\n", 1, true)
+      if not header_end then return end
+
+      local header_section = buffer:sub(1, header_end - 1)
+      local content_length = header_section:match("Content%-Length:%s*(%d+)")
+      if not content_length then
+        vim.notify("Missing Content-Length header", vim.log.levels.WARN)
+        buffer = buffer:sub(header_end + 4)
+        return
+      end
+
+      content_length = tonumber(content_length)
+      local body_start = header_end + 4
+      local body_end = body_start + content_length - 1
+
+      if #buffer < body_end then return end
+
+      local body = buffer:sub(body_start, body_end)
+      buffer = buffer:sub(body_end + 1)
+
+      local ok, decoded = pcall(vim.json.decode, body)
+      if ok and decoded then
+        if decoded.id then
+          handle_response(decoded)
+        elseif decoded.method then
+          handle_server_notification(decoded)
+        end
+      else
+        vim.notify("Malformed JSON: " .. body, vim.log.levels.WARN)
+      end
+    end
+  end
+
   connection:read_start(function(err, data)
     if err then
       vim.schedule(function() vim.notify("Pipe read error: " .. err, vim.log.levels.ERROR) end)
       return
     end
-
-    if not data then return end
-
-    local header_end = data:find("\r\n\r\n", 1, true)
-    if not header_end then
-      vim.schedule(function() vim.notify("Incomplete JSON-RPC header", vim.log.levels.WARN) end)
-      return
-    end
-
-    local header_section = data:sub(1, header_end - 1)
-    local content_length = header_section:match("Content%-Length:%s*(%d+)")
-    if not content_length then
-      vim.schedule(function() vim.notify("Missing Content-Length header", vim.log.levels.WARN) end)
-      return
-    end
-
-    content_length = tonumber(content_length)
-    local body_start = header_end + 4
-    local body = data:sub(body_start, body_start + content_length - 1)
-
-    local ok, decoded = pcall(vim.json.decode, body)
-    if ok and decoded then
-      if decoded.id then
-        handle_response(decoded)
-      elseif decoded.method then
-        handle_server_notification(decoded)
-      else
-        vim.schedule(function() vim.notify("Unknown JSON structure" .. body, vim.log.levels.WARN) end)
-      end
-    else
-      vim.schedule(function() vim.notify("Malformed or unmatched JSON body: " .. body, vim.log.levels.WARN) end)
+    if data then
+      buffer = buffer .. data
+      process_buffer()
     end
   end)
 end
@@ -179,7 +195,9 @@ end
 
 function M.request(method, params, callback, options)
   options = options or {}
-  if not vim.tbl_contains(M.routes, method) then logger.warn("Server does not broadcast support for " .. method .. " perhaps your server is outdated? :Dotnet _server update") end
+  if not vim.tbl_contains(M.routes, method) and method ~= "$/enumerator/next" then
+    logger.warn("Server does not broadcast support for " .. method .. " perhaps your server is outdated? :Dotnet _server update")
+  end
   if not is_connected then error("Client not connected") end
 
   request_id = request_id + 1
@@ -216,6 +234,61 @@ function M.request(method, params, callback, options)
   return id
 end
 
+function M:request_enumerate(method, params, on_yield, on_finished, on_error)
+  local all_results = {}
+
+  local function handle_next(token)
+    self._enumerable_next(token, function(res)
+      if res.error and on_error then on_error(res) end
+      if res.result then
+        if #res.result.values > 0 then
+          vim.list_extend(all_results, res.result.values)
+          if on_yield then on_yield(res.result.values) end
+        end
+        if res.result.finished == false then
+          handle_next(token)
+        else
+          if on_finished then on_finished(all_results) end
+        end
+      end
+    end)
+  end
+
+  local id = self.request(method, params, function(response)
+    if response.error and on_error then on_error(response) end
+    if response.result and response.result.token then
+      handle_next(response.result.token)
+    else
+      error("Response was not an enumerable")
+    end
+  end)
+
+  return id
+end
+
+function M:request_property_enumerate(token, on_yield, on_finished, on_error)
+  local all_results = {}
+
+  local function handle_next(enumerable_token)
+    self._enumerable_next(enumerable_token, function(res)
+      if res.error and on_error then on_error(res) end
+      if res.result then
+        if #res.result.values > 0 then
+          vim.list_extend(all_results, res.result.values)
+          if on_yield then on_yield(res.result.values) end
+        end
+        if res.result.finished == false then
+          handle_next(enumerable_token)
+        else
+          if on_finished then on_finished(all_results) end
+        end
+      end
+    end)
+  end
+
+  handle_next(token)
+end
+
 function M.cancel(id)
   if callbacks[id] then
     M.notify("$/cancelRequest", { id = id })
@@ -225,6 +298,8 @@ function M.cancel(id)
     cancellation_callbacks[id] = nil
   end
 end
+
+function M._enumerable_next(id, cb) M.request("$/enumerator/next", { token = id }, cb) end
 
 function M.subscribe_notifications(cb)
   table.insert(notification_callbacks, cb)

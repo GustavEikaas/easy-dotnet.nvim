@@ -16,9 +16,9 @@ local function wrap(callback)
     else
       -- If not, create a new coroutine and resume it
       local co = coroutine.create(callback)
-      local s = ...
+      local args = { ... }
       local handle = function()
-        local success, err = coroutine.resume(co, s)
+        local success, err = coroutine.resume(co, unpack(args))
         if not success then print("Coroutine failed: " .. err) end
       end
       handle()
@@ -62,7 +62,8 @@ local function present_command_picker()
   end, "Select command", false)
 end
 
-local function define_highlights_and_signs(merged_opts)
+local function define_highlights()
+  --TODO: stop polluting global namespace
   vim.api.nvim_set_hl(0, "EasyDotnetPackage", {
     fg = "#000000",
     bg = "#ffffff",
@@ -71,6 +72,7 @@ local function define_highlights_and_signs(merged_opts)
     underline = false,
   })
 
+  --Testrunner
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerSolution, { link = "Question" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerProject, { link = "Character" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerTest, { link = "Normal" })
@@ -80,14 +82,10 @@ local function define_highlights_and_signs(merged_opts)
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerPassed, { link = "DiagnosticOk" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerFailed, { link = "DiagnosticError" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
-
-  local icons = merged_opts.test_runner.icons
-  vim.fn.sign_define(constants.signs.EasyDotnetTestSign, { text = icons.test, texthl = "Character" })
-  vim.fn.sign_define(constants.signs.EasyDotnetTestPassed, { text = icons.passed, texthl = "EasyDotnetTestRunnerPassed" })
-  vim.fn.sign_define(constants.signs.EasyDotnetTestFailed, { text = icons.failed, texthl = "EasyDotnetTestRunnerFailed" })
-  vim.fn.sign_define(constants.signs.EasyDotnetTestInProgress, { text = icons.reload, texthl = "EasyDotnetTestRunnerRunning" })
-  vim.fn.sign_define(constants.signs.EasyDotnetTestSkipped, { text = icons.skipped })
-  vim.fn.sign_define(constants.signs.EasyDotnetTestError, { text = "E", texthl = "EasyDotnetTestRunnerFailed" })
+  --Debugger
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerFloatVariable, { link = "Question" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerVirtualVariable, { link = "Question" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerVirtualException, { link = "DiagnosticError" })
 end
 
 local register_legacy_functions = function()
@@ -175,10 +173,15 @@ end
 local function background_scanning(merged_opts)
   if merged_opts.background_scanning then
     --prewarm msbuild properties
-    get_solutions_async(function(slns)
-      if #slns ~= 1 then return end
-      require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(slns[1])
-    end)
+    local selected_solution = require("easy-dotnet.parsers.sln-parse").try_get_selected_solution_file()
+    if selected_solution then
+      require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(selected_solution)
+    else
+      get_solutions_async(function(slns)
+        if #slns ~= 1 then return end
+        require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(slns[1])
+      end)
+    end
   end
 end
 
@@ -197,22 +200,25 @@ local function auto_install_easy_dotnet()
           vim.fn.jobstart({ "dotnet", "tool", "install", "-g", "EasyDotnet" }, {
             on_exit = function(_, install_code)
               if install_code ~= 0 then
-                logger.info("[easy-dotnet.nvim]: Failed to install new dependency EasyDotnet(testrunner). This is required for the testrunner `dotnet tool install -g EasyDotnet`")
+                logger.info("[easy-dotnet.nvim]: Failed to install easy-dotnet-server. This is required for the plugin `dotnet tool install -g EasyDotnet`")
               else
-                logger.info("EasyDotnet(testrunner) installed successfully")
+                logger.info("easy-dotnet-server installed successfully, you may need to restart Neovim for the changes to take effect.")
                 local ok, err = pcall(function() vim.fn.writefile({ "installed" }, is_installed) end)
                 if not ok then logger.warn("[easy-dotnet.nvim]: Failed to write install marker file: " .. err) end
               end
             end,
           })
         end)
+      else
+        local ok, err = pcall(function() vim.fn.writefile({ "installed" }, is_installed) end)
+        if not ok then logger.warn("[easy-dotnet.nvim]: Failed to write install marker file: " .. err) end
       end
     end,
   })
 end
 M.setup = function(opts)
   local merged_opts = require("easy-dotnet.options").set_options(opts)
-  define_highlights_and_signs(merged_opts)
+  define_highlights()
   check_picker_config(merged_opts)
 
   vim.api.nvim_create_user_command("Dotnet", function(commandOpts)
@@ -291,5 +297,9 @@ M.is_dotnet_project = function()
 end
 
 M.package_completion_source = require("easy-dotnet.csproj-mappings").package_completion_cmp
+
+M.get_test_results = require("easy-dotnet.test-signs").get_test_results
+
+M.diagnostics = require("easy-dotnet.actions.diagnostics")
 
 return M

@@ -24,6 +24,7 @@ local M = {
   append_job = nil,
   buf = nil,
   win = nil,
+  mtime = nil,
   height = 10,
   modifiable = false,
   buf_name = "",
@@ -97,6 +98,7 @@ local function discover_package_references(project)
     on_exit = function(_, code)
       finished()
       M.refresh()
+      M.refresh_mappings()
       if code ~= 0 then return end
     end,
     on_stdout = function(_, data, _)
@@ -110,6 +112,8 @@ local function discover_package_references(project)
         table.insert(package_refs, string.format("%s@%s", v.name, v.version))
       end
       M.package_refs = package_refs
+      M.refresh()
+      M.refresh_mappings()
     end,
   })
 end
@@ -252,7 +256,7 @@ local function remove_project_keymap(ref)
     key = "r",
     handler = function()
       local cleanup = M.append_job("Removing project reference")
-      vim.fn.jobstart(string.format("dotnet remove %s reference %s ", M.project.path, ref), {
+      vim.fn.jobstart({ "dotnet", "remove", M.project.path, "reference", ref }, {
         on_exit = function(_, code)
           cleanup()
           if code ~= 0 then
@@ -297,7 +301,7 @@ local function stringify_project_header()
   table.insert(args, { "Package References: (a)dd (r)emove", "Character" })
 
   if not M.package_refs then
-    table.insert(args, { "  None", "Question" })
+    table.insert(args, { "  None", "Question", { add_package_keymap() } })
   else
     for _, ref in ipairs(M.package_refs) do
       table.insert(args, { string.format("  %s", ref), "Question", { add_package_keymap(), remove_package_keymap(ref), open_package_browser_keymap(ref) } })
@@ -403,8 +407,30 @@ function M.close()
   end
 end
 
+local get_mtime = function(path)
+  local stat = vim.loop.fs_stat(path)
+  if not stat then
+    logger.warn("File not found: " .. path)
+    return nil
+  end
+
+  local mtime = stat.mtime.sec
+  return mtime
+end
+
 function M.open()
-  if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
+  if not M.buf then
+    M.buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_create_autocmd("BufEnter", {
+      buffer = M.buf,
+      callback = function()
+        if get_mtime(M.project.path) ~= M.mtime then
+          M.refresh_references(M.project)
+          M.mtime = get_mtime(M.project.path)
+        end
+      end,
+    })
+  end
   local win_opts = get_default_win_opts()
   M.win = vim.api.nvim_open_win(M.buf, true, win_opts)
   vim.api.nvim_buf_set_option(M.buf, "bufhidden", "hide")
@@ -429,17 +455,21 @@ end
 M.render = function(project, sln_path)
   window_destroy()
   M.project = project
+  M.mtime = get_mtime(project.path)
   M.sln_path = sln_path
   local isVisible = M.toggle()
   if not isVisible then return end
 
+  M.refresh_references(project)
+
+  M.refresh()
+  M.refresh_mappings()
+  return M
+end
+
+function M.refresh_references(project)
   discover_project_references(project)
   dotnet_restore(project, function() discover_package_references(project) end)
-
-  print_lines()
-  set_buffer_options()
-  set_mappings()
-  return M
 end
 
 M.refresh_mappings = function()

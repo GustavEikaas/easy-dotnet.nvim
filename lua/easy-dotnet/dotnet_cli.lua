@@ -18,6 +18,4 @@ function M.package_search(query, is_json, exact, take)
   return string.format("dotnet package search %s %s %s %s", query, take_query, json_query, exact_query)
 end
 
-function M.list_projects(sln_file_path) return string.format("dotnet sln %s list", vim.fn.shellescape(sln_file_path)) end
-
 return M

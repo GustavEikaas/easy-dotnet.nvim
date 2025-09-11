@@ -201,6 +201,7 @@ M.build = {
 }
 
 M.createfile = {
+  passthrough = true,
   handle = function(args) require("easy-dotnet.actions.new").create_new_item(args[1]) end,
 }
 
@@ -326,7 +327,7 @@ M._server = {
   subcommands = {
     update = {
       handle = function()
-        local on_finished = job.register_job({ name = "Updating EasyDotnet", on_success_text = "Successfully updated" })
+        local on_finished = job.register_job({ name = "Updating EasyDotnet", on_success_text = "Successfully updated", on_error_text = "Failed to update server" })
         require("easy-dotnet.rpc.rpc").global_rpc_client:stop(function()
           local output = {}
           vim.fn.jobstart({ "dotnet", "tool", "install", "-g", "EasyDotnet" }, {
@@ -335,7 +336,11 @@ M._server = {
             on_exit = function(_, code)
               on_finished(code == 0)
               if code == 0 then
-                require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(function() end)
+                local stdout = vim.trim(vim.fn.system("dotnet-easydotnet -v"):gsub("^Assembly", "Server"))
+                vim.print(string.format("%s installed", stdout))
+                vim.defer_fn(function()
+                  require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(function() end)
+                end, 2000)
               else
                 vim.print("Update failed, Code " .. code)
                 vim.print(output)
@@ -362,6 +367,18 @@ M._server = {
         local on_finished = job.register_job({ name = "Restarting server...", on_success_text = "Server restarted" })
         require("easy-dotnet.rpc.rpc").global_rpc_client:restart(function() on_finished(true) end)
       end,
+    },
+  },
+}
+
+M.diagnostic = {
+  handle = function() require("easy-dotnet.actions.diagnostics").get_workspace_diagnostics() end,
+  subcommands = {
+    errors = {
+      handle = function() require("easy-dotnet.actions.diagnostics").get_workspace_diagnostics("error") end,
+    },
+    warnings = {
+      handle = function() require("easy-dotnet.actions.diagnostics").get_workspace_diagnostics("warning") end,
     },
   },
 }
