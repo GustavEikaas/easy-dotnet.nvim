@@ -200,15 +200,18 @@ local function auto_install_easy_dotnet()
           vim.fn.jobstart({ "dotnet", "tool", "install", "-g", "EasyDotnet" }, {
             on_exit = function(_, install_code)
               if install_code ~= 0 then
-                logger.info("[easy-dotnet.nvim]: Failed to install new dependency EasyDotnet(testrunner). This is required for the testrunner `dotnet tool install -g EasyDotnet`")
+                logger.info("[easy-dotnet.nvim]: Failed to install easy-dotnet-server. This is required for the plugin `dotnet tool install -g EasyDotnet`")
               else
-                logger.info("EasyDotnet(testrunner) installed successfully")
+                logger.info("easy-dotnet-server installed successfully, you may need to restart Neovim for the changes to take effect.")
                 local ok, err = pcall(function() vim.fn.writefile({ "installed" }, is_installed) end)
                 if not ok then logger.warn("[easy-dotnet.nvim]: Failed to write install marker file: " .. err) end
               end
             end,
           })
         end)
+      else
+        local ok, err = pcall(function() vim.fn.writefile({ "installed" }, is_installed) end)
+        if not ok then logger.warn("[easy-dotnet.nvim]: Failed to write install marker file: " .. err) end
       end
     end,
   })
