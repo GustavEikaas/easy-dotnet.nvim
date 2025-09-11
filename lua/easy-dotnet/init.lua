@@ -173,10 +173,15 @@ end
 local function background_scanning(merged_opts)
   if merged_opts.background_scanning then
     --prewarm msbuild properties
-    get_solutions_async(function(slns)
-      if #slns ~= 1 then return end
-      require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(slns[1])
-    end)
+    local selected_solution = require("easy-dotnet.parsers.sln-parse").try_get_selected_solution_file()
+    if selected_solution then
+      require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(selected_solution)
+    else
+      get_solutions_async(function(slns)
+        if #slns ~= 1 then return end
+        require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(slns[1])
+      end)
+    end
   end
 end
 
