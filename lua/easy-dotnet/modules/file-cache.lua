@@ -35,4 +35,6 @@ function M.get(path, value_factory)
   return value
 end
 
+function M.invalidate(path) cache[path] = nil end
+
 return M

@@ -48,7 +48,6 @@ local init_secrets = function(project)
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   client:initialize(function()
     client:secrets_init(project.path, function(res)
-      project.secrets = res.id
       vim.cmd("edit! " .. res.filePath)
     end)
   end)
