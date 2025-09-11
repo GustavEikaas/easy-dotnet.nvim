@@ -8,8 +8,11 @@ local function attach_mappings()
     callback = function()
       local bufnr = vim.api.nvim_get_current_buf()
       local curr_project_path = vim.api.nvim_buf_get_name(bufnr)
-      -- adds a project reference
-      vim.keymap.set("n", "<leader>ar", function() M.add_project_reference(curr_project_path) end, { buffer = bufnr })
+      vim.keymap.set("n", "<leader>ar", function()
+        coroutine.wrap(function()
+          M.add_project_reference(curr_project_path)
+        end)()
+      end, { buffer = bufnr })
     end,
   })
 end
