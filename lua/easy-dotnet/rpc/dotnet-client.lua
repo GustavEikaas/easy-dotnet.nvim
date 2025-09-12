@@ -70,10 +70,6 @@ end
 local M = {}
 M.__index = M
 
----@class ProjectSecretInitResponse
----@field id string
----@field filePath string
-
 --- @class RPC_TestRunResult
 --- @field id string
 --- @field stackTrace string[] | nil
@@ -95,6 +91,9 @@ M.__index = M
 ---@field lineEnd integer
 ---@field lineStart integer
 
+---@class RPC_CallOpts
+---@field on_crash? fun(err: RPC_Error)
+
 ---@class DotnetClient
 ---@field new fun(self: DotnetClient): DotnetClient # Constructor
 ---@field initialized_msbuild_path string
@@ -109,13 +108,13 @@ M.__index = M
 ---@field nuget_push fun(self: DotnetClient, packages: string[], source: string, cb?: fun(success: boolean)) # Request a NuGet restore
 ---@field msbuild_pack fun(self: DotnetClient, targetPath: string, configuration?: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
 ---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: BuildResult)): integer|false # Request msbuild
----@field msbuild_query_properties fun(self: DotnetClient, request: QueryProjectPropertiesRequest, cb?: fun(res: DotnetProjectProperties), on_error?: fun(err: RPC_Error)): RPC_CallHandle # Request msbuild
----@field msbuild_list_project_reference fun(self: DotnetClient, targetPath: string, cb?: fun(res: string[]), on_crash?: fun(err: RPC_Error)): RPC_CallHandle # Request project references
----@field msbuild_add_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(success: boolean), on_crash?: fun(err: RPC_Error)): RPC_CallHandle # Request project references
+---@field msbuild_query_properties fun(self: DotnetClient, request: QueryProjectPropertiesRequest, cb?: fun(res: DotnetProjectProperties), opts: RPC_CallOpts): RPC_CallHandle # Request msbuild
+---@field msbuild_list_project_reference fun(self: DotnetClient, targetPath: string, cb?: fun(res: string[]), opts: RPC_CallOpts): RPC_CallHandle # Request project references
+---@field msbuild_add_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(success: boolean), opts: RPC_CallOpts): RPC_CallHandle # Request project references
 ---@field msbuild_remove_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(success: boolean)): integer|false # Request project references
 ---@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
----@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: ProjectSecretInitResponse), options?: RpcRequestOptions): integer|false # Request adding package
----@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), on_crash?: fun(err: RPC_Error), options?: RpcRequestOptions): RPC_CallHandle # Request adding package
+---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: RPC_ProjectUserSecretsInitResponse), opts: RPC_CallOpts): RPC_CallHandle # Request adding package
+---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), opts: RPC_CallOpts): RPC_CallHandle # Request adding package
 ---@field test_run fun(self: DotnetClient, request: RPC_TestRunRequest, cb?: fun(res: RPC_TestRunResult)) # Request running multiple tests for MTP
 ---@field test_discover fun(self: DotnetClient, request: RPC_TestDiscoverRequest, cb?: fun(res: RPC_DiscoveredTest[])) # Request test discovery for MTP
 ---@field outdated_packages fun(self: DotnetClient, target_path: string, cb?: fun(res: OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
@@ -461,35 +460,38 @@ end
 ---@field configuration? string
 ---@field targetFramework? string
 
-function M:msbuild_query_properties(request, cb, on_crash)
+function M:msbuild_query_properties(request, cb, opts)
+  opts = opts or {}
   local proj_name = vim.fn.fnamemodify(request.targetPath, ":t:r")
   return create_rpc_call({
     client = self._client,
     job = { name = "Loading " .. proj_name, on_success_text = proj_name .. " loaded", on_error_text = "Failed to load " .. proj_name },
     cb = cb,
-    on_crash = on_crash,
+    on_crash = opts.on_crash,
     method = "msbuild/project-properties",
     params = { request = request },
   })()
 end
 
-function M:msbuild_list_project_reference(targetPath, cb, on_crash)
+function M:msbuild_list_project_reference(targetPath, cb, opts)
+  opts = opts or {}
   return create_rpc_call({
     client = self._client,
     job = nil,
     cb = cb,
-    on_crash = on_crash,
+    on_crash = opts.on_crash,
     method = "msbuild/list-project-reference",
     params = { projectPath = targetPath },
   })()
 end
 
-function M:msbuild_add_project_reference(projectPath, targetPath, cb, on_crash)
+function M:msbuild_add_project_reference(projectPath, targetPath, cb, opts)
+  opts = opts or {}
   return create_rpc_call({
     client = self._client,
     job = nil,
     cb = cb,
-    on_crash = on_crash,
+    on_crash = opts.on_crash,
     method = "msbuild/add-project-reference",
     params = { projectPath = projectPath, targetPath = targetPath },
   })()
@@ -549,24 +551,32 @@ end
 ---@field relativePath string
 ---@field absolutePath string
 
-function M:solution_list_projects(solution_file_path, cb, on_crash)
+function M:solution_list_projects(solution_file_path, cb, opts)
+  opts = opts or {}
   return create_rpc_call({
     client = self._client,
     job = nil,
     cb = cb,
-    on_crash = on_crash,
+    on_crash = opts.on_crash,
     method = "solution/list-projects",
     params = { solutionFilePath = solution_file_path },
   })()
 end
 
-function M:secrets_init(project_path, cb)
-  local id = self._client.request("user-secrets/init", { projectPath = project_path }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response.result) end
-  end)
-  return id
+---@class RPC_ProjectUserSecretsInitResponse
+---@field id string
+---@field filePath string
+
+function M:secrets_init(project_path, cb, opts)
+  opts = opts or {}
+  return create_rpc_call({
+    client = self._client,
+    job = nil,
+    cb = cb,
+    on_crash = opts.on_crash,
+    method = "user-secrets/init",
+    params = { projectPath = project_path },
+  })()
 end
 
 ---@class OutdatedPackage
