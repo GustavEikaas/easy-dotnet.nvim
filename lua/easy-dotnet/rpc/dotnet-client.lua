@@ -36,12 +36,12 @@ end
 ---@field method DotnetPipeMethod The RPC method to call
 ---@field params table Parameters for the RPC call
 
----@class RPCCallHandle
+---@class RPC_CallHandle
 ---@field id number The RPC request ID
 ---@field cancel fun() Cancels the RPC request
 
 ---@param opts RPCCallOpts
----@return fun():RPCCallHandle
+---@return fun():RPC_CallHandle
 local function create_rpc_call(opts)
   return function()
     local maybe_job = nil
@@ -109,13 +109,13 @@ M.__index = M
 ---@field nuget_push fun(self: DotnetClient, packages: string[], source: string, cb?: fun(success: boolean)) # Request a NuGet restore
 ---@field msbuild_pack fun(self: DotnetClient, targetPath: string, configuration?: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
 ---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: BuildResult)): integer|false # Request msbuild
----@field msbuild_query_properties fun(self: DotnetClient, request: QueryProjectPropertiesRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
----@field msbuild_list_project_reference fun(self: DotnetClient, targetPath: string, cb?: fun(res: string[]), on_crash?: fun(err: RPC_Error)): RPCCallHandle # Request project references
----@field msbuild_add_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(success: boolean), on_crash?: fun(err: RPC_Error)): RPCCallHandle # Request project references
+---@field msbuild_query_properties fun(self: DotnetClient, request: QueryProjectPropertiesRequest, cb?: fun(res: DotnetProjectProperties), on_error?: fun(err: RPC_Error)): RPC_CallHandle # Request msbuild
+---@field msbuild_list_project_reference fun(self: DotnetClient, targetPath: string, cb?: fun(res: string[]), on_crash?: fun(err: RPC_Error)): RPC_CallHandle # Request project references
+---@field msbuild_add_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(success: boolean), on_crash?: fun(err: RPC_Error)): RPC_CallHandle # Request project references
 ---@field msbuild_remove_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(success: boolean)): integer|false # Request project references
 ---@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: ProjectSecretInitResponse), options?: RpcRequestOptions): integer|false # Request adding package
----@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), on_crash?: fun(err: RPC_Error), options?: RpcRequestOptions): RPCCallHandle # Request adding package
+---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), on_crash?: fun(err: RPC_Error), options?: RpcRequestOptions): RPC_CallHandle # Request adding package
 ---@field test_run fun(self: DotnetClient, request: RPC_TestRunRequest, cb?: fun(res: RPC_TestRunResult)) # Request running multiple tests for MTP
 ---@field test_discover fun(self: DotnetClient, request: RPC_TestDiscoverRequest, cb?: fun(res: RPC_DiscoveredTest[])) # Request test discovery for MTP
 ---@field outdated_packages fun(self: DotnetClient, target_path: string, cb?: fun(res: OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
@@ -426,25 +426,51 @@ function M:msbuild_build(request, cb)
   return id
 end
 
+---@class DotnetProjectProperties
+---@field projectName string
+---@field language string
+---@field outputPath? string
+---@field outputType? string
+---@field targetExt? string
+---@field assemblyName? string
+---@field targetFramework? string
+---@field targetFrameworks? string[]
+---@field isTestProject boolean
+---@field isWebProject boolean
+---@field isWorkerProject boolean
+---@field userSecretsId? string
+---@field testingPlatformDotnetTestSupport boolean
+---@field targetPath? string
+---@field generatePackageOnBuild boolean
+---@field isPackable boolean
+---@field langVersion? string
+---@field rootNamespace? string
+---@field packageId? string
+---@field nugetVersion? string
+---@field version? string
+---@field packageOutputPath? string
+---@field isMultiTarget boolean
+---@field isNetFramework boolean
+---@field useIISExpress boolean
+---@field runCommand string
+---@field buildCommand string
+---@field testCommand string
+
 ---@class QueryProjectPropertiesRequest
 ---@field targetPath string
 ---@field configuration? string
 ---@field targetFramework? string
 
-function M:msbuild_query_properties(request, cb)
+function M:msbuild_query_properties(request, cb, on_crash)
   local proj_name = vim.fn.fnamemodify(request.targetPath, ":t:r")
-  local job_finished = jobs.register_job({ name = "Loading " .. proj_name, on_success_text = proj_name .. " loaded", on_error_text = "Failed to load " .. proj_name })
-  local id = self._client.request("msbuild/project-properties", { request = request }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then
-      job_finished(false)
-      return
-    end
-    job_finished(true)
-    if cb then cb(response) end
-  end)
-
-  return id
+  return create_rpc_call({
+    client = self._client,
+    job = { name = "Loading " .. proj_name, on_success_text = proj_name .. " loaded", on_error_text = "Failed to load " .. proj_name },
+    cb = cb,
+    on_crash = on_crash,
+    method = "msbuild/project-properties",
+    params = { request = request },
+  })()
 end
 
 function M:msbuild_list_project_reference(targetPath, cb, on_crash)

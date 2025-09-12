@@ -114,8 +114,7 @@ function M.preload_msbuild_properties(project_file_path, on_finished, target_fra
   if on_finished then table.insert(msbuild_cache[cache_key].waiters, on_finished) end
 
   client:initialize(function()
-    client:msbuild_query_properties({ targetPath = project_file_path, targetFramework = target_framework }, function(res)
-      local properties = res.result
+    client:msbuild_query_properties({ targetPath = project_file_path, targetFramework = target_framework }, function(properties)
       local entry = msbuild_cache[cache_key]
       msbuild_cache[cache_key] = properties
 
