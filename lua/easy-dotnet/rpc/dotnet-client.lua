@@ -408,9 +408,9 @@ function M:msbuild_query_properties(request, cb)
   return id
 end
 
-function M:msbuild_get_project_references(targetPath, cb)
+function M:msbuild_get_project_references(project_path, cb)
   -- local job_finished = jobs.register_job({ name = "Loading " .. proj_name, on_success_text = proj_name .. " loaded", on_error_text = "Failed to load " .. proj_name })
-  local id = self._client.request("msbuild/project-references", { targetPath = targetPath }, function(response)
+  local id = self._client.request("msbuild/project-references", { projectPath = project_path }, function(response)
     local crash = handle_rpc_error(response)
     if crash then
       -- job_finished(false)
