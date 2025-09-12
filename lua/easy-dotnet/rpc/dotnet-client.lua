@@ -32,7 +32,7 @@ function M.handle_rpc_error(response)
   return false
 end
 
----@class RPCCallOpts
+---@class RPC_CallOpts
 ---@field client StreamJsonRpc The RPC client object
 ---@field job? JobData Optional job function wrapper
 ---@field cb? fun(result: any) Callback function with RPC result
@@ -44,7 +44,7 @@ end
 ---@field id number The RPC request ID
 ---@field cancel fun() Cancels the RPC request
 
----@param opts RPCCallOpts
+---@param opts RPC_CallOpts
 ---@return fun():RPC_CallHandle
 function M.create_rpc_call(opts)
   return function()
@@ -61,6 +61,36 @@ function M.create_rpc_call(opts)
 
       if maybe_job then maybe_job(true) end
       if opts.cb then opts.cb(response.result) end
+    end)
+    if not id then error("Failed to send RPC call") end
+    return {
+      id = id,
+      cancel = function() opts.client.cancel(id) end,
+    }
+  end
+end
+
+---@class RPC_EnumerateCallOpts
+---@field client StreamJsonRpc The RPC client object
+---@field job? JobData Optional job function wrapper
+---@field cb? fun(result: any[]) Callback function with RPC result
+---@field on_crash? fun(err: RPC_Error) Optional crash callback
+---@field on_yield? fun(item: any)
+---@field method DotnetPipeMethod The RPC method to call
+---@field params table Parameters for the RPC call
+
+---@param opts RPC_EnumerateCallOpts
+---@return fun():RPC_CallHandle
+function M.create_enumerate_rpc_call(opts)
+  return function()
+    local maybe_job = nil
+    if opts.job then maybe_job = jobs.register_job(opts.job) end
+    local id = opts.client:request_enumerate(opts.method, opts.params, opts.on_yield, function(results)
+      if maybe_job then maybe_job(true) end
+      if opts.cb then opts.cb(results) end
+    end, function(res)
+      if maybe_job then maybe_job(false) end
+      if opts.on_crash then opts.on_crash(res.error) end
     end)
     if not id then error("Failed to send RPC call") end
     return {
