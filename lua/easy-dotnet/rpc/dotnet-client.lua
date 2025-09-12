@@ -73,6 +73,7 @@ end
 ---@field msbuild_pack fun(self: DotnetClient, targetPath: string, configuration?: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
 ---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: BuildResult)): integer|false # Request msbuild
 ---@field msbuild_query_properties fun(self: DotnetClient, request: QueryProjectPropertiesRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
+---@field msbuild_get_project_references fun(self: DotnetClient, targetPath: string, cb?: fun(res: string[])): integer|false # Request project references
 ---@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: ProjectSecretInitResponse), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), options?: RpcRequestOptions): integer|false # Request adding package
@@ -402,6 +403,21 @@ function M:msbuild_query_properties(request, cb)
     end
     job_finished(true)
     if cb then cb(response) end
+  end)
+
+  return id
+end
+
+function M:msbuild_get_project_references(targetPath, cb)
+  -- local job_finished = jobs.register_job({ name = "Loading " .. proj_name, on_success_text = proj_name .. " loaded", on_error_text = "Failed to load " .. proj_name })
+  local id = self._client.request("msbuild/project-references", { targetPath = targetPath }, function(response)
+    local crash = handle_rpc_error(response)
+    if crash then
+      -- job_finished(false)
+      return
+    end
+    -- job_finished(true)
+    if cb then cb(response.result) end
   end)
 
   return id

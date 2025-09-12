@@ -1,4 +1,5 @@
 local file_cache = require("easy-dotnet.modules.file-cache")
+local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local logger = require("easy-dotnet.logger")
 local M = {}
 
@@ -73,24 +74,14 @@ local function extract_from_lines(lines, pattern)
 end
 
 M.get_project_references_from_projects = function(project_path)
-  local projects = {}
-  local output = vim.fn.systemlist(string.format("dotnet list %s reference", project_path))
-
-  for _, line in ipairs(output) do
-    line = line:gsub("\\", "/")
-    local filename = line:match("[^/\\]+%.%a+proj")
-    if filename ~= nil then
-      local project_name = filename:gsub("%.csproj$", ""):gsub("%.fsproj$", "")
-      table.insert(projects, project_name)
-    end
-  end
-
-  local exit_code = vim.v.shell_error
-  if exit_code ~= 0 then
-    logger.error("Command failed")
-    return {}
-  end
-  return projects
+  local co = coroutine.running()
+  client:initialize(function()
+    client:msbuild_get_project_references(project_path, function(projects)
+      local project_names = vim.tbl_map(function(i) return vim.fn.fnamemodify(i, ":t:r") end, projects)
+      coroutine.resume(co, project_names)
+    end)
+  end)
+  return coroutine.yield()
 end
 
 ---@type table<string, MsbuildProperties | {pending: true, waiters: fun(MsbuildProperties)[]}>
