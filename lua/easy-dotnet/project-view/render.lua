@@ -43,7 +43,7 @@ local function discover_project_references(project)
   local finished = M.append_job("Discovering project references")
 
   client:initialize(function()
-    client:msbuild_list_project_reference(project.path, function(res)
+    client.msbuild:msbuild_list_project_reference(project.path, function(res)
       if #res == 0 then
         M.project_refs = nil
       else
@@ -239,7 +239,7 @@ local function remove_project_keymap(ref)
       local cleanup = M.append_job("Removing project reference")
       coroutine.wrap(function()
         client:initialize(function()
-          client:msbuild_remove_project_reference(M.project.path, ref, function(res)
+          client.msbuild:msbuild_remove_project_reference(M.project.path, ref, function(res)
             cleanup()
             if res == false then
               logger.error("Command failed")

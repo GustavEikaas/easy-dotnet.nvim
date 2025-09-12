@@ -76,7 +76,7 @@ end
 M.get_project_references_from_projects = function(project_path)
   local co = coroutine.running()
   client:initialize(function()
-    client:msbuild_list_project_reference(project_path, function(projects)
+    client.msbuild:msbuild_list_project_reference(project_path, function(projects)
       local project_names = vim.tbl_map(function(i) return vim.fn.fnamemodify(i, ":t:r") end, projects)
       coroutine.resume(co, project_names)
     end)
@@ -114,7 +114,7 @@ function M.preload_msbuild_properties(project_file_path, on_finished, target_fra
   if on_finished then table.insert(msbuild_cache[cache_key].waiters, on_finished) end
 
   client:initialize(function()
-    client:msbuild_query_properties({ targetPath = project_file_path, targetFramework = target_framework }, function(properties)
+    client.msbuild:msbuild_query_properties({ targetPath = project_file_path, targetFramework = target_framework }, function(properties)
       local entry = msbuild_cache[cache_key]
       msbuild_cache[cache_key] = properties
 
