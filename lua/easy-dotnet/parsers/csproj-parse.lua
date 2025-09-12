@@ -76,7 +76,7 @@ end
 M.get_project_references_from_projects = function(project_path)
   local co = coroutine.running()
   client:initialize(function()
-    client:msbuild_get_project_references(project_path, function(projects)
+    client:msbuild_list_project_reference(project_path, function(projects)
       local project_names = vim.tbl_map(function(i) return vim.fn.fnamemodify(i, ":t:r") end, projects)
       coroutine.resume(co, project_names)
     end)

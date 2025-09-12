@@ -1,5 +1,6 @@
 local ns_id = require("easy-dotnet.constants").ns_id
 local polyfills = require("easy-dotnet.polyfills")
+local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local logger = require("easy-dotnet.logger")
 
 ---@class ProjectWindow
@@ -37,53 +38,33 @@ M.keymap = {
   ["q"] = function() M.hide() end,
 }
 
----@param output string[]
----@returns string[]
-local function extract_projects(output)
-  local projects = {}
-  for _, value in ipairs(output) do
-    local sanitized = value:gsub("\n", ""):gsub("\r", "")
-    if sanitized:match("%.csproj$") or sanitized:match("%.fsproj$") then table.insert(projects, sanitized) end
-  end
-
-  return projects
-end
-
 ---@param project DotnetProject
 local function discover_project_references(project)
   local finished = M.append_job("Discovering project references")
 
-  vim.fn.jobstart({ "dotnet", "list", project.path, "reference" }, {
-    stdout_buffered = true,
-    on_exit = function(_, code)
-      finished()
-      M.refresh()
-      if code ~= 0 then return end
-    end,
-    on_stdout = function(_, data, _)
-      local projects = extract_projects(data)
-      if #projects == 0 then
+  client:initialize(function()
+    client:msbuild_list_project_reference(project.path, function(res)
+      if #res == 0 then
         M.project_refs = nil
       else
-        M.project_refs = projects
+        M.project_refs = res
       end
-    end,
-  })
+      finished()
+      M.refresh()
+    end)
+  end)
 end
 
 local function dotnet_restore(project, cb)
   local finished = M.append_job("Restoring packages")
-  vim.fn.jobstart({ "dotnet", "restore", project.path }, {
-    on_exit = function(_, code)
+  client:initialize(function()
+    client:nuget_restore(project.path, function(res)
       finished()
       M.refresh()
       cb()
-      if code ~= 0 then
-        logger.error("Dotnet restore failed")
-        return
-      end
-    end,
-  })
+      if res.success == false then logger.error("Dotnet restore failed") end
+    end)
+  end)
 end
 
 ---@param project DotnetProject
@@ -256,17 +237,19 @@ local function remove_project_keymap(ref)
     key = "r",
     handler = function()
       local cleanup = M.append_job("Removing project reference")
-      vim.fn.jobstart({ "dotnet", "remove", M.project.path, "reference", ref }, {
-        on_exit = function(_, code)
-          cleanup()
-          if code ~= 0 then
-            logger.error("Command failed")
-          else
-            logger.info("Project removed " .. ref)
-            discover_project_references(M.project)
-          end
-        end,
-      })
+      coroutine.wrap(function()
+        client:initialize(function()
+          client:msbuild_remove_project_reference(M.project.path, ref, function(res)
+            cleanup()
+            if not res then
+              logger.error("Command failed")
+            else
+              logger.info("Project removed " .. ref)
+              discover_project_references(M.project)
+            end
+          end)
+        end)
+      end)()
     end,
   }
 end
