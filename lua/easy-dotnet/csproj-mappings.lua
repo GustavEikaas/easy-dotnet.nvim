@@ -76,7 +76,6 @@ M.package_completion_cmp = {
     local inside_include = before_cursor:match(package_completion_pattern)
     local inside_version = before_cursor:match(version_completion_pattern)
 
-    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
     if inside_include then
       local search_term = inside_include:gsub('%Include="', "")
       if M.include_pending then

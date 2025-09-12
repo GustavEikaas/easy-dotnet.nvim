@@ -100,24 +100,19 @@ function M.preload_msbuild_properties(project_file_path, on_finished, target_fra
   local cache_key = build_cache_key(project_file_path, target_framework)
   local maybe_cached = msbuild_cache[cache_key]
 
-  -- Already resolved
   if maybe_cached and maybe_cached.pending == nil then
     if on_finished then on_finished(maybe_cached) end
     return
   end
 
-  -- Pending request
   if maybe_cached and maybe_cached.pending then
     if on_finished then table.insert(maybe_cached.waiters, on_finished) end
     return
   end
 
-  -- Create pending entry
   msbuild_cache[cache_key] = { pending = true, waiters = {} }
   if on_finished then table.insert(msbuild_cache[cache_key].waiters, on_finished) end
 
-  -- Fire RPC
-  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   client:initialize(function()
     client:msbuild_query_properties({ targetPath = project_file_path, targetFramework = target_framework }, function(res)
       local properties = res.result
