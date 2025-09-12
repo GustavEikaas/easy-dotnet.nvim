@@ -62,7 +62,7 @@ local function rpc_build_quickfix(target_path, args)
 
   client:initialize(function()
     M.pending = true
-    client:msbuild_build({ targetPath = target_path, buildArgs = args }, function(res)
+    client.msbuild:msbuild_build({ targetPath = target_path, buildArgs = args }, function(res)
       M.pending = false
       if res.success then
         close_quickfix_list()

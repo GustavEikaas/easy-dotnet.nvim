@@ -1,10 +1,5 @@
----@diagnostic disable: unused-function
 local jobs = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
-
----@type DotnetClient
-local M = {}
-M.__index = M
 
 local function dump_to_file(obj, filepath)
   local serialized = vim.inspect(obj)
@@ -33,9 +28,47 @@ local function handle_rpc_error(response)
   return false
 end
 
----@class ProjectSecretInitResponse
----@field id string
----@field filePath string
+---@type DotnetClient
+local M = {}
+M.__index = M
+
+---@class RPCCallOpts
+---@field client StreamJsonRpc The RPC client object
+---@field job? JobData Optional job function wrapper
+---@field cb? fun(result: any) Callback function with RPC result
+---@field on_crash? fun(err: RPC_Error) Optional crash callback
+---@field method DotnetPipeMethod The RPC method to call
+---@field params table Parameters for the RPC call
+
+---@class RPC_CallHandle
+---@field id number The RPC request ID
+---@field cancel fun() Cancels the RPC request
+
+---@param opts RPCCallOpts
+---@return fun():RPC_CallHandle
+function M.create_rpc_call(opts)
+  return function()
+    local maybe_job = nil
+    if opts.job then maybe_job = jobs.register_job(opts.job) end
+    ---@param response RPC_Response
+    local id = opts.client.request(opts.method, opts.params, function(response)
+      local crash = handle_rpc_error(response)
+      if crash then
+        if opts.on_crash then opts.on_crash(response.error) end
+        if maybe_job then maybe_job(false) end
+        return
+      end
+
+      if maybe_job then maybe_job(true) end
+      if opts.cb then opts.cb(response.result) end
+    end)
+    if not id then error("Failed to send RPC call") end
+    return {
+      id = id,
+      cancel = function() opts.client.cancel(id) end,
+    }
+  end
+end
 
 --- @class RPC_TestRunResult
 --- @field id string
@@ -58,6 +91,9 @@ end
 ---@field lineEnd integer
 ---@field lineStart integer
 
+---@class RPC_CallOpts
+---@field on_crash? fun(err: RPC_Error)
+
 ---@class DotnetClient
 ---@field new fun(self: DotnetClient): DotnetClient # Constructor
 ---@field initialized_msbuild_path string
@@ -70,15 +106,9 @@ end
 ---@field nuget_search fun(self: DotnetClient, searchTerm: string, sources?: string[], cb?: fun(res: NugetPackageMetadata[])): integer | false # Request a NuGet restore
 ---@field nuget_get_package_versions fun(self: DotnetClient, packageId: string, sources?: string[], include_prerelease?: boolean, cb?: fun(res: string[])): integer | false # Request a NuGet restore
 ---@field nuget_push fun(self: DotnetClient, packages: string[], source: string, cb?: fun(success: boolean)) # Request a NuGet restore
----@field msbuild_pack fun(self: DotnetClient, targetPath: string, configuration?: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
----@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: BuildResult)): integer|false # Request msbuild
----@field msbuild_query_properties fun(self: DotnetClient, request: QueryProjectPropertiesRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
----@field msbuild_list_project_reference fun(self: DotnetClient, targetPath: string, cb?: fun(res: string[])): integer|false # Request project references
----@field msbuild_add_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(success: boolean)): integer|false # Request project references
----@field msbuild_remove_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(success: boolean)): integer|false # Request project references
----@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
----@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: ProjectSecretInitResponse), options?: RpcRequestOptions): integer|false # Request adding package
----@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), options?: RpcRequestOptions): integer|false # Request adding package
+---@field msbuild MsBuildClient
+---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: RPC_ProjectUserSecretsInitResponse), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
+---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
 ---@field test_run fun(self: DotnetClient, request: RPC_TestRunRequest, cb?: fun(res: RPC_TestRunResult)) # Request running multiple tests for MTP
 ---@field test_discover fun(self: DotnetClient, request: RPC_TestDiscoverRequest, cb?: fun(res: RPC_DiscoveredTest[])) # Request test discovery for MTP
 ---@field outdated_packages fun(self: DotnetClient, target_path: string, cb?: fun(res: OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
@@ -106,6 +136,7 @@ function M:new()
   instance._init_callbacks = {}
   instance._initializing = false
   instance._initialized = false
+  instance.msbuild = require("easy-dotnet.rpc.controllers.msbuild").new(client)
   return instance
 end
 
@@ -294,151 +325,6 @@ function M:nuget_get_package_versions(package, sources, include_prerelease, cb)
   return id
 end
 
-function M:msbuild_pack(target_path, configuration, cb)
-  local finished = jobs.register_job({ name = "Packing...", on_error_text = "Packing failed", on_success_text = "Packed successfully" })
-  self._client.request("msbuild/pack", { targetPath = target_path, configuration = configuration }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then
-      finished(false)
-      return
-    end
-    finished(response.result.success)
-    if cb then cb(response) end
-  end)
-end
-
----@class AddPackageReferenceParams
----@field targetPath string
----@field packageName string
----@field version? string
-
-function M:msbuild_add_package_reference(params, cb, options)
-  local finished = jobs.register_job({
-    name = "Adding package...",
-    on_error_text = "Failed to add package",
-    on_success_text = "Package added successfully",
-  })
-
-  local id = self._client.request("msbuild/add-package-reference", params, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then
-      finished(false)
-      return
-    end
-    finished(true)
-    if cb then cb(response) end
-  end, options)
-
-  return id
-end
-
----@class BuildRequest
----@field targetPath string
----@field targetFramework? string
----@field configuration? string
----@field buildArgs? string
-
----@class Diagnostic
----@field code string
----@field columnNumber integer
----@field filePath string
----@field lineNumber integer
----@field message string
----@field type "error" | "warning"
-
----@class BuildResult
----@field errors Diagnostic[]
----@field warnings Diagnostic[]
----@field success boolean
-
-function M:msbuild_build(request, cb)
-  local finished = jobs.register_job({ name = "Building...", on_error_text = "Build failed", on_success_text = "Built successfully" })
-  local id = self._client.request("msbuild/build", { request = request }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then
-      finished(false)
-      return
-    end
-    local result = response.result or {}
-    local pending = 2
-
-    local function done()
-      if pending == 0 then
-        finished(result.success)
-        if cb then cb(result) end
-      end
-    end
-
-    if result.warnings and result.warnings.token then
-      self._client:request_property_enumerate(response.result.warnings.token, nil, function(warnings)
-        response.result.warnings = warnings
-        pending = pending - 1
-        done()
-      end)
-    end
-
-    if result.errors and result.errors.token then
-      self._client:request_property_enumerate(response.result.errors.token, nil, function(errors)
-        response.result.errors = errors
-        pending = pending - 1
-        done()
-      end)
-    end
-  end)
-
-  return id
-end
-
----@class QueryProjectPropertiesRequest
----@field targetPath string
----@field configuration? string
----@field targetFramework? string
-
-function M:msbuild_query_properties(request, cb)
-  local proj_name = vim.fn.fnamemodify(request.targetPath, ":t:r")
-  local job_finished = jobs.register_job({ name = "Loading " .. proj_name, on_success_text = proj_name .. " loaded", on_error_text = "Failed to load " .. proj_name })
-  local id = self._client.request("msbuild/project-properties", { request = request }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then
-      job_finished(false)
-      return
-    end
-    job_finished(true)
-    if cb then cb(response) end
-  end)
-
-  return id
-end
-
-function M:msbuild_list_project_reference(targetPath, cb)
-  local id = self._client.request("msbuild/list-project-reference", { projectPath = targetPath }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response.result) end
-  end)
-
-  return id
-end
-
-function M:msbuild_add_project_reference(projectPath, targetPath, cb)
-  local id = self._client.request("msbuild/add-project-reference", { projectPath = projectPath, targetPath = targetPath }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response.result) end
-  end)
-
-  return id
-end
-
-function M:msbuild_remove_project_reference(projectPath, targetPath, cb)
-  local id = self._client.request("msbuild/remove-project-reference", { projectPath = projectPath, targetPath = targetPath }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response.result) end
-  end)
-
-  return id
-end
 function M:test_discover(request, cb) self._client:request_enumerate("test/discover", request, nil, cb, handle_rpc_error) end
 
 ---@class RPC_TestDiscoverRequest
@@ -480,26 +366,36 @@ function M:test_run(request, cb)
 end
 
 ---@class SolutionFileProjectResponse
----@field ProjectName string
----@field RelativePath string
----@field AbsolutePath string
+---@field projectName string
+---@field relativePath string
+---@field absolutePath string
 
-function M:solution_list_projects(solution_file_path, cb)
-  local id = self._client.request("solution/list-projects", { solutionFilePath = solution_file_path }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response.result) end
-  end)
-  return id
+function M:solution_list_projects(solution_file_path, cb, opts)
+  opts = opts or {}
+  return M.create_rpc_call({
+    client = self._client,
+    job = nil,
+    cb = cb,
+    on_crash = opts.on_crash,
+    method = "solution/list-projects",
+    params = { solutionFilePath = solution_file_path },
+  })()
 end
 
-function M:secrets_init(project_path, cb)
-  local id = self._client.request("user-secrets/init", { projectPath = project_path }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response.result) end
-  end)
-  return id
+---@class RPC_ProjectUserSecretsInitResponse
+---@field id string
+---@field filePath string
+
+function M:secrets_init(project_path, cb, opts)
+  opts = opts or {}
+  return M.create_rpc_call({
+    client = self._client,
+    job = nil,
+    cb = cb,
+    on_crash = opts.on_crash,
+    method = "user-secrets/init",
+    params = { projectPath = project_path },
+  })()
 end
 
 ---@class OutdatedPackage
