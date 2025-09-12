@@ -9,7 +9,7 @@ local function sln_add_project(sln_path, project, cb)
       if b ~= 0 then
         logger.error("Failed to link project to solution")
       else
-        cb()
+        if cb then cb() end
       end
     end,
   })
@@ -129,7 +129,7 @@ end
 function M.new()
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   client:initialize(function()
-    client:template_list(function(templates)
+    client.template_engine:template_list(function(templates)
       ---@param value DotnetNewTemplate
       local choices = vim.tbl_map(function(value)
         return {
@@ -143,14 +143,14 @@ function M.new()
         if val.type == "project" then
           vim.ui.input({ prompt = "Enter name:" }, function(input)
             local args = get_project_name_and_output(input)
-            prompt_parameters(val.identity, client, args.project_name, args.output, function() sln_add_project(args.sln_path, args.output) end)
+            prompt_parameters(val.identity, client.template_engine, args.project_name, args.output, function() sln_add_project(args.sln_path, args.output) end)
           end)
         elseif not vim.tbl_contains(no_name_templates, selection.value.identity) then
           vim.ui.input({ prompt = "Enter name:" }, function(input)
-            prompt_parameters(val.identity, client, input, nil, function() print("Success") end)
+            prompt_parameters(val.identity, client.template_engine, input, nil, function() print("Success") end)
           end)
         else
-          prompt_parameters(val.identity, client, nil, nil, function() print("Success") end)
+          prompt_parameters(val.identity, client.template_engine, nil, nil, function() print("Success") end)
         end
       end, "New", false, true)
     end)
