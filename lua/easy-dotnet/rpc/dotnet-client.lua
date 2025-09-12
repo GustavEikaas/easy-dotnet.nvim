@@ -1,10 +1,5 @@
----@diagnostic disable: unused-function
 local jobs = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
-
----@type DotnetClient
-local M = {}
-M.__index = M
 
 local function dump_to_file(obj, filepath)
   local serialized = vim.inspect(obj)
@@ -32,6 +27,48 @@ local function handle_rpc_error(response)
   end
   return false
 end
+
+---@class RPCCallOpts
+---@field client StreamJsonRpc The RPC client object
+---@field job? JobData Optional job function wrapper
+---@field cb? fun(result: any) Callback function with RPC result
+---@field on_crash? fun(err: RPC_Error) Optional crash callback
+---@field method DotnetPipeMethod The RPC method to call
+---@field params table Parameters for the RPC call
+
+---@class RPCCallHandle
+---@field id number The RPC request ID
+---@field cancel fun() Cancels the RPC request
+
+---@param opts RPCCallOpts
+---@return fun():RPCCallHandle
+local function create_rpc_call(opts)
+  return function()
+    local maybe_job = nil
+    if opts.job then maybe_job = jobs.register_job(opts.job) end
+    ---@param response RPC_Response
+    local id = opts.client.request(opts.method, opts.params, function(response)
+      local crash = handle_rpc_error(response)
+      if crash then
+        if opts.on_crash then opts.on_crash(response.error) end
+        if maybe_job then maybe_job(false) end
+        return
+      end
+
+      if maybe_job then maybe_job(true) end
+      if opts.cb then opts.cb(response.result) end
+    end)
+    if not id then error("Failed to send RPC call") end
+    return {
+      id = id,
+      cancel = function() opts.client.cancel(id) end,
+    }
+  end
+end
+
+---@type DotnetClient
+local M = {}
+M.__index = M
 
 ---@class ProjectSecretInitResponse
 ---@field id string
@@ -73,12 +110,12 @@ end
 ---@field msbuild_pack fun(self: DotnetClient, targetPath: string, configuration?: string, cb?: fun(res: RPC_Response)) # Request a NuGet restore
 ---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: BuildResult)): integer|false # Request msbuild
 ---@field msbuild_query_properties fun(self: DotnetClient, request: QueryProjectPropertiesRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
----@field msbuild_list_project_reference fun(self: DotnetClient, targetPath: string, cb?: fun(res: string[])): integer|false # Request project references
----@field msbuild_add_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(success: boolean)): integer|false # Request project references
+---@field msbuild_list_project_reference fun(self: DotnetClient, targetPath: string, cb?: fun(res: string[]), on_crash?: fun(err: RPC_Error)): RPCCallHandle # Request project references
+---@field msbuild_add_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(success: boolean), on_crash?: fun(err: RPC_Error)): RPCCallHandle # Request project references
 ---@field msbuild_remove_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(success: boolean)): integer|false # Request project references
 ---@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: ProjectSecretInitResponse), options?: RpcRequestOptions): integer|false # Request adding package
----@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), options?: RpcRequestOptions): integer|false # Request adding package
+---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), on_crash?: fun(err: RPC_Error), options?: RpcRequestOptions): RPCCallHandle # Request adding package
 ---@field test_run fun(self: DotnetClient, request: RPC_TestRunRequest, cb?: fun(res: RPC_TestRunResult)) # Request running multiple tests for MTP
 ---@field test_discover fun(self: DotnetClient, request: RPC_TestDiscoverRequest, cb?: fun(res: RPC_DiscoveredTest[])) # Request test discovery for MTP
 ---@field outdated_packages fun(self: DotnetClient, target_path: string, cb?: fun(res: OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
@@ -410,24 +447,26 @@ function M:msbuild_query_properties(request, cb)
   return id
 end
 
-function M:msbuild_list_project_reference(targetPath, cb)
-  local id = self._client.request("msbuild/list-project-reference", { projectPath = targetPath }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response.result) end
-  end)
-
-  return id
+function M:msbuild_list_project_reference(targetPath, cb, on_crash)
+  return create_rpc_call({
+    client = self._client,
+    job = nil,
+    cb = cb,
+    on_crash = on_crash,
+    method = "msbuild/list-project-reference",
+    params = { projectPath = targetPath },
+  })()
 end
 
-function M:msbuild_add_project_reference(projectPath, targetPath, cb)
-  local id = self._client.request("msbuild/add-project-reference", { projectPath = projectPath, targetPath = targetPath }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response.result) end
-  end)
-
-  return id
+function M:msbuild_add_project_reference(projectPath, targetPath, cb, on_crash)
+  return create_rpc_call({
+    client = self._client,
+    job = nil,
+    cb = cb,
+    on_crash = on_crash,
+    method = "msbuild/add-project-reference",
+    params = { projectPath = projectPath, targetPath = targetPath },
+  })()
 end
 
 function M:msbuild_remove_project_reference(projectPath, targetPath, cb)
@@ -480,17 +519,19 @@ function M:test_run(request, cb)
 end
 
 ---@class SolutionFileProjectResponse
----@field ProjectName string
----@field RelativePath string
----@field AbsolutePath string
+---@field projectName string
+---@field relativePath string
+---@field absolutePath string
 
-function M:solution_list_projects(solution_file_path, cb)
-  local id = self._client.request("solution/list-projects", { solutionFilePath = solution_file_path }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response.result) end
-  end)
-  return id
+function M:solution_list_projects(solution_file_path, cb, on_crash)
+  return create_rpc_call({
+    client = self._client,
+    job = nil,
+    cb = cb,
+    on_crash = on_crash,
+    method = "solution/list-projects",
+    params = { solutionFilePath = solution_file_path },
+  })()
 end
 
 function M:secrets_init(project_path, cb)
