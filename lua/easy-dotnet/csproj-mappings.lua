@@ -4,11 +4,11 @@ local M = {
 }
 
 local picker = require("easy-dotnet.picker")
+local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local polyfills = require("easy-dotnet.polyfills")
 local csproj = require("easy-dotnet.parsers.csproj-parse")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local error_messages = require("easy-dotnet.error-messages")
-local cli = require("easy-dotnet.dotnet_cli")
 local logger = require("easy-dotnet.logger")
 
 local function not_in_list(list, value) return not polyfills.tbl_contains(list, value) end
@@ -38,17 +38,16 @@ function M.add_project_reference(curr_project_path, cb)
   end
 
   picker.picker(nil, projects, function(i)
-    local command = cli.add_project(curr_project_path, i.path)
-    vim.fn.jobstart(command, {
-      on_exit = function(_, code)
+    client:initialize(function()
+      client:msbuild_add_project_reference(curr_project_path, i.path, function(res)
         if cb then cb() end
-        if code ~= 0 then
+        if res == false then
           logger.error("Command failed")
         else
           vim.cmd("checktime")
         end
-      end,
-    })
+      end)
+    end)
   end, "Add project reference")
 end
 
@@ -77,7 +76,6 @@ M.package_completion_cmp = {
     local inside_include = before_cursor:match(package_completion_pattern)
     local inside_version = before_cursor:match(version_completion_pattern)
 
-    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
     if inside_include then
       local search_term = inside_include:gsub('%Include="', "")
       if M.include_pending then
