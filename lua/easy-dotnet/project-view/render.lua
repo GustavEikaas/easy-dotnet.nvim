@@ -241,7 +241,7 @@ local function remove_project_keymap(ref)
         client:initialize(function()
           client:msbuild_remove_project_reference(M.project.path, ref, function(res)
             cleanup()
-            if not res then
+            if res == false then
               logger.error("Command failed")
             else
               logger.info("Project removed " .. ref)

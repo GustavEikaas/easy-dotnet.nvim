@@ -41,8 +41,7 @@ function M.add_project_reference(curr_project_path, cb)
     client:initialize(function()
       client:msbuild_add_project_reference(curr_project_path, i.path, function(res)
         if cb then cb() end
-
-        if not res then
+        if res == false then
           logger.error("Command failed")
         else
           vim.cmd("checktime")

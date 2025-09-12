@@ -74,8 +74,8 @@ end
 ---@field msbuild_build fun(self: DotnetClient, request: BuildRequest, cb?: fun(res: BuildResult)): integer|false # Request msbuild
 ---@field msbuild_query_properties fun(self: DotnetClient, request: QueryProjectPropertiesRequest, cb?: fun(res: RPC_Response)): integer|false # Request msbuild
 ---@field msbuild_list_project_reference fun(self: DotnetClient, targetPath: string, cb?: fun(res: string[])): integer|false # Request project references
----@field msbuild_add_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(res: {success: boolean})): integer|false # Request project references
----@field msbuild_remove_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(res: {success: boolean})): integer|false # Request project references
+---@field msbuild_add_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(success: boolean)): integer|false # Request project references
+---@field msbuild_remove_project_reference fun(self: DotnetClient, projectPath: string, targetPath: string, cb?: fun(success: boolean)): integer|false # Request project references
 ---@field msbuild_add_package_reference fun(self: DotnetClient, request: AddPackageReferenceParams, cb?: fun(res: RPC_Response), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: ProjectSecretInitResponse), options?: RpcRequestOptions): integer|false # Request adding package
 ---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), options?: RpcRequestOptions): integer|false # Request adding package
