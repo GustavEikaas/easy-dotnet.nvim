@@ -32,10 +32,6 @@ function M.handle_rpc_error(response)
   return false
 end
 
----@type DotnetClient
-local M = {}
-M.__index = M
-
 ---@class RPCCallOpts
 ---@field client StreamJsonRpc The RPC client object
 ---@field job? JobData Optional job function wrapper
