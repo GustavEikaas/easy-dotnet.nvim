@@ -100,27 +100,6 @@ function M.create_enumerate_rpc_call(opts)
   end
 end
 
---- @class RPC_TestRunResult
---- @field id string
---- @field stackTrace string[] | nil
---- @field message string | nil
---- @field outcome TestResult
-
----@class RPC_DiscoveredTest
----@field id string
----@field namespace? string
----@field name string
----@field displayName string
----@field filePath string
----@field lineNumber? integer
-
----@class VariableLocation
----@field columnEnd integer
----@field columnStart integer
----@field identifier string
----@field lineEnd integer
----@field lineStart integer
-
 ---@class RPC_CallOpts
 ---@field on_crash? fun(err: RPC_Error)
 
@@ -136,10 +115,9 @@ end
 ---@field template_engine TemplateEngineClient
 ---@field nuget NugetClient
 ---@field roslyn RoslynClient
+---@field test TestClient
 ---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: RPC_ProjectUserSecretsInitResponse), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
 ---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
----@field test_run fun(self: DotnetClient, request: RPC_TestRunRequest, cb?: fun(res: RPC_TestRunResult)) # Request running multiple tests for MTP
----@field test_discover fun(self: DotnetClient, request: RPC_TestDiscoverRequest, cb?: fun(res: RPC_DiscoveredTest[])) # Request test discovery for MTP
 ---@field outdated_packages fun(self: DotnetClient, target_path: string, cb?: fun(res: OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
 ---@field get_state fun(self: DotnetClient): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
 ---@field _initializing boolean? # True while initialization is in progress
@@ -162,6 +140,7 @@ function M:new()
   instance.template_engine = require("easy-dotnet.rpc.controllers.template").new(client)
   instance.nuget = require("easy-dotnet.rpc.controllers.nuget").new(client)
   instance.roslyn = require("easy-dotnet.rpc.controllers.roslyn").new(client)
+  instance.test = require("easy-dotnet.rpc.controllers.test").new(client)
   return instance
 end
 
@@ -259,46 +238,6 @@ function M:_initialize(cb)
       if cb then cb(response) end
     end)
   end)()
-end
-
-function M:test_discover(request, cb) self._client:request_enumerate("test/discover", request, nil, cb, M.handle_rpc_error) end
-
----@class RPC_TestDiscoverRequest
----@field projectPath string
----@field targetFrameworkMoniker string
----@field configuration string
-
----@class RunRequestNode
----@field uid string Unique test run identifier
----@field displayName string Human-readable name for the run
-
----@class RPC_TestRunRequest
----@field projectPath string
----@field targetFrameworkMoniker string
----@field configuration string
----@field filter? table<RunRequestNode>
-
-function M:test_run(request, cb)
-  self._client:request_enumerate("test/run", request, nil, function(res)
-    local pending = #res
-
-    local function done()
-      if pending == 0 then
-        if cb then cb(res) end
-      end
-    end
-    done()
-
-    for _, value in ipairs(res) do
-      if value.stackTrace and value.stackTrace.token then
-        self._client:request_property_enumerate(value.stackTrace.token, nil, function(trace)
-          value.stackTrace = trace
-          pending = pending - 1
-          done()
-        end)
-      end
-    end
-  end, M.handle_rpc_error)
 end
 
 ---@class SolutionFileProjectResponse

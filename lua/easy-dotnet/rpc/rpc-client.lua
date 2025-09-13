@@ -263,6 +263,7 @@ function M:request_enumerate(method, params, on_yield, on_finished, on_error)
     if response.result and response.result.token then
       handle_next(response.result.token)
     else
+      vim.print(response)
       error("Response was not an enumerable")
     end
   end)

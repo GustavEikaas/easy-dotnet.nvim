@@ -307,7 +307,7 @@ local function start_test_discovery(project, options, solution_file_path)
   project_node.job = { name = "discover", state = "pending" }
   win.refreshTree()
 
-  M.client:test_discover({ projectPath = project.path, configuration = "Debug", targetFrameworkMoniker = project_node.framework }, handle_rpc_response(project_node, options))
+  M.client.test:test_discover({ projectPath = project.path, configuration = "Debug", targetFrameworkMoniker = project_node.framework }, handle_rpc_response(project_node, options))
 end
 
 local function refresh_runner(options, solution_file_path)
