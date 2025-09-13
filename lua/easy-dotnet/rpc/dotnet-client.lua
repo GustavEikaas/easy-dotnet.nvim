@@ -9,10 +9,14 @@ local function dump_to_file(obj, filepath)
   f:close()
 end
 
+---@type DotnetClient
+local M = {}
+M.__index = M
+
 --- Handles an RPC response and displays/logs error info if present
 ---@param response RPC_Response
 ---@return boolean did_error
-local function handle_rpc_error(response)
+function M.handle_rpc_error(response)
   if response.error then
     vim.schedule(function() vim.notify(string.format("[RPC Error %s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
 
@@ -27,10 +31,6 @@ local function handle_rpc_error(response)
   end
   return false
 end
-
----@type DotnetClient
-local M = {}
-M.__index = M
 
 ---@class RPCCallOpts
 ---@field client StreamJsonRpc The RPC client object
@@ -52,7 +52,7 @@ function M.create_rpc_call(opts)
     if opts.job then maybe_job = jobs.register_job(opts.job) end
     ---@param response RPC_Response
     local id = opts.client.request(opts.method, opts.params, function(response)
-      local crash = handle_rpc_error(response)
+      local crash = M.handle_rpc_error(response)
       if crash then
         if opts.on_crash then opts.on_crash(response.error) end
         if maybe_job then maybe_job(false) end
@@ -61,6 +61,36 @@ function M.create_rpc_call(opts)
 
       if maybe_job then maybe_job(true) end
       if opts.cb then opts.cb(response.result) end
+    end)
+    if not id then error("Failed to send RPC call") end
+    return {
+      id = id,
+      cancel = function() opts.client.cancel(id) end,
+    }
+  end
+end
+
+---@class RPC_EnumerateCallOpts
+---@field client StreamJsonRpc The RPC client object
+---@field job? JobData Optional job function wrapper
+---@field cb? fun(result: any[]) Callback function with RPC result
+---@field on_crash? fun(err: RPC_Error) Optional crash callback
+---@field on_yield? fun(item: any)
+---@field method DotnetPipeMethod The RPC method to call
+---@field params table Parameters for the RPC call
+
+---@param opts RPC_EnumerateCallOpts
+---@return fun():RPC_CallHandle
+function M.create_enumerate_rpc_call(opts)
+  return function()
+    local maybe_job = nil
+    if opts.job then maybe_job = jobs.register_job(opts.job) end
+    local id = opts.client:request_enumerate(opts.method, opts.params, opts.on_yield, function(results)
+      if maybe_job then maybe_job(true) end
+      if opts.cb then opts.cb(results) end
+    end, function(res)
+      if maybe_job then maybe_job(false) end
+      if opts.on_crash then opts.on_crash(res.error) end
     end)
     if not id then error("Failed to send RPC call") end
     return {
@@ -107,6 +137,7 @@ end
 ---@field nuget_get_package_versions fun(self: DotnetClient, packageId: string, sources?: string[], include_prerelease?: boolean, cb?: fun(res: string[])): integer | false # Request a NuGet restore
 ---@field nuget_push fun(self: DotnetClient, packages: string[], source: string, cb?: fun(success: boolean)) # Request a NuGet restore
 ---@field msbuild MsBuildClient
+---@field template_engine TemplateEngineClient
 ---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: RPC_ProjectUserSecretsInitResponse), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
 ---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
 ---@field test_run fun(self: DotnetClient, request: RPC_TestRunRequest, cb?: fun(res: RPC_TestRunResult)) # Request running multiple tests for MTP
@@ -116,9 +147,6 @@ end
 ---@field roslyn_bootstrap_file_json fun(self: DotnetClient, file_path: string, json_data: string, prefer_file_scoped: boolean, cb?: fun(success: true)): integer | false
 ---@field roslyn_scope_variables fun(self: DotnetClient, file_path: string, line: number, cb?: fun(variables: VariableLocation[])): integer | false
 ---@field get_workspace_diagnostics fun(self: DotnetClient, project_path: string, include_warnings: boolean, cb?: fun(res: RPC_Response)): integer | false
----@field template_list fun(self: DotnetClient, cb?: fun(variables: DotnetNewTemplate[])): integer | false
----@field template_parameters fun(self: DotnetClient, identity: string, cb?: fun(variables: DotnetNewParameter[])): integer | false
----@field template_instantiate fun(self: DotnetClient, identity: string, name: string, output_path: string, params: table<string,string>, cb?: fun()): integer | false
 ---@field get_state fun(self: DotnetClient): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
 ---@field _initializing boolean? # True while initialization is in progress
 ---@field _initialized boolean? # True once initialization is complete
@@ -137,6 +165,7 @@ function M:new()
   instance._initializing = false
   instance._initialized = false
   instance.msbuild = require("easy-dotnet.rpc.controllers.msbuild").new(client)
+  instance.template_engine = require("easy-dotnet.rpc.controllers.template").new(client)
   return instance
 end
 
@@ -224,7 +253,7 @@ function M:_initialize(cb)
         options = { useVisualStudio = use_visual_studio },
       },
     }, function(response)
-      local crash = handle_rpc_error(response)
+      local crash = M.handle_rpc_error(response)
       if crash then
         finished(false)
         return
@@ -239,7 +268,7 @@ end
 function M:nuget_push(packages, source, cb)
   local finished = jobs.register_job({ name = "Pushing packages", on_error_text = "Failed to push packages", on_success_text = "Packages pushed to " .. source })
   self._client.request("nuget/push", { packagePaths = packages, source = source }, function(response)
-    local crash = handle_rpc_error(response)
+    local crash = M.handle_rpc_error(response)
     if crash then
       finished(false)
       return
@@ -252,7 +281,7 @@ end
 function M:nuget_restore(targetPath, cb)
   local finished = jobs.register_job({ name = "Restoring packages...", on_error_text = "Failed to restore nuget packages", on_success_text = "Nuget packages restored" })
   self._client.request("nuget/restore", { targetPath = targetPath }, function(response)
-    local crash = handle_rpc_error(response)
+    local crash = M.handle_rpc_error(response)
     if crash then
       finished(false)
       return
@@ -304,10 +333,10 @@ end
 
 function M:nuget_search(prompt, sources, cb)
   local id = self._client:request_enumerate("nuget/search-packages", { searchTerm = prompt, sources = sources }, nil, function(response)
-    local crash = handle_rpc_error(response)
+    local crash = M.handle_rpc_error(response)
     if crash then return end
     if cb then cb(response) end
-  end, handle_rpc_error)
+  end, M.handle_rpc_error)
 
   return id
 end
@@ -319,13 +348,13 @@ function M:nuget_get_package_versions(package, sources, include_prerelease, cb)
     finished(true)
     cb(response)
   end, function(res)
-    handle_rpc_error(res)
+    M.handle_rpc_error(res)
     finished(false)
   end)
   return id
 end
 
-function M:test_discover(request, cb) self._client:request_enumerate("test/discover", request, nil, cb, handle_rpc_error) end
+function M:test_discover(request, cb) self._client:request_enumerate("test/discover", request, nil, cb, M.handle_rpc_error) end
 
 ---@class RPC_TestDiscoverRequest
 ---@field projectPath string
@@ -362,7 +391,7 @@ function M:test_run(request, cb)
         end)
       end
     end
-  end, handle_rpc_error)
+  end, M.handle_rpc_error)
 end
 
 ---@class SolutionFileProjectResponse
@@ -414,7 +443,7 @@ function M:outdated_packages(target_path, cb)
     on_job_finished(true)
     cb(results)
   end, function(res)
-    handle_rpc_error(res)
+    M.handle_rpc_error(res)
     on_job_finished(false)
   end)
   return id
@@ -422,7 +451,7 @@ end
 
 function M:roslyn_bootstrap_file_json(file_path, json_data, prefer_file_scoped, cb)
   local id = self._client.request("json-code-gen", { filePath = file_path, jsonData = json_data, preferFileScopedNamespace = prefer_file_scoped }, function(response)
-    local crash = handle_rpc_error(response)
+    local crash = M.handle_rpc_error(response)
     if crash then return end
     if cb then cb(response.result.success) end
   end)
@@ -431,7 +460,7 @@ end
 
 function M:roslyn_bootstrap_file(file_path, type, prefer_file_scoped, cb)
   local id = self._client.request("roslyn/bootstrap-file", { filePath = file_path, kind = type, preferFileScopedNamespace = prefer_file_scoped }, function(response)
-    local crash = handle_rpc_error(response)
+    local crash = M.handle_rpc_error(response)
     if crash then return end
     if cb then cb(response.result.success) end
   end)
@@ -439,47 +468,7 @@ function M:roslyn_bootstrap_file(file_path, type, prefer_file_scoped, cb)
 end
 
 function M:roslyn_scope_variables(file_path, line, cb)
-  local id = self._client:request_enumerate("roslyn/scope-variables", { sourceFilePath = file_path, lineNumber = line }, nil, function(response) cb(response) end, handle_rpc_error)
-  return id
-end
-
----@class DotnetNewTemplate
----@field displayName string
----@field identity string
----@field type string|nil
-
-function M:template_list(cb)
-  local id = self._client:request_enumerate("template/list", {}, nil, function(response) cb(response) end, handle_rpc_error)
-  return id
-end
-
----@alias DotnetNewParameterDataType
----| '"text"'
----| '"bool"'
----| '"choice"'
----| '"string"'
-
----@class DotnetNewParameter
----@field name string
----@field defaultValue string|nil
----@field defaultIfOptionWithoutValue string|nil
----@field dataType DotnetNewParameterDataType
----@field description string|nil
----@field isRequired boolean
----@field choices table<string, string>|nil
-
-function M:template_parameters(identity, cb)
-  local id = self._client:request_enumerate("template/parameters", { identity = identity }, nil, function(response) cb(response) end, handle_rpc_error)
-  return id
-end
-
-function M:template_instantiate(identity, name, output_path, params, cb)
-  if #vim.tbl_keys(params) == 0 then params["_"] = "" end
-  local id = self._client.request("template/instantiate", { identity = identity, name = name, outputPath = output_path, parameters = params }, function(response)
-    local crash = handle_rpc_error(response)
-    if crash then return end
-    if cb then cb() end
-  end)
+  local id = self._client:request_enumerate("roslyn/scope-variables", { sourceFilePath = file_path, lineNumber = line }, nil, function(response) cb(response) end, M.handle_rpc_error)
   return id
 end
 
@@ -502,7 +491,7 @@ function M:get_workspace_diagnostics(project_path, include_warnings, cb)
       if cb then cb(response) end
     end,
     function(error_response)
-      handle_rpc_error(error_response)
+      M.handle_rpc_error(error_response)
       finished(false)
     end
   )
