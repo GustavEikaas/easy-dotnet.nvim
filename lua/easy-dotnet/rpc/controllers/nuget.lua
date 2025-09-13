@@ -10,7 +10,7 @@ M.__index = M
 
 --- Constructor
 ---@param client StreamJsonRpc
----@return MsBuildClient
+---@return NugetClient
 function M.new(client)
   local self = setmetatable({}, M)
   self._client = client

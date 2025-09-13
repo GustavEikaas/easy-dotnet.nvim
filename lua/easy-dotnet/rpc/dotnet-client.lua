@@ -135,15 +135,12 @@ end
 ---@field msbuild MsBuildClient
 ---@field template_engine TemplateEngineClient
 ---@field nuget NugetClient
+---@field roslyn RoslynClient
 ---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: RPC_ProjectUserSecretsInitResponse), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
 ---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
 ---@field test_run fun(self: DotnetClient, request: RPC_TestRunRequest, cb?: fun(res: RPC_TestRunResult)) # Request running multiple tests for MTP
 ---@field test_discover fun(self: DotnetClient, request: RPC_TestDiscoverRequest, cb?: fun(res: RPC_DiscoveredTest[])) # Request test discovery for MTP
 ---@field outdated_packages fun(self: DotnetClient, target_path: string, cb?: fun(res: OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
----@field roslyn_bootstrap_file fun(self: DotnetClient, file_path: string, type: "Class" | "Interface" | "Record", prefer_file_scoped: boolean, cb?: fun(success: true)): integer | false
----@field roslyn_bootstrap_file_json fun(self: DotnetClient, file_path: string, json_data: string, prefer_file_scoped: boolean, cb?: fun(success: true)): integer | false
----@field roslyn_scope_variables fun(self: DotnetClient, file_path: string, line: number, cb?: fun(variables: VariableLocation[])): integer | false
----@field get_workspace_diagnostics fun(self: DotnetClient, project_path: string, include_warnings: boolean, cb?: fun(res: RPC_Response)): integer | false
 ---@field get_state fun(self: DotnetClient): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
 ---@field _initializing boolean? # True while initialization is in progress
 ---@field _initialized boolean? # True once initialization is complete
@@ -164,6 +161,7 @@ function M:new()
   instance.msbuild = require("easy-dotnet.rpc.controllers.msbuild").new(client)
   instance.template_engine = require("easy-dotnet.rpc.controllers.template").new(client)
   instance.nuget = require("easy-dotnet.rpc.controllers.nuget").new(client)
+  instance.roslyn = require("easy-dotnet.rpc.controllers.roslyn").new(client)
   return instance
 end
 
@@ -355,56 +353,6 @@ function M:outdated_packages(target_path, cb)
     M.handle_rpc_error(res)
     on_job_finished(false)
   end)
-  return id
-end
-
-function M:roslyn_bootstrap_file_json(file_path, json_data, prefer_file_scoped, cb)
-  local id = self._client.request("json-code-gen", { filePath = file_path, jsonData = json_data, preferFileScopedNamespace = prefer_file_scoped }, function(response)
-    local crash = M.handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response.result.success) end
-  end)
-  return id
-end
-
-function M:roslyn_bootstrap_file(file_path, type, prefer_file_scoped, cb)
-  local id = self._client.request("roslyn/bootstrap-file", { filePath = file_path, kind = type, preferFileScopedNamespace = prefer_file_scoped }, function(response)
-    local crash = M.handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response.result.success) end
-  end)
-  return id
-end
-
-function M:roslyn_scope_variables(file_path, line, cb)
-  local id = self._client:request_enumerate("roslyn/scope-variables", { sourceFilePath = file_path, lineNumber = line }, nil, function(response) cb(response) end, M.handle_rpc_error)
-  return id
-end
-
-function M:get_workspace_diagnostics(project_path, include_warnings, cb)
-  local finished = jobs.register_job({
-    name = "Getting workspace diagnostics...",
-    on_error_text = "Failed to get diagnostics",
-    on_success_text = "Diagnostics retrieved",
-  })
-
-  local id = self._client:request_enumerate(
-    "roslyn/get-workspace-diagnostics",
-    {
-      targetPath = project_path,
-      includeWarnings = include_warnings,
-    },
-    nil,
-    function(response)
-      finished(true)
-      if cb then cb(response) end
-    end,
-    function(error_response)
-      M.handle_rpc_error(error_response)
-      finished(false)
-    end
-  )
-
   return id
 end
 

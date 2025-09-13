@@ -68,6 +68,7 @@ local M = {
 ---| "outdated/packages"
 ---| "roslyn/bootstrap-file"
 ---| "roslyn/scope-variables"
+---| "roslyn/get-workspace-diagnostics"
 ---| "json-code-gen"
 ---| "template/list"
 ---| "template/parameters"
