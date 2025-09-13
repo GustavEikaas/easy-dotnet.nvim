@@ -51,19 +51,19 @@ local function discover_project_references(project)
       end
       finished()
       M.refresh()
-    end)
+    end, { on_crash = finished })
   end)
 end
 
 local function dotnet_restore(project, cb)
   local finished = M.append_job("Restoring packages")
   client:initialize(function()
-    client:nuget_restore(project.path, function(res)
+    client.nuget:nuget_restore(project.path, function(res)
       finished()
       M.refresh()
       cb()
       if res.success == false then logger.error("Dotnet restore failed") end
-    end)
+    end, { on_crash = finished })
   end)
 end
 

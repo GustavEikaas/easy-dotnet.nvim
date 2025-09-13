@@ -59,7 +59,7 @@ function M.create_rpc_call(opts)
         return
       end
 
-      if maybe_job then maybe_job(true) end
+      if maybe_job then maybe_job(type(response.result.success) == "boolean" and response.result.success or true) end
       if opts.cb then opts.cb(response.result) end
     end)
     if not id then error("Failed to send RPC call") end
@@ -132,12 +132,9 @@ end
 ---@field initialize fun(self: DotnetClient, cb: fun()): nil # Starts the dotnet server and connects the JSON-RPC client
 ---@field stop fun(self: DotnetClient, cb: fun()): nil # Stops the dotnet server
 ---@field restart fun(self: DotnetClient, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
----@field nuget_restore fun(self: DotnetClient, targetPath: string, cb?: fun(res: BuildResult)) # Request a NuGet restore
----@field nuget_search fun(self: DotnetClient, searchTerm: string, sources?: string[], cb?: fun(res: NugetPackageMetadata[])): integer | false # Request a NuGet restore
----@field nuget_get_package_versions fun(self: DotnetClient, packageId: string, sources?: string[], include_prerelease?: boolean, cb?: fun(res: string[])): integer | false # Request a NuGet restore
----@field nuget_push fun(self: DotnetClient, packages: string[], source: string, cb?: fun(success: boolean)) # Request a NuGet restore
 ---@field msbuild MsBuildClient
 ---@field template_engine TemplateEngineClient
+---@field nuget NugetClient
 ---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: RPC_ProjectUserSecretsInitResponse), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
 ---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
 ---@field test_run fun(self: DotnetClient, request: RPC_TestRunRequest, cb?: fun(res: RPC_TestRunResult)) # Request running multiple tests for MTP
@@ -166,6 +163,7 @@ function M:new()
   instance._initialized = false
   instance.msbuild = require("easy-dotnet.rpc.controllers.msbuild").new(client)
   instance.template_engine = require("easy-dotnet.rpc.controllers.template").new(client)
+  instance.nuget = require("easy-dotnet.rpc.controllers.nuget").new(client)
   return instance
 end
 
@@ -263,95 +261,6 @@ function M:_initialize(cb)
       if cb then cb(response) end
     end)
   end)()
-end
-
-function M:nuget_push(packages, source, cb)
-  local finished = jobs.register_job({ name = "Pushing packages", on_error_text = "Failed to push packages", on_success_text = "Packages pushed to " .. source })
-  self._client.request("nuget/push", { packagePaths = packages, source = source }, function(response)
-    local crash = M.handle_rpc_error(response)
-    if crash then
-      finished(false)
-      return
-    end
-    finished(response.result.success)
-    if cb then cb(response.result.success) end
-  end)
-end
-
-function M:nuget_restore(targetPath, cb)
-  local finished = jobs.register_job({ name = "Restoring packages...", on_error_text = "Failed to restore nuget packages", on_success_text = "Nuget packages restored" })
-  self._client.request("nuget/restore", { targetPath = targetPath }, function(response)
-    local crash = M.handle_rpc_error(response)
-    if crash then
-      finished(false)
-      return
-    end
-    local result = response.result or {}
-    local pending = 2
-
-    local function done()
-      if pending == 0 then
-        finished(result.success)
-        if cb then cb(result) end
-      end
-    end
-
-    if result.warnings and result.warnings.token then
-      self._client:request_property_enumerate(response.result.warnings.token, nil, function(warnings)
-        response.result.warnings = warnings
-        pending = pending - 1
-        done()
-      end)
-    end
-
-    if result.errors and result.errors.token then
-      self._client:request_property_enumerate(response.result.errors.token, nil, function(errors)
-        response.result.errors = errors
-        pending = pending - 1
-        done()
-      end)
-    end
-  end)
-end
-
----@class NugetPackageMetadata
----@field source string
----@field id string
----@field version string
----@field authors? string
----@field description? string
----@field downloadCount? integer
----@field licenseUrl? string
----@field owners string[]
----@field projectUrl? string
----@field readmeUrl? string
----@field summary? string
----@field tags string[]
----@field title? string
----@field prefixReserved boolean
----@field isListed boolean
-
-function M:nuget_search(prompt, sources, cb)
-  local id = self._client:request_enumerate("nuget/search-packages", { searchTerm = prompt, sources = sources }, nil, function(response)
-    local crash = M.handle_rpc_error(response)
-    if crash then return end
-    if cb then cb(response) end
-  end, M.handle_rpc_error)
-
-  return id
-end
-
-function M:nuget_get_package_versions(package, sources, include_prerelease, cb)
-  local finished = jobs.register_job({ name = "Getting versions for " .. package, on_error_text = string.format("Failed to get versions for %s", package) })
-  include_prerelease = include_prerelease or false
-  local id = self._client:request_enumerate("nuget/get-package-versions", { packageId = package, includePrerelease = include_prerelease, sources = sources }, nil, function(response)
-    finished(true)
-    cb(response)
-  end, function(res)
-    M.handle_rpc_error(res)
-    finished(false)
-  end)
-  return id
 end
 
 function M:test_discover(request, cb) self._client:request_enumerate("test/discover", request, nil, cb, M.handle_rpc_error) end

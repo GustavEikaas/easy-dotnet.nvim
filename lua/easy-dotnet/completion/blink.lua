@@ -42,13 +42,13 @@ function M:get_completions(ctx, callback)
       M.include_pending = nil
     end
     client:initialize(function()
-      M.include_pending = client:nuget_search(search_term, nil, function(res)
+      M.include_pending = client.nuget:nuget_search(search_term, nil, function(res)
         local items = polyfills.tbl_map(function(value)
           local label = string.format("%s (%s)", value.id, value.source)
           return { label = label, dup = 0, insertText = value.id, documentation = "", kind = 11 }
         end, res)
         transformed_callback(items)
-      end)
+      end).id
     end)
 
     return
@@ -59,7 +59,7 @@ function M:get_completions(ctx, callback)
     end
     local package_name = current_line:match('Include="([^"]+)"')
     client:initialize(function()
-      M.version_pending = client:nuget_get_package_versions(package_name, nil, false, function(res)
+      M.version_pending = client.nuget:nuget_get_package_versions(package_name, nil, false, function(res)
         local index = 0
         local latest = nil
         local last_index = #res - 1
@@ -85,7 +85,7 @@ function M:get_completions(ctx, callback)
           })
         end
         transformed_callback(items)
-      end)
+      end).id
     end)
     return
   end
