@@ -94,7 +94,7 @@ function M:nuget_search(prompt, sources, cb, opts)
   opts = opts or {}
   return helper.create_enumerate_rpc_call({
     client = self._client,
-    job = { name = "Getting versions for " .. package, on_error_text = string.format("Failed to get versions for %s", package) },
+    job = nil,
     method = "nuget/search-packages",
     params = { searchTerm = prompt, sources = sources },
     cb = cb,
