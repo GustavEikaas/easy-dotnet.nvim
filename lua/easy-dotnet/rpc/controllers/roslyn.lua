@@ -43,6 +43,13 @@ function M:roslyn_bootstrap_file(file_path, type, prefer_file_scoped, cb, opts)
   })()
 end
 
+---@class VariableLocation
+---@field columnEnd integer
+---@field columnStart integer
+---@field identifier string
+---@field lineEnd integer
+---@field lineStart integer
+
 function M:roslyn_scope_variables(file_path, line, cb, opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
