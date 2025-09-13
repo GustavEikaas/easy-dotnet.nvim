@@ -48,8 +48,8 @@ local function auto_bootstrap_namespace(bufnr, mode)
     vim.cmd("checktime")
   end
 
-  local from_json = function(clipboard) client:roslyn_bootstrap_file_json(curr_file, clipboard, mode == "file_scoped", on_finished) end
-  local default = function() client:roslyn_bootstrap_file(curr_file, type_keyword, mode == "file_scoped", on_finished) end
+  local from_json = function(clipboard) client.roslyn:roslyn_bootstrap_file_json(curr_file, clipboard, mode == "file_scoped", on_finished) end
+  local default = function() client.roslyn:roslyn_bootstrap_file(curr_file, type_keyword, mode == "file_scoped", on_finished) end
 
   client:initialize(function()
     local opt = require("easy-dotnet.options").get_option("auto_bootstrap_namespace")

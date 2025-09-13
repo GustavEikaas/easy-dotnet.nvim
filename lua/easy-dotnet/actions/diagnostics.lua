@@ -24,7 +24,7 @@ local function execute_diagnostics_request(selected_item, include_warnings)
     vim.notify("Invalid project/solution path", vim.log.levels.ERROR)
     return
   end
-  rpc.global_rpc_client:get_workspace_diagnostics(selected_item.value, include_warnings, function(response) diagnostics.populate_diagnostics(response, get_default_filter()) end)
+  rpc.global_rpc_client.roslyn:get_workspace_diagnostics(selected_item.value, include_warnings, function(response) diagnostics.populate_diagnostics(response, get_default_filter()) end)
 end
 
 ---@param severity_filter? "error"|"warning"
