@@ -51,7 +51,7 @@ local function discover_project_references(project)
       end
       finished()
       M.refresh()
-    end)
+    end, { on_crash = finished })
   end)
 end
 
@@ -63,7 +63,7 @@ local function dotnet_restore(project, cb)
       M.refresh()
       cb()
       if res.success == false then logger.error("Dotnet restore failed") end
-    end)
+    end, { on_crash = finished })
   end)
 end
 
