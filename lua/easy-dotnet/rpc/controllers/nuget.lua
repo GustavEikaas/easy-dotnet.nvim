@@ -117,3 +117,5 @@ function M:nuget_get_package_versions(package, sources, include_prerelease, cb, 
     on_crash = opts.on_crash,
   })()
 end
+
+return M
