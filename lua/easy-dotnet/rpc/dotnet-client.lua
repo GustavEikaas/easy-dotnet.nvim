@@ -52,7 +52,7 @@ function M.create_rpc_call(opts)
     if opts.job then maybe_job = jobs.register_job(opts.job) end
     ---@param response RPC_Response
     local id = opts.client.request(opts.method, opts.params, function(response)
-      local crash = handle_rpc_error(response)
+      local crash = M.handle_rpc_error(response)
       if crash then
         if opts.on_crash then opts.on_crash(response.error) end
         if maybe_job then maybe_job(false) end
@@ -354,7 +354,7 @@ function M:nuget_get_package_versions(package, sources, include_prerelease, cb)
   return id
 end
 
-function M:test_discover(request, cb) self._client:request_enumerate("test/discover", request, nil, cb, handle_rpc_error) end
+function M:test_discover(request, cb) self._client:request_enumerate("test/discover", request, nil, cb, M.handle_rpc_error) end
 
 ---@class RPC_TestDiscoverRequest
 ---@field projectPath string
