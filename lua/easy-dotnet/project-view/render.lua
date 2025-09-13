@@ -58,7 +58,7 @@ end
 local function dotnet_restore(project, cb)
   local finished = M.append_job("Restoring packages")
   client:initialize(function()
-    client:nuget_restore(project.path, function(res)
+    client.nuget:nuget_restore(project.path, function(res)
       finished()
       M.refresh()
       cb()

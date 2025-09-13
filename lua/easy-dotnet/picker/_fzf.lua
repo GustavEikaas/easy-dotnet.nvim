@@ -8,7 +8,7 @@ local function nuget_search_rpc(prompt, client)
 
   local results = {}
 
-  client:nuget_search(prompt, nil, function(p)
+  client.nuget:nuget_search(prompt, nil, function(p)
     for _, r in ipairs(p) do
       table.insert(results, { id = r.id, display = r.id .. " (" .. r.source .. ")" })
     end

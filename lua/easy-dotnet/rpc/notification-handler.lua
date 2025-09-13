@@ -3,7 +3,7 @@ local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
 local M = {}
 
 ---@param client DotnetClient
-local function nuget_restore_handler(client, target_path) client:nuget_restore(target_path) end
+local function nuget_restore_handler(client, target_path) client.nuget:nuget_restore(target_path) end
 
 ---@param client DotnetClient
 M.handler = function(client, method, params)

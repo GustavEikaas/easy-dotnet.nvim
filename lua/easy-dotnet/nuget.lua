@@ -18,7 +18,7 @@ local function get_all_versions(package)
 
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   client:initialize(function()
-    client:nuget_get_package_versions(package, nil, false, function(i) coroutine.resume(co, i) end)
+    client.nuget:nuget_get_package_versions(package, nil, false, function(i) coroutine.resume(co, i) end)
   end)
   return coroutine.yield()
 end

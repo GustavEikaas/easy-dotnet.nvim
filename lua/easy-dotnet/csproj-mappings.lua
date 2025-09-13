@@ -83,10 +83,10 @@ M.package_completion_cmp = {
         M.include_pending = nil
       end
       client:initialize(function()
-        M.include_pending = client:nuget_search(search_term, nil, function(res)
+        M.include_pending = client.nuget:nuget_search(search_term, nil, function(res)
           local items = polyfills.tbl_map(function(value) return { label = value.id, kind = 18 } end, res)
           callback({ items = items, isIncomplete = true })
-        end)
+        end).id
       end)
     elseif inside_version then
       local package_name = current_line:match('Include="([^"]+)"')
@@ -96,7 +96,7 @@ M.package_completion_cmp = {
         M.version_pending = nil
       end
       client:initialize(function()
-        M.version_pending = client:nuget_get_package_versions(package_name, nil, false, function(res)
+        M.version_pending = client.nuget:nuget_get_package_versions(package_name, nil, false, function(res)
           local index = 0
           local latest = nil
           local last_index = #res - 1
@@ -119,7 +119,7 @@ M.package_completion_cmp = {
             preselect = true,
           }) end
           callback({ items = items, isIncomplete = false })
-        end)
+        end).id
       end)
     end
   end,
