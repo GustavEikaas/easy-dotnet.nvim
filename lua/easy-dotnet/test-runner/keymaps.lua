@@ -108,7 +108,10 @@ function M.test_run(node, win, cb)
 
   coroutine.wrap(function()
     local client = require("easy-dotnet.test-runner.runner").client
-    client.test:test_run({ projectPath = project_framework.path, targetFrameworkMoniker = node.framework, configuration = "Debug", filter = filter }, get_test_result_handler(win, node, on_job_finished))
+    client.test:test_run(
+      { projectPath = project_framework.path, targetFrameworkMoniker = node.framework, configuration = "Debug", filter = filter },
+      get_test_result_handler(win, node, on_job_finished)
+    )
   end)()
 end
 
