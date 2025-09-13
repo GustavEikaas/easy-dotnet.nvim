@@ -64,7 +64,7 @@ function M:test_run(request, cb, opts)
   return helper.create_enumerate_rpc_call({
     client = self._client,
     job = nil,
-    method = "test/discover",
+    method = "test/run",
     params = request,
     ---@param res RPC_TestRunResult[]
     cb = function(res)
