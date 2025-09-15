@@ -29,6 +29,7 @@
 
 ---@class TestRunnerMappings
 ---@field run_test_from_buffer Keymap
+---@field peek_stack_trace_from_buffer Keymap
 ---@field debug_test_from_buffer Keymap
 ---@field go_to_file Keymap
 ---@field debug_test Keymap
@@ -115,6 +116,7 @@ local M = {
       },
       mappings = {
         run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
+        peek_stack_trace_from_buffer = { lhs = "<leader>p", desc = "peek stack trace from buffer" },
         debug_test_from_buffer = { lhs = "<leader>d", desc = "run test from buffer" },
         filter_failed_tests = { lhs = "<leader>fe", desc = "filter failed tests" },
         debug_test = { lhs = "<leader>d", desc = "debug test" },

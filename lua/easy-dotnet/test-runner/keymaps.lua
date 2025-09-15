@@ -36,6 +36,10 @@ local function parse_status(result, test_line, options)
     test_line.icon = options.icons.failed
 
     if result.errorMessage or result.stackTrace then test_line.expand = vim.list_extend(result.errorMessage or {}, result.stackTrace or {}) end
+    if result.stdOut then
+      local output = vim.list_extend({ "" }, result.stdOut or {})
+      vim.list_extend(test_line.expand or {}, output)
+    end
   elseif result.outcome == "skipped" then
     test_line.icon = options.icons.skipped
   else
