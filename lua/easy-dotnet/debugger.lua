@@ -143,7 +143,7 @@ M.get_dll_for_solution_project = function(default)
   if default == nil then default = false end
   local project = pick_project(default)
 
-  local path = vim.fs.dirname(project.path)
+  local path = project.path
   return {
     dll = project.get_dll_path(),
     project = path,
