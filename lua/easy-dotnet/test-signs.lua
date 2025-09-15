@@ -108,6 +108,28 @@ local function run_test_from_buffer()
   end
 end
 
+local function open_stack_trace_from_buffer()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local curr_file = vim.api.nvim_buf_get_name(bufnr)
+
+  local handlers = {}
+
+  ---@param node TestNode
+  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+    if (node.type == "test" or node.type == "subcase") and compare_paths(node.file_path, curr_file) then table.insert(handlers, node) end
+  end)
+
+  -- In case of multiple tests on the same line (e.g. [TheoryData]), show the first one with a stack trace
+  ---@type TestNode
+  for _, node in ipairs(handlers) do
+    if node.expand then
+      local window = require("easy-dotnet.test-runner.window")
+      window:new_float():write_buf(node.expand):create()
+      return
+    end
+  end
+end
+
 function M.add_gutter_test_signs()
   local options = require("easy-dotnet.test-runner.render").options
   local is_test_file = false
@@ -170,6 +192,10 @@ function M.add_gutter_test_signs()
     vim.keymap.set("n", keymap.run_test_from_buffer.lhs, function()
       coroutine.wrap(function() run_test_from_buffer() end)()
     end, { silent = true, buffer = bufnr, desc = keymap.run_test_from_buffer.desc })
+
+    vim.keymap.set("n", keymap.peek_stack_trace_from_buffer.lhs, function()
+      coroutine.wrap(function() open_stack_trace_from_buffer() end)()
+    end, { silent = true, buffer = bufnr, desc = keymap.peek_stack_trace_from_buffer.desc })
   end
 end
 
