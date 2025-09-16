@@ -55,8 +55,9 @@ end
 --- @class RPC_TestRunResult
 --- @field id string
 --- @field stackTrace string[] | nil
---- @field message string | nil
+--- @field message string[] | nil
 --- @field outcome TestResult
+--- @field stdOut string[] | nil
 
 function M:test_run(request, cb, opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
@@ -68,10 +69,11 @@ function M:test_run(request, cb, opts)
     params = request,
     ---@param res RPC_TestRunResult[]
     cb = function(res)
-      local pending = #res
+      local stackTrace_pending = #res
+      local stdOut_pending = #res
 
       local function done()
-        if pending == 0 then
+        if stackTrace_pending == 0 and stdOut_pending == 0 then
           if cb then cb(res) end
         end
       end
@@ -83,7 +85,17 @@ function M:test_run(request, cb, opts)
           ---@diagnostic disable-next-line: undefined-field
           self._client:request_property_enumerate(value.stackTrace.token, nil, function(trace)
             value.stackTrace = trace
-            pending = pending - 1
+            stackTrace_pending = stackTrace_pending - 1
+            done()
+          end)
+        end
+
+        ---@diagnostic disable-next-line: undefined-field
+        if value.stdOut and value.stdOut.token then
+          ---@diagnostic disable-next-line: undefined-field
+          self._client:request_property_enumerate(value.stdOut.token, nil, function(output)
+            value.stdOut = output
+            stdOut_pending = stdOut_pending - 1
             done()
           end)
         end
