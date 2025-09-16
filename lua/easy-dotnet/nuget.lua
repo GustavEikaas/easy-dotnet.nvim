@@ -13,12 +13,20 @@ local logger = require("easy-dotnet.logger")
 local messages = require("easy-dotnet.error-messages")
 local job = require("easy-dotnet.ui-modules.jobs")
 
+local function list_reverse(tbl)
+  local rev = {}
+  for i = #tbl, 1, -1 do
+    table.insert(rev, tbl[i])
+  end
+  return rev
+end
+
 local function get_all_versions(package)
   local co = coroutine.running()
 
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   client:initialize(function()
-    client.nuget:nuget_get_package_versions(package, nil, false, function(i) coroutine.resume(co, i) end)
+    client.nuget:nuget_get_package_versions(package, nil, false, function(i) coroutine.resume(co, list_reverse(i)) end)
   end)
   return coroutine.yield()
 end
@@ -57,7 +65,9 @@ local function add_package(package, project_path)
         vim.fn.jobstart(string.format("dotnet restore %s", selected_project), {
           on_exit = function(_, code)
             if code ~= 0 then
-              require("easy-dotnet.options").options.terminal(selected_project, "restore", "")
+              local cmd = require("easy-dotnet.options").options.server.use_visual_studio == true and string.format("nuget restore %s %s", selected_project, "")
+                or string.format("dotnet restore %s %s", selected_project, "")
+              require("easy-dotnet.options").options.terminal(selected_project, "restore", "", { cmd = cmd })
               finished(false)
             else
               finished(true)
