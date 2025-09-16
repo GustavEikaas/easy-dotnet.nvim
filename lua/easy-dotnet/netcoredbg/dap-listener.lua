@@ -115,7 +115,7 @@ function M.register_listener()
 
   require("dap").listeners.after.event_stopped["easy-dotnet-scopes"] = function(session, body)
     ---@diagnostic disable-next-line: undefined-field
-    if not (session.adapter.command:lower():find("netcoredbg") or session.config.type == "coreclr") then return end
+    -- if not (session.adapter.command:lower():find("netcoredbg") or session.config.type == "coreclr") then return end
 
     session:request("stackTrace", { threadId = body.threadId }, function(err1, response1)
       if err1 then return end
