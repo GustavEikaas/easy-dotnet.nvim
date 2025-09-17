@@ -112,9 +112,7 @@ M.get_launch_profiles = function(relative_project_path)
 
   client:initialize(function()
     client.launch_profiles:get_launch_profiles(relative_project_path, function(res) coroutine.resume(co, res) end, {
-      on_crash = function()
-        coroutine.resume(co)
-      end,
+      on_crash = function() coroutine.resume(co) end,
     })
   end)
   local profiles = coroutine.yield()
