@@ -65,7 +65,6 @@ end
 ---@field launch_profile string | nil
 
 ---@param use_default boolean
----@return PrepareDebuggerResult
 M.prepare_debugger = function(use_default)
   local project = pick_project(use_default)
   --TODO:
@@ -83,12 +82,19 @@ M.prepare_debugger = function(use_default)
     end,
   })
   coroutine.yield()
-  return {
-    path = project.path,
-    target_framework_moniker = project.msbuild_props.targetFramework,
-    configuration = "Debug",
-    launch_profile = nil,
-  }
+
+  client.debugger:debugger_start(
+    { targetPath = project.path, targetFramework = project.msbuild_props.targetFramework, configuration = "Debug", launchProfileName = nil },
+    function() coroutine.resume(co) end,
+    {
+      on_crash = function()
+        logger.error("Debugger failed to start")
+        coroutine.resume(co)
+      end,
+    }
+  )
+
+  coroutine.yield()
 end
 
 local function run_job_sync(cmd)
