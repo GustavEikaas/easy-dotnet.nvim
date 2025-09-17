@@ -1,5 +1,6 @@
 local M = {}
 local picker = require("easy-dotnet.picker")
+local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local error_messages = require("easy-dotnet.error-messages")
 local logger = require("easy-dotnet.logger")
 local parsers = require("easy-dotnet.parsers")
@@ -107,18 +108,20 @@ local function select_profile(profiles, result)
 end
 
 M.get_launch_profiles = function(relative_project_path)
-  local launch_settings_path = polyfills.fs.joinpath(relative_project_path, "Properties", "launchSettings.json")
+  local co = coroutine.running()
 
-  local stat = vim.loop.fs_stat(launch_settings_path)
-  if stat == nil then return nil end
-
-  local success, result = pcall(vim.fn.json_decode, vim.fn.readfile(launch_settings_path, ""))
-  if not success then
-    logger.warn(result)
-    return nil, "Error parsing JSON: " .. result
+  client:initialize(function()
+    client.launch_profiles:get_launch_profiles(relative_project_path, function(res) coroutine.resume(co, res) end, {
+      on_crash = function() coroutine.resume(co) end,
+    })
+  end)
+  local profiles = coroutine.yield()
+  local dictionary = {}
+  for _, entry in ipairs(profiles) do
+    dictionary[entry.name] = entry.value
   end
 
-  return result.profiles
+  return dictionary
 end
 
 M.get_environment_variables = function(project_name, relative_project_path, autoselect)
