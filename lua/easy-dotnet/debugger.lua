@@ -103,7 +103,6 @@ M.start_debugging_test_project = function(project_path)
 end
 
 local function select_profile(profiles, result)
-  vim.print(profiles)
   local profile_name = picker.pick_sync(nil, polyfills.tbl_map(function(i) return { display = i, value = i } end, profiles), "Pick launch profile", true)
   return result[profile_name.value]
 end
