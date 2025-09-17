@@ -78,7 +78,7 @@ M.prepare_debugger = function(use_default)
   local co = coroutine.running()
   client:debugger_start(function() coroutine.resume(co) end, {
     on_crash = function()
-      logger.error("Debugger crashed")
+      logger.error("Debugger failed to start")
       coroutine.resume(co)
     end,
   })
