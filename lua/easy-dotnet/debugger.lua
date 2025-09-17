@@ -138,7 +138,7 @@ end
 
 local function select_profile(profiles, result)
   local profile_name = picker.pick_sync(nil, polyfills.tbl_map(function(i) return { display = i, value = i } end, profiles), "Pick launch profile", true)
-  return result.profiles[profile_name.value]
+  return result[profile_name.value]
 end
 
 M.get_launch_profiles = function(relative_project_path)
