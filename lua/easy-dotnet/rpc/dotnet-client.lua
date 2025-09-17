@@ -114,6 +114,7 @@ end
 ---@field msbuild MsBuildClient
 ---@field debugger DebuggerClient
 ---@field template_engine TemplateEngineClient
+---@field launch_profiles LaunchProfilesClient
 ---@field nuget NugetClient
 ---@field roslyn RoslynClient
 ---@field test TestClient
@@ -140,6 +141,7 @@ function M:new()
   instance._initialized = false
   instance.msbuild = require("easy-dotnet.rpc.controllers.msbuild").new(client)
   instance.template_engine = require("easy-dotnet.rpc.controllers.template").new(client)
+  instance.launch_profiles = require("easy-dotnet.rpc.controllers.launch-profiles").new(client)
   instance.nuget = require("easy-dotnet.rpc.controllers.nuget").new(client)
   instance.roslyn = require("easy-dotnet.rpc.controllers.roslyn").new(client)
   instance.debugger = require("easy-dotnet.rpc.controllers.debugger").new(client)
