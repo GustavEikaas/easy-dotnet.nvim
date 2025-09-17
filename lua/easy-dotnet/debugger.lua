@@ -1,4 +1,6 @@
 local M = {}
+
+local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local picker = require("easy-dotnet.picker")
 local error_messages = require("easy-dotnet.error-messages")
 local logger = require("easy-dotnet.logger")
@@ -53,6 +55,39 @@ M.get_debug_dll = function(default)
     project_name = result.projectName,
     relative_dll_path = target_path,
     relative_project_path = absolute_project_path,
+  }
+end
+
+---@class PrepareDebuggerResult
+---@field path string
+---@field target_framework_moniker string | nil
+---@field configuration string | nil
+---@field launch_profile string | nil
+
+---@param use_default boolean
+---@return PrepareDebuggerResult
+M.prepare_debugger = function(use_default)
+  local project = pick_project(use_default)
+  --TODO:
+  --1. pick project
+  --2. pick configuration (Debug/Release)
+  --3. pick framework (net6.0/net7.0 etc)
+  --4. pick launch profile (if exists)
+  --5. build project
+  --6. start debugger
+  local co = coroutine.running()
+  client:debugger_start(function() coroutine.resume(co) end, {
+    on_crash = function()
+      logger.error("Debugger crashed")
+      coroutine.resume(co)
+    end,
+  })
+  coroutine.yield()
+  return {
+    path = project.path,
+    target_framework_moniker = project.msbuild_props.targetFramework,
+    configuration = "Debug",
+    launch_profile = nil,
   }
 end
 
