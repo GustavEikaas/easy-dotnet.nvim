@@ -50,6 +50,7 @@ local M = {
 ---@alias DotnetPipeMethod
 ---| "initialize"
 ---| "msbuild/build"
+---| "launch-profiles"
 ---| "nuget/restore"
 ---| "msbuild/pack"
 ---| "msbuild/list-project-reference"
