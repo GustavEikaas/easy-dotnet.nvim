@@ -76,7 +76,7 @@ M.prepare_debugger = function(use_default)
   --5. build project
   --6. start debugger
   local co = coroutine.running()
-  client:debugger_start(function() coroutine.resume(co) end, {
+  client.msbuild:msbuild_build({ targetPath = project.path, targetFramework = project.msbuild_props.targetFramework }, function() coroutine.resume(co) end, {
     on_crash = function()
       logger.error("Debugger failed to start")
       coroutine.resume(co)
