@@ -272,6 +272,7 @@ end
 M.create_new_item = wrap(function(...) require("easy-dotnet.actions.new").create_new_item(...) end)
 
 M.get_debug_dll = debug.get_debug_dll
+M.prepare_debugger = debug.prepare_debugger
 M.get_environment_variables = debug.get_environment_variables
 
 M.try_get_selected_solution = function()

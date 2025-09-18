@@ -112,6 +112,7 @@ end
 ---@field stop fun(self: DotnetClient, cb: fun()): nil # Stops the dotnet server
 ---@field restart fun(self: DotnetClient, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
 ---@field msbuild MsBuildClient
+---@field debugger DebuggerClient
 ---@field template_engine TemplateEngineClient
 ---@field launch_profiles LaunchProfilesClient
 ---@field nuget NugetClient
@@ -120,6 +121,7 @@ end
 ---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: RPC_ProjectUserSecretsInitResponse), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
 ---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
 ---@field outdated_packages fun(self: DotnetClient, target_path: string, cb?: fun(res: OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
+---@field debugger_start fun(self: DotnetClient, cb?: fun(), opts?: RPC_CallOpts): RPC_CallHandle
 ---@field get_state fun(self: DotnetClient): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
 ---@field _initializing boolean? # True while initialization is in progress
 ---@field _initialized boolean? # True once initialization is complete
@@ -142,6 +144,7 @@ function M:new()
   instance.launch_profiles = require("easy-dotnet.rpc.controllers.launch-profiles").new(client)
   instance.nuget = require("easy-dotnet.rpc.controllers.nuget").new(client)
   instance.roslyn = require("easy-dotnet.rpc.controllers.roslyn").new(client)
+  instance.debugger = require("easy-dotnet.rpc.controllers.debugger").new(client)
   instance.test = require("easy-dotnet.rpc.controllers.test").new(client)
   return instance
 end
@@ -222,12 +225,13 @@ function M:_initialize(cb)
   coroutine.wrap(function()
     local finished = jobs.register_job({ name = "Initializing...", on_success_text = "Client initialized", on_error_text = "Failed to initialize server" })
     local use_visual_studio = require("easy-dotnet.options").options.server.use_visual_studio == true
+    local debugger_path = require("easy-dotnet.options").options.debugger.bin_path
     local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
     self._client.request("initialize", {
       request = {
         clientInfo = { name = "EasyDotnet", version = "2.0.0" },
         projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
-        options = { useVisualStudio = use_visual_studio },
+        options = { useVisualStudio = use_visual_studio, debuggerOptions = { binaryPath = debugger_path } },
       },
     }, function(response)
       local crash = M.handle_rpc_error(response)
@@ -297,4 +301,15 @@ function M:outdated_packages(target_path, cb)
   return id
 end
 
+function M:debugger_start(cb, opts)
+  opts = opts or {}
+  return M.create_rpc_call({
+    client = self._client,
+    job = nil,
+    cb = cb,
+    on_crash = opts.on_crash,
+    method = "debugger/start",
+    params = nil,
+  })()
+end
 return M
