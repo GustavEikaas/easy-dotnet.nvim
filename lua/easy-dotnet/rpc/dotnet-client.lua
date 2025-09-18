@@ -225,12 +225,13 @@ function M:_initialize(cb)
   coroutine.wrap(function()
     local finished = jobs.register_job({ name = "Initializing...", on_success_text = "Client initialized", on_error_text = "Failed to initialize server" })
     local use_visual_studio = require("easy-dotnet.options").options.server.use_visual_studio == true
+    local debugger_path = require("easy-dotnet.options").options.debugger.bin_path
     local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
     self._client.request("initialize", {
       request = {
         clientInfo = { name = "EasyDotnet", version = "2.0.0" },
         projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
-        options = { useVisualStudio = use_visual_studio },
+        options = { useVisualStudio = use_visual_studio, debuggerOptions = { binaryPath = debugger_path } },
       },
     }, function(response)
       local crash = M.handle_rpc_error(response)

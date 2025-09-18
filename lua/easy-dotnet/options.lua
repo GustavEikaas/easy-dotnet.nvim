@@ -145,6 +145,10 @@ local M = {
       ---@type nil | "Off" | "Critical" | "Error" | "Warning" | "Information" | "Verbose" | "All"
       log_level = nil,
     },
+    debygger = {
+      -- The path to netcoredbg
+      bin_path = nil,
+    },
     enable_filetypes = true,
     auto_bootstrap_namespace = {
       type = "block_scoped",

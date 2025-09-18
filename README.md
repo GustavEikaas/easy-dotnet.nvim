@@ -224,6 +224,10 @@ Although not *required* by the plugin, it is highly recommended to install one o
           ---@type nil | "Off" | "Critical" | "Error" | "Warning" | "Information" | "Verbose" | "All"
           log_level = nil,
       },
+      debygger = {
+        -- The path to netcoredbg
+        bin_path = nil,
+      },
       -- choose which picker to use with the plugin
       -- possible values are "telescope" | "fzf" | "snacks" | "basic"
       -- if no picker is specified, the plugin will determine
