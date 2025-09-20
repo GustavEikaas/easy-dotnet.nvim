@@ -97,9 +97,7 @@ function M.create_enumerate_rpc_call(opts)
       id = id,
       cancel = function()
         opts.client.cancel(id)
-        if maybe_job then
-          maybe_job(true)
-        end
+        if maybe_job then maybe_job(true) end
       end,
     }
   end
