@@ -95,7 +95,13 @@ function M.create_enumerate_rpc_call(opts)
     if not id then error("Failed to send RPC call") end
     return {
       id = id,
-      cancel = function() opts.client.cancel(id) end,
+      cancel = function()
+        opts.client.cancel(id)
+        if maybe_job then
+          vim.print("Cleaning up cancelled job")
+          maybe_job(true)
+        end
+      end,
     }
   end
 end
