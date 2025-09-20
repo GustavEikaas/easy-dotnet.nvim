@@ -35,7 +35,6 @@ jobs:
             const repo_owner = context.repo.owner;
             const message = process.env.GREETING;
 
-            if (pr_author !== repo_owner) {
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -43,8 +42,5 @@ jobs:
                 body: `[TEST MODE] 👋 Workflow ran successfully!\n\n${message}`
               });
               core.info(`Commented on PR #${pr_number} by ${pr_author}`);
-            } else {
-              core.info(`Skipping comment since PR author (${pr_author}) is the repo owner.`);
-            }
         env:
           GREETING: ${{ steps.greeting.outputs.text }}
