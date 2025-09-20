@@ -14,21 +14,22 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Read greeting message
-        id: greeting
-        run: |
-          content=$(cat .github/ISSUE_GREETING.md)
-          echo "text=$content" >> $GITHUB_OUTPUT
-
       - name: Add a comment to pull request (for testing)
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const fs = require("fs");
+            const path = require("path");
+
             const pr_number = context.payload.pull_request.number;
             const pr_author = context.payload.pull_request.user.login;
             const repo_owner = context.repo.owner;
-            const message = process.env.GREETING;
+
+            const message = fs.readFileSync(
+              path.join(process.env.GITHUB_WORKSPACE, ".github/ISSUE_GREETING.md"),
+              "utf8"
+            );
 
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
@@ -36,6 +37,3 @@ jobs:
                 issue_number: pr_number,
                 body: `[TEST MODE] 👋 Workflow ran successfully!\n\n${message}`
               });
-              core.info(`Commented on PR #${pr_number} by ${pr_author}`);
-        env:
-          GREETING: ${{ steps.greeting.outputs.text }}
