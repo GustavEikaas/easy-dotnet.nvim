@@ -5,6 +5,7 @@ local logger = require("easy-dotnet.logger")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
+local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 
 ---Runs a dotnet project with the given arguments using the terminal runner.
 ---
@@ -97,7 +98,7 @@ end
 local function pick_profile(project)
   local co = coroutine.running()
   assert(co, "coroutine required for getting launch profiles")
-  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+
   client:initialize(function()
     client.launch_profiles:get_launch_profiles(vim.fs.dirname(project.path), function(res)
       local values = vim.tbl_filter(function(value) return value.value.commandName == "Project" end, res)
