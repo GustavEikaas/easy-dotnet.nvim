@@ -5,7 +5,6 @@ local logger = require("easy-dotnet.logger")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
-local polyfills = require("easy-dotnet.polyfills")
 
 ---Runs a dotnet project with the given arguments using the terminal runner.
 ---
