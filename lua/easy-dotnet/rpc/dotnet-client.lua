@@ -98,7 +98,6 @@ function M.create_enumerate_rpc_call(opts)
       cancel = function()
         opts.client.cancel(id)
         if maybe_job then
-          vim.print("Cleaning up cancelled job")
           maybe_job(true)
         end
       end,
