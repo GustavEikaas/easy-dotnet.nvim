@@ -17,12 +17,7 @@ jobs:
       - name: Read greeting message
         id: greeting
         run: |
-          # Store file contents in output
           content=$(cat .github/ISSUE_GREETING.md)
-          # Escape % and newlines for GitHub Actions output
-          content="${content//'%'/'%25'}"
-          content="${content//$'\n'/'%0A'}"
-          content="${content//$'\r'/'%0D'}"
           echo "text=$content" >> $GITHUB_OUTPUT
 
       - name: Add a comment to pull request (for testing)
