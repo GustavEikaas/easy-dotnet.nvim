@@ -1,8 +1,8 @@
 local polyfills = require("easy-dotnet.polyfills")
 
 local M = {
-  include_pending = nil,
-  version_pending = nil,
+  include_pending_cancel_cb = nil,
+  version_pending_cancel_cb = nil,
 }
 
 function M.new() return setmetatable({}, { __index = M }) end
@@ -37,29 +37,29 @@ function M:get_completions(ctx, callback)
   if inside_include then
     local search_term = inside_include:gsub('%Include="', "")
 
-    if M.include_pending then
-      client._client.cancel(M.include_pending)
-      M.include_pending = nil
+    if M.include_pending_cancel_cb then
+      M.include_pending_cancel_cb()
+      M.include_pending_cancel_cb = nil
     end
     client:initialize(function()
-      M.include_pending = client.nuget:nuget_search(search_term, nil, function(res)
+      M.include_pending_cancel_cb = client.nuget:nuget_search(search_term, nil, function(res)
         local items = polyfills.tbl_map(function(value)
           local label = string.format("%s (%s)", value.id, value.source)
           return { label = label, dup = 0, insertText = value.id, documentation = "", kind = 11 }
         end, res)
         transformed_callback(items)
-      end).id
+      end).cancel
     end)
 
     return
   elseif inside_version then
-    if M.version_pending then
-      client._client.cancel(M.version_pending)
-      M.version_pending = nil
+    if M.version_pending_cancel_cb then
+      M.version_pending_cancel_cb()
+      M.version_pending_cancel_cb = nil
     end
     local package_name = current_line:match('Include="([^"]+)"')
     client:initialize(function()
-      M.version_pending = client.nuget:nuget_get_package_versions(package_name, nil, false, function(res)
+      M.version_pending_cancel_cb = client.nuget:nuget_get_package_versions(package_name, nil, false, function(res)
         local index = 0
         local latest = nil
         local last_index = #res - 1
@@ -85,7 +85,7 @@ function M:get_completions(ctx, callback)
           })
         end
         transformed_callback(items)
-      end).id
+      end).cancel
     end)
     return
   end
