@@ -5,7 +5,7 @@ local logger = require("easy-dotnet.logger")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
-local polyfills = require("easy-dotnet.polyfills")
+local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 
 ---Runs a dotnet project with the given arguments using the terminal runner.
 ---
@@ -96,21 +96,19 @@ end
 
 ---@param project DotnetProject
 local function pick_profile(project)
-  local path = polyfills.fs.joinpath(vim.fs.dirname(project.path), "Properties/launchSettings.json")
-  --In case of OUT OF MEM, this would be another way: cat launchSettings.json | jq '.profiles | to_entries[] | select(.value.commandName == \"Project\") | .key'
-  local success, content = pcall(function() return table.concat(vim.fn.readfile(path), "\n") end)
-  if not success then
-    logger.trace("No launchSettings file found")
-    return nil
-  end
+  local co = coroutine.running()
+  assert(co, "coroutine required for getting launch profiles")
 
-  local decodeSuccess, json = pcall(vim.fn.json_decode, content)
-  if not decodeSuccess then error("Failed to decode json in launchSettings.json") end
+  client:initialize(function()
+    client.launch_profiles:get_launch_profiles(vim.fs.dirname(project.path), function(res)
+      local values = vim.tbl_filter(function(value) return value.value.commandName == "Project" end, res)
+      coroutine.resume(co, values)
+    end, { on_crash = function() coroutine.resume(co) end })
+  end)
 
-  local options = {}
-  for key, value in pairs(json.profiles) do
-    if value.commandName and value.commandName == "Project" then table.insert(options, { display = key }) end
-  end
+  local profiles = coroutine.yield()
+  if not profiles or #profiles == 0 then return nil end
+  local options = vim.tbl_map(function(value) return { display = value.name } end, profiles)
 
   local profile = picker.pick_sync(nil, options, "Pick profile")
   if not profile then error("No profile selected") end

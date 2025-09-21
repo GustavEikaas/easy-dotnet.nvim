@@ -81,10 +81,10 @@ local M = {
     terminal = function(path, action, args, ctx)
       args = args or ""
       local commands = {
-        run = function() return ctx.cmd end,
-        test = function() return ctx.cmd end,
-        restore = function() return ctx.cmd end,
-        build = function() return ctx.cmd end,
+        run = function() return string.format("%s %s", ctx.cmd, args) end,
+        test = function() return string.format("%s %s", ctx.cmd, args) end,
+        restore = function() return string.format("%s %s", ctx.cmd, args) end,
+        build = function() return string.format("%s %s", ctx.cmd, args) end,
         watch = function() return string.format("dotnet watch --project %s %s", path, args) end,
       }
       local command = commands[action]()
@@ -178,6 +178,8 @@ local M = {
       mappings = {
         open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
       },
+      bin_path = nil,
+      auto_register_dap = true,
     },
     diagnostics = {
       default_severity = "error",

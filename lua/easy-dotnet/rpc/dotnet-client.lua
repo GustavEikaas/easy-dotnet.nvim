@@ -95,7 +95,10 @@ function M.create_enumerate_rpc_call(opts)
     if not id then error("Failed to send RPC call") end
     return {
       id = id,
-      cancel = function() opts.client.cancel(id) end,
+      cancel = function()
+        opts.client.cancel(id)
+        if maybe_job then maybe_job(true) end
+      end,
     }
   end
 end
@@ -125,7 +128,7 @@ end
 ---@field get_state fun(self: DotnetClient): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
 ---@field _initializing boolean? # True while initialization is in progress
 ---@field _initialized boolean? # True once initialization is complete
----@field _initialize fun(self: DotnetClient, cb?: fun(response: RPC_Response)) # Sends the "initialize" RPC request to the server
+---@field _initialize fun(self: DotnetClient, cb?: fun(response: table), opts?: RPC_CallOpts) # Sends the "initialize" RPC request to the server
 ---@field _init_callbacks table<function> List of callback functions waiting for initialization to complete
 
 --- Constructor
@@ -186,15 +189,17 @@ function M:initialize(cb)
     self._client.setup({ pipe_path = self._server.pipe_path, debug = false })
     self._client.connect(function()
       vim.schedule(function()
-        self:_initialize(function(...)
-          local routes = ({ ... })[1].result.capabilities.routes
+        self:_initialize(function(result)
+          local routes = result.capabilities.routes
           self._client.routes = routes
+
+          M.initialized_msbuild_path = result.toolPaths.msBuildPath
 
           self._initializing = false
           self._initialized = true
 
           for _, callback in ipairs(self._init_callbacks) do
-            pcall(callback, ...)
+            pcall(callback, result)
           end
           self._init_callbacks = {}
         end)
@@ -221,28 +226,27 @@ function M:get_state()
   end
 end
 
-function M:_initialize(cb)
+function M:_initialize(cb, opts)
+  opts = opts or {}
   coroutine.wrap(function()
-    local finished = jobs.register_job({ name = "Initializing...", on_success_text = "Client initialized", on_error_text = "Failed to initialize server" })
     local use_visual_studio = require("easy-dotnet.options").options.server.use_visual_studio == true
     local debugger_path = require("easy-dotnet.options").options.debugger.bin_path
     local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
-    self._client.request("initialize", {
-      request = {
-        clientInfo = { name = "EasyDotnet", version = "2.0.0" },
-        projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
-        options = { useVisualStudio = use_visual_studio, debuggerOptions = { binaryPath = "netcoredbg" } },
+
+    return M.create_rpc_call({
+      client = self._client,
+      job = { name = "Initializing...", on_success_text = "Client initialized", on_error_text = "Failed to initialize server" },
+      cb = cb,
+      on_crash = opts.on_crash,
+      method = "initialize",
+      params = {
+        request = {
+          clientInfo = { name = "EasyDotnet", version = "2.0.0" },
+          projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
+          options = { useVisualStudio = use_visual_studio, debuggerOptions = { binaryPath = debugger_path} },
+        },
       },
-    }, function(response)
-      local crash = M.handle_rpc_error(response)
-      if crash then
-        finished(false)
-        return
-      end
-      finished(true)
-      M.initialized_msbuild_path = response.result.toolPaths.msBuildPath
-      if cb then cb(response) end
-    end)
+    })()
   end)()
 end
 

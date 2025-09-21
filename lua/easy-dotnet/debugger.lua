@@ -108,6 +108,7 @@ M.prepare_debugger = function(use_default)
   )
 
   coroutine.yield()
+  return "REWRITE_ATTACH"
 end
 
 local function run_job_sync(cmd)
