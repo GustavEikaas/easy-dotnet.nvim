@@ -110,84 +110,89 @@ local function query_stack_frame(frame, session, bufnr, cache)
   end)
 end
 
+local function try_get_command(session)
+  if session.adapter and session.adapter.command then return session.adapter.command or "" end
+  return ""
+end
+
 function M.register_listener()
   local keymap_backup = {}
 
-  -- require("dap").listeners.after.event_stopped["easy-dotnet-scopes"] = function(session, body)
-  --     ---@diagnostic disable-next-line: undefined-field
-  --     -- if not (session.adapter.command:lower():find("netcoredbg") or session.config.type == "coreclr") then return end
-  --     session:request("stackTrace", { threadId = body.threadId }, function(err1, response1)
-  --     if err1 then return end
-  --
-  --     local frame = response1.stackFrames[1]
-  --     if not frame then return end
-  --
-  --     local file = frame.source.path
-  --     local bufnr = open_or_switch_to_file(file)
-  --     if not file then error("StackFrame file cannot be nil") end
-  --
-  --     local cache = {}
-  --
-  --     local opt = require("easy-dotnet.options").options.debugger.mappings.open_variable_viewer
-  --     local existing = vim.fn.maparg(opt.lhs, "n", false, true)
-  --     if existing and existing.buffer == bufnr then
-  --       keymap_backup[bufnr] = existing
-  --     elseif vim.api.nvim_buf_is_loaded(bufnr) then
-  --       keymap_backup[bufnr] = false
-  --     end
-  --
-  --     vim.keymap.set("n", opt.lhs, function()
-  --       local current_line = vim.api.nvim_win_get_cursor(0)[1]
-  --       local matches = {}
-  --       for key, value in pairs(cache) do
-  --         if value.netcoredbg and value.roslyn and value.roslyn.lineStart == current_line then table.insert(matches, { display = key, value = value }) end
-  --       end
-  --       if #matches == 0 then
-  --         return
-  --       else
-  --         require("easy-dotnet.picker").picker(nil, matches, function(val)
-  --           require("easy-dotnet.netcoredbg").resolve_by_var_name(
-  --             val.value.frame.frame_id,
-  --             val.display,
-  --             function(res) require("easy-dotnet.netcoredbg.debugger-float").show(res.value, val.value.frame.frame_id) end
-  --           )
-  --         end, "Pick variable", true, true)
-  --       end
-  --     end, { silent = true, buffer = bufnr, desc = opt.desc })
-  --
-  --     query_stack_frame(frame, session, bufnr, cache)
-  --
-  --     local frame2 = response1.stackFrames[2]
-  --     if frame2 and frame2.source and frame2.source.path == file then query_stack_frame(frame2, session, bufnr, cache) end
-  --   end)
-  -- end
-  --
-  -- require("dap").listeners.after.event_exited["easy-dotnet-cleanup"] = function()
-  --   ---@type Keymap
-  --   local opt = require("easy-dotnet.options").options.debugger.mappings.open_variable_viewer
-  --   require("easy-dotnet.netcoredbg.debugger-float").close()
-  --   require("easy-dotnet.netcoredbg").variable_cache = {}
-  --   require("easy-dotnet.netcoredbg").pending_callbacks = {}
-  --   for bufnr, original in pairs(keymap_backup) do
-  --     if vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_is_loaded(bufnr) then
-  --       vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-  --       if original == false then
-  --         pcall(vim.keymap.del, "n", opt.lhs, { buffer = bufnr })
-  --       else
-  --         if original.rhs then
-  --           vim.keymap.set("n", opt.lhs, original.rhs, {
-  --             noremap = original.noremap == 1,
-  --             expr = original.expr == 1,
-  --             silent = original.silent == 1,
-  --             buffer = bufnr,
-  --           })
-  --         end
-  --       end
-  --     end
-  --   end
-  --
-  --   keymap_backup = {}
-  -- end
+  require("dap").listeners.after.event_stopped["easy-dotnet-scopes"] = function(session, body)
+    ---@diagnostic disable-next-line: undefined-field
+    if not (try_get_command(session):lower():find("netcoredbg") or session.config.type == "coreclr" or session.config.type == "easy-dotnet") then return end
+    session:request("stackTrace", { threadId = body.threadId }, function(err1, response1)
+      if err1 then return end
+
+      local frame = response1.stackFrames[1]
+      if not frame then return end
+
+      local file = frame.source.path
+      local bufnr = open_or_switch_to_file(file)
+      if not file then error("StackFrame file cannot be nil") end
+
+      local cache = {}
+
+      local opt = require("easy-dotnet.options").options.debugger.mappings.open_variable_viewer
+      local existing = vim.fn.maparg(opt.lhs, "n", false, true)
+      if existing and existing.buffer == bufnr then
+        keymap_backup[bufnr] = existing
+      elseif vim.api.nvim_buf_is_loaded(bufnr) then
+        keymap_backup[bufnr] = false
+      end
+
+      vim.keymap.set("n", opt.lhs, function()
+        local current_line = vim.api.nvim_win_get_cursor(0)[1]
+        local matches = {}
+        for key, value in pairs(cache) do
+          if value.netcoredbg and value.roslyn and value.roslyn.lineStart == current_line then table.insert(matches, { display = key, value = value }) end
+        end
+        if #matches == 0 then
+          return
+        else
+          require("easy-dotnet.picker").picker(nil, matches, function(val)
+            require("easy-dotnet.netcoredbg").resolve_by_var_name(
+              val.value.frame.frame_id,
+              val.display,
+              function(res) require("easy-dotnet.netcoredbg.debugger-float").show(res.value, val.value.frame.frame_id) end
+            )
+          end, "Pick variable", true, true)
+        end
+      end, { silent = true, buffer = bufnr, desc = opt.desc })
+
+      query_stack_frame(frame, session, bufnr, cache)
+
+      local frame2 = response1.stackFrames[2]
+      if frame2 and frame2.source and frame2.source.path == file then query_stack_frame(frame2, session, bufnr, cache) end
+    end)
+  end
+
+  require("dap").listeners.after.event_exited["easy-dotnet-cleanup"] = function()
+    ---@type Keymap
+    local opt = require("easy-dotnet.options").options.debugger.mappings.open_variable_viewer
+    require("easy-dotnet.netcoredbg.debugger-float").close()
+    require("easy-dotnet.netcoredbg").variable_cache = {}
+    require("easy-dotnet.netcoredbg").pending_callbacks = {}
+    for bufnr, original in pairs(keymap_backup) do
+      if vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_is_loaded(bufnr) then
+        vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+        if original == false then
+          pcall(vim.keymap.del, "n", opt.lhs, { buffer = bufnr })
+        else
+          if original.rhs then
+            vim.keymap.set("n", opt.lhs, original.rhs, {
+              noremap = original.noremap == 1,
+              expr = original.expr == 1,
+              silent = original.silent == 1,
+              buffer = bufnr,
+            })
+          end
+        end
+      end
+    end
+
+    keymap_backup = {}
+  end
 end
 
 return M
