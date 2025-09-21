@@ -103,6 +103,27 @@ local register_legacy_functions = function()
   end
 end
 
+local function auto_register_dap(merged_opts)
+  if merged_opts.debugger.auto_register_dap == true and merged_opts.debugger.bin_path ~= nil then
+    local success, dap = pcall(require, "dap")
+    if not success then return end
+    local dotnet = require("easy-dotnet")
+
+    local debugger_conf = dap.configurations["cs"] or {}
+
+    vim.list_extend(debugger_conf, { {
+      type = "easy-dotnet",
+      name = "easy-dotnet",
+      request = "attach",
+      select_project = dotnet.prepare_debugger,
+    } })
+
+    dap.configurations["cs"] = debugger_conf
+
+    dap.adapters["easy-dotnet"] = function(callback) callback({ type = "server", host = "127.0.0.1", port = 8086 }) end
+  end
+end
+
 ---@return table<string>
 local function split_by_whitespace(str) return str and polyfills.iter(str:gmatch("%S+")):totable() or {} end
 
@@ -265,6 +286,8 @@ M.setup = function(opts)
   end)
 
   register_legacy_functions()
+
+  wrap(auto_register_dap)(merged_opts)
   wrap(background_scanning)(merged_opts)
   wrap(auto_install_easy_dotnet)()
 end
@@ -272,6 +295,7 @@ end
 M.create_new_item = wrap(function(...) require("easy-dotnet.actions.new").create_new_item(...) end)
 
 M.get_debug_dll = debug.get_debug_dll
+M.prepare_debugger = debug.prepare_debugger
 M.get_environment_variables = debug.get_environment_variables
 
 M.try_get_selected_solution = function()

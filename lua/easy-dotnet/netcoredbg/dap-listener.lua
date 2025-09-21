@@ -110,13 +110,17 @@ local function query_stack_frame(frame, session, bufnr, cache)
   end)
 end
 
+local function try_get_command(session)
+  if session.adapter and session.adapter.command then return session.adapter.command or "" end
+  return ""
+end
+
 function M.register_listener()
   local keymap_backup = {}
 
   require("dap").listeners.after.event_stopped["easy-dotnet-scopes"] = function(session, body)
     ---@diagnostic disable-next-line: undefined-field
-    if not (session.adapter.command:lower():find("netcoredbg") or session.config.type == "coreclr") then return end
-
+    if not (try_get_command(session):lower():find("netcoredbg") or session.config.type == "coreclr" or session.config.type == "easy-dotnet") then return end
     session:request("stackTrace", { threadId = body.threadId }, function(err1, response1)
       if err1 then return end
 

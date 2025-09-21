@@ -1,4 +1,5 @@
 local M = {}
+
 local picker = require("easy-dotnet.picker")
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local error_messages = require("easy-dotnet.error-messages")
@@ -7,6 +8,23 @@ local parsers = require("easy-dotnet.parsers")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local polyfills = require("easy-dotnet.polyfills")
+
+local function select_profile(profiles, result)
+  local profile_name = picker.pick_sync(nil, polyfills.tbl_map(function(i) return { display = i, value = i } end, profiles), "Pick launch profile", true)
+  return result[profile_name.value]
+end
+
+local function select_launch_profile_name(project_path)
+  local launch_profiles = M.get_launch_profiles(project_path)
+
+  if launch_profiles == nil then return nil end
+
+  local profiles = polyfills.tbl_keys(launch_profiles)
+  if #profiles == 0 then return nil end
+
+  local profile_name = picker.pick_sync(nil, polyfills.tbl_map(function(i) return { display = i, value = i } end, profiles), "Pick launch profile", true)
+  return profile_name.value
+end
 
 ---@param use_default boolean
 ---@return DotnetProject, string | nil
@@ -57,6 +75,42 @@ M.get_debug_dll = function(default)
   }
 end
 
+---@class PrepareDebuggerResult
+---@field path string
+---@field target_framework_moniker string | nil
+---@field configuration string | nil
+---@field launch_profile string | nil
+
+---@param use_default boolean
+M.prepare_debugger = function(use_default)
+  local project = pick_project(use_default)
+  --TODO: pick configuration?
+  local co = coroutine.running()
+  client.msbuild:msbuild_build({ targetPath = project.path, targetFramework = project.msbuild_props.targetFramework }, function() coroutine.resume(co) end, {
+    on_crash = function()
+      logger.error("Debugger failed to start")
+      coroutine.resume(co)
+    end,
+  })
+  coroutine.yield()
+
+  local launch_profile_name = select_launch_profile_name(vim.fs.dirname(project.path))
+
+  client.debugger:debugger_start(
+    { targetPath = project.path, targetFramework = project.msbuild_props.targetFramework, configuration = "Debug", launchProfileName = launch_profile_name },
+    function() coroutine.resume(co) end,
+    {
+      on_crash = function()
+        logger.error("Debugger failed to start")
+        coroutine.resume(co)
+      end,
+    }
+  )
+
+  coroutine.yield()
+  return "REWRITE_ATTACH"
+end
+
 local function run_job_sync(cmd)
   local result = {}
   local co = coroutine.running()
@@ -102,11 +156,6 @@ M.start_debugging_test_project = function(project_path)
   }
 end
 
-local function select_profile(profiles, result)
-  local profile_name = picker.pick_sync(nil, polyfills.tbl_map(function(i) return { display = i, value = i } end, profiles), "Pick launch profile", true)
-  return result[profile_name.value]
-end
-
 M.get_launch_profiles = function(relative_project_path)
   local co = coroutine.running()
 
@@ -146,7 +195,7 @@ M.get_dll_for_solution_project = function(default)
   if default == nil then default = false end
   local project = pick_project(default)
 
-  local path = vim.fs.dirname(project.path)
+  local path = project.path
   return {
     dll = project.get_dll_path(),
     project = path,

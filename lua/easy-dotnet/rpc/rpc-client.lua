@@ -49,6 +49,7 @@ local M = {
 
 ---@alias DotnetPipeMethod
 ---| "initialize"
+---| "debugger/start"
 ---| "msbuild/build"
 ---| "launch-profiles"
 ---| "nuget/restore"

@@ -115,6 +115,7 @@ end
 ---@field stop fun(self: DotnetClient, cb: fun()): nil # Stops the dotnet server
 ---@field restart fun(self: DotnetClient, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
 ---@field msbuild MsBuildClient
+---@field debugger DebuggerClient
 ---@field template_engine TemplateEngineClient
 ---@field launch_profiles LaunchProfilesClient
 ---@field nuget NugetClient
@@ -145,6 +146,7 @@ function M:new()
   instance.launch_profiles = require("easy-dotnet.rpc.controllers.launch-profiles").new(client)
   instance.nuget = require("easy-dotnet.rpc.controllers.nuget").new(client)
   instance.roslyn = require("easy-dotnet.rpc.controllers.roslyn").new(client)
+  instance.debugger = require("easy-dotnet.rpc.controllers.debugger").new(client)
   instance.test = require("easy-dotnet.rpc.controllers.test").new(client)
   return instance
 end
@@ -227,7 +229,11 @@ function M:_initialize(cb, opts)
   opts = opts or {}
   coroutine.wrap(function()
     local use_visual_studio = require("easy-dotnet.options").options.server.use_visual_studio == true
+    local debugger_path = require("easy-dotnet.options").options.debugger.bin_path
     local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
+
+    local debuggerOptions = vim.empty_dict()
+    debuggerOptions["binaryPath"] = debugger_path
 
     return M.create_rpc_call({
       client = self._client,
@@ -239,7 +245,7 @@ function M:_initialize(cb, opts)
         request = {
           clientInfo = { name = "EasyDotnet", version = "2.0.0" },
           projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
-          options = { useVisualStudio = use_visual_studio },
+          options = { useVisualStudio = use_visual_studio, debuggerOptions = debuggerOptions },
         },
       },
     })()

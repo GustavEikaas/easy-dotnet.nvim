@@ -174,6 +174,9 @@ local M = {
       mappings = {
         open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
       },
+      -- The path to netcoredbg
+      bin_path = nil,
+      auto_register_dap = true,
     },
     diagnostics = {
       default_severity = "error",
