@@ -232,6 +232,9 @@ function M:_initialize(cb, opts)
     local debugger_path = require("easy-dotnet.options").options.debugger.bin_path
     local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
 
+    local debuggerOptions = vim.empty_dict()
+    debuggerOptions["binaryPath"] = debugger_path
+
     return M.create_rpc_call({
       client = self._client,
       job = { name = "Initializing...", on_success_text = "Client initialized", on_error_text = "Failed to initialize server" },
@@ -242,7 +245,7 @@ function M:_initialize(cb, opts)
         request = {
           clientInfo = { name = "EasyDotnet", version = "2.0.0" },
           projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
-          options = { useVisualStudio = use_visual_studio, debuggerOptions = { binaryPath = debugger_path } },
+          options = { useVisualStudio = use_visual_studio, debuggerOptions = debuggerOptions },
         },
       },
     })()
