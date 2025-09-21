@@ -1,3 +1,4 @@
+local options = require("easy-dotnet.options")
 --checkhealth easy-dotnet
 local M = {}
 
@@ -33,19 +34,26 @@ local function ensure_nvim_dep_installed(pkg, advice, required)
   end
 end
 
-local function check_coreclr_configured()
+local function check_debugger_configured()
   local success, s = pcall(function() return require("dap") end)
   if not success or not s then
     --verifying nvim-dap is done in another check
     return
   end
   for key, _ in pairs(s.adapters) do
-    if key == "coreclr" then
-      vim.health.ok("coreclr is configured")
+    if key == "easy-dotnet" then
+      vim.health.ok("debugger is configured")
       return
     end
   end
-  vim.health.error("coreclr is not configured", { "https://github.com/GustavEikaas/easy-dotnet.nvim?tab=readme-ov-file#nvim-dap-configuration" })
+  if options.get_option("debugger").bin_path == nil then
+    vim.health.error(
+      "debugger is not configured because `options.debugger.bin_path` was not supplied",
+      { "https://github.com/GustavEikaas/easy-dotnet.nvim?tab=readme-ov-file#nvim-dap-configuration" }
+    )
+  else
+    vim.health.error("debugger not configured, is your debug config overwriting dap config?", { "https://github.com/GustavEikaas/easy-dotnet.nvim?tab=readme-ov-file#nvim-dap-configuration" })
+  end
 end
 
 local function check_cmp()
@@ -134,7 +142,6 @@ M.check = function()
   ensure_dep_installed({ "dotnet", "easydotnet", "-v" }, "dotnet tool install --global EasyDotnet")
   ensure_dep_installed({ "jq" })
   ensure_dep_installed({ "dotnet", "ef" }, "dotnet tool install --global dotnet-ef")
-  ensure_dep_installed({ "netcoredbg", "--version" }, "https://github.com/samsung/netcoredbg")
 
   vim.health.start("easy-dotnet lua dependencies")
   ensure_nvim_dep_installed("plenary", "https://github.com/nvim-lua/plenary.nvim")
@@ -146,7 +153,7 @@ M.check = function()
   }, false)
 
   vim.health.start("easy-dotnet dap configuration (optional)")
-  check_coreclr_configured()
+  check_debugger_configured()
 
   vim.health.start("easy-dotnet configuration")
   local selected_picker = require("easy-dotnet.options").get_option("picker")
