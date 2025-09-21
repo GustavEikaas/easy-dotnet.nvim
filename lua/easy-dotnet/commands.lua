@@ -383,19 +383,4 @@ M.diagnostic = {
   },
 }
 
-M.debugger = {
-  subcommands = {
-    start = {
-      handle = function()
-        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-        client:initialize(function()
-          client:debugger_start(function()
-            vim.print("Debugger started")
-          end)
-        end)
-      end,
-    },
-  },
-}
-
 return M
