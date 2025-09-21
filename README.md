@@ -870,9 +870,7 @@ and parsers for `sql`, `json` and `xml`, so make sure you have these parsers ins
 
 ## Nvim-dap configuration
 
-While its out of the scope of this plugin to setup dap, we do provide a few helpful functions/widgets to make it easier.
-
-Check out [debugging-setup](./docs/debugging.md) for specific details
+Check out [debugging-setup](./docs/debugging.md) for a full walkthrough of debugging setup
 
 ## Troubleshooting
 
