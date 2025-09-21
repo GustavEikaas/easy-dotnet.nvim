@@ -63,8 +63,6 @@ function M.start(cb)
           local full_pipe_path
           if extensions.isWindows() then
             full_pipe_path = [[\\.\pipe\]] .. pipe_name
-
-            full_pipe_path = [[\\.\pipe\EasyDotnet_ROcrjwn9kiox3tKvRWcQg]]
           elseif extensions.isDarwin() then
             full_pipe_path = os.getenv("TMPDIR") .. "CoreFxPipe_" .. pipe_name
           else
