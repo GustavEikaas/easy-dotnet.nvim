@@ -24,26 +24,28 @@ Dont start the project before doing this, debugger has to start it for you
 6. You can now `<F10>` step over, `<F11>` step into, `<F5>` continue and more (see code)
 
 ## Configuration
+The only thing required for easy-dotnet to automatically configure dap for you is that you supply the bin_path option in `options.debugger.bin_path`
 ```lua
-
-local function rebuild_project(co, path)
-  local spinner = require("easy-dotnet.ui-modules.spinner").new()
-  spinner:start_spinner "Building"
-  vim.fn.jobstart(string.format("dotnet build %s", path), {
-    on_exit = function(_, return_code)
-      if return_code == 0 then
-        spinner:stop_spinner "Built successfully"
-      else
-        spinner:stop_spinner("Build failed with exit code " .. return_code, vim.log.levels.ERROR)
-        error "Build failed"
-      end
-      coroutine.resume(co)
-    end,
-  })
-  coroutine.yield()
-end
-
 --lazy.nvim
+-- easy-dotnet config
+return {
+  "GustavEikaas/easy-dotnet.nvim",
+  dependencies = { "nvim-lua/plenary.nvim", "nvim-telescope/telescope.nvim" },
+  config = function()
+    local dotnet = require "easy-dotnet"
+    dotnet.setup {
+      debugger = {
+        --name if netcoredbg is in PATH or full path like 'C:\Users\gusta\AppData\Local\nvim-data\mason\bin\netcoredbg.cmd'
+        bin_path = "netcoredbg",
+      }
+    }
+  end
+}
+```
+
+```lua
+--lazy.nvim
+--nvim-dap config
 return {
   "mfussenegger/nvim-dap",
   config = function()
@@ -68,113 +70,9 @@ return {
 
     -- .NET specific setup using `easy-dotnet`
     require("easy-dotnet.netcoredbg").register_dap_variables_viewer() -- special variables viewer specific for .NET
-    local dotnet = require("easy-dotnet")
-    local debug_dll = nil
-
-    local function ensure_dll()
-      if debug_dll ~= nil then
-        return debug_dll
-      end
-      local dll = dotnet.get_debug_dll(true)
-      debug_dll = dll
-      return dll
-    end
-
-    for _, value in ipairs({ "cs", "fsharp" }) do
-      dap.configurations[value] = {
-        {
-          type = "coreclr",
-          name = "Program",
-          request = "launch",
-          env = function()
-            local dll = ensure_dll()
-            local vars = dotnet.get_environment_variables(dll.project_name, dll.relative_project_path)
-            return vars or nil
-          end,
-          program = function()
-            local dll = ensure_dll()
-            local co = coroutine.running()
-            rebuild_project(co, dll.project_path)
-            return dll.relative_dll_path
-          end,
-          cwd = function()
-            local dll = ensure_dll()
-            return dll.relative_project_path
-          end
-        },
-        {
-          type = "coreclr",
-          name = "Test",
-          request = "attach",
-          processId = function()
-            local res = require("easy-dotnet").experimental.start_debugging_test_project()
-            return res.process_id
-          end
-        }
-      }
-    end
-
-    -- Reset debug_dll after each terminated session
-    dap.listeners.before['event_terminated']['easy-dotnet'] = function()
-      debug_dll = nil
-    end
-
-    dap.adapters.coreclr = {
-      type = "executable",
-      command = "netcoredbg",
-      args = { "--interpreter=vscode" },
-    }
     end
 }
 ```
-
-You could also compute all the lauch profiles for a project at start up with something like
-```lua
-coroutine.resume(coroutine.create(function()
-
-  local sln_file = sln_parse.find_solution_file()
-  local cs_configs = {}
-
-  if sln_file ~= nil then
-    local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(sln_file, function(project)
-      return project.runnable
-      end)
-
-        for _, project in pairs(projects) do
-          local project_dll = project.get_dll_path()
-          local project_profiles = debug.get_launch_profiles(vim.fs.dirname(project.path))
-
-          if project_profiles ~= nil then
-            local profile_names = polyfills.tbl_keys(project_profiles)
-            for _, profile_name in pairs(profile_names) do
-              local config_cs = {
-                type = "coreclr",
-                name = project.name .. " - " .. profile_name,
-                request = "launch",
-                env = function()
-                  local project_profile = project_profiles[profile_name]
-                  project_profile.environmentVariables["ASPNETCORE_URLS"] = project_profile.applicationUrl
-                  return project_profile.environmentVariables
-                end,
-                program = function()
-                  local co = coroutine.running()
-                  rebuild_project(co, project.path)
-                  return project_dll
-                end,
-                cwd = vim.fs.dirname(project.path),
-              }
-
-              table.insert(cs_configs, config_cs)
-            end
-          end
-        end
-    end
-
-    dap.configurations.cs = cs_configs
-end))
-```
-
-
 
 ## Variables viewer
 
@@ -240,24 +138,3 @@ Let's you view and expand more complex variables. With automatic unwrapping
 * Default keybind: `T`
 ![image](https://github.com/user-attachments/assets/4e4c2cff-687b-4715-b5a8-b7ca67f7955b)
 
-
-## Debugging with launch-profiles
-
-The default profile being chosen must be named the same as your project.
-The file is expected to be in the Properties/launchsettings.json relative to your .csproject file
-If you want to be prompted to select a profile, remember to pass false as the last flag to `get_environment_variables`
-```json
-{
-  "profiles": {
-    "NeovimDebugProject.Api": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": true,
-      "launchUrl": "swagger",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "applicationUrl": "https://localhost:7073;http://localhost:7071"
-    }
-}
-```
