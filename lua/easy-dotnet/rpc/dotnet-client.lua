@@ -242,7 +242,7 @@ function M:_initialize(cb, opts)
         request = {
           clientInfo = { name = "EasyDotnet", version = "2.0.0" },
           projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
-          options = { useVisualStudio = use_visual_studio, debuggerOptions = { binaryPath = debugger_path} },
+          options = { useVisualStudio = use_visual_studio, debuggerOptions = { binaryPath = debugger_path } },
         },
       },
     })()
