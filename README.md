@@ -85,6 +85,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 - Outdated command: Makes checking outdated packages a breeze using virtual text
 - (csproj/fsproj) mappings: Keymappings for .csproj and .fsproj files are automatically available
 - Auto bootstrap namespace: Automatically inserts namespace and class/interface when opening a newly created `.cs` file. (also checks clipboard for json to create class from)
+- Debugger works out of the box with nvim-dap (if configured)
 - Create dotnet templates like with `dotnet new`, automatically adding them to the current solution
 - Package autocomplete inside .csproj and .fsproj files [Check it out](#package-autocomplete)
 - [Rider-like](https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments)
@@ -93,7 +94,7 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 ## Requirements
 
 - Neovim needs to be built with **LuaJIT**
-- [EasyDotnet](https://www.nuget.org/packages/EasyDotnet) for testrunner. `dotnet tool install -g EasyDotnet`
+- [EasyDotnet](https://www.nuget.org/packages/EasyDotnet) `dotnet tool install -g EasyDotnet`
 - `jq`
 
 Although not *required* by the plugin, it is highly recommended to install one of:
