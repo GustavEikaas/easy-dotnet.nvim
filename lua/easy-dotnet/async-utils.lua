@@ -23,17 +23,32 @@ M.job_run_async = function(cmd, callback)
   })
 end
 
--- await: Function to suspend a coroutine until an async function completes
--- Must be wrapped in a coroutine
---- Wraps an async function, suspending the coroutine until the job completes.
+--- Await a callback-style async function inside a coroutine.
+---
+--- Wraps a function like `job_run_async` so you can use it in a coroutine-style flow.
+---
+--- Example:
+--- ```lua
+--- local async = require("path.to.this.module")
+---
+--- coroutine.wrap(function()
+---   local res = async.await(async.job_run_async)({ "dotnet", "build", "project.csproj" })
+---   if res.success then
+---     vim.notify("Build succeeded")
+---   else
+---     vim.notify("Build failed: " .. table.concat(res.stderr, "\n"), vim.log.levels.ERROR)
+---   end
+--- end)()
+--- ```
+---
 --- @param async_function fun(cmd: string[], callback: JobCallback)
---- @return fun(...: any): string[], string[], number
+--- @return fun(cmd: string[]): { stdout: string[], stderr: string[], exit_code: number, success: boolean }
 M.await = function(async_function)
   return function(...)
     local co = coroutine.running()
     assert(co, "await function must be called within a coroutine")
 
-    async_function(..., function(stdout, stderr, exit_code) coroutine.resume(co, stdout, stderr, exit_code) end)
+    async_function(..., function(stdout, stderr, exit_code) coroutine.resume(co, { stdout = stdout, stderr = stderr, exit_code = exit_code, success = exit_code == 0 }) end)
 
     return coroutine.yield()
   end

@@ -1,24 +1,34 @@
 local M = {}
 
+---@class NugetSource
+---@field name string  # The source URL or path
+---@field display string  # Display-friendly name (same as URL here)
+
+local async = require("easy-dotnet.async-utils")
 local polyfills = require("easy-dotnet.polyfills")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
 local picker = require("easy-dotnet.picker")
 local logger = require("easy-dotnet.logger")
 local messages = require("easy-dotnet.error-messages")
+local job = require("easy-dotnet.ui-modules.jobs")
 
-local function reverse_list(list)
-  local reversed = {}
-  for i = #list, 1, -1 do
-    table.insert(reversed, list[i])
+local function list_reverse(tbl)
+  local rev = {}
+  for i = #tbl, 1, -1 do
+    table.insert(rev, tbl[i])
   end
-  return reversed
+  return rev
 end
 
 local function get_all_versions(package)
-  local command = string.format('dotnet package search %s --exact-match --format json | jq ".searchResult[].packages[].version"', package)
-  local versions = vim.fn.split(vim.fn.system(command):gsub('"', ""), "\n")
-  return reverse_list(versions)
+  local co = coroutine.running()
+
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  client:initialize(function()
+    client.nuget:nuget_get_package_versions(package, nil, false, function(i) coroutine.resume(co, list_reverse(i)) end)
+  end)
+  return coroutine.yield()
 end
 
 ---@return string
@@ -38,31 +48,34 @@ end
 
 ---@param project_path string | nil
 local function add_package(package, project_path)
-  print("Getting versions...")
   local versions = polyfills.tbl_map(function(v) return { value = v, display = v } end, get_all_versions(package))
 
   local selected_version = picker.pick_sync(nil, versions, "Select a version", true)
-  logger.info("Adding package...")
+  local finished = job.register_job({
+    name = string.format("Installing %s@%s", package, selected_version.value),
+    on_error_text = string.format("dotnet restore failed"),
+    on_success_text = string.format("%s@%s installed", package, selected_version.value),
+  })
   local selected_project = project_path or get_project()
   local command = string.format("dotnet add %s package %s --version %s", selected_project, package, selected_version.value)
   local co = coroutine.running()
   vim.fn.jobstart(command, {
     on_exit = function(_, ex_code)
       if ex_code == 0 then
-        logger.info("Restoring packages...")
         vim.fn.jobstart(string.format("dotnet restore %s", selected_project), {
           on_exit = function(_, code)
             if code ~= 0 then
-              logger.error("Dotnet restore failed...")
-              --Retry usings users terminal, this will present the error for them. Not sure if this is the correct design choice
-              require("easy-dotnet.options").options.terminal(selected_project, "restore", "")
+              local cmd = require("easy-dotnet.options").options.server.use_visual_studio == true and string.format("nuget restore %s %s", selected_project, "")
+                or string.format("dotnet restore %s %s", selected_project, "")
+              require("easy-dotnet.options").options.terminal(selected_project, "restore", "", { cmd = cmd })
+              finished(false)
             else
-              logger.info(string.format("Installed %s@%s in %s", package, selected_version.value, vim.fs.basename(selected_project)))
+              finished(true)
             end
           end,
         })
       else
-        logger.error(string.format("Failed to install %s@%s in %s", package, selected_version.value, vim.fs.basename(selected_project)))
+        finished(false)
       end
       coroutine.resume(co)
     end,
@@ -82,6 +95,30 @@ local function get_package_refs(project_path)
   if vim.v.shell_error then logger.error("Failed to get packages for " .. project_path) end
   local packages = vim.fn.json_decode(out)
   return packages
+end
+
+---@async
+--- Asynchronously lists NuGet sources using `dotnet nuget list source`.
+--- Returns a list of `NugetSource` objects representing each source.
+--- Throws an error if the command fails.
+---
+--- @return NugetSource[] List of NuGet source objects.
+M.get_nuget_sources_async = function()
+  local pack_res = async.await(async.job_run_async)({ "dotnet", "nuget", "list", "source", "--format", "short" })
+
+  if not pack_res.success then
+    vim.print(pack_res.stderr)
+    error("Listing nuget sources failed")
+  end
+  return vim
+    .iter(pack_res.stdout)
+    :map(function(line)
+      local url = vim.trim(line):match("^%u%s+(.*)")
+      if not url then return nil end
+      return { name = url, display = url }
+    end)
+    :filter(function(val) return val ~= nil end)
+    :totable()
 end
 
 M.remove_nuget = function()

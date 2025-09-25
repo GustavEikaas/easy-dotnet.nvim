@@ -1,0 +1,44 @@
+name: "Auto Comment on New Issues"
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Add a comment to new issue if not opened by repo owner
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require("fs");
+            const path = require("path");
+
+            const issue_number = context.payload.issue.number;
+            const issue_author = context.payload.issue.user.login;
+            const repo_owner = context.repo.owner;
+
+            const message = fs.readFileSync(
+              path.join(process.env.GITHUB_WORKSPACE, ".github/ISSUE_GREETING.md"),
+              "utf8"
+            );
+
+            if (issue_author !== repo_owner) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number,
+                body: message
+              });
+              core.info(`Commented on issue #${issue_number} by ${issue_author}`);
+            } else {
+              core.info(`Skipping comment since issue author (${issue_author}) is the repo owner.`);
+            }

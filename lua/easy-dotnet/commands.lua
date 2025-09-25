@@ -1,3 +1,4 @@
+local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
 ---@type table<string,Command>
 local M = {}
@@ -105,10 +106,20 @@ M.project = {
   },
 }
 
+M.pack = {
+  handle = function() actions.pack() end,
+  passthrough = false,
+}
+
+M.push = {
+  handle = function() actions.pack_and_push() end,
+  passthrough = false,
+}
+
 M.add = {
   subcommands = {
     package = {
-      handle = function(args) require("easy-dotnet.nuget").search_nuget(nil, stringify_args(args)) end,
+      handle = function() require("easy-dotnet.nuget").search_nuget(nil) end,
       passthrough = true,
     },
   },
@@ -190,6 +201,7 @@ M.build = {
 }
 
 M.createfile = {
+  passthrough = true,
   handle = function(args) require("easy-dotnet.actions.new").create_new_item(args[1]) end,
 }
 
@@ -306,6 +318,67 @@ M.ef = {
           handle = function() require("easy-dotnet.ef-core.migration").list_migrations() end,
         },
       },
+    },
+  },
+}
+
+M._server = {
+  handle = nil,
+  subcommands = {
+    update = {
+      handle = function()
+        local on_finished = job.register_job({ name = "Updating EasyDotnet", on_success_text = "Successfully updated", on_error_text = "Failed to update server" })
+        require("easy-dotnet.rpc.rpc").global_rpc_client:stop(function()
+          local output = {}
+          vim.fn.jobstart({ "dotnet", "tool", "install", "-g", "EasyDotnet" }, {
+            on_stdout = function(_, data) vim.list_extend(output, data) end,
+            on_stderr = function(_, data) vim.list_extend(output, data) end,
+            on_exit = function(_, code)
+              on_finished(code == 0)
+              if code == 0 then
+                local stdout = vim.trim(vim.fn.system("dotnet-easydotnet -v"):gsub("^Assembly", "Server"))
+                vim.print(string.format("%s installed", stdout))
+                vim.defer_fn(function()
+                  require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(function() end)
+                end, 2000)
+              else
+                vim.print("Update failed, Code " .. code)
+                vim.print(output)
+              end
+            end,
+          })
+        end)
+      end,
+    },
+    stop = {
+      handle = function()
+        local on_finished = job.register_job({ name = "Stopping server...", on_success_text = "Server stopped" })
+        require("easy-dotnet.rpc.rpc").global_rpc_client:stop(function() on_finished(true) end)
+      end,
+    },
+    start = {
+      handle = function()
+        local on_finished = job.register_job({ name = "Starting server...", on_success_text = "Server started" })
+        require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(function() on_finished(true) end)
+      end,
+    },
+    restart = {
+      handle = function()
+        local on_finished = job.register_job({ name = "Restarting server...", on_success_text = "Server restarted" })
+        require("easy-dotnet.rpc.rpc").global_rpc_client:restart(function() on_finished(true) end)
+      end,
+    },
+  },
+}
+
+M.diagnostic = {
+  handle = function() require("easy-dotnet.actions.diagnostics").get_workspace_diagnostics() end,
+  subcommands = {
+    errors = {
+      handle = function() require("easy-dotnet.actions.diagnostics").get_workspace_diagnostics("error") end,
+    },
+    warnings = {
+      handle = function() require("easy-dotnet.actions.diagnostics").get_workspace_diagnostics("warning") end,
     },
   },
 }

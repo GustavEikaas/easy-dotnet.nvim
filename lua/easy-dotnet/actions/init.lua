@@ -11,5 +11,7 @@ M.run = require("easy-dotnet.actions.run").run_project_picker
 M.run_with_profile = require("easy-dotnet.actions.run").run_project_with_profile
 M.test_watcher = require("easy-dotnet.actions.test").test_watcher
 M.watch = require("easy-dotnet.actions.watch").run_project_picker
+M.pack = require("easy-dotnet.actions.pack").pack
+M.pack_and_push = require("easy-dotnet.actions.pack").push
 
 return M

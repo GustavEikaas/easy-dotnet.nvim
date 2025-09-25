@@ -1,18 +1,22 @@
 local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
-local options = require("easy-dotnet.options")
 local M = {}
 
-local function sln_add_project(sln_path, project)
+local function sln_add_project(sln_path, project, cb)
   vim.fn.jobstart(string.format("dotnet sln %s add %s", sln_path, project), {
     stdout_buffered = true,
     on_exit = function(_, b)
-      if b ~= 0 then logger.error("Failed to link project to solution") end
+      if b ~= 0 then
+        logger.error("Failed to link project to solution")
+      else
+        if cb then cb() end
+      end
     end,
   })
 end
 
 local make_project_name = function(name, sln_name)
+  local options = require("easy-dotnet.options")
   if options.get_option("new").project.prefix == "sln" then return sln_name .. "." .. name end
   return name
 end
@@ -33,7 +37,7 @@ local function get_dotnet_new_args(name)
   }
 end
 
-local function create_and_link_project(name, type)
+local function get_project_name_and_output(name)
   local args = get_dotnet_new_args(name)
   if args == nil then
     --No sln
@@ -42,188 +46,115 @@ local function create_and_link_project(name, type)
       output = ".",
     }
   end
-  vim.fn.jobstart(string.format("dotnet new %s -n %s -o %s", type, args.project_name, args.output), {
-    stdout_buffered = true,
-    on_exit = function(_, code)
-      if code ~= 0 then
-        logger.error("Failed to create project")
-      else
-        logger.info("Project created")
-        if args.sln_path ~= nil then sln_add_project(args.sln_path, args.output) end
-      end
-    end,
-  })
+  return args
 end
 
-local function create_config_file(type)
-  local sln_parse = require("easy-dotnet.parsers.sln-parse")
-  local sln_path = sln_parse.find_solution_file()
+local function handle_choices(params, done)
+  local selected_params = {}
 
-  local folder_path = sln_path ~= nil and vim.fs.dirname(sln_path) or nil
-  local output_arg = folder_path ~= nil and string.format("-o %s", folder_path) or ""
-  vim.fn.jobstart(string.format("dotnet new %s %s", type, output_arg), {
-    stdout_buffered = true,
-    on_exit = function(_, code)
-      if code ~= 0 then
-        logger.error("Command failed")
-      else
-        logger.info("Config file created")
+  local function process_param(param_list)
+    if #param_list == 0 then
+      if done then done(selected_params) end
+      return
+    end
+
+    local param = param_list[1]
+    local prompt = param.name
+    if not param.isRequired then prompt = prompt .. " (optional)" end
+
+    if param.dataType == "bool" then
+      local default_bool = (param.defaultValue == "true")
+
+      local options = vim
+        .iter({
+          { display = "yes", value = true },
+          { display = "no", value = false },
+        })
+        :map(function(opt)
+          return {
+            display = opt.display .. (opt.value == default_bool and " (default)" or ""),
+            value = opt.value,
+          }
+        end)
+        :totable()
+
+      table.sort(options, function(a, b) return a.value == default_bool and b.value ~= default_bool end)
+
+      require("easy-dotnet.picker").picker(nil, options, function(bool_val)
+        selected_params[param.name] = bool_val.value
+        process_param({ unpack(param_list, 2) })
+      end, prompt, false, true)
+    elseif param.dataType == "text" or param.dataType == "string" then
+      vim.ui.input({ prompt = prompt, default = param.defaultValue or "" }, function(input)
+        selected_params[param.name] = input or ""
+        process_param({ unpack(param_list, 2) })
+      end)
+    elseif param.dataType == "choice" then
+      local choices = {}
+      for key, va in pairs(param.choices or {}) do
+        table.insert(choices, { display = va, value = key })
       end
-    end,
-  })
+      require("easy-dotnet.picker").picker(nil, choices, function(choice_val)
+        selected_params[param.name] = choice_val.value
+        process_param({ unpack(param_list, 2) })
+      end, prompt, true, true)
+    end
+  end
+
+  process_param(params)
 end
 
-local templates = {
-  {
-    display = "Solution file",
-    type = "config",
-    run = function() create_config_file("sln") end,
-  },
-  {
-    display = "nuget.config",
-    type = "config",
-    run = function() create_config_file("nugetconfig") end,
-  },
-  {
-    display = ".gitignore",
-    type = "config",
-    run = function()
-      vim.fn.jobstart(string.format("dotnet new gitignore", type), {
-        stdout_buffered = true,
-        on_exit = function(_, code)
-          if code ~= 0 then
-            logger.error("Command failed")
-          else
-            logger.info(".gitignore file created")
-          end
-        end,
-      })
-    end,
-  },
-  {
-    display = "global.json file",
-    type = "config",
-    run = function() create_config_file("globaljson") end,
-  },
-  {
-    display = ".editorconfig file",
-    type = "config",
-    run = function() create_config_file("editorconfig") end,
-  },
-  {
-    display = "xUnit Test Project",
-    type = "project",
-    run = function(name) create_and_link_project(name, "xunit") end,
-  },
-  {
-    display = "NUnit Test Project",
-    type = "project",
-    run = function(name) create_and_link_project(name, "nunit") end,
-  },
-  {
-    display = "Blazor",
-    type = "project",
-    run = function(name) create_and_link_project(name, "blazor") end,
-  },
-  {
-    display = "ASP.NET Core with React.js",
-    type = "project",
-    run = function(name) create_and_link_project(name, "react") end,
-  },
-  {
-    display = "ASP.NET Core with Angular",
-    type = "project",
-    run = function(name) create_and_link_project(name, "angular") end,
-  },
-  {
-    display = "ASP.NET Core Web API",
-    type = "project",
-    run = function(name) create_and_link_project(name, "webapi") end,
-  },
-  {
-    display = "ASP.NET Core Web API F#",
-    type = "project",
-    run = function(name) create_and_link_project(name, "webapi --language F#") end,
-  },
-  {
-    display = "ASP.NET Core Empty",
-    type = "project",
-    run = function(name) create_and_link_project(name, "web") end,
-  },
-  {
-    display = "ASP.NET Core Empty F#",
-    type = "project",
-    run = function(name) create_and_link_project(name, "web --language F#") end,
-  },
-  {
-    display = "ASP.NET Core gRPC Service",
-    type = "project",
-    run = function(name) create_and_link_project(name, "grpc") end,
-  },
-  {
-    display = "Console app",
-    type = "project",
-    run = function(name) create_and_link_project(name, "console") end,
-  },
-  {
-    display = "Console app F#",
-    type = "project",
-    run = function(name) create_and_link_project(name, "console --language F#") end,
-  },
-  {
-    display = "Class library",
-    type = "project",
-    run = function(name) create_and_link_project(name, "classlib") end,
-  },
-  {
-    display = "Class library F#",
-    type = "project",
-    run = function(name) create_and_link_project(name, "classlib --language F#") end,
-  },
-  {
-    display = "ASP.NET Core Web API (native AOT)",
-    type = "project",
-    run = function(name) create_and_link_project(name, "webapiaot") end,
-  },
-  {
-    display = "ASP.NET Core Web App (Model-View-Controller)",
-    type = "project",
-    run = function(name) create_and_link_project(name, "mvc") end,
-  },
-  {
-    display = "ASP.NET Core Web App (Razor Pages)",
-    type = "project",
-    run = function(name) create_and_link_project(name, "razor") end,
-  },
-  {
-    display = "Blazor server",
-    type = "project",
-    run = function(name) create_and_link_project(name, "blazorserver") end,
-  },
-  {
-    display = "Blazor WebAssembly Standalone App",
-    type = "project",
-    run = function(name) create_and_link_project(name, "blazorwasm") end,
-  },
+local no_name_templates = {
+  "Microsoft.Standard.QuickStarts.DirectoryProps",
+  "Microsoft.Standard.QuickStarts.DirectoryTargets",
+  "Microsoft.Standard.QuickStarts.DirectoryPackages",
+  "Microsoft.Standard.QuickStarts.EditorConfigFile",
+  "Microsoft.Standard.QuickStarts.GitignoreFile",
+  "Microsoft.Standard.QuickStarts.GlobalJsonFile",
+  "Microsoft.Standard.QuickStarts.Nuget.Config",
+  "Microsoft.Standard.QuickStarts.Web.Config",
+  "Microsoft.Standard.QuickStarts.ToolManifestFile",
 }
 
-M.new = function()
-  local picker = require("easy-dotnet.picker")
-  local template = picker.pick_sync(nil, templates, "Select type")
-  if template.type == "project" then
-    vim.cmd("startinsert")
-    --TODO: telescope
-    vim.ui.input({ prompt = string.format("Enter name for %s", template.display) }, function(input)
-      if input == nil then
-        logger.error("No name provided")
-        return
-      end
-      vim.cmd("stopinsert")
-      coroutine.wrap(function() template.run(input) end)()
+local function prompt_parameters(identity, client, name, cwd, cb)
+  client:template_parameters(identity, function(params)
+    handle_choices(params, function(res)
+      client:template_instantiate(identity, name or "", cwd or vim.fn.getcwd(), res, function()
+        if cb then cb() end
+      end)
     end)
-  else
-    template.run()
-  end
+  end)
+end
+
+function M.new()
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  client:initialize(function()
+    client.template_engine:template_list(function(templates)
+      ---@param value DotnetNewTemplate
+      local choices = vim.tbl_map(function(value)
+        return {
+          value = value,
+          display = value.displayName,
+        }
+      end, templates)
+      require("easy-dotnet.picker").picker(nil, choices, function(selection)
+        ---@type DotnetNewTemplate
+        local val = selection.value
+        if val.type == "project" then
+          vim.ui.input({ prompt = "Enter name:" }, function(input)
+            local args = get_project_name_and_output(input)
+            prompt_parameters(val.identity, client.template_engine, args.project_name, args.output, function() sln_add_project(args.sln_path, args.output) end)
+          end)
+        elseif not vim.tbl_contains(no_name_templates, selection.value.identity) then
+          vim.ui.input({ prompt = "Enter name:" }, function(input)
+            prompt_parameters(val.identity, client.template_engine, input, nil, function() print("Success") end)
+          end)
+        else
+          prompt_parameters(val.identity, client.template_engine, nil, nil, function() print("Success") end)
+        end
+      end, "New", false, true)
+    end)
+  end)
 end
 
 local function name_input_sync() return vim.fn.input("Enter name:") end
@@ -233,53 +164,65 @@ local function name_input_sync() return vim.fn.input("Enter name:") end
 M.create_new_item = function(path, cb)
   path = path or "."
   local template = require("easy-dotnet.picker").pick_sync(nil, {
-    { value = "buildprops", display = "MSBuild Directory.Build.props File", type = "MSBuild/props" },
-    { value = "packagesprops", display = "MSBuild Directory.Packages.props File", type = "MSBuild/props" },
-    { value = "buildtargets", display = "MSBuild Directory.Build.targets File", type = "MSBuild/props" },
-    { value = "apicontroller", display = "Api Controller", type = "Code" },
-    { value = "interface", display = "Interface", type = "Code" },
-    { value = "class", display = "Class", type = "Code" },
-    { value = "mvccontroller", display = "MVC Controller", type = "Code" },
-    { value = "viewimports", display = "MVC ViewImports", type = "Code" },
-    { value = "viewstart", display = "MVC ViewStart", type = "Code" },
-    { value = "razorcomponent", display = "Razor Component", type = "Code" },
-    { value = "page", display = "Razor Page", type = "Code" },
-    { value = "view", display = "Razor View", type = "Code" },
-    { value = "nunit-test", display = "NUnit 3 Test Item", type = "Test/NUnit" },
-    { value = "gitignore", display = "Dotnet Gitignore File", type = "Config" },
-    { value = "tool-manifest", display = "Dotnet Local Tool Manifest File", type = "Config" },
-    { value = "editorconfig", display = "EditorConfig File", type = "Config" },
-    { value = "globaljson", display = "Global.json File", type = "Config" },
-    { value = "nugetconfig", display = "NuGet Config", type = "Config" },
-    { value = "webconfig", display = "Web Config", type = "Config" },
-    { value = "solution", display = "Solution", type = "Config" },
+    { value = "buildprops", display = "MSBuild Directory.Build.props File", type = "MSBuild/props", predefined_file_name = "Directory.Build.props" },
+    { value = "packagesprops", display = "MSBuild Directory.Packages.props File", type = "MSBuild/props", predefined_file_name = "Directory.Packages.props" },
+    { value = "buildtargets", display = "MSBuild Directory.Build.targets File", type = "MSBuild/props", predefined_file_name = "Directory.Build.targets" },
+    { value = "apicontroller", display = "Api Controller", type = "Code", extension = ".cs" },
+    { value = "interface", display = "Interface", type = "Code", extension = ".cs" },
+    { value = "class", display = "Class", type = "Code", extension = ".cs" },
+    { value = "record", display = "Record", type = "Code", extension = ".cs" },
+    { value = "struct", display = "Struct", type = "Code", extension = ".cs" },
+    { value = "enum", display = "Enum", type = "Code", extension = ".cs" },
+    { value = "mvccontroller", display = "MVC Controller", type = "Code", extension = ".cs" },
+    { value = "viewimports", display = "MVC ViewImports", type = "Code", extension = ".cshtml" },
+    { value = "viewstart", display = "MVC ViewStart", type = "Code", extension = ".cshtml" },
+    { value = "razorcomponent", display = "Razor Component", type = "Code", extension = ".razor" },
+    { value = "page", display = "Razor Page", type = "Code", extension = ".cshtml" },
+    { value = "view", display = "Razor View", type = "Code", extension = ".cshtml" },
+    { value = "nunit-test", display = "NUnit 3 Test Item", type = "Test/NUnit", extension = ".cs" },
+    { value = "gitignore", display = "Dotnet Gitignore File", type = "Config", predefined_file_name = ".gitignore" },
+    { value = "tool-manifest", display = "Dotnet Local Tool Manifest File", type = "Config", predefined_file_name = "dotnet-tools.json" },
+    { value = "editorconfig", display = "EditorConfig File", type = "Config", predefined_file_name = ".editorconfig" },
+    { value = "globaljson", display = "Global.json File", type = "Config", predefined_file_name = "global.json" },
+    { value = "nugetconfig", display = "NuGet Config", type = "Config", predefined_file_name = "nuget.config" },
+    { value = "webconfig", display = "Web Config", type = "Config", predefined_file_name = "web.config" },
+    { value = "solution", display = "Solution", type = "Config", extension = ".sln" },
   }, "Type")
 
   assert(template)
 
+  path = path or "."
   local args = ""
+  local file_name
 
-  if template.type == "Code" then
+  if template.predefined_file_name ~= nil then
+    file_name = template.predefined_file_name
+  else
     local name = name_input_sync()
-    args = string.format("-n %s", name)
-  elseif template.type == "Config" then
-    local name = name_input_sync()
-    args = string.format("-n %s", name)
-  elseif template.type == "Test/NUnit" then
-    local name = name_input_sync()
+    if not name or name:match("^%s*$") then
+      logger.error("No name provided")
+      return
+    end
+    file_name = name .. template.extension
     args = string.format("-n %s", name)
   end
 
   local cmd = string.format("dotnet new %s -o %s %s", template.value, path, args)
+  local stdout = {}
   vim.fn.jobstart(cmd, {
-    on_stderr = function(_, data)
-      for _, value in ipairs(data) do
-        logger.error(value)
-      end
-    end,
+    on_stderr = function(_, data) vim.list_extend(stdout, data) end,
+    on_stdout = function(_, data) vim.list_extend(stdout, data) end,
+    stdout_buffered = true,
+    stderr_buffered = true,
     on_exit = function(_, code)
-      if code ~= 0 then logger.error("Command failed") end
-      if cb then cb() end
+      if code ~= 0 then
+        vim.print(stdout)
+        logger.error("Command failed")
+      end
+      if cb then
+        local file_path = vim.fs.normalize(vim.fs.joinpath(path, file_name))
+        cb(file_path)
+      end
     end,
   })
 end

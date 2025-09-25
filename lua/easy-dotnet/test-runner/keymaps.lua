@@ -2,16 +2,6 @@ local M = {}
 local window = require("easy-dotnet.test-runner.window")
 local runner = require("easy-dotnet.test-runner.runner")
 local logger = require("easy-dotnet.logger")
-local extensions = require("easy-dotnet.extensions")
-
----@class RPC_RunRequest
----@field testExecutablePath string Path to the test runner binary
----@field filter RunRequestNode[] Optional filter for which tests to run
----@field outFile string Path where test results should be written
-
----@class RunRequestNode
----@field uid string Unique test run identifier
----@field displayName string Human-readable name for the run
 
 ---@param node TestNode
 ---@param options table
@@ -44,7 +34,12 @@ local function parse_status(result, test_line, options)
     --TODO: figure this shit out
   elseif result.outcome == "failed" or result.outcome == "error" then
     test_line.icon = options.icons.failed
-    if result.errorMessage or result.stackTrace then test_line.expand = vim.split((result.errorMessage or "") .. "\n" .. (result.stackTrace or ""):gsub("^%s+", ""):gsub("\n%s+", "\n"), "\n") end
+
+    if result.errorMessage or result.stackTrace then test_line.expand = vim.list_extend(result.errorMessage or {}, result.stackTrace or {}) end
+    if result.stdOut then
+      local output = vim.list_extend({ "" }, result.stdOut or {})
+      vim.list_extend(test_line.expand or {}, output)
+    end
   elseif result.outcome == "skipped" then
     test_line.icon = options.icons.skipped
   else
@@ -56,7 +51,7 @@ local function parse_status(result, test_line, options)
   end
 end
 
----@param unit_test_results TestCase[]
+---@param unit_test_results RPC_TestRunResult[]
 ---@param win table
 ---@param node TestNode
 local test_status_updater = function(unit_test_results, win, node)
@@ -78,75 +73,18 @@ local test_status_updater = function(unit_test_results, win, node)
   win.refreshTree()
 end
 
-local function dump_to_file(obj, filepath)
-  local serialized = vim.inspect(obj)
-  local f = io.open(filepath, "w")
-  if not f then error("Could not open file: " .. filepath) end
-  f:write(serialized)
-  f:close()
-end
-
 local function get_test_result_handler(win, node, on_job_finished)
-  ---@param rpc_res RPC_Response
+  ---@param rpc_res RPC_TestRunResult[]
   return function(rpc_res)
-    if rpc_res.error then
-      vim.schedule(function() vim.notify(string.format("[%s]: %s", rpc_res.error.code, rpc_res.error.message), vim.log.levels.ERROR) end)
-      if rpc_res.error.data then
-        local file = vim.fs.normalize(os.tmpname())
-        dump_to_file(rpc_res, file)
-        logger.error("Crash dump written at " .. file)
-      end
-      on_job_finished()
-
-      win.traverse(node, function(child)
-        if child.icon == "<Running>" then child.icon = "<Operation failed>" end
-      end)
-      win.refreshTree()
-      return
-    end
-
-    ---@type TestCase[]
-    local test_results = vim.tbl_map(function(i) return vim.fn.json_decode(i) end, vim.fn.readfile(rpc_res.result.outFile))
-    test_status_updater(test_results, win, node)
+    test_status_updater(rpc_res, win, node)
     on_job_finished()
   end
 end
 
 ---@param node TestNode
 ---@param win table
-function M.VsTest_Run(node, win, cb)
-  ---@type TestNode[]
-  local tests = {}
-  ---@param child TestNode
-  win.traverse_filtered(node, function(child)
-    child.icon = "<Running>"
-    if child.type == "test" or child.type == "subcase" then table.insert(tests, child) end
-  end)
-
-  local _on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
-  local function on_job_finished()
-    _on_job_finished()
-    if cb then cb() end
-  end
-
-  local filter = vim.tbl_map(function(test) return test.id end, tests)
-
-  local project = require("easy-dotnet.parsers.csproj-parse").get_project_from_project_file(node.cs_project_path)
-  local project_framework = project.get_specific_runtime_definition(node.framework)
-  local testPath = project_framework.get_dll_path()
-
-  local vstest_dll = vim.fs.joinpath(runner.sdk_path, "vstest.console.dll")
-  coroutine.wrap(function()
-    ---@type StreamJsonRpc | nil
-    local client = require("easy-dotnet.test-runner.runner")._server.client
-    if not client then error("RPC client not initialized") end
-    client.request("vstest/run", { vsTestPath = vstest_dll, dllPath = testPath, testIds = filter }, get_test_result_handler(win, node, on_job_finished))
-  end)()
-end
----@param node TestNode
----@param win table
 ---@param cb function | nil
-function M.MTP_Run(node, win, cb)
+function M.test_run(node, win, cb)
   ---@type TestNode[]
   local tests = {}
   ---@param child TestNode
@@ -165,31 +103,32 @@ function M.MTP_Run(node, win, cb)
     ---@type RunRequestNode
     return {
       uid = test.id,
-      displayName = test.displayName,
+      displayName = test.displayName or "",
     }
   end, tests)
 
   local project = require("easy-dotnet.parsers.csproj-parse").get_project_from_project_file(node.cs_project_path)
   local project_framework = project.get_specific_runtime_definition(node.framework)
 
-  local testPath = project_framework.get_dll_path():gsub("%.dll", extensions.isWindows() and "." .. project_framework.msbuild_props.outputType:lower() or "")
-
   coroutine.wrap(function()
-    ---@type StreamJsonRpc | nil
-    local client = require("easy-dotnet.test-runner.runner")._server.client
-    if not client then error("RPC client not initialized") end
-    client.request("mtp/run", { testExecutablePath = testPath, filter = filter }, get_test_result_handler(win, node, on_job_finished))
+    local client = require("easy-dotnet.test-runner.runner").client
+    client.test:test_run(
+      { projectPath = project_framework.path, targetFrameworkMoniker = node.framework, configuration = "Debug", filter = filter },
+      get_test_result_handler(win, node, on_job_finished)
+    )
   end)()
 end
 
 ---@param node TestNode
 local function run_tests(node, win)
-  if node.is_MTP then
-    M.MTP_Run(node, win)
-    return
-  else
-    M.VsTest_Run(node, win)
+  if not win.options.noBuild then
+    local build_success = runner.request_build(node.cs_project_path)
+    if not build_success then
+      logger.error("Failed to build project")
+      return
+    end
   end
+  M.test_run(node, win)
 end
 
 local function filter_failed_tests(win)
@@ -202,7 +141,7 @@ local function filter_failed_tests(win)
 end
 
 local function get_path_from_stack_trace(stack_trace)
-  stack_trace = table.concat(stack_trace)
+  stack_trace = table.concat(stack_trace, " \n")
   -- Pattern to match the file path and line number
   local pattern = "in%s+(.-):line%s+(%d+)"
 
@@ -223,6 +162,10 @@ local function open_stack_trace(line)
   local path = get_path_from_stack_trace(line.expand)
 
   local ns_id = require("easy-dotnet.constants").ns_id
+  if not line.file_path then
+    logger.warn("Test adapter does not provide file path")
+    return
+  end
   local contents = vim.fn.readfile(line.file_path)
 
   --TODO: handle fsharp
@@ -345,7 +288,7 @@ M.keymaps = function()
     [keymap.run_all.lhs] = {
       handle = function(_, win)
         win.traverse(win.tree, function(node)
-          if node.type == "csproject" then run_tests(node, win) end
+          if node.type == "csproject" then coroutine.wrap(function() run_tests(node, win) end)() end
         end)
       end,
       desc = keymap.run_all.desc,
@@ -355,18 +298,18 @@ M.keymaps = function()
       handle = function(node, win)
         if node.type == "sln" then
           for _, value in pairs(node.children) do
-            run_tests(value, win)
+            coroutine.wrap(function() run_tests(value, win) end)()
           end
         elseif node.type == "csproject" then
-          run_tests(node, win)
+          coroutine.wrap(function() run_tests(node, win) end)()
         elseif node.type == "namespace" then
-          run_tests(node, win)
+          coroutine.wrap(function() run_tests(node, win) end)()
         elseif node.type == "test_group" then
-          run_tests(node, win)
+          coroutine.wrap(function() run_tests(node, win) end)()
         elseif node.type == "subcase" then
-          run_tests(node, win)
+          coroutine.wrap(function() run_tests(node, win) end)()
         elseif node.type == "test" then
-          run_tests(node, win)
+          coroutine.wrap(function() run_tests(node, win) end)()
         else
           logger.warn("Unknown line type " .. node.type)
           return

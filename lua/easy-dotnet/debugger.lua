@@ -1,11 +1,30 @@
 local M = {}
+
 local picker = require("easy-dotnet.picker")
+local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local error_messages = require("easy-dotnet.error-messages")
 local logger = require("easy-dotnet.logger")
 local parsers = require("easy-dotnet.parsers")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local polyfills = require("easy-dotnet.polyfills")
+
+local function select_profile(profiles, result)
+  local profile_name = picker.pick_sync(nil, polyfills.tbl_map(function(i) return { display = i, value = i } end, profiles), "Pick launch profile", true)
+  return result[profile_name.value]
+end
+
+local function select_launch_profile_name(project_path)
+  local launch_profiles = M.get_launch_profiles(project_path)
+
+  if launch_profiles == nil then return nil end
+
+  local profiles = polyfills.tbl_keys(launch_profiles)
+  if #profiles == 0 then return nil end
+
+  local profile_name = picker.pick_sync(nil, polyfills.tbl_map(function(i) return { display = i, value = i } end, profiles), "Pick launch profile", true)
+  return profile_name.value
+end
 
 ---@param use_default boolean
 ---@return DotnetProject, string | nil
@@ -56,6 +75,42 @@ M.get_debug_dll = function(default)
   }
 end
 
+---@class PrepareDebuggerResult
+---@field path string
+---@field target_framework_moniker string | nil
+---@field configuration string | nil
+---@field launch_profile string | nil
+
+---@param use_default boolean
+M.prepare_debugger = function(use_default)
+  local project = pick_project(use_default)
+  --TODO: pick configuration?
+  local co = coroutine.running()
+  client.msbuild:msbuild_build({ targetPath = project.path, targetFramework = project.msbuild_props.targetFramework }, function() coroutine.resume(co) end, {
+    on_crash = function()
+      logger.error("Debugger failed to start")
+      coroutine.resume(co)
+    end,
+  })
+  coroutine.yield()
+
+  local launch_profile_name = select_launch_profile_name(vim.fs.dirname(project.path))
+
+  client.debugger:debugger_start(
+    { targetPath = project.path, targetFramework = project.msbuild_props.targetFramework, configuration = "Debug", launchProfileName = launch_profile_name },
+    function() coroutine.resume(co) end,
+    {
+      on_crash = function()
+        logger.error("Debugger failed to start")
+        coroutine.resume(co)
+      end,
+    }
+  )
+
+  coroutine.yield()
+  return "REWRITE_ATTACH"
+end
+
 local function run_job_sync(cmd)
   local result = {}
   local co = coroutine.running()
@@ -101,40 +156,46 @@ M.start_debugging_test_project = function(project_path)
   }
 end
 
-local function select_profile(profiles, result)
-  local profile_name = picker.pick_sync(nil, polyfills.tbl_map(function(i) return { display = i, value = i } end, profiles), "Pick launch profile", true)
-  return result.profiles[profile_name.value]
+M.get_launch_profiles = function(relative_project_path)
+  local co = coroutine.running()
+
+  client:initialize(function()
+    client.launch_profiles:get_launch_profiles(relative_project_path, function(res) coroutine.resume(co, res) end, {
+      on_crash = function() coroutine.resume(co) end,
+    })
+  end)
+  local profiles = coroutine.yield()
+  local dictionary = {}
+  for _, entry in ipairs(profiles) do
+    dictionary[entry.name] = entry.value
+  end
+
+  return dictionary
 end
 
 M.get_environment_variables = function(project_name, relative_project_path, autoselect)
   if autoselect == nil then autoselect = true end
-  local launch_settings_path = polyfills.fs.joinpath(relative_project_path, "Properties", "launchSettings.json")
 
-  local stat = vim.loop.fs_stat(launch_settings_path)
-  if stat == nil then return nil end
+  local launch_profiles = M.get_launch_profiles(relative_project_path)
 
-  local success, result = pcall(vim.fn.json_decode, vim.fn.readfile(launch_settings_path, ""))
-  if not success then
-    logger.warn(result)
-    return nil, "Error parsing JSON: " .. result
-  end
+  if launch_profiles == nil then return nil end
 
-  local profiles = polyfills.tbl_keys(result.profiles)
+  local profiles = polyfills.tbl_keys(launch_profiles)
 
-  local launchProfile = (not autoselect and #profiles > 0) and select_profile(profiles, result) or result.profiles[project_name]
+  local launch_profile = (not autoselect and #profiles > 0) and select_profile(profiles, launch_profiles) or launch_profiles[project_name]
 
-  if launchProfile == nil then return nil end
+  if launch_profile == nil then return nil end
 
   --TODO: Is there more env vars in launchsetttings.json?
-  launchProfile.environmentVariables["ASPNETCORE_URLS"] = launchProfile.applicationUrl
-  return launchProfile.environmentVariables
+  launch_profile.environmentVariables["ASPNETCORE_URLS"] = launch_profile.applicationUrl
+  return launch_profile.environmentVariables
 end
 
 M.get_dll_for_solution_project = function(default)
   if default == nil then default = false end
   local project = pick_project(default)
 
-  local path = vim.fs.dirname(project.path)
+  local path = project.path
   return {
     dll = project.get_dll_path(),
     project = path,

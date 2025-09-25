@@ -1,3 +1,4 @@
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 --- @class FileCacheEntry
@@ -14,7 +15,7 @@ local cache = {}
 function M.get(path, value_factory)
   local stat = vim.loop.fs_stat(path)
   if not stat then
-    vim.notify("File not found: " .. path, vim.log.levels.WARN)
+    logger.warn("File not found: " .. path)
     return nil
   end
 
@@ -33,5 +34,7 @@ function M.get(path, value_factory)
 
   return value
 end
+
+function M.invalidate(path) cache[path] = nil end
 
 return M

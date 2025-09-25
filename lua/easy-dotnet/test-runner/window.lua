@@ -66,7 +66,12 @@ function Window:write_buf(lines)
   return self
 end
 
-function Window:close() vim.api.nvim_win_close(self.win, true) end
+function Window:close()
+  if self.win and vim.api.nvim_win_is_valid(self.win) then
+    vim.api.nvim_win_close(self.win, true)
+    self.win = nil
+  end
+end
 
 function Window:pos_left()
   self.opts.col = 1

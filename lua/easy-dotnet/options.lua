@@ -1,12 +1,19 @@
-local polyfills = require("easy-dotnet.polyfills")
 ---@class Options
----@field get_sdk_path fun(): string
 ---@field test_runner TestRunnerOptions
 ---@field csproj_mappings boolean
 ---@field fsproj_mappings boolean
 ---@field new { project: {prefix: "sln" | "none"} }
 ---@field enable_filetypes boolean
 ---@field picker PickerType
+---@field notifications Notifications
+---@field diagnostics DiagnosticsOptions
+
+---@class Notifications
+---@field handler fun(start_event: JobEvent): fun(finished_event: JobEvent)
+
+---@class DiagnosticsOptions
+---@field default_severity "error" | "warning"
+---@field setqflist boolean
 
 ---@class TestRunnerIcons
 ---@field passed string
@@ -22,6 +29,7 @@ local polyfills = require("easy-dotnet.polyfills")
 
 ---@class TestRunnerMappings
 ---@field run_test_from_buffer Keymap
+---@field peek_stack_trace_from_buffer Keymap
 ---@field debug_test_from_buffer Keymap
 ---@field go_to_file Keymap
 ---@field debug_test Keymap
@@ -41,6 +49,8 @@ local polyfills = require("easy-dotnet.polyfills")
 
 ---@class TestRunnerOptions
 ---@field viewmode string
+---@field vsplit_width number|nil
+---@field vsplit_pos string|nil
 ---@field enable_buffer_test_execution boolean
 ---@field noBuild boolean
 ---@field icons TestRunnerIcons
@@ -48,22 +58,6 @@ local polyfills = require("easy-dotnet.polyfills")
 ---@field additional_args table
 
 ---@alias PickerType nil | "telescope" | "fzf" | "snacks" | "basic"
-
-local function get_sdk_path()
-  local sdk_version = vim.trim(vim.fn.system("dotnet --version"))
-  local sdk_list = vim.trim(vim.fn.system("dotnet --list-sdks"))
-  local base = nil
-  for line in sdk_list:gmatch("[^\n]+") do
-    if line:find(sdk_version, 1, true) then
-      local path = line:match("%[(.-)%]")
-      if not path then error("no sdk path found calling dotnet --list-sdks " .. (path or "empty")) end
-      base = vim.fs.normalize(path)
-      break
-    end
-  end
-  local sdk_path = polyfills.fs.joinpath(base, sdk_version)
-  return sdk_path
-end
 
 local function get_secret_path(secret_guid)
   local path
@@ -81,18 +75,16 @@ end
 local M = {
   ---@type Options
   options = {
-    ---@type function | string
-    get_sdk_path = get_sdk_path,
     ---@param path string
     ---@param action "test"|"restore"|"build"|"run"|"watch"
     ---@param args string
-    terminal = function(path, action, args)
+    terminal = function(path, action, args, ctx)
       args = args or ""
       local commands = {
-        run = function() return string.format("dotnet run --project %s %s", path, args) end,
-        test = function() return string.format("dotnet test %s %s", path, args) end,
-        restore = function() return string.format("dotnet restore %s %s", path, args) end,
-        build = function() return string.format("dotnet build %s %s", path, args) end,
+        run = function() return string.format("%s %s", ctx.cmd, args) end,
+        test = function() return string.format("%s %s", ctx.cmd, args) end,
+        restore = function() return string.format("%s %s", ctx.cmd, args) end,
+        build = function() return string.format("%s %s", ctx.cmd, args) end,
         watch = function() return string.format("dotnet watch --project %s %s", path, args) end,
       }
       local command = commands[action]()
@@ -106,6 +98,8 @@ local M = {
     ---@type TestRunnerOptions
     test_runner = {
       viewmode = "split",
+      vsplit_width = nil,
+      vsplit_pos = nil,
       enable_buffer_test_execution = true,
       noBuild = true,
       icons = {
@@ -122,6 +116,7 @@ local M = {
       },
       mappings = {
         run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
+        peek_stack_trace_from_buffer = { lhs = "<leader>p", desc = "peek stack trace from buffer" },
         debug_test_from_buffer = { lhs = "<leader>d", desc = "run test from buffer" },
         filter_failed_tests = { lhs = "<leader>fe", desc = "filter failed tests" },
         debug_test = { lhs = "<leader>d", desc = "debug test" },
@@ -145,10 +140,19 @@ local M = {
         prefix = "sln",
       },
     },
+    server = {
+      use_visual_studio = false,
+      ---@type nil | "Off" | "Critical" | "Error" | "Warning" | "Information" | "Verbose" | "All"
+      log_level = nil,
+    },
     enable_filetypes = true,
     auto_bootstrap_namespace = {
       type = "block_scoped",
       enabled = true,
+      use_clipboard_json = {
+        behavior = "prompt", --'auto' | 'prompt' | 'never',
+        register = "+",
+      },
     },
     -- choose which picker to use with the plugin
     -- possible values are "telescope" | "fzf" | "snacks" | "basic"
@@ -157,6 +161,27 @@ local M = {
     picker = nil,
     --For performance reasons this will query msbuild properties as soon as vim starts
     background_scanning = true,
+    notifications = {
+      --Set this to false if you have configured lualine to avoid double logging
+      handler = function(start_event)
+        local spinner = require("easy-dotnet.ui-modules.spinner").new()
+        spinner:start_spinner(start_event.job.name)
+        ---@param finished_event JobEvent
+        return function(finished_event) spinner:stop_spinner(finished_event.result.msg, finished_event.result.level) end
+      end,
+    },
+    debugger = {
+      mappings = {
+        open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
+      },
+      -- The path to netcoredbg
+      bin_path = nil,
+      auto_register_dap = true,
+    },
+    diagnostics = {
+      default_severity = "error",
+      setqflist = false,
+    },
   },
 }
 
@@ -164,9 +189,9 @@ local function merge_tables(default_options, user_options) return vim.tbl_deep_e
 
 --- Auto_bootstrap namespace can be either true or table with config
 local function handle_auto_bootstrap_namespace(a)
-  if type(a.auto_bootstrap_namespace) ~= "table" then a.auto_bootstrap_namespace = {
+  if type(a.auto_bootstrap_namespace) == "boolean" then a.auto_bootstrap_namespace = {
     type = "block_scoped",
-    enabled = a.auto_bootstrap_namespace == true,
+    enabled = a.auto_bootstrap_namespace,
   } end
 end
 

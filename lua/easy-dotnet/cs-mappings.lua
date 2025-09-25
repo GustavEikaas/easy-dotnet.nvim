@@ -1,53 +1,4 @@
-local logger = require("easy-dotnet.logger")
 local M = {}
-
-local function find_csproj_for_cs_file(cs_file_path, maxdepth)
-  local curr_depth = 0
-
-  local function get_directory(path) return vim.fn.fnamemodify(path, ":h") end
-
-  local function find_csproj_in_directory(dir)
-    local result = vim.fn.globpath(dir, "*.csproj", false, true)
-    if #result > 0 then return result[1] end
-    return nil
-  end
-
-  local cs_file_dir = vim.fs.dirname(cs_file_path)
-
-  while cs_file_dir ~= "/" and cs_file_dir ~= "~" and cs_file_dir ~= "" and curr_depth < maxdepth do
-    curr_depth = curr_depth + 1
-    local csproj_file = find_csproj_in_directory(cs_file_dir)
-    if csproj_file then return csproj_file end
-    cs_file_dir = get_directory(cs_file_dir)
-  end
-
-  return nil
-end
-
-local function generate_csharp_namespace(cs_file_path, csproj_path, maxdepth)
-  local curr_depth = 0
-
-  local function get_parent_directory(path) return vim.fn.fnamemodify(path, ":h") end
-
-  local function get_basename_without_ext(path) return vim.fn.fnamemodify(path, ":t:r") end
-
-  local cs_file_dir = vim.fs.dirname(cs_file_path)
-  local csproj_dir = vim.fs.dirname(csproj_path)
-
-  local csproj_basename = get_basename_without_ext(csproj_path)
-
-  local relative_path_parts = {}
-  while cs_file_dir ~= csproj_dir and cs_file_dir ~= "/" and cs_file_dir ~= "~" and cs_file_dir ~= "" and curr_depth < maxdepth do
-    table.insert(relative_path_parts, 1, vim.fn.fnamemodify(cs_file_dir, ":t"))
-    cs_file_dir = get_parent_directory(cs_file_dir)
-    curr_depth = curr_depth + 1
-  end
-
-  if cs_file_dir ~= csproj_dir then return nil, "The .cs file is not located under the .csproj directory." end
-
-  table.insert(relative_path_parts, 1, csproj_basename)
-  return table.concat(relative_path_parts, ".")
-end
 
 local function is_buffer_empty(buf)
   for i = 1, vim.api.nvim_buf_line_count(buf), 1 do
@@ -60,53 +11,66 @@ end
 
 ---@alias BootstrapNamespaceMode "file_scoped" | "block_scoped"
 
----@param mode BootstrapNamespaceMode
-local bootstrap = function(namespace, type_keyword, file_name, mode)
-  if mode == "file_scoped" then
-    return {
-      string.format("namespace %s;", namespace),
-      "",
-      string.format("public %s %s", type_keyword, file_name),
-      "{",
-      "",
-      "}",
-    }
-  else
-    return {
-      string.format("namespace %s", namespace),
-      "{",
-      string.format("  public %s %s", type_keyword, file_name),
-      "  {",
-      "",
-      "  }",
-      "}",
-      " ",
-    }
+local function is_key_value_table(tbl)
+  if type(tbl) ~= "table" then return false end
+
+  local i = 0
+  for k, _ in pairs(tbl) do
+    i = i + 1
+    if type(k) ~= "number" or k ~= i then return true end
   end
+
+  return false
 end
 
 ---@param mode BootstrapNamespaceMode
 local function auto_bootstrap_namespace(bufnr, mode)
-  local max_depth = 50
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
+  if not vim.startswith(vim.fs.normalize(curr_file), vim.fs.normalize(vim.fn.getcwd())) then return end
   if not is_buffer_empty(bufnr) then return end
 
-  local csproject_file_path = find_csproj_for_cs_file(curr_file, max_depth)
-  if not csproject_file_path then
-    logger.warn("Failed to bootstrap namespace, csproject file not found")
-    return
-  end
-  local namespace = generate_csharp_namespace(curr_file, csproject_file_path, max_depth)
   local file_name = vim.fn.fnamemodify(curr_file, ":t:r")
 
   local is_interface = file_name:sub(1, 1) == "I" and file_name:sub(2, 2):match("%u")
-  local type_keyword = is_interface and "interface" or "class"
+  local type_keyword = is_interface and "Interface" or "Class"
 
-  local bootstrap_lines = bootstrap(namespace, type_keyword, file_name, mode)
+  local ns = require("easy-dotnet.constants").ns_id
 
-  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, bootstrap_lines)
-  vim.cmd("w")
+  vim.api.nvim_buf_set_extmark(bufnr, ns, 0, 0, {
+    virt_text = { { "⏳ Bootstrapping... (do not modify file)", "Comment" } },
+    virt_text_pos = "eol",
+  })
+
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  local on_finished = function()
+    vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
+    vim.cmd("checktime")
+  end
+
+  local from_json = function(clipboard) client.roslyn:roslyn_bootstrap_file_json(curr_file, clipboard, mode == "file_scoped", on_finished) end
+  local default = function() client.roslyn:roslyn_bootstrap_file(curr_file, type_keyword, mode == "file_scoped", on_finished) end
+
+  client:initialize(function()
+    local opt = require("easy-dotnet.options").get_option("auto_bootstrap_namespace")
+    local clipboard = vim.fn.getreg(opt.use_clipboard_json.register)
+    local is_valid_json, res = pcall(vim.fn.json_decode, clipboard)
+    local is_table = is_valid_json and (type(res) == "table" and is_key_value_table(res))
+
+    if is_table and opt.use_clipboard_json.behavior == "auto" then
+      from_json(clipboard)
+    elseif is_table and opt.use_clipboard_json.behavior == "prompt" then
+      require("easy-dotnet.picker").picker(nil, { { display = "Yes", value = true }, { display = "No", value = false } }, function(choice)
+        if choice.value == true then
+          from_json(clipboard)
+        else
+          default()
+        end
+      end, "Bootstrap file from json in clipboard?", false, true)
+    else
+      default()
+    end
+  end)
 end
 
 ---@param mode BootstrapNamespaceMode
