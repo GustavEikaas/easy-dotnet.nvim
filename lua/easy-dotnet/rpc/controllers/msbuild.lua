@@ -127,6 +127,7 @@ end
 ---@field lineNumber integer
 ---@field message string
 ---@field type "error" | "warning"
+---@field project string | nil
 
 ---@class BuildResult
 ---@field errors Diagnostic[]

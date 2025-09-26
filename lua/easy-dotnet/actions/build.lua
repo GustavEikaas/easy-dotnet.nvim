@@ -10,41 +10,15 @@ local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
 local default_manager = require("easy-dotnet.default-manager")
+local qf_list = require("easy-dotnet.build-output.qf-list")
 
-local qf_title = "easy-dotnet"
-
-local function close_quickfix_list()
-  local info = vim.fn.getqflist({ title = 1 })
-  if info.title == qf_title then
-    vim.fn.setqflist({})
-    vim.cmd("cclose")
-  end
-end
-
-local function set_quickfix_list(items)
-  vim.fn.setqflist({}, " ", {
-    title = qf_title,
-    items = items,
-  })
-  vim.cmd("copen")
-end
-
-local function populate_quickfix_from_list(diagnostics)
-  local quickfix_list = {}
-
-  for _, d in ipairs(diagnostics) do
-    table.insert(quickfix_list, {
-      filename = d.filePath,
-      lnum = tonumber(d.lineNumber),
-      col = tonumber(d.columnNumber),
-      text = d.message,
-      type = d.type == "error" and "E" or "W",
-    })
-  end
-
-  set_quickfix_list(quickfix_list)
-
-  vim.cmd("copen")
+local function group_by_project(errors)
+  return vim.iter(errors):fold({}, function(acc, err)
+    local project = err.project or "Unknown project"
+    acc[project] = acc[project] or {}
+    table.insert(acc[project], err)
+    return acc
+  end)
 end
 
 local function rpc_build_quickfix(target_path, args)
@@ -65,10 +39,18 @@ local function rpc_build_quickfix(target_path, args)
     client.msbuild:msbuild_build({ targetPath = target_path, buildArgs = args }, function(res)
       M.pending = false
       if res.success then
-        close_quickfix_list()
+        local ext = vim.fn.fnamemodify(target_path, ":e")
+        if ext == "sln" then
+          qf_list.clear_all()
+        else
+          qf_list.clear_project(target_path)
+        end
         return
       end
-      populate_quickfix_from_list(res.errors)
+      local project_map = group_by_project(res.errors)
+      for project, diagnostics in pairs(project_map) do
+        qf_list.set_project_diagnostics(project, diagnostics)
+      end
     end)
   end)
 end
