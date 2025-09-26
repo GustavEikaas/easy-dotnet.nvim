@@ -37,9 +37,9 @@ local function rpc_build_quickfix(target_path, args)
   client:initialize(function()
     M.pending = true
     client.msbuild:msbuild_build({ targetPath = target_path, buildArgs = args }, function(res)
+      local ext = vim.fn.fnamemodify(target_path, ":e")
       M.pending = false
       if res.success then
-        local ext = vim.fn.fnamemodify(target_path, ":e")
         if ext == "sln" then
           qf_list.clear_all()
         else
@@ -47,6 +47,8 @@ local function rpc_build_quickfix(target_path, args)
         end
         return
       end
+
+      if ext == "sln" then qf_list.clear_all() end
       local project_map = group_by_project(res.errors)
       for project, diagnostics in pairs(project_map) do
         qf_list.set_project_diagnostics(project, diagnostics)
