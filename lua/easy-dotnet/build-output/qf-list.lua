@@ -29,15 +29,16 @@ end
 
 --- Refresh quickfix window with all project errors
 local function refresh_quickfix()
+  local project_count = #vim.tbl_keys(M.projects)
   local all_items = {}
   for project, diags in pairs(M.projects) do
-    table.insert(all_items, {
+    if project_count > 1 then table.insert(all_items, {
       filename = "",
       lnum = 0,
       col = 0,
       text = string.format("==== %s ====", project),
       type = "I",
-    })
+    }) end
 
     local items = diagnostics_to_qf(diags)
     for _, item in ipairs(items) do
