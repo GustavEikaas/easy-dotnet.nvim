@@ -14,7 +14,7 @@ local function diagnostics_to_qf(diagnostics)
       lnum = tonumber(d.lineNumber) or 1,
       col = tonumber(d.columnNumber) or 1,
       text = d.message,
-      type = (d.type == "error" or d.type == "E") and "E" or "W",
+      type = (d.type == "error" or d.type == "E") and "E" or (d.type == "warning" or d.type == "W") and "W" or "I",
     })
   end
   return items
