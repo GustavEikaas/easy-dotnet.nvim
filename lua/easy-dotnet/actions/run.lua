@@ -24,16 +24,36 @@ end
 
 local pick_project_without_solution = function()
   local csproject_path = csproj_parse.find_project_file()
-  if not csproject_path then logger.error(error_messages.no_runnable_projects_found) end
+  if not csproject_path then return nil end
   local project = csproj_parse.get_project_from_project_file(csproject_path)
   local project_framework = picker.pick_sync(nil, project.get_all_runtime_definitions(), "Run project")
   return project_framework
 end
 
+local single_file_fallback = function(term, args)
+  client:initialize(function()
+    local bufname = vim.api.nvim_buf_get_name(0)
+    local ext = vim.fn.fnamemodify(bufname, ":e")
+    local supports_single_file = require("easy-dotnet.rpc.dotnet-client").supports_single_file_execution
+
+    if ext == "cs" and supports_single_file then
+      local cmd_str = string.format("dotnet run %s %s", bufname, args)
+      term(bufname, "run", args, { cmd = cmd_str })
+    else
+      logger.error(error_messages.no_runnable_projects_found)
+    end
+  end)
+end
+
 ---@param term function
 local function csproj_fallback_run(term, args)
   local project = pick_project_without_solution()
-  run_project(project, args, term)
+  if project then
+    run_project(project, args, term)
+    return
+  end
+
+  single_file_fallback(term, args)
 end
 
 ---Prompts the user to select a runnable DotnetProject (with framework),
@@ -137,7 +157,10 @@ M.run_project_with_profile = function(term, use_default, args)
   use_default = use_default or false
   args = args or ""
   local project, solution_file_path = pick_project_framework(use_default)
-  if not project then error("Failed to select project") end
+  if not project then
+    single_file_fallback(term, args)
+    return
+  end
   local profile = get_or_pick_profile(use_default, project, solution_file_path)
   local arg = profile and string.format("--launch-profile %s", vim.fn.shellescape(profile)) or ""
   run_project(project, arg .. " " .. args, term)

@@ -109,6 +109,7 @@ end
 ---@class DotnetClient
 ---@field new fun(self: DotnetClient): DotnetClient # Constructor
 ---@field initialized_msbuild_path string
+---@field supports_single_file_execution boolean
 ---@field _client StreamJsonRpc # Underlying StreamJsonRpc client used for communication
 ---@field _server DotnetServer # Manages the .NET named pipe server process
 ---@field initialize fun(self: DotnetClient, cb: fun()): nil # Starts the dotnet server and connects the JSON-RPC client
@@ -193,6 +194,7 @@ function M:initialize(cb)
           self._client.routes = routes
 
           M.initialized_msbuild_path = result.toolPaths.msBuildPath
+          M.supports_single_file_execution = result.capabilities.supportsSingleFileExecution or false
 
           self._initializing = false
           self._initialized = true
