@@ -192,6 +192,9 @@ local function get_solutions_async(cb)
 end
 
 local function background_scanning(merged_opts)
+  vim.print("starting LSP")
+  require("easy-dotnet.roslyn.lsp").start()
+
   if merged_opts.background_scanning then
     --prewarm msbuild properties
     local selected_solution = require("easy-dotnet.parsers.sln-parse").try_get_selected_solution_file()
