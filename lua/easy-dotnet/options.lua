@@ -178,6 +178,9 @@ local M = {
       bin_path = nil,
       auto_register_dap = true,
     },
+    lsp = {
+      enabled = false
+    },
     diagnostics = {
       default_severity = "error",
       setqflist = false,
