@@ -179,7 +179,7 @@ local M = {
       auto_register_dap = true,
     },
     lsp = {
-      enabled = false
+      enabled = false,
     },
     diagnostics = {
       default_severity = "error",
