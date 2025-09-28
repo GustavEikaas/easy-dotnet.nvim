@@ -1,15 +1,9 @@
 local extensions = require("easy-dotnet.extensions")
+local dotnet_client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local logger = require("easy-dotnet.logger")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
 local M = {}
-
-local function debug_handler(name, fn)
-  return function(...)
-    vim.print("Handler:", name, "Args:", ...)
-    if fn then fn(...) end
-  end
-end
 
 function M.start()
   local rpc = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -43,7 +37,6 @@ function M.start()
 
         if sln then
           local full_path = vim.fs.normalize(vim.fs.joinpath(vim.fn.getcwd(), sln))
-          vim.print("root " .. vim.fs.dirname(full_path))
           cb(vim.fs.dirname(full_path))
           return
         end
@@ -58,14 +51,13 @@ function M.start()
         cb(vim.fs.dirname(buf_path))
       end,
       on_init = function(client)
-        vim.notify("[easy-dotnet] LSP initialized for " .. client.name, vim.log.levels.INFO)
+        vim.notify("Roslyn loading", vim.log.levels.INFO)
 
         local sln = sln_parse.try_get_selected_solution_file()
         if sln then
           local full_path = vim.fs.normalize(vim.fs.joinpath(vim.fn.getcwd(), sln))
           local sln_uri = vim.uri_from_fname(full_path)
-          vim.print("slnuri " .. sln_uri)
-          vim.notify("[easy-dotnet] Sending solution/open " .. full_path, vim.log.levels.INFO)
+          -- vim.notify("[easy-dotnet] Sending solution/open " .. full_path, vim.log.levels.INFO)
           client:notify("solution/open", {
             solution = sln_uri,
           })
@@ -74,7 +66,7 @@ function M.start()
 
         local proj = csproj_parse.find_csproj_file()
         if proj then
-          vim.notify("[easy-dotnet] Sending project/open " .. proj, vim.log.levels.INFO)
+          -- vim.notify("[easy-dotnet] Sending project/open " .. proj, vim.log.levels.INFO)
           client:notify("project/open", {
             projects = { vim.uri_from_fname(proj) },
           })
@@ -82,15 +74,48 @@ function M.start()
         end
         vim.notify("[easy-dotnet] No solution or project found to open", vim.log.levels.WARN)
       end,
-      on_exit = function(_, code) vim.notify("[easy-dotnet] LSP exited with code " .. code, vim.log.levels.WARN) end,
+      on_exit = function() vim.notify("[easy-dotnet] LSP exited", vim.log.levels.WARN) end,
       handlers = {
-        ["workspace/projectInitializationComplete"] = debug_handler("workspace/projectInitializationComplete", function() vim.print("LSP fully ready") end),
-        ["workspace/_roslyn_projectHasUnresolvedDependencies"] = debug_handler("workspace/_roslyn_projectHasUnresolvedDependencies", function() vim.print("unresolved deps??") end),
+        ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
+          vim.defer_fn(function()
+            local client = vim.lsp.get_client_by_id(ctx.client_id)
+            if not client then return end
+
+            local bufnr = vim.api.nvim_get_current_buf()
+            if not vim.api.nvim_buf_is_valid(bufnr) then return end
+
+            local params = {
+              textDocument = {
+                uri = vim.uri_from_bufnr(bufnr),
+                version = vim.lsp.util.buf_versions[bufnr] or 0,
+              },
+              contentChanges = {},
+            }
+
+            client:notify("textDocument/didChange", params)
+            vim.print("Roslyn ready")
+          end, 500)
+        end,
         ["workspace/_roslyn_projectNeedsRestore"] = function(_, params)
-          vim.print("Project needs restore:", params.projectFilePaths)
+          local paths = params.projectFilePaths or {}
+          local csproj_files = vim.tbl_filter(function(path) return path:match("%.csproj$") end, paths)
+
+          if vim.tbl_isempty(csproj_files) then return {} end
+
+          dotnet_client:initialize(function()
+            local sln = sln_parse.try_get_selected_solution_file()
+            if sln and #csproj_files > 1 then
+              local full_path = vim.fs.normalize(vim.fs.joinpath(vim.fn.getcwd(), sln))
+              dotnet_client.nuget:nuget_restore(full_path, function() end)
+              return
+            end
+
+            local proj = csproj_files[1]
+            dotnet_client.nuget:nuget_restore(proj, function() end)
+          end)
+
           return {}
         end,
-        ["workspace/refreshSourceGeneratedDocument"] = debug_handler("workspace/refreshSourceGeneratedDocument", function() end),
       },
     }
 
