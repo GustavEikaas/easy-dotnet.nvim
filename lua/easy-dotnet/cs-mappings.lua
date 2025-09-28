@@ -1,11 +1,10 @@
 local M = {}
 
 local function is_buffer_empty(buf)
-  for i = 1, vim.api.nvim_buf_line_count(buf), 1 do
+  for i = 0, vim.api.nvim_buf_line_count(buf) - 1 do
     local line = vim.api.nvim_buf_get_lines(buf, i, i + 1, false)[1]
-    if line ~= "" and line ~= nil then return false end
+    if line ~= nil and line ~= "" then return false end
   end
-
   return true
 end
 

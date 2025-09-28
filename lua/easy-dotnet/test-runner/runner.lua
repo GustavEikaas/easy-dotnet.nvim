@@ -3,6 +3,7 @@ local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
 local error_messages = require("easy-dotnet.error-messages")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local logger = require("easy-dotnet.logger")
+local qf_list = require("easy-dotnet.build-output.qf-list")
 
 ---@class TestRunnerModule
 ---@field client DotnetClient
@@ -61,10 +62,12 @@ local M = {
 ---@param project_path string path to csproject file
 ---@return boolean indicating success
 function M.request_build(project_path)
+  qf_list.clear_project(project_path)
   local co = coroutine.running()
   local success = false
 
   M.client.msbuild:msbuild_build({ targetPath = project_path, configuration = nil }, function(response)
+    if not response.success then qf_list.set_project_diagnostics(project_path, response.errors) end
     success = response.success == true
     coroutine.resume(co)
   end)
