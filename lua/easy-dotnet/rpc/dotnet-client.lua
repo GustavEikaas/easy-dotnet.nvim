@@ -109,7 +109,6 @@ end
 ---@class DotnetClient
 ---@field new fun(self: DotnetClient): DotnetClient # Constructor
 ---@field initialized_msbuild_path string
----@field roslyn_pipe string | nil
 ---@field supports_single_file_execution boolean
 ---@field _client StreamJsonRpc # Underlying StreamJsonRpc client used for communication
 ---@field _server DotnetServer # Manages the .NET named pipe server process
@@ -118,6 +117,7 @@ end
 ---@field restart fun(self: DotnetClient, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
 ---@field msbuild MsBuildClient
 ---@field debugger DebuggerClient
+---@field lsp LspClient
 ---@field template_engine TemplateEngineClient
 ---@field launch_profiles LaunchProfilesClient
 ---@field nuget NugetClient
@@ -149,6 +149,7 @@ function M:new()
   instance.nuget = require("easy-dotnet.rpc.controllers.nuget").new(client)
   instance.roslyn = require("easy-dotnet.rpc.controllers.roslyn").new(client)
   instance.debugger = require("easy-dotnet.rpc.controllers.debugger").new(client)
+  instance.lsp = require("easy-dotnet.rpc.controllers.lsp").new(client)
   instance.test = require("easy-dotnet.rpc.controllers.test").new(client)
   return instance
 end
@@ -195,7 +196,6 @@ function M:initialize(cb)
           self._client.routes = routes
 
           M.initialized_msbuild_path = result.toolPaths.msBuildPath
-          M.roslyn_pipe = result.capabilities.roslynPipeName
           M.supports_single_file_execution = result.capabilities.supportsSingleFileExecution or false
 
           self._initializing = false

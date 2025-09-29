@@ -196,11 +196,9 @@ local function background_scanning(merged_opts)
     --prewarm msbuild properties
     local selected_solution = require("easy-dotnet.parsers.sln-parse").try_get_selected_solution_file()
     if selected_solution then
-      if merged_opts.lsp.enabled == true then require("easy-dotnet.roslyn.lsp").start() end
       require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(selected_solution)
     else
       get_solutions_async(function(slns)
-        if merged_opts.lsp.enabled == true then require("easy-dotnet.roslyn.lsp").start() end
         if #slns ~= 1 then return end
         require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(slns[1])
       end)
@@ -289,6 +287,7 @@ M.setup = function(opts)
 
   register_legacy_functions()
 
+  if merged_opts.lsp.enabled == true then require("easy-dotnet.roslyn.lsp").enable() end
   wrap(auto_register_dap)(merged_opts)
   wrap(background_scanning)(merged_opts)
   wrap(auto_install_easy_dotnet)()
