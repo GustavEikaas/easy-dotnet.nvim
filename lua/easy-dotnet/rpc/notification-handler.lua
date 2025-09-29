@@ -14,8 +14,6 @@ M.handler = function(client, method, params)
     elseif method == "project/changed" then
       csproj_parse.invalidate(params.projectPath)
       csproj_parse.get_project_from_project_file(params.projectPath)
-    elseif method == "lsp/ready" then
-      vim.print("LSP IS FULLY READY")
     else
       vim.print("Unknown server notification " .. method)
     end

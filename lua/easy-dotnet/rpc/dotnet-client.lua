@@ -233,7 +233,6 @@ function M:_initialize(cb, opts)
   opts = opts or {}
   coroutine.wrap(function()
     local use_visual_studio = require("easy-dotnet.options").options.server.use_visual_studio == true
-    local use_lsp = require("easy-dotnet.options").options.lsp.enabled == true
     local debugger_path = require("easy-dotnet.options").options.debugger.bin_path
     local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
 
@@ -250,7 +249,7 @@ function M:_initialize(cb, opts)
         request = {
           clientInfo = { name = "EasyDotnet", version = "2.0.0" },
           projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
-          options = { useVisualStudio = use_visual_studio, debuggerOptions = debuggerOptions, useRoslynLsp = use_lsp },
+          options = { useVisualStudio = use_visual_studio, debuggerOptions = debuggerOptions },
         },
       },
     })()
