@@ -20,13 +20,18 @@ end
 function M:lsp_start(cb, opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
+  local user_opts = require("easy-dotnet.options").get_option("lsp")
+
   return helper.create_rpc_call({
     client = self._client,
     job = nil,
     cb = cb,
     on_crash = opts.on_crash,
     method = "lsp/start",
-    params = vim.empty_dict(),
+    params = {
+      useRoslynator = user_opts.roslynator_enabled or false,
+      analyzerAssemblies = user_opts.analyzer_assemblies or {},
+    },
   })()
 end
 

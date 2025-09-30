@@ -179,7 +179,9 @@ local M = {
       auto_register_dap = true,
     },
     lsp = {
-      enabled = false,
+      enabled = true,
+      analyzer_assemblies = {},
+      roslynator_enabled = true,
     },
     diagnostics = {
       default_severity = "error",
