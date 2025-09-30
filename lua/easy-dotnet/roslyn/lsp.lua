@@ -1,4 +1,6 @@
 local extensions = require("easy-dotnet.extensions")
+local job = require("easy-dotnet.ui-modules.jobs")
+local logger = require("easy-dotnet.logger")
 local root_finder = require("easy-dotnet.roslyn.root_finder")
 local dotnet_client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
@@ -42,7 +44,45 @@ M.lsp_config = {
     M.client_state[client_id] = nil
   end,
   commands = {
-    ["roslyn.client.fixAllCodeAction"] = function(data, ctx) vim.print("fixAllCodeAction", "data", data, "ctx", ctx) end,
+    ["roslyn.client.fixAllCodeAction"] = function(data, ctx)
+      local title = data.title
+      local options = data.arguments[1].FixAllFlavors
+      require("easy-dotnet.picker").picker(nil, vim.tbl_map(function(value) return { display = value, value = value } end, options), function(selected)
+        local cleanup = job.register_job({ name = title, on_error_text = title .. " failed", on_success_text = title .. " completed" })
+        local client = vim.lsp.get_client_by_id(ctx.client_id)
+        if not client then return end
+        client:request("codeAction/resolveFixAll", {
+          title = data.title,
+          data = data.arguments[1],
+          scope = selected.value,
+        }, function(err, response)
+          if err then
+            cleanup(false)
+            logger.error("Error resolving fix all code action: " .. err.message)
+            return
+          end
+
+          if not (response and response.edit) then return end
+
+          vim.lsp.util.apply_workspace_edit(response.edit, client.offset_encoding)
+
+          local x = vim.iter(response.edit.documentChanges or {}):fold({ files = {}, edit_count = 0 }, function(acc, change)
+            table.insert(acc.files, change.textDocument.uri)
+            acc.edit_count = acc.edit_count + #(change.edits or {})
+            return acc
+          end)
+
+          local msg = (#x.files > 1) and string.format("Performed %d edits across %d files", x.edit_count, #x.files) or string.format("Performed %d edits", x.edit_count)
+          vim.notify(msg)
+
+          vim.iter(x.files):map(vim.uri_to_fname):map(function(fname) return vim.fn.bufnr(fname, true) end):filter(function(bufnr) return bufnr ~= -1 end):each(function(bufnr)
+            vim.api.nvim_buf_call(bufnr, function() vim.cmd("silent write") end)
+          end)
+
+          cleanup(true)
+        end)
+      end, title, true, true)
+    end,
     ["roslyn.client.nestedCodeAction"] = function(data, ctx) vim.print("nestedCodeAction", "data", data, "ctx", ctx) end,
   },
   handlers = {
