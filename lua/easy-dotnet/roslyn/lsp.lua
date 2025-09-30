@@ -204,6 +204,10 @@ function M.enable()
       end
 
       dotnet_client:initialize(function()
+        if not dotnet_client.has_lsp then
+          vim.defer_fn(function() logger.warn("Roslyn LSP unable to start, server outdated. :Dotnet _server update") end, 500)
+          return
+        end
         dotnet_client.lsp:lsp_start(function(res)
           local pipe_path = get_correct_pipe_path(res.pipe)
 
