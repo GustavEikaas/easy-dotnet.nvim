@@ -14,6 +14,7 @@ local M = {
 ---@type table<number, EasyDotnetClientStateEntry>
 M.client_state = {}
 
+local roslyn_starting
 local selected_file_for_init
 ---@type vim.lsp.Config
 M.lsp_config = {
@@ -27,6 +28,7 @@ M.lsp_config = {
     },
   },
   on_init = function(client)
+    roslyn_starting = job.register_job({ name = "Roslyn starting", on_error_text = "Roslyn failed to start", on_success_text = "Roslyn started" })
     M.client_state[client.id] = {
       selected_file_for_init = selected_file_for_init,
     }
@@ -103,7 +105,10 @@ M.lsp_config = {
         }
 
         client:notify("textDocument/didChange", params)
-        vim.notify("Roslyn ready")
+        if roslyn_starting then
+          roslyn_starting(true)
+          roslyn_starting = nil
+        end
       end, 500)
     end,
     ["workspace/_roslyn_projectNeedsRestore"] = function(_, params, ctx)
