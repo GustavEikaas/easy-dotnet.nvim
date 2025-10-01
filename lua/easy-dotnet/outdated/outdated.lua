@@ -40,17 +40,24 @@ end
 local function apply_ext_marks(deps, pattern_type)
   local ns_id = constants.ns_id
   local bnr = vim.fn.bufnr("%")
+
   vim.api.nvim_buf_clear_namespace(bnr, ns_id, 0, -1)
-  for _, value in ipairs(deps) do
-    local line = find_package_in_buffer(value.name, pattern_type)
-    if line ~= nil then
+
+  local deduped = vim.iter(deps):filter(function(p) return p.isOutdated end):fold({}, function(acc, p)
+    if not acc[p.name] then acc[p.name] = p end
+    return acc
+  end)
+
+  for _, pkg in pairs(deduped) do
+    local line = find_package_in_buffer(pkg.name, pattern_type)
+    if line then
       vim.api.nvim_buf_set_extmark(bnr, ns_id, line - 1, 0, {
-        virt_text = { { string.format("%s -> %s", value.currentVersion, value.latestVersion), "EasyDotnetPackage" } },
+        virt_text = { { string.format("%s -> %s", pkg.currentVersion, pkg.latestVersion), "EasyDotnetPackage" } },
         virt_text_pos = "eol",
         priority = 200,
       })
     else
-      logger.warn("Failed to find package " .. value.name)
+      logger.warn("Failed to find package " .. pkg.name)
     end
   end
 end
