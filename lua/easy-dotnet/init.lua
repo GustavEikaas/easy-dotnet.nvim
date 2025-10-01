@@ -115,12 +115,15 @@ local function auto_register_dap(merged_opts)
       type = "easy-dotnet",
       name = "easy-dotnet",
       request = "attach",
-      select_project = dotnet.prepare_debugger,
+      port = dotnet.prepare_debugger,
     } })
 
     dap.configurations["cs"] = debugger_conf
 
-    dap.adapters["easy-dotnet"] = function(callback) callback({ type = "server", host = "127.0.0.1", port = 8086 }) end
+    dap.adapters["easy-dotnet"] = function(callback, config)
+      --8086 port for backwards compatible pre #551
+      callback({ type = "server", host = "127.0.0.1", port = config.port or 8086 })
+    end
   end
 end
 

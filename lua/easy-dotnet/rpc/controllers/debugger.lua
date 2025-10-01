@@ -22,6 +22,7 @@ end
 
 ---@class DebuggerStartResponse
 ---@field success boolean
+---@field port integer | nil
 
 function M:debugger_start(request, cb, opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
