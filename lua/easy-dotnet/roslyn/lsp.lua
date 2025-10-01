@@ -14,6 +14,89 @@ local M = {
 ---@type table<number, EasyDotnetClientStateEntry>
 M.client_state = {}
 
+local function get_grouped_code_actions(nested_code_actions)
+  local grouped = {}
+
+  for _, it in ipairs(nested_code_actions) do
+    local path = it.data.CodeActionPath
+    local fix_all_flavors = it.data.FixAllFlavors
+
+    if #path == 1 then
+      table.insert(grouped, {
+        group = path[1],
+        leaf = nil,
+        code_action = it,
+      })
+    else
+      local leaf = path[#path]
+      local group = table.concat(path, " -> ", 2, #path - 1)
+
+      if fix_all_flavors then leaf = "[Fix All] " .. leaf end
+
+      grouped[group] = grouped[group] or {}
+      table.insert(grouped[group], {
+        leaf = leaf,
+        code_action = it,
+      })
+    end
+  end
+
+  return grouped
+end
+
+local function apply_workspace_edit(edit, client)
+  if not edit then return end
+
+  vim.lsp.util.apply_workspace_edit(edit, client.offset_encoding)
+
+  local x = vim.iter(edit.documentChanges or {}):fold({ files = {}, edit_count = 0 }, function(acc, change)
+    table.insert(acc.files, change.textDocument.uri)
+    acc.edit_count = acc.edit_count + #(change.edits or {})
+    return acc
+  end)
+
+  local msg = (#x.files > 1) and string.format("Performed %d edits across %d files", x.edit_count, #x.files) or string.format("Performed %d edits", x.edit_count)
+  vim.notify(msg)
+
+  vim.iter(x.files):map(vim.uri_to_fname):map(function(fname) return vim.fn.bufnr(fname, true) end):filter(function(bufnr) return bufnr ~= -1 end):each(function(bufnr)
+    vim.api.nvim_buf_call(bufnr, function() vim.cmd("silent write") end)
+  end)
+end
+
+local function resolve_or_apply_code_action(client, action)
+  if not action then return end
+
+  if action.data and action.data.FixAllFlavors then
+    local title = action.title or "Fix All"
+    local options = action.data.FixAllFlavors
+    require("easy-dotnet.picker").picker(nil, vim.tbl_map(function(v) return { display = v, value = v } end, options), function(selected)
+      if not selected then return end
+      client:request("codeAction/resolveFixAll", {
+        title = title,
+        data = action.data,
+        scope = selected.value,
+      }, function(err, response)
+        if err then
+          vim.notify("Failed to apply code action")
+          return
+        end
+        if response and response.edit then apply_workspace_edit(response.edit, client) end
+      end)
+    end, title, true, true)
+  else
+    client:request("codeAction/resolve", {
+      title = action.title,
+      data = action.data,
+    }, function(err, response)
+      if err then
+        vim.notify("Failed to apply code action")
+        return
+      end
+      if response and response.edit then apply_workspace_edit(response.edit, client) end
+    end)
+  end
+end
+
 local roslyn_starting
 local selected_file_for_init
 ---@type vim.lsp.Config
@@ -65,27 +148,39 @@ M.lsp_config = {
           end
 
           if not (response and response.edit) then return end
-
-          vim.lsp.util.apply_workspace_edit(response.edit, client.offset_encoding)
-
-          local x = vim.iter(response.edit.documentChanges or {}):fold({ files = {}, edit_count = 0 }, function(acc, change)
-            table.insert(acc.files, change.textDocument.uri)
-            acc.edit_count = acc.edit_count + #(change.edits or {})
-            return acc
-          end)
-
-          local msg = (#x.files > 1) and string.format("Performed %d edits across %d files", x.edit_count, #x.files) or string.format("Performed %d edits", x.edit_count)
-          vim.notify(msg)
-
-          vim.iter(x.files):map(vim.uri_to_fname):map(function(fname) return vim.fn.bufnr(fname, true) end):filter(function(bufnr) return bufnr ~= -1 end):each(function(bufnr)
-            vim.api.nvim_buf_call(bufnr, function() vim.cmd("silent write") end)
-          end)
-
+          apply_workspace_edit(response.edit, client)
           cleanup(true)
         end)
       end, title, true, true)
     end,
-    ["roslyn.client.nestedCodeAction"] = function(data, ctx) vim.print("nestedCodeAction", "data", data, "ctx", ctx) end,
+    ["roslyn.client.nestedCodeAction"] = function(data, ctx)
+      local client = vim.lsp.get_client_by_id(ctx.client_id)
+      if not client then return end
+
+      local args = data.arguments[1]
+      if not args then return end
+
+      local grouped = get_grouped_code_actions(args.NestedCodeActions)
+
+      local groups = vim.tbl_keys(grouped)
+      require("easy-dotnet.picker").picker(nil, vim.tbl_map(function(g) return { display = g, value = g } end, groups), function(group_selected)
+        if not group_selected then return end
+
+        local leaves = grouped[group_selected.value]
+
+        if vim.islist(leaves) and #leaves == 1 and not leaves[1].leaf then
+          local action = leaves[1].code_action
+          resolve_or_apply_code_action(client, action)
+          return
+        end
+
+        require("easy-dotnet.picker").picker(nil, vim.tbl_map(function(s) return { display = s.leaf, value = s } end, leaves), function(leaf_selected)
+          if not leaf_selected then return end
+          local action = leaf_selected.value.code_action
+          resolve_or_apply_code_action(client, action)
+        end, "Pick nested action", true, true)
+      end, args.UniqueIdentifier or "Pick group", true, true)
+    end,
   },
   handlers = {
     ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
