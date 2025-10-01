@@ -98,7 +98,7 @@ M.prepare_debugger = function(use_default)
 
   client.debugger:debugger_start(
     { targetPath = project.path, targetFramework = project.msbuild_props.targetFramework, configuration = "Debug", launchProfileName = launch_profile_name },
-    function() coroutine.resume(co) end,
+    function(res) coroutine.resume(co, res.port) end,
     {
       on_crash = function()
         logger.error("Debugger failed to start")
@@ -106,9 +106,9 @@ M.prepare_debugger = function(use_default)
       end,
     }
   )
+  local curr_debugger_port = coroutine.yield()
 
-  coroutine.yield()
-  return "REWRITE_ATTACH"
+  return curr_debugger_port
 end
 
 local function run_job_sync(cmd)
