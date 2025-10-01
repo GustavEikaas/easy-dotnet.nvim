@@ -146,6 +146,19 @@ Although not *required* by the plugin, it is highly recommended to install one o
     local dotnet = require("easy-dotnet")
     -- Options are not required
     dotnet.setup({
+      lsp = {
+        enabled = true, -- Enable builtin roslyn lsp
+        roslynator_enabled = true, -- Automatically enable roslynator analyzer
+        analyzer_assemblies = {}, -- Any additional roslyn analyzers you might use like SonarAnalyzer.CSharp
+      },
+      debugger = {
+        -- The path to netcoredbg executable
+        bin_path = nil,
+        auto_register_dap = true,
+        mappings = {
+          open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
+        },
+      },
       ---@type TestRunnerOptions
       test_runner = {
         ---@type "split" | "vsplit" | "float" | "buf"
@@ -242,14 +255,6 @@ Although not *required* by the plugin, it is highly recommended to install one o
             spinner:stop_spinner(finished_event.result.text, finished_event.result.level)
           end
         end,
-      },
-      debugger = {
-        mappings = {
-          open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
-        },
-        -- The path to netcoredbg
-        bin_path = nil,
-        auto_register_dap = true,
       },
       diagnostics = {
         default_severity = "error",

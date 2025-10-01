@@ -178,6 +178,11 @@ local M = {
       bin_path = nil,
       auto_register_dap = true,
     },
+    lsp = {
+      enabled = true,
+      analyzer_assemblies = {},
+      roslynator_enabled = true,
+    },
     diagnostics = {
       default_severity = "error",
       setqflist = false,

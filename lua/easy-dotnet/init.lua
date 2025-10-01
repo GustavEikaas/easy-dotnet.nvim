@@ -287,6 +287,7 @@ M.setup = function(opts)
 
   register_legacy_functions()
 
+  if merged_opts.lsp.enabled == true then require("easy-dotnet.roslyn.lsp").enable() end
   wrap(auto_register_dap)(merged_opts)
   wrap(background_scanning)(merged_opts)
   wrap(auto_install_easy_dotnet)()

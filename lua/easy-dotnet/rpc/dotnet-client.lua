@@ -109,6 +109,7 @@ end
 ---@class DotnetClient
 ---@field new fun(self: DotnetClient): DotnetClient # Constructor
 ---@field initialized_msbuild_path string
+---@field has_lsp boolean
 ---@field supports_single_file_execution boolean
 ---@field _client StreamJsonRpc # Underlying StreamJsonRpc client used for communication
 ---@field _server DotnetServer # Manages the .NET named pipe server process
@@ -117,6 +118,7 @@ end
 ---@field restart fun(self: DotnetClient, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
 ---@field msbuild MsBuildClient
 ---@field debugger DebuggerClient
+---@field lsp LspClient
 ---@field template_engine TemplateEngineClient
 ---@field launch_profiles LaunchProfilesClient
 ---@field nuget NugetClient
@@ -148,6 +150,7 @@ function M:new()
   instance.nuget = require("easy-dotnet.rpc.controllers.nuget").new(client)
   instance.roslyn = require("easy-dotnet.rpc.controllers.roslyn").new(client)
   instance.debugger = require("easy-dotnet.rpc.controllers.debugger").new(client)
+  instance.lsp = require("easy-dotnet.rpc.controllers.lsp").new(client)
   instance.test = require("easy-dotnet.rpc.controllers.test").new(client)
   return instance
 end
@@ -167,6 +170,33 @@ end
 function M:restart(cb)
   self:stop(function() self:initialize(cb) end)
 end
+
+local function splitVersion(version)
+  local parts = {}
+  for num in version:gmatch("%d+") do
+    table.insert(parts, tonumber(num))
+  end
+  return parts
+end
+
+local function compareVersions(a, b)
+  local va = splitVersion(a)
+  local vb = splitVersion(b)
+
+  local maxLen = math.max(#va, #vb)
+  for i = 1, maxLen do
+    local ai = va[i] or 0
+    local bi = vb[i] or 0
+    if ai > bi then
+      return 1
+    elseif ai < bi then
+      return -1
+    end
+  end
+  return 0
+end
+
+local function has_lsp(version) return compareVersions(version, "2.3.0.0") >= 0 end
 
 function M:initialize(cb)
   assert(self._server, "[DotnetClient] .new() was not called before :initialize(). Please construct with :new().")
@@ -192,6 +222,7 @@ function M:initialize(cb)
         self:_initialize(function(result)
           local routes = result.capabilities.routes
           self._client.routes = routes
+          M.has_lsp = has_lsp(result.serverInfo.version)
 
           M.initialized_msbuild_path = result.toolPaths.msBuildPath
           M.supports_single_file_execution = result.capabilities.supportsSingleFileExecution or false
