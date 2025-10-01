@@ -92,7 +92,9 @@ local function handle_choices(params, done)
     elseif param.dataType == "choice" then
       local choices = {}
       for key, va in pairs(param.choices or {}) do
-        table.insert(choices, { display = va, value = key })
+        local display = va
+        if display == nil or display == "" then display = key end
+        table.insert(choices, { display = display, value = key })
       end
       require("easy-dotnet.picker").picker(nil, choices, function(choice_val)
         selected_params[param.name] = choice_val.value
