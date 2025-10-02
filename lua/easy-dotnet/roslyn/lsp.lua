@@ -50,7 +50,7 @@ M.lsp_config = {
     end
   end,
   on_exit = function(_, _, client_id)
-    vim.schedule(function() vim.notify("[easy-dotnet] LSP exited unexpectedly", vim.log.levels.WARN) end)
+    vim.schedule(function() vim.notify("[easy-dotnet] Roslyn stopped", vim.log.levels.WARN) end)
     M.client_state[client_id] = nil
   end,
   commands = {
