@@ -146,11 +146,6 @@ M.check = function()
   vim.health.start("easy-dotnet lua dependencies")
   ensure_nvim_dep_installed("plenary", "https://github.com/nvim-lua/plenary.nvim")
   ensure_nvim_dep_installed("dap", { "Some functionality will be disabled", "https://github.com/mfussenegger/nvim-dap" }, false)
-  ensure_nvim_dep_installed("roslyn", {
-    "This is not required for this plugin but is a nice addition to the .Net developer experience",
-    "If you are using another LSP you can safely ignore this warning",
-    "https://github.com/seblj/roslyn.nvim",
-  }, false)
 
   vim.health.start("easy-dotnet dap configuration (optional)")
   check_debugger_configured()

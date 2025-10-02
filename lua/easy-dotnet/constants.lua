@@ -3,6 +3,7 @@ local M = {}
 
 M.ns_id = vim.api.nvim_create_namespace("easy-dotnet")
 M.sign_namespace = "EasyDotnetTestSignGroup"
+M.lsp_client_name = "easy_dotnet"
 
 M.get_data_directory = function()
   local dir = polyfills.fs.joinpath(vim.fs.normalize(vim.fn.stdpath("data")), "easy-dotnet")
