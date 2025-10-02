@@ -8,20 +8,10 @@ local constants = require("easy-dotnet.constants")
 
 local M = {
   max_clients = 5,
-  stopping_clients = {},
 }
 
 local function get_running_lsp_clients()
   return vim.iter(vim.lsp.get_clients({ name = constants.lsp_client_name })):filter(function(client) return not client:is_stopped() end):totable()
-end
-
-local function clean_orphaned_lsp_clients()
-  vim.defer_fn(function()
-    vim.iter(get_running_lsp_clients()):filter(function(client) return vim.tbl_isempty(client.attached_buffers) end):each(function(client)
-      M.stopping_clients[client.id] = true
-      client:stop(true)
-    end)
-  end, 200)
 end
 
 ---@class EasyDotnetClientStateEntry
@@ -60,8 +50,7 @@ M.lsp_config = {
     end
   end,
   on_exit = function(_, _, client_id)
-    if not M.stopping_clients[client_id] then vim.schedule(function() vim.notify("[easy-dotnet] LSP exited unexpectedly", vim.log.levels.WARN) end) end
-    M.stopping_clients[client_id] = nil
+    vim.schedule(function() vim.notify("[easy-dotnet] LSP exited unexpectedly", vim.log.levels.WARN) end)
     M.client_state[client_id] = nil
   end,
   commands = {
@@ -168,14 +157,13 @@ end
 
 function M.enable()
   local function start_easy_dotnet_lsp(bufnr)
-    clean_orphaned_lsp_clients()
     M.find_project_or_solution(bufnr, function(root, selected_file)
       selected_file_for_init = selected_file
 
       local existing_clients = get_running_lsp_clients()
 
       for _, client in ipairs(existing_clients) do
-        if client.config.root_dir == root then
+        if client.config.root_dir == root or root:match("/MetadataAsSource/") then
           vim.lsp.buf_attach_client(bufnr, client.id)
           return
         end
