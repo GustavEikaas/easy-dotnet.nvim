@@ -150,6 +150,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
         enabled = true, -- Enable builtin roslyn lsp
         roslynator_enabled = true, -- Automatically enable roslynator analyzer
         analyzer_assemblies = {}, -- Any additional roslyn analyzers you might use like SonarAnalyzer.CSharp
+        config = {},
       },
       debugger = {
         -- The path to netcoredbg executable
