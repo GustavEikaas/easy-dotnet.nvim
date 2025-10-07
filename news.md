@@ -78,10 +78,11 @@ dotnet.setup {
 
 ## .NET framework support ([#484](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/484))
 
-This release introduces initial support for the .NET Framework.
-You can now build, run, and test traditional .NET Framework projects directly inside Neovim including full test-runner integration and support for IIS projects.
+This release brings native support for the .NET Framework
+You can now build, run, and test classic .NET Framework projects directly inside Neovim including full testrunner integration and support for IIS-based projects.
+LSP functionality is also supported out of the box.
 
-While debugger support isn’t available yet (no open-source DAP-compatible CLR debugger exists), most core workflows are already supported.
+Debugger support is not yet available, as no open-source, DAP-compliant CLR debugger exists. However, all core workflows are now functional and ready for daily use.
 
 ### How can I start using this
 - Visual Studio must be installed (required for MSBuild).
