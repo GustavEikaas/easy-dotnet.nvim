@@ -5,6 +5,7 @@ local root_finder = require("easy-dotnet.roslyn.root_finder")
 local dotnet_client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
+local options = require("easy-dotnet.options")
 
 local M = {
   max_clients = 5,
@@ -182,10 +183,12 @@ function M.enable()
         dotnet_client.lsp:lsp_start(function(res)
           local pipe_path = get_correct_pipe_path(res.pipe)
 
-          local lsp_opts = vim.tbl_extend("keep", {
+          local user_lsp_config = options.get_option("lsp").config or {}
+
+          local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, user_lsp_config, {
             cmd = function(dispatchers) return vim.lsp.rpc.connect(pipe_path)(dispatchers) end,
             root_dir = root,
-          }, M.lsp_config)
+          })
 
           vim.lsp.start(lsp_opts, { bufnr = bufnr })
         end)

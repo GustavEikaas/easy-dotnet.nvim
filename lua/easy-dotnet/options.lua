@@ -182,6 +182,7 @@ local M = {
       enabled = true,
       analyzer_assemblies = {},
       roslynator_enabled = true,
+      config = {},
     },
     diagnostics = {
       default_severity = "error",
