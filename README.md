@@ -11,8 +11,7 @@ Are you a .NET developer looking to harness the power of Neovim for your daily c
 >Run `:Dotnet _server update` or `dotnet tool install -g EasyDotnet` to update it.
 >The plugin will attempt to detect when the server is outdated and notify you. If you encounter any issues, please don't hesitate to file an issue.
 
-> 💡 **Tip:**
-> 📰 **Stay updated:** Major updates and new features are announced in [`NEWS.md`](./NEWS.md).  
+> 📰 **Stay updated:** Major updates and new features are announced in [`news.md`](./news.md).  
 > Give it a read periodically to stay in sync with the latest capabilities!
 
 
