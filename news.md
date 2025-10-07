@@ -60,7 +60,7 @@ You no longer need to manually write DAP configurations for typical .NET workflo
 - [easy-dotnet-server](https://github.com/GustavEikaas/easy-dotnet-server): Acts as a smart proxy between Neovim and NetCoreDbg, rewriting requests and responses as needed.
 - Automatically normalize breakpoints (windows): Automatically fixes this issue [nvim-dap#1551](https://github.com/mfussenegger/nvim-dap/issues/1551)
 
-### How to Start Using It
+### How can I start using this
 
 1. Remove any existing DAP configuration for C#.
 2. Set your debugger path:
@@ -75,3 +75,22 @@ dotnet.setup {
   }
 }
 ```
+
+## .NET framework support ([#484](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/484))
+
+This release introduces initial support for the .NET Framework.
+You can now build, run, and test traditional .NET Framework projects directly inside Neovim including full test-runner integration and support for IIS projects.
+
+While debugger support isn’t available yet (no open-source DAP-compatible CLR debugger exists), most core workflows are already supported.
+
+### How can I start using this
+- Visual Studio must be installed (required for MSBuild).
+- Install the nuget CLI via Chocolatey or other sources
+```sh
+choco install nuget.commandline
+```
+- Set this option in your setup:
+```lua
+options.server.use_visual_studio = true
+```
+
