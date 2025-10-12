@@ -61,15 +61,24 @@ local function debug_test_from_buffer()
 end
 
 local function get_nearest_method_line()
-  local ts_utils = require("nvim-treesitter.ts_utils")
-  local node = ts_utils.get_node_at_cursor()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local row, col = cursor[1] - 1, cursor[2]
+
+  local parser = vim.treesitter.get_parser(bufnr)
+  if not parser then return nil end
+  local tree = parser:parse()[1]
+  local root = tree:root()
+
+  local node = root:named_descendant_for_range(row, col, row, col)
 
   while node do
     if node:type() == "method_declaration" then
-      local wantedNode = node:field("name")[1]
-      local wantedNodeStartRow, _, _ = wantedNode:start()
-      -- treesitter uses 0 based indexing where as line numbers start at 1
-      return wantedNodeStartRow + 1
+      local name_node = node:field("name")[1]
+      if name_node then
+        local start_row = name_node:start()
+        return start_row + 1
+      end
     end
     node = node:parent()
   end
