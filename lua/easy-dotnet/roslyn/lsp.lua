@@ -40,6 +40,7 @@ M.lsp_config = {
       selected_file_for_init = selected_file_for_init,
     }
     if selected_file_for_init then
+      vim.notify("Opening workspace: " .. vim.fs.basename(selected_file_for_init))
       local uri = vim.uri_from_fname(selected_file_for_init)
       if selected_file_for_init:match("%.slnx?$") then
         client:notify("solution/open", { solution = uri })
@@ -198,6 +199,7 @@ function M.enable()
   vim.api.nvim_create_autocmd("FileType", {
     pattern = "cs",
     callback = function(args)
+      vim.print("Filetype", args)
       local path = vim.api.nvim_buf_get_name(args.buf)
       if not path or #path == 0 then return end
       start_easy_dotnet_lsp(args.buf)
