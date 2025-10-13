@@ -157,6 +157,11 @@ local function get_correct_pipe_path(roslyn_pipe)
 end
 
 function M.enable()
+  if vim.fn.has("nvim-0.11") == 0 then
+    logger.warn("easy-dotnet lsp requires neovim 0.11 or higher ")
+    return
+  end
+
   local function start_easy_dotnet_lsp(bufnr)
     M.find_project_or_solution(bufnr, function(root, selected_file)
       selected_file_for_init = selected_file
