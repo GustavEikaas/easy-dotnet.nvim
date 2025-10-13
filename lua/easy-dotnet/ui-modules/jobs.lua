@@ -44,6 +44,7 @@ local M = {
   spinner_frames = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" },
   listeners = {},
   finished_job = nil,
+  finished_job_time = nil,
   _clear_timer = nil,
   -- 15 seconds
   default_timeout = 15000,
@@ -68,6 +69,7 @@ function M.register_job(job)
         local msg = string.format("%s (timed out)", job.name)
         local level = vim.log.levels.WARN
         M.finished_job = msg
+        M.finished_job_time = vim.loop.now()
         M.job_counter = M.job_counter + 1
 
         for _, value in ipairs(on_finished) do
@@ -100,6 +102,7 @@ function M.register_job(job)
     local msg = is_error and (job.on_error_text or job.name) or (job.on_success_text or job.name)
     local level = is_error and vim.log.levels.ERROR or vim.log.levels.INFO
     M.finished_job = msg
+    M.finished_job_time = vim.loop.now()
     M.job_counter = M.job_counter + 1
     for _, value in ipairs(on_finished) do
       value({ event = "finished", success = success, job = job, result = { msg = msg, level = level, stack_trace = error } })
@@ -124,6 +127,15 @@ end
 
 function M.lualine()
   local total_jobs = #M.jobs
+
+  if total_jobs == 0 and M.finished_job and M.finished_job_time then
+    local elapsed = vim.loop.now() - M.finished_job_time
+    if elapsed > 5000 then
+      M.finished_job = nil
+      M.finished_job_time = nil
+    end
+  end
+
   if total_jobs == 0 then return M.finished_job or "" end
 
   M.job_counter = (M.job_counter % total_jobs) + 1
