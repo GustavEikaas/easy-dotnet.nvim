@@ -248,7 +248,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
           spinner:start_spinner(start_event.job.name)
           ---@param finished_event JobEvent
           return function(finished_event)
-            spinner:stop_spinner(finished_event.result.text, finished_event.result.level)
+            spinner:stop_spinner(finished_event.result.msg, finished_event.result.level)
           end
         end,
       },
