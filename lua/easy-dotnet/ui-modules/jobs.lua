@@ -2,6 +2,7 @@
 ---@field name string The job description text (e.g., "building...")
 ---@field on_success_text? string Text shown if the job succeeds
 ---@field on_error_text? string Text shown if the job fails
+---@field timeout? integer Time (ms) after which the job auto-fails if not finished
 
 ---@alias JobEventType "started" | "finished"
 
@@ -24,6 +25,7 @@
 ---@field spinner_frames string[] Spinner animation frames.
 ---@field listeners JobLifecycleListener[]
 ---@field register_job fun(job: JobData): fun(success: boolean, error?: string[]) Adds a job and returns a function to remove it.
+---@field default_timeout integer
 ---@field register_listener fun(listener: JobLifecycleListener): fun() Registers a listener and returns a function to remove it.
 ---@field notify_listeners fun(event: JobEvent): (fun(event: JobEvent)?)[] Calls all registered listeners with a job event and returns their optional finish callbacks.
 ---@field lualine fun(): string Returns a string representing current job state, intended for statusline display.
@@ -42,22 +44,65 @@ local M = {
   spinner_frames = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" },
   listeners = {},
   finished_job = nil,
+  finished_job_time = nil,
+  _clear_timer = nil,
+  -- 15 seconds
+  default_timeout = 15000,
 }
 
 ---Register a job and get a function to remove it
 ---@param job JobData The job description
 ---@return fun(success: boolean, error?: string[]) remove_callback
 function M.register_job(job)
+  job.timeout = job.timeout or M.default_timeout
   local index = #M.jobs + 1
   M.jobs[index] = job
   local on_finished = M.notify_listeners({ event = "started", job = job })
 
+  local finished = false
+  local timeout_timer
+
+  if job.timeout and job.timeout > 0 then
+    timeout_timer = vim.defer_fn(function()
+      if not finished then
+        M.jobs = vim.tbl_filter(function(x) return x ~= job end, M.jobs)
+        local msg = string.format("%s (timed out)", job.name)
+        local level = vim.log.levels.WARN
+        M.finished_job = msg
+        M.finished_job_time = vim.loop.now()
+        M.job_counter = M.job_counter + 1
+
+        for _, value in ipairs(on_finished) do
+          value({
+            event = "finished",
+            success = false,
+            job = job,
+            result = {
+              msg = msg,
+              level = level,
+              stack_trace = { "Job timed out after " .. job.timeout .. "ms" },
+            },
+          })
+        end
+      end
+    end, job.timeout)
+  end
+
   return function(success, error)
+    if finished then return end
+    finished = true
+
+    if timeout_timer then pcall(function()
+      timeout_timer:stop()
+      timeout_timer:close()
+    end) end
+
     M.jobs = vim.tbl_filter(function(x) return x ~= job end, M.jobs)
     local is_error = success == false
     local msg = is_error and (job.on_error_text or job.name) or (job.on_success_text or job.name)
     local level = is_error and vim.log.levels.ERROR or vim.log.levels.INFO
     M.finished_job = msg
+    M.finished_job_time = vim.loop.now()
     M.job_counter = M.job_counter + 1
     for _, value in ipairs(on_finished) do
       value({ event = "finished", success = success, job = job, result = { msg = msg, level = level, stack_trace = error } })
@@ -82,6 +127,15 @@ end
 
 function M.lualine()
   local total_jobs = #M.jobs
+
+  if total_jobs == 0 and M.finished_job and M.finished_job_time then
+    local elapsed = vim.loop.now() - M.finished_job_time
+    if elapsed > 5000 then
+      M.finished_job = nil
+      M.finished_job_time = nil
+    end
+  end
+
   if total_jobs == 0 then return M.finished_job or "" end
 
   M.job_counter = (M.job_counter % total_jobs) + 1
