@@ -14,6 +14,12 @@ M.handler = function(client, method, params)
     elseif method == "project/changed" then
       csproj_parse.invalidate(params.projectPath)
       csproj_parse.get_project_from_project_file(params.projectPath)
+    elseif method == "displayError" then
+      logger.error(params.message)
+    elseif method == "displayWarning" then
+      logger.warn(params.message)
+    elseif method == "displayMessage" then
+      logger.info(params.message)
     else
       vim.print("Unknown server notification " .. method)
     end
