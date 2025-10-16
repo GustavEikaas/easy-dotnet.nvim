@@ -113,11 +113,14 @@ local function encode_rpc_message(message)
   return header .. json_message
 end
 
-local client_methods = { "openBuffer" }
+local client_methods = { "openBuffer", "setBreakpoint" }
 
 local function handle_server_request(decoded, response)
-  if decoded.method == "openBuffer" then
-    local path = decoded.params and decoded.params.path
+  local method = decoded.method
+  local params = decoded.params or {}
+
+  if method == "openBuffer" then
+    local path = params and params.path
     if not path then
       local msg = "openBuffer request received but 'path' is nil"
       logger.error(msg)
@@ -135,9 +138,49 @@ local function handle_server_request(decoded, response)
     end
     vim.cmd.edit(vim.fn.fnameescape(full_path))
     response(true)
+  elseif method == "setBreakpoint" then
+    local path = params.path
+    local line = params.lineNumber
+
+    if not path or not line then
+      local msg = "setBreakpoint request missing 'path' or 'lineNumber'"
+      logger.error(msg)
+      response(nil, { code = -32602, message = msg })
+      return
+    end
+
+    local full_path = vim.fn.expand(path)
+
+    if vim.fn.filereadable(full_path) == 0 then
+      local msg = ("setBreakpoint: file not found: %s"):format(full_path)
+      logger.error(msg)
+      response(nil, { code = -32000, message = msg })
+      return
+    end
+
+    local ok, dap = pcall(require, "dap")
+    if not ok then
+      local msg = "nvim-dap is not installed"
+      logger.error(msg)
+      response(nil, { code = -32001, message = msg })
+      return
+    end
+
+    vim.cmd.edit(vim.fn.fnameescape(full_path))
+    vim.api.nvim_win_set_cursor(0, { line, 0 })
+
+    local bp_ok, bp_err = pcall(dap.set_breakpoint)
+    if not bp_ok then
+      local msg = "Failed to set breakpoint: " .. tostring(bp_err)
+      logger.error(msg)
+      response(nil, { code = -32002, message = msg })
+      return
+    end
+
+    response(true)
   else
-    logger.error("Unhandled server method: " .. decoded.method)
-    response(nil, { code = -32601, message = "Unhandled method: " .. decoded.method })
+    logger.error("Unhandled server method: " .. method)
+    response(nil, { code = -32601, message = "Unhandled method: " .. method })
   end
 end
 
