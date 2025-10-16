@@ -180,7 +180,7 @@ local function handle_response(decoded)
   elseif vim.list_contains(client_methods, decoded.method) then
     vim.schedule(function() handle_server_request(decoded, make_response(decoded)) end)
   else
-    vim.print("No callback found for ", decoded)
+    --TODO: want to warn user but also ignore cancelled requests.
   end
 end
 
