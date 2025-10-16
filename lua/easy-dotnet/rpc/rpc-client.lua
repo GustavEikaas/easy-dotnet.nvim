@@ -104,6 +104,15 @@ function M.setup(opts)
   return M
 end
 
+---Encodes a Lua table into a JSON-RPC message with headers
+---@param message table The JSON-RPC message body (already containing jsonrpc, id, etc.)
+---@return string full_message The complete message (headers + JSON)
+local function encode_rpc_message(message)
+  local json_message = vim.json.encode(message)
+  local header = string.format("Content-Length: %d\r\n\r\n", #json_message)
+  return header .. json_message
+end
+
 local client_methods = { "openBuffer" }
 
 local function handle_server_request(decoded, response)
@@ -153,11 +162,9 @@ local function make_response(decoded)
       message.result = result
     end
 
-    local json_message = vim.json.encode(message)
-    local header = string.format("Content-Length: %d\r\n\r\n", #json_message)
-    local full_message = header .. json_message
+    local full_message = encode_rpc_message(message)
 
-    debug_log("Sending response for ID " .. tostring(decoded.id) .. ": " .. json_message)
+    debug_log("Sending response for ID " .. tostring(decoded.id) .. ": " .. message)
 
     local ok, write_result = pcall(vim.loop.write, connection, full_message)
     if not ok or not write_result then vim.schedule(function() vim.notify("StreamJsonRpc: failed to send response for ID " .. tostring(decoded.id), vim.log.levels.ERROR) end) end
@@ -286,11 +293,9 @@ function M.request(method, params, callback, options)
   callbacks[id] = callback
   cancellation_callbacks[id] = options.on_cancel
 
-  local json_message = vim.json.encode(message)
-  local header = string.format("Content-Length: %d\r\n\r\n", #json_message)
-  local full_message = header .. json_message
+  local full_message = encode_rpc_message(message)
 
-  debug_log("Sending request: " .. method .. " (ID: " .. id .. "), content: " .. json_message)
+  debug_log("Sending request: " .. method .. " (ID: " .. id .. "), content: " .. message)
 
   local ok, write_result = pcall(vim.loop.write, connection, full_message)
 
@@ -395,11 +400,9 @@ function M.notify(method, params)
     params = params or {},
   }
 
-  local json_message = vim.json.encode(message)
-  local header = string.format("Content-Length: %d\r\n\r\n", #json_message)
-  local full_message = header .. json_message
+  local full_message = encode_rpc_message(message)
 
-  debug_log("Sending notification: " .. method .. ", content: " .. json_message)
+  debug_log("Sending notification: " .. method .. ", content: " .. message)
 
   local ok, write_result = pcall(vim.loop.write, connection, full_message)
 
