@@ -104,12 +104,76 @@ function M.setup(opts)
   return M
 end
 
+local client_methods = { "openBuffer" }
+
+local function handle_server_request(decoded, response)
+  if decoded.method == "openBuffer" then
+    local path = decoded.params and decoded.params.path
+    if not path then
+      local msg = "openBuffer request received but 'path' is nil"
+      logger.error(msg)
+      response(nil, { code = -32602, message = msg })
+      return
+    end
+
+    local full_path = vim.fn.expand(path)
+
+    if vim.fn.filereadable(full_path) == 0 then
+      logger.error(("openBuffer: file does not exist: %s"):format(full_path))
+
+      response(nil, { code = -32000, message = "File not found: " .. full_path })
+      return
+    end
+    vim.cmd.edit(vim.fn.fnameescape(full_path))
+    response(true)
+  else
+    logger.error("Unhandled server method: " .. decoded.method)
+    response(nil, { code = -32601, message = "Unhandled method: " .. decoded.method })
+  end
+end
+
+---Create a response function for replying to server requests
+---@param decoded table The original request object from the server
+---@return fun(result: any, err?: string|table): nil
+local function make_response(decoded)
+  return function(result, err)
+    if not connection then
+      logger.error("RPC: cannot send response, no active connection")
+      return
+    end
+
+    local message = {
+      jsonrpc = "2.0",
+      id = decoded.id,
+    }
+
+    if err then
+      message.error = type(err) == "table" and err or { code = -32603, message = tostring(err) }
+    else
+      message.result = result
+    end
+
+    local json_message = vim.json.encode(message)
+    local header = string.format("Content-Length: %d\r\n\r\n", #json_message)
+    local full_message = header .. json_message
+
+    debug_log("Sending response for ID " .. tostring(decoded.id) .. ": " .. json_message)
+
+    local ok, write_result = pcall(vim.loop.write, connection, full_message)
+    if not ok or not write_result then vim.schedule(function() vim.notify("StreamJsonRpc: failed to send response for ID " .. tostring(decoded.id), vim.log.levels.ERROR) end) end
+  end
+end
+
 local function handle_response(decoded)
   local cb = callbacks[decoded.id]
   if cb then
     callbacks[decoded.id] = nil
     cancellation_callbacks[decoded.id] = nil
     vim.schedule(function() cb(decoded) end)
+  elseif vim.list_contains(client_methods, decoded.method) then
+    vim.schedule(function() handle_server_request(decoded, make_response(decoded)) end)
+  else
+    vim.print("No callback found for ", decoded)
   end
 end
 
