@@ -179,7 +179,7 @@ local function handle_response(decoded)
     vim.schedule(function() cb(decoded) end)
   elseif vim.list_contains(client_methods, decoded.method) then
     vim.schedule(function() handle_server_request(decoded, make_response(decoded)) end)
-  -- else
+    -- else
     --TODO: want to warn user but also ignore cancelled requests.
   end
 end
