@@ -164,7 +164,7 @@ local function make_response(decoded)
 
     local full_message = encode_rpc_message(message)
 
-    debug_log("Sending response for ID " .. tostring(decoded.id) .. ": " .. message)
+    debug_log("Sending response for ID " .. tostring(decoded.id) .. ": " .. vim.inspect(message))
 
     local ok, write_result = pcall(vim.loop.write, connection, full_message)
     if not ok or not write_result then vim.schedule(function() vim.notify("StreamJsonRpc: failed to send response for ID " .. tostring(decoded.id), vim.log.levels.ERROR) end) end
@@ -295,7 +295,7 @@ function M.request(method, params, callback, options)
 
   local full_message = encode_rpc_message(message)
 
-  debug_log("Sending request: " .. method .. " (ID: " .. id .. "), content: " .. message)
+  debug_log("Sending request: " .. method .. " (ID: " .. id .. "), content: " .. vim.inspect(message))
 
   local ok, write_result = pcall(vim.loop.write, connection, full_message)
 
@@ -402,7 +402,7 @@ function M.notify(method, params)
 
   local full_message = encode_rpc_message(message)
 
-  debug_log("Sending notification: " .. method .. ", content: " .. message)
+  debug_log("Sending notification: " .. method .. ", content: " .. vim.inspect(message))
 
   local ok, write_result = pcall(vim.loop.write, connection, full_message)
 
