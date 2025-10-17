@@ -113,97 +113,25 @@ local function encode_rpc_message(message)
   return header .. json_message
 end
 
-local client_methods = { "openBuffer", "setBreakpoint", "promptConfirm", "promptString" }
+local handlers = {
+  openBuffer = require("easy-dotnet.rpc.handlers.open_buffer"),
+  setBreakpoint = require("easy-dotnet.rpc.handlers.set_breakpoint"),
+  promptConfirm = require("easy-dotnet.rpc.handlers.prompt_confirm"),
+  promptString = require("easy-dotnet.rpc.handlers.prompt_string"),
+  promptSelection = require("easy-dotnet.rpc.handlers.prompt_selection"),
+}
 
-local function handle_server_request(decoded, response)
-  local method = decoded.method
+---@class RPC_PromptSelection
+---@field id string
+---@field display string
+
+local function handle_server_request(decoded, response, handler)
   local params = decoded.params or {}
 
-  if method == "openBuffer" then
-    local path = params and params.path
-    if not path then
-      local msg = "openBuffer request received but 'path' is nil"
-      logger.error(msg)
-      response(nil, { code = -32602, message = msg })
-      return
-    end
+  local validator = function(rules) return require("easy-dotnet.rpc.handlers.validator").validate_params(params, rules) end
+  local throw = function(err) response(nil, err) end
 
-    local full_path = vim.fn.expand(path)
-
-    if vim.fn.filereadable(full_path) == 0 then
-      logger.error(("openBuffer: file does not exist: %s"):format(full_path))
-
-      response(nil, { code = -32000, message = "File not found: " .. full_path })
-      return
-    end
-    vim.cmd.edit(vim.fn.fnameescape(full_path))
-    response(true)
-  elseif method == "setBreakpoint" then
-    local path = params.path
-    local line = params.lineNumber
-
-    if not path or not line then
-      local msg = "setBreakpoint request missing 'path' or 'lineNumber'"
-      logger.error(msg)
-      response(nil, { code = -32602, message = msg })
-      return
-    end
-
-    local full_path = vim.fn.expand(path)
-
-    if vim.fn.filereadable(full_path) == 0 then
-      local msg = ("setBreakpoint: file not found: %s"):format(full_path)
-      logger.error(msg)
-      response(nil, { code = -32000, message = msg })
-      return
-    end
-
-    local ok, dap = pcall(require, "dap")
-    if not ok then
-      local msg = "nvim-dap is not installed"
-      logger.error(msg)
-      response(nil, { code = -32001, message = msg })
-      return
-    end
-
-    vim.cmd.edit(vim.fn.fnameescape(full_path))
-    vim.api.nvim_win_set_cursor(0, { line, 0 })
-
-    local bp_ok, bp_err = pcall(dap.set_breakpoint)
-    if not bp_ok then
-      local msg = "Failed to set breakpoint: " .. tostring(bp_err)
-      logger.error(msg)
-      response(nil, { code = -32002, message = msg })
-      return
-    end
-
-    response(true)
-  elseif method == "promptConfirm" then
-    if type(params.defaultValue) ~= "boolean" or not params.prompt then
-      local msg = "promptConfirm request missing 'defaultValue' or 'prompt'"
-      logger.error(msg)
-      response(nil, { code = -32602, message = msg })
-      return
-    end
-    local options = {
-      { display = "Yes", value = true },
-      { display = "No", value = false },
-    }
-    table.sort(options, function(a) return a.value == params.defaultValue end)
-    --TODO: somehow detect picker closing without selecting a value
-    require("easy-dotnet.picker").picker(nil, options, function(value) response(value.value) end, params.prompt, false, true)
-  elseif method == "promptString" then
-    if not params.prompt then
-      local msg = "promptString request missing 'prompt'"
-      logger.error(msg)
-      response(nil, { code = -32602, message = msg })
-      return
-    end
-    vim.ui.input({ prompt = params.prompt }, function(input) response(input) end)
-  else
-    logger.error("Unhandled server method: " .. method)
-    response(nil, { code = -32601, message = "Unhandled method: " .. method })
-  end
+  if handler then handler(params, response, throw, validator) end
 end
 
 ---Create a response function for replying to server requests
@@ -238,14 +166,13 @@ end
 
 local function handle_response(decoded)
   local cb = callbacks[decoded.id]
+  local handler = handlers[decoded.method]
   if cb then
     callbacks[decoded.id] = nil
     cancellation_callbacks[decoded.id] = nil
     vim.schedule(function() cb(decoded) end)
-  elseif vim.list_contains(client_methods, decoded.method) then
-    vim.schedule(function() handle_server_request(decoded, make_response(decoded)) end)
-    -- else
-    --TODO: want to warn user but also ignore cancelled requests.
+  elseif handler then
+    vim.schedule(function() handle_server_request(decoded, make_response(decoded), handler) end)
   end
 end
 
