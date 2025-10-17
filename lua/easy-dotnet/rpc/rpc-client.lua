@@ -113,7 +113,7 @@ local function encode_rpc_message(message)
   return header .. json_message
 end
 
-local client_methods = { "openBuffer", "setBreakpoint" }
+local client_methods = { "openBuffer", "setBreakpoint", "promptConfirm" }
 
 local function handle_server_request(decoded, response)
   local method = decoded.method
@@ -178,6 +178,20 @@ local function handle_server_request(decoded, response)
     end
 
     response(true)
+  elseif method == "promptConfirm" then
+    if type(params.defaultValue) ~= "boolean" or not params.prompt then
+      local msg = "promptConfirm request missing 'defaultValue' or 'prompt'"
+      logger.error(msg)
+      response(nil, { code = -32602, message = msg })
+      return
+    end
+    local options = {
+      { display = "Yes", value = true },
+      { display = "No", value = false },
+    }
+    table.sort(options, function(a) return a.value == params.defaultValue end)
+    --TODO: somehow detect picker closing without selecting a value
+    require("easy-dotnet.picker").picker(nil, options, function(value) response(value.value) end, params.prompt, false, true)
   else
     logger.error("Unhandled server method: " .. method)
     response(nil, { code = -32601, message = "Unhandled method: " .. method })
