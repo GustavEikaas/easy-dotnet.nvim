@@ -179,7 +179,7 @@ local function handle_server_request(decoded, response)
 
     response(true)
   elseif method == "promptConfirm" then
-    if not (type(params.defaultValue) == "boolean") or not params.prompt then
+    if type(params.defaultValue) ~= "boolean" or not params.prompt then
       local msg = "promptConfirm request missing 'defaultValue' or 'prompt'"
       logger.error(msg)
       response(nil, { code = -32602, message = msg })
