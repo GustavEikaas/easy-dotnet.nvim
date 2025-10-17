@@ -18,5 +18,6 @@ return function(params, response, throw, validate)
     return false
   end) end
 
+  --BUG: somehow detect picker closing without selecting a value
   require("easy-dotnet.picker").picker(nil, options, function(i) response(i.id) end, params.prompt, true, true)
 end
