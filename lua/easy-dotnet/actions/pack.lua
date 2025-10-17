@@ -71,9 +71,7 @@ local function push_nuget_package(project, configuration, source)
   if not ok or not props then error("Failed to parse MSBuild JSON output") end
 
   local out_dir = vim.fs.normalize(props.Properties.PackageOutputPath)
-  if not require("easy-dotnet.extensions").isWindows() then
-      out_dir = string.gsub(out_dir, "\\", "/")
-  end
+  if not require("easy-dotnet.extensions").isWindows() then out_dir = string.gsub(out_dir, "\\", "/") end
 
   local id = props.Properties.PackageId
   local version = props.Properties.Version
