@@ -71,6 +71,7 @@ local function push_nuget_package(project, configuration, source)
   if not ok or not props then error("Failed to parse MSBuild JSON output") end
 
   local out_dir = vim.fs.normalize(props.Properties.PackageOutputPath)
+  --TODO: vim.fs.normalize does not normalize \\ on unix. (fix when using easy-dotnet-server)
   if not require("easy-dotnet.extensions").isWindows() then out_dir = string.gsub(out_dir, "\\", "/") end
 
   local id = props.Properties.PackageId
