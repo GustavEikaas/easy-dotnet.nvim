@@ -113,7 +113,7 @@ local function encode_rpc_message(message)
   return header .. json_message
 end
 
-local client_methods = { "openBuffer", "setBreakpoint", "promptConfirm" }
+local client_methods = { "openBuffer", "setBreakpoint", "promptConfirm", "promptString" }
 
 local function handle_server_request(decoded, response)
   local method = decoded.method
@@ -192,6 +192,14 @@ local function handle_server_request(decoded, response)
     table.sort(options, function(a) return a.value == params.defaultValue end)
     --TODO: somehow detect picker closing without selecting a value
     require("easy-dotnet.picker").picker(nil, options, function(value) response(value.value) end, params.prompt, false, true)
+  elseif method == "promptString" then
+    if not params.prompt then
+      local msg = "promptString request missing 'prompt'"
+      logger.error(msg)
+      response(nil, { code = -32602, message = msg })
+      return
+    end
+    vim.ui.input({ prompt = params.prompt }, function(input) response(input) end)
   else
     logger.error("Unhandled server method: " .. method)
     response(nil, { code = -32601, message = "Unhandled method: " .. method })
