@@ -189,7 +189,7 @@ local function handle_server_request(decoded, response)
       { display = "Yes", value = true },
       { display = "No", value = false },
     }
-    table.sort(options, function(a, b) return a.value == params.defaultValue end)
+    table.sort(options, function(a) return a.value == params.defaultValue end)
     --TODO: somehow detect picker closing without selecting a value
     require("easy-dotnet.picker").picker(nil, options, function(value) response(value.value) end, params.prompt, false, true)
   else
