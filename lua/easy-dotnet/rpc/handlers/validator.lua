@@ -11,13 +11,17 @@ function M.validate_params(params, rules)
 
     if value == nil then return false, ("Missing required parameter: '%s'"):format(key) end
 
-    -- Convert single string to table for uniform processing
     if type(allowed_types) == "string" then allowed_types = { allowed_types } end
 
-    local value_type = type(value)
     local match = false
     for _, t in ipairs(allowed_types) do
-      if value_type == t then
+      if t == "file" then
+        local full_path = vim.fn.expand(tostring(value))
+        if type(value) == "string" and vim.fn.filereadable(full_path) == 1 then
+          match = true
+          break
+        end
+      elseif type(value) == t then
         match = true
         break
       end
@@ -25,7 +29,7 @@ function M.validate_params(params, rules)
 
     if not match then
       local expected = table.concat(allowed_types, "/")
-      return false, ("Parameter '%s' must be of type %s, got %s"):format(key, expected, value_type)
+      return false, ("Parameter '%s' must be of type %s, got %s"):format(key, expected, type(value))
     end
   end
 

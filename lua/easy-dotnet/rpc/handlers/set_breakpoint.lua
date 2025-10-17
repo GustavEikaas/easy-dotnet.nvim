@@ -2,17 +2,9 @@ return function(params, response, throw, validate)
   local path = params.path
   local line = params.lineNumber
 
-  local ok, err = validate({ lineNumber = "number", path = "string" })
+  local ok, err = validate({ lineNumber = "number", path = "file" })
   if not ok then
     throw({ code = -32602, message = err })
-    return
-  end
-
-  local full_path = vim.fn.expand(path)
-
-  if vim.fn.filereadable(full_path) == 0 then
-    local msg = ("setBreakpoint: file not found: %s"):format(full_path)
-    throw({ code = -32000, message = msg })
     return
   end
 
@@ -23,6 +15,7 @@ return function(params, response, throw, validate)
     return
   end
 
+  local full_path = vim.fn.expand(path)
   vim.cmd.edit(vim.fn.fnameescape(full_path))
   vim.api.nvim_win_set_cursor(0, { line, 0 })
 
