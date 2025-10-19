@@ -170,6 +170,40 @@ M.picker = function(_, options, on_select_cb, title, autopick, apply_numeration)
   })
 end
 
+M.multi_picker = function(options, on_select_cb, title, apply_numeration)
+  if #options == 0 then error("No options provided, minimum 1 is required") end
+
+  local fzf_options = {}
+  for index, option in ipairs(options) do
+    local display_text = option.display
+    if apply_numeration then display_text = index .. ". " .. option.display end
+    table.insert(fzf_options, display_text)
+  end
+
+  require("fzf-lua").fzf_exec(fzf_options, {
+    prompt = (title or "Select an option") .. " > ",
+    fzf_opts = {
+      ["--multi"] = "",
+    },
+    actions = {
+      ["default"] = function(selected)
+        local selected_values = {}
+
+        for _, sel in ipairs(selected) do
+          for i, display_text in ipairs(fzf_options) do
+            if display_text == sel then
+              table.insert(selected_values, options[i])
+              break
+            end
+          end
+        end
+
+        on_select_cb(selected_values)
+      end,
+    },
+  })
+end
+
 ---@generic T
 ---@param bufnr number | nil
 ---@param options table<T>

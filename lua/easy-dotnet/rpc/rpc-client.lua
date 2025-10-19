@@ -119,6 +119,7 @@ local handlers = {
   promptConfirm = require("easy-dotnet.rpc.handlers.prompt_confirm"),
   promptString = require("easy-dotnet.rpc.handlers.prompt_string"),
   promptSelection = require("easy-dotnet.rpc.handlers.prompt_selection"),
+  promptMultiSelection = require("easy-dotnet.rpc.handlers.prompt_selections"),
 }
 
 ---@class RPC_PromptSelection

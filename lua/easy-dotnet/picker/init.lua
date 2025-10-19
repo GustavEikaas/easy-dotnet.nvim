@@ -96,6 +96,22 @@ M.picker = function(bufnr, options, on_select_cb, title, autopick, apply_numerat
   end
 end
 
+M.multi_picker = function(options, on_select_cb, title, apply_numeration)
+  if apply_numeration == nil then apply_numeration = true end
+
+  local active_picker = get_active_picker()
+
+  if active_picker == "fzf" then
+    return require("easy-dotnet.picker._fzf").multi_picker(options, on_select_cb, title, apply_numeration)
+  elseif active_picker == "telescope" then
+    return require("easy-dotnet.picker._telescope").multi_picker(options, on_select_cb, title, apply_numeration)
+  elseif active_picker == "snacks" then
+    return require("easy-dotnet.picker._snacks").multi_picker(options, on_select_cb, title, apply_numeration)
+  else
+    return require("easy-dotnet.picker._base").multi_picker(options, on_select_cb, title)
+  end
+end
+
 M.pick_sync = function(bufnr, options, title, autopick, apply_numeration)
   if autopick == nil then autopick = true end
   if apply_numeration == nil then apply_numeration = true end
