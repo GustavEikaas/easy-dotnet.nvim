@@ -146,8 +146,8 @@ M.picker = function(options, on_select_cb, title, autopick, apply_numeration)
   })
 end
 
----@diagnostic disable-next-line: unused-local
-M.multi_picker = function(options, on_select_cb, title, apply_numeration) error("multi_picker not implemented for snacks") end
+-- (options, on_select_cb, title, apply_numeration)
+M.multi_picker = function() error("multi_picker not implemented for snacks") end
 
 ---@generic T
 ---@param options table<T>
