@@ -114,7 +114,8 @@ M.picker = function(_, options, on_select_cb, title, autopick)
   end)
 end
 
-M.multi_picker = function(options, on_select_cb, title) error("multi_picker not implemented for vim.ui.select") end
+--(options, on_select_cb, title)
+M.multi_picker = function() error("multi_picker not implemented for vim.ui.select") end
 
 ---@generic T
 ---@param bufnr number | nil
