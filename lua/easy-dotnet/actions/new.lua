@@ -84,7 +84,7 @@ local function handle_choices(params, done)
         selected_params[param.name] = bool_val.value
         process_param({ unpack(param_list, 2) })
       end, prompt, false, true)
-    elseif param.dataType == "text" or param.dataType == "string" then
+    elseif param.dataType == "text" or param.dataType == "string" or param.dataType == "integer" then
       vim.ui.input({ prompt = prompt, default = param.defaultValue or "" }, function(input)
         selected_params[param.name] = input or ""
         process_param({ unpack(param_list, 2) })
@@ -100,6 +100,8 @@ local function handle_choices(params, done)
         selected_params[param.name] = choice_val.value
         process_param({ unpack(param_list, 2) })
       end, prompt, true, true)
+    else
+      vim.print("Unhandled dotnet new param type", param)
     end
   end
 
