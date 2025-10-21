@@ -122,9 +122,7 @@ local no_name_templates = {
 
 local function prompt_parameters(identity, client, name, cwd, cb)
   client:template_parameters(identity, function(params)
-    vim.print("PARAMS", params)
     handle_choices(params, function(res)
-      vim.print("RES", res)
       client:template_instantiate(identity, name or "", cwd or vim.fn.getcwd(), res, function()
         if cb then cb() end
       end)
