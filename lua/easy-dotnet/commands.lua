@@ -1,4 +1,6 @@
 local job = require("easy-dotnet.ui-modules.jobs")
+local picker = require("easy-dotnet.picker")
+local sln = require("easy-dotnet.parsers.sln-parse")
 local logger = require("easy-dotnet.logger")
 ---@type table<string,Command>
 local M = {}
@@ -379,6 +381,32 @@ M.diagnostic = {
     },
     warnings = {
       handle = function() require("easy-dotnet.actions.diagnostics").get_workspace_diagnostics("warning") end,
+    },
+  },
+}
+
+M.aspire = {
+  subcommands = {
+    debug = {
+      handle = function()
+        local solution_file_path = sln.find_solution_file()
+        if not solution_file_path then error("No sln file found") end
+
+        local projects = sln.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(i) return i.isAspireHost == true end)
+
+        if #projects == 0 then error("No aspire apphosts found") end
+        ---@type DotnetProject
+        local project_framework = picker.pick_sync(nil, projects, "Debug aspire project")
+        if not project_framework then
+          logger.error("No project selected")
+          return
+        end
+
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function()
+          client.debugger:aspire_debugger_start(project_framework.path, function() vim.print("debugger started") end)
+        end)
+      end,
     },
   },
 }
