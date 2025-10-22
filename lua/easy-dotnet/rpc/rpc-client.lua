@@ -120,6 +120,7 @@ local handlers = {
   promptString = require("easy-dotnet.rpc.handlers.prompt_string"),
   promptSelection = require("easy-dotnet.rpc.handlers.prompt_selection"),
   promptMultiSelection = require("easy-dotnet.rpc.handlers.prompt_selections"),
+  startDebugSession = require("easy-dotnet.rpc.handlers.start_debug_session"),
 }
 
 ---@class RPC_PromptSelection
