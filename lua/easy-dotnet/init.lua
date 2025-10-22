@@ -120,7 +120,7 @@ local function auto_register_dap(merged_opts)
 
     dap.configurations["cs"] = debugger_conf
 
-    dap.adapters["easy-dotnet"] = function(callback, config) callback({ type = "server", host = "127.0.0.1", port = config.port or 8086 }) end
+    dap.adapters[constants.debug_adapter_name] = function(callback, config) callback({ type = "server", host = "127.0.0.1", port = config.port or 8086 }) end
   end
 end
 
