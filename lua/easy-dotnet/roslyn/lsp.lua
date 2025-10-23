@@ -190,7 +190,11 @@ function M.enable()
 
           local user_lsp_config = options.get_option("lsp").config or {}
 
-          local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, user_lsp_config, {
+          local ok, razor_handlers = pcall(require, "rzls.roslyn_handlers")
+
+          local razor = ok and { handlers = razor_handlers } or {}
+
+          local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, razor, user_lsp_config, {
             cmd = function(dispatchers) return vim.lsp.rpc.connect(pipe_path)(dispatchers) end,
             root_dir = root,
           })
@@ -200,8 +204,18 @@ function M.enable()
       end)
     end)
   end
+
+  vim.filetype.add({
+    extension = {
+      razor = "razor",
+      cshtml = "razor",
+    },
+  })
+
+  local ok = pcall(require, "rzls")
+  if ok then logger.info("enabling cshtml") end
   vim.api.nvim_create_autocmd("FileType", {
-    pattern = "cs",
+    pattern = ok and { "cs", "razor" } or { "cs" },
     callback = function(args)
       local path = vim.api.nvim_buf_get_name(args.buf)
       if not path or #path == 0 then return end
