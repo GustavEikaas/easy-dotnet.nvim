@@ -6,6 +6,8 @@ local dotnet_client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local options = require("easy-dotnet.options")
+local roslyn_starting
+local selected_file_for_init
 
 local function get_running_lsp_clients()
   return vim.iter(vim.lsp.get_clients({ name = constants.lsp_client_name })):filter(function(client) return not client:is_stopped() end):totable()
@@ -23,6 +25,25 @@ end
 local M = {
   max_clients = 5,
 }
+
+local function easy_dotnet_lsp_start(bufnr, root)
+  dotnet_client:initialize(function()
+    if not dotnet_client.has_lsp then
+      vim.defer_fn(function() logger.warn("Roslyn LSP unable to start, server outdated. :Dotnet _server update") end, 500)
+      return
+    end
+
+    dotnet_client.lsp:lsp_start(function(res)
+      local pipe_path = get_correct_pipe_path(res.pipe)
+      local user_lsp_config = options.get_option("lsp").config or {}
+      local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, user_lsp_config, {
+        cmd = function(dispatchers) return vim.lsp.rpc.connect(pipe_path)(dispatchers) end,
+        root_dir = root,
+      })
+      vim.lsp.start(lsp_opts, { bufnr = bufnr })
+    end)
+  end)
+end
 
 function M.start()
   local bufnr = vim.api.nvim_get_current_buf()
@@ -42,17 +63,7 @@ function M.start()
 
   M.find_project_or_solution(bufnr, function(root, selected_file)
     selected_file_for_init = selected_file
-    dotnet_client:initialize(function()
-      dotnet_client.lsp:lsp_start(function(res)
-        local pipe_path = get_correct_pipe_path(res.pipe)
-        local user_lsp_config = options.get_option("lsp").config or {}
-        local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, user_lsp_config, {
-          cmd = function(dispatchers) return vim.lsp.rpc.connect(pipe_path)(dispatchers) end,
-          root_dir = root,
-        })
-        vim.lsp.start(lsp_opts, { bufnr = bufnr })
-      end)
-    end)
+    easy_dotnet_lsp_start(bufnr, root)
   end)
 end
 
@@ -78,8 +89,6 @@ end
 ---@type table<number, EasyDotnetClientStateEntry>
 M.client_state = {}
 
-local roslyn_starting
-local selected_file_for_init
 ---@type vim.lsp.Config
 M.lsp_config = {
   name = constants.lsp_client_name,
@@ -227,24 +236,7 @@ function M.enable()
         return
       end
 
-      dotnet_client:initialize(function()
-        if not dotnet_client.has_lsp then
-          vim.defer_fn(function() logger.warn("Roslyn LSP unable to start, server outdated. :Dotnet _server update") end, 500)
-          return
-        end
-        dotnet_client.lsp:lsp_start(function(res)
-          local pipe_path = get_correct_pipe_path(res.pipe)
-
-          local user_lsp_config = options.get_option("lsp").config or {}
-
-          local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, user_lsp_config, {
-            cmd = function(dispatchers) return vim.lsp.rpc.connect(pipe_path)(dispatchers) end,
-            root_dir = root,
-          })
-
-          vim.lsp.start(lsp_opts, { bufnr = bufnr })
-        end)
-      end)
+      easy_dotnet_lsp_start(bufnr, root)
     end)
   end
   vim.api.nvim_create_autocmd("FileType", {
