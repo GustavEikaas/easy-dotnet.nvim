@@ -10,7 +10,6 @@ local options = require("easy-dotnet.options")
 local M = {
   max_clients = 5,
 }
--- vim.diagnostic.disable(0)
 
 local function get_running_lsp_clients()
   return vim.iter(vim.lsp.get_clients({ name = constants.lsp_client_name })):filter(function(client) return not client:is_stopped() end):totable()
@@ -205,7 +204,6 @@ function M.enable()
     pattern = "cs",
     callback = function(args)
       local path = vim.api.nvim_buf_get_name(args.buf)
-      -- if path:match("^diffview://") then return end
       if path:match("^%a+://") then return end
       if not path or #path == 0 then return end
       if vim.fn.filereadable(path) == 0 then return end
