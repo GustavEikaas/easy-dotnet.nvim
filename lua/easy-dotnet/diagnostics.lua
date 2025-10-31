@@ -1,5 +1,6 @@
 local M = {}
 
+local constants = require("easy-dotnet.constants")
 local diagnostic_ns = vim.api.nvim_create_namespace("easy-dotnet-diagnostics")
 
 local function get_or_create_buffer(filename)
@@ -45,10 +46,14 @@ function M.populate_diagnostics(diagnostics_response, filter_func)
   end
 
   local roslyn_clients = vim.lsp.get_clients({ name = "roslyn" })
+  local easy_dotnet_roslyn_clients = vim.lsp.get_clients({ name = constants.lsp_client_name })
+  local all_clients = {}
+  vim.list_extend(all_clients, roslyn_clients)
+  vim.list_extend(all_clients, easy_dotnet_roslyn_clients)
   local ns = diagnostic_ns
 
-  if roslyn_clients and #roslyn_clients > 0 then
-    for _, client in ipairs(roslyn_clients) do
+  if all_clients and #all_clients > 0 then
+    for _, client in ipairs(all_clients) do
       local ok, lsp_ns = pcall(vim.lsp.diagnostic.get_namespace, client.id)
       if ok and lsp_ns then
         ns = lsp_ns
