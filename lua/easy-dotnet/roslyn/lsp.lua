@@ -6,22 +6,11 @@ local dotnet_client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local options = require("easy-dotnet.options")
-vim.keymap.set("n", "<leader>tt", function()
-  -- Close all windows except current
-  vim.cmd("only")
-
-  -- Open first file
-  vim.cmd("edit ./EasyDotnet.Infrastructure/Dap/DebuggerProxy.cs")
-
-  -- Create vertical split and open second file
-  vim.cmd("vsplit ./EasyDotnet.Infrastructure/Dap/DapProtocolMessages.cs")
-
-  print("Opened test files side-by-side")
-end, { desc = "Test LSP: Open two files side-by-side" })
 
 local M = {
   max_clients = 5,
 }
+-- vim.diagnostic.disable(0)
 
 local function get_running_lsp_clients()
   return vim.iter(vim.lsp.get_clients({ name = constants.lsp_client_name })):filter(function(client) return not client:is_stopped() end):totable()
@@ -32,19 +21,6 @@ end
 
 ---@type table<number, EasyDotnetClientStateEntry>
 M.client_state = {}
-
--- Track pending client starts by root directory
----@class PendingClientInfo
----@field buffers number[]
----@field starting boolean
----@field root string|nil Set once root is determined
-
----@type table<string, PendingClientInfo>
-local pending_by_root = {}
-
--- Track which buffers are waiting for root resolution
----@type table<number, boolean>
-local buffers_resolving = {}
 
 local roslyn_starting
 local selected_file_for_init
@@ -181,69 +157,6 @@ local function get_correct_pipe_path(roslyn_pipe)
   end
 end
 
-local function attach_pending_buffers(root, client_id)
-  local pending = pending_by_root[root]
-  if pending and pending.buffers then
-    for _, bufnr in ipairs(pending.buffers) do
-      if vim.api.nvim_buf_is_valid(bufnr) then
-        -- Check if buffer is already attached to avoid duplicate attachment
-        local already_attached = false
-        for _, client in ipairs(vim.lsp.get_clients({ bufnr = bufnr })) do
-          if client.id == client_id then
-            already_attached = true
-            break
-          end
-        end
-        if not already_attached then vim.lsp.buf_attach_client(bufnr, client_id) end
-      end
-    end
-  end
-  pending_by_root[root] = nil
-end
-
-local function start_client_for_root(root, selected_file, initiating_bufnr)
-  selected_file_for_init = selected_file
-
-  dotnet_client:initialize(function()
-    if not dotnet_client.has_lsp then
-      vim.defer_fn(function()
-        logger.warn("Roslyn LSP unable to start, server outdated. :Dotnet _server update")
-        pending_by_root[root] = nil
-      end, 500)
-      return
-    end
-
-    dotnet_client.lsp:lsp_start(function(res)
-      local pipe_path = get_correct_pipe_path(res.pipe)
-
-      local user_lsp_config = options.get_option("lsp").config or {}
-
-      local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, user_lsp_config, {
-        cmd = function(dispatchers) return vim.lsp.rpc.connect(pipe_path)(dispatchers) end,
-        root_dir = root,
-      })
-
-      vim.print("starting client", pipe_path)
-      local client_id = vim.lsp.start(lsp_opts, { bufnr = initiating_bufnr })
-
-      if client_id then
-        -- Wait a bit for the client to be ready, then attach all pending buffers
-        vim.defer_fn(function()
-          if pending_by_root[root] then attach_pending_buffers(root, client_id) end
-        end, 100)
-
-        -- Also call user's on_attach if it exists
-        if user_lsp_config.on_attach then
-          local client = vim.lsp.get_client_by_id(client_id)
-          if client then user_lsp_config.on_attach(client, initiating_bufnr) end
-        end
-      else
-        pending_by_root[root] = nil
-      end
-    end)
-  end)
-end
-
 function M.enable()
   if vim.fn.has("nvim-0.11") == 0 then
     logger.warn("easy-dotnet LSP requires neovim 0.11 or higher ")
@@ -251,17 +164,11 @@ function M.enable()
   end
 
   local function start_easy_dotnet_lsp(bufnr)
-    -- First check if this buffer is already being processed
-    if buffers_resolving[bufnr] then return end
-
-    buffers_resolving[bufnr] = true
-
     M.find_project_or_solution(bufnr, function(root, selected_file)
-      buffers_resolving[bufnr] = nil
+      selected_file_for_init = selected_file
 
       local existing_clients = get_running_lsp_clients()
 
-      -- Check for existing clients for this root
       for _, client in ipairs(existing_clients) do
         if client.config.root_dir == root or root:match("/MetadataAsSource/") then
           vim.lsp.buf_attach_client(bufnr, client.id)
@@ -269,33 +176,37 @@ function M.enable()
         end
       end
 
-      -- Check if we're already starting a client for this root
-      if pending_by_root[root] then
-        -- Add this buffer to the pending list
-        table.insert(pending_by_root[root].buffers, bufnr)
-        return
-      end
-
       if #existing_clients >= M.max_clients then
         vim.notify(string.format("[easy-dotnet] Cannot start new client: already %d running", M.max_clients), vim.log.levels.WARN)
         return
       end
 
-      -- Mark this root as having a pending client start
-      pending_by_root[root] = {
-        buffers = { bufnr },
-        starting = true,
-        root = root,
-      }
+      dotnet_client:initialize(function()
+        if not dotnet_client.has_lsp then
+          vim.defer_fn(function() logger.warn("Roslyn LSP unable to start, server outdated. :Dotnet _server update") end, 500)
+          return
+        end
+        dotnet_client.lsp:lsp_start(function(res)
+          local pipe_path = get_correct_pipe_path(res.pipe)
 
-      start_client_for_root(root, selected_file, bufnr)
+          local user_lsp_config = options.get_option("lsp").config or {}
+
+          local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, user_lsp_config, {
+            cmd = function(dispatchers) return vim.lsp.rpc.connect(pipe_path)(dispatchers) end,
+            root_dir = root,
+          })
+
+          vim.lsp.start(lsp_opts, { bufnr = bufnr })
+        end)
+      end)
     end)
   end
-
   vim.api.nvim_create_autocmd("FileType", {
     pattern = "cs",
     callback = function(args)
       local path = vim.api.nvim_buf_get_name(args.buf)
+      -- if path:match("^diffview://") then return end
+      if path:match("^%a+://") then return end
       if not path or #path == 0 then return end
       if vim.fn.filereadable(path) == 0 then return end
       start_easy_dotnet_lsp(args.buf)
