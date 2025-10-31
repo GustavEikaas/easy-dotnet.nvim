@@ -204,6 +204,7 @@ function M.enable()
     pattern = "cs",
     callback = function(args)
       local path = vim.api.nvim_buf_get_name(args.buf)
+      if path:match("^%a+://") then return end
       if not path or #path == 0 then return end
       if vim.fn.filereadable(path) == 0 then return end
       start_easy_dotnet_lsp(args.buf)
