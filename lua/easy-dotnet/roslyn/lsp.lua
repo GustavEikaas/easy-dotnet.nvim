@@ -7,12 +7,69 @@ local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local options = require("easy-dotnet.options")
 
+local function get_running_lsp_clients()
+  return vim.iter(vim.lsp.get_clients({ name = constants.lsp_client_name })):filter(function(client) return not client:is_stopped() end):totable()
+end
+
+local function get_correct_pipe_path(roslyn_pipe)
+  if extensions.isWindows() then
+    return [[\\.\pipe\]] .. roslyn_pipe
+  elseif extensions.isDarwin() then
+    return os.getenv("TMPDIR") .. "CoreFxPipe_" .. roslyn_pipe
+  else
+    return "/tmp/CoreFxPipe_" .. roslyn_pipe
+  end
+end
 local M = {
   max_clients = 5,
 }
 
-local function get_running_lsp_clients()
-  return vim.iter(vim.lsp.get_clients({ name = constants.lsp_client_name })):filter(function(client) return not client:is_stopped() end):totable()
+function M.start()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local path = vim.api.nvim_buf_get_name(bufnr)
+  if not path or #path == 0 or vim.fn.filereadable(path) == 0 then
+    vim.notify("[easy-dotnet] Cannot start: buffer has no valid file", vim.log.levels.WARN)
+    return
+  end
+
+  local clients = get_running_lsp_clients()
+  for _, client in ipairs(clients) do
+    if vim.lsp.buf_is_attached(bufnr, client.id) then
+      vim.notify("[easy-dotnet] Roslyn already attached to this buffer", vim.log.levels.INFO)
+      return
+    end
+  end
+
+  M.find_project_or_solution(bufnr, function(root, selected_file)
+    selected_file_for_init = selected_file
+    dotnet_client:initialize(function()
+      dotnet_client.lsp:lsp_start(function(res)
+        local pipe_path = get_correct_pipe_path(res.pipe)
+        local user_lsp_config = options.get_option("lsp").config or {}
+        local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, user_lsp_config, {
+          cmd = function(dispatchers) return vim.lsp.rpc.connect(pipe_path)(dispatchers) end,
+          root_dir = root,
+        })
+        vim.lsp.start(lsp_opts, { bufnr = bufnr })
+      end)
+    end)
+  end)
+end
+
+function M.stop()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local attached_clients = vim.lsp.get_active_clients({ bufnr = bufnr })
+  for _, client in ipairs(attached_clients) do
+    if client.name == constants.lsp_client_name then
+      client:stop(true)
+      M.client_state[client.id] = nil
+    end
+  end
+end
+
+function M.restart()
+  M.stop()
+  M.start()
 end
 
 ---@class EasyDotnetClientStateEntry
@@ -144,16 +201,6 @@ function M.find_project_or_solution(bufnr, cb)
     selected_file = r.display
     cb(vim.fs.dirname(selected_file), selected_file)
   end, "Pick solution file to start Roslyn from", true, true)
-end
-
-local function get_correct_pipe_path(roslyn_pipe)
-  if extensions.isWindows() then
-    return [[\\.\pipe\]] .. roslyn_pipe
-  elseif extensions.isDarwin() then
-    return os.getenv("TMPDIR") .. "CoreFxPipe_" .. roslyn_pipe
-  else
-    return "/tmp/CoreFxPipe_" .. roslyn_pipe
-  end
 end
 
 function M.enable()
