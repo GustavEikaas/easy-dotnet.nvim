@@ -112,18 +112,15 @@ local function auto_register_dap(merged_opts)
     local debugger_conf = dap.configurations["cs"] or {}
 
     vim.list_extend(debugger_conf, { {
-      type = "easy-dotnet",
-      name = "easy-dotnet",
+      type = constants.debug_adapter_name,
+      name = constants.debug_adapter_name,
       request = "attach",
       port = dotnet.prepare_debugger,
     } })
 
     dap.configurations["cs"] = debugger_conf
 
-    dap.adapters["easy-dotnet"] = function(callback, config)
-      --8086 port for backwards compatible pre #551
-      callback({ type = "server", host = "127.0.0.1", port = config.port or 8086 })
-    end
+    dap.adapters[constants.debug_adapter_name] = function(callback, config) callback({ type = "server", host = "127.0.0.1", port = config.port or 8086 }) end
   end
 end
 

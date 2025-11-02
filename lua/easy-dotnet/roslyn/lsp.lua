@@ -6,13 +6,84 @@ local dotnet_client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local options = require("easy-dotnet.options")
+local roslyn_starting
+local selected_file_for_init
 
+local function get_running_lsp_clients()
+  return vim.iter(vim.lsp.get_clients({ name = constants.lsp_client_name })):filter(function(client) return not client:is_stopped() end):totable()
+end
+
+local function get_correct_pipe_path(roslyn_pipe)
+  if extensions.isWindows() then
+    return [[\\.\pipe\]] .. roslyn_pipe
+  elseif extensions.isDarwin() then
+    return os.getenv("TMPDIR") .. "CoreFxPipe_" .. roslyn_pipe
+  else
+    return "/tmp/CoreFxPipe_" .. roslyn_pipe
+  end
+end
 local M = {
   max_clients = 5,
 }
 
-local function get_running_lsp_clients()
-  return vim.iter(vim.lsp.get_clients({ name = constants.lsp_client_name })):filter(function(client) return not client:is_stopped() end):totable()
+local function easy_dotnet_lsp_start(bufnr, root)
+  dotnet_client:initialize(function()
+    if not dotnet_client.has_lsp then
+      vim.defer_fn(function() logger.warn("Roslyn LSP unable to start, server outdated. :Dotnet _server update") end, 500)
+      return
+    end
+
+    dotnet_client.lsp:lsp_start(function(res)
+      local pipe_path = get_correct_pipe_path(res.pipe)
+      local user_lsp_config = options.get_option("lsp").config or {}
+      local ok, razor_handlers = pcall(require, "rzls.roslyn_handlers")
+      local razor = ok and { handlers = razor_handlers } or {}
+      local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, razor, user_lsp_config, {
+        cmd = function(dispatchers) return vim.lsp.rpc.connect(pipe_path)(dispatchers) end,
+        root_dir = root,
+      })
+
+      vim.lsp.start(lsp_opts, { bufnr = bufnr })
+    end)
+  end)
+end
+
+function M.start()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local path = vim.api.nvim_buf_get_name(bufnr)
+  if not path or #path == 0 or vim.fn.filereadable(path) == 0 then
+    vim.notify("[easy-dotnet] Cannot start: buffer has no valid file", vim.log.levels.WARN)
+    return
+  end
+
+  local clients = get_running_lsp_clients()
+  for _, client in ipairs(clients) do
+    if vim.lsp.buf_is_attached(bufnr, client.id) then
+      vim.notify("[easy-dotnet] Roslyn already attached to this buffer", vim.log.levels.INFO)
+      return
+    end
+  end
+
+  M.find_project_or_solution(bufnr, function(root, selected_file)
+    selected_file_for_init = selected_file
+    easy_dotnet_lsp_start(bufnr, root)
+  end)
+end
+
+function M.stop()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local attached_clients = vim.lsp.get_active_clients({ bufnr = bufnr })
+  for _, client in ipairs(attached_clients) do
+    if client.name == constants.lsp_client_name then
+      client:stop(true)
+      M.client_state[client.id] = nil
+    end
+  end
+end
+
+function M.restart()
+  M.stop()
+  M.start()
 end
 
 ---@class EasyDotnetClientStateEntry
@@ -21,8 +92,6 @@ end
 ---@type table<number, EasyDotnetClientStateEntry>
 M.client_state = {}
 
-local roslyn_starting
-local selected_file_for_init
 ---@type vim.lsp.Config
 M.lsp_config = {
   name = constants.lsp_client_name,
@@ -59,7 +128,43 @@ M.lsp_config = {
     ["roslyn.client.nestedCodeAction"] = require("easy-dotnet.roslyn.lsp.nested_code_action"),
   },
   handlers = {
+    ["workspace/refreshSourceGeneratedDocument"] = function(_, _, ctx)
+      local client = assert(vim.lsp.get_client_by_id(ctx.client_id))
+      for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+        local uri = vim.api.nvim_buf_get_name(buf)
+        if vim.api.nvim_buf_get_name(buf):match("^roslyn%-source%-generated://") then
+          local function handler(err, result)
+            assert(not err, vim.inspect(err))
+            if vim.b[buf].resultId == result.resultId then return end
+            local content = result.text
+            if content == nil then content = "" end
+            local normalized = string.gsub(content, "\r\n", "\n")
+            local source_lines = vim.split(normalized, "\n", { plain = true })
+            vim.bo[buf].modifiable = true
+            vim.api.nvim_buf_set_lines(buf, 0, -1, false, source_lines)
+            vim.b[buf].resultId = result.resultId
+            vim.bo[buf].modifiable = false
+          end
+
+          local params = {
+            textDocument = {
+              uri = uri,
+            },
+            resultId = vim.b[buf].resultId,
+          }
+
+          ---@diagnostic disable-next-line: param-type-mismatch
+          client:request("sourceGeneratedDocument/_roslyn_getText", params, handler, buf)
+        end
+      end
+    end,
     ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
+      vim.api.nvim_exec_autocmds("User", {
+        pattern = "RoslynInitialized",
+        modeline = false,
+        data = { client_id = ctx.client_id },
+      })
+      _G.roslyn_initialized = true
       vim.defer_fn(function()
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         if not client then return end
@@ -146,16 +251,6 @@ function M.find_project_or_solution(bufnr, cb)
   end, "Pick solution file to start Roslyn from", true, true)
 end
 
-local function get_correct_pipe_path(roslyn_pipe)
-  if extensions.isWindows() then
-    return [[\\.\pipe\]] .. roslyn_pipe
-  elseif extensions.isDarwin() then
-    return os.getenv("TMPDIR") .. "CoreFxPipe_" .. roslyn_pipe
-  else
-    return "/tmp/CoreFxPipe_" .. roslyn_pipe
-  end
-end
-
 function M.enable()
   if vim.fn.has("nvim-0.11") == 0 then
     logger.warn("easy-dotnet LSP requires neovim 0.11 or higher ")
@@ -180,28 +275,7 @@ function M.enable()
         return
       end
 
-      dotnet_client:initialize(function()
-        if not dotnet_client.has_lsp then
-          vim.defer_fn(function() logger.warn("Roslyn LSP unable to start, server outdated. :Dotnet _server update") end, 500)
-          return
-        end
-        dotnet_client.lsp:lsp_start(function(res)
-          local pipe_path = get_correct_pipe_path(res.pipe)
-
-          local user_lsp_config = options.get_option("lsp").config or {}
-
-          local ok, razor_handlers = pcall(require, "rzls.roslyn_handlers")
-
-          local razor = ok and { handlers = razor_handlers } or {}
-
-          local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, razor, user_lsp_config, {
-            cmd = function(dispatchers) return vim.lsp.rpc.connect(pipe_path)(dispatchers) end,
-            root_dir = root,
-          })
-
-          vim.lsp.start(lsp_opts, { bufnr = bufnr })
-        end)
-      end)
+      easy_dotnet_lsp_start(bufnr, root)
     end)
   end
 
@@ -218,6 +292,7 @@ function M.enable()
     pattern = ok and { "cs", "razor" } or { "cs" },
     callback = function(args)
       local path = vim.api.nvim_buf_get_name(args.buf)
+      if path:match("^%a+://") then return end
       if not path or #path == 0 then return end
       if vim.fn.filereadable(path) == 0 then return end
       start_easy_dotnet_lsp(args.buf)

@@ -359,6 +359,9 @@ require("lualine").setup {
 
 ```lua
 local dotnet = require("easy-dotnet")
+dotnet.lsp_start()
+dotnet.lsp_restart()
+dotnet.lsp_stop()
 dotnet.get_environment_variables(project_name, project_path, use_default_launch_profile: boolean)
 dotnet.is_dotnet_project()                                 
 dotnet.try_get_selected_solution()                         
@@ -412,6 +415,9 @@ diagnostics.get_workspace_diagnostics("warning")
 Run :Dotnet in nvim to list all commands
 ```
 ```
+Dotnet lsp start
+Dotnet lsp restart
+Dotnet lsp stop
 Dotnet testrunner
 Dotnet testrunner refresh
 Dotnet testrunner refresh build
