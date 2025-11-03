@@ -1,7 +1,7 @@
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local M = {}
 
-local function find_nuget_packages(opts, ctx)
+local function find_nuget_packages(_, ctx)
   local Async = require("snacks.picker.util.async")
   ---@async
   return function(cb)
