@@ -1,28 +1,43 @@
+local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local M = {}
 
-local function find_nuget_packages(opts, ctx)
-  local args = {
-    "package",
-    "search",
-    ctx.filter.search or "",
-    "--format",
-    "json",
-  }
-  return require("snacks.picker.source.proc").proc({
-    opts,
-    {
-      cmd = "dotnet",
-      args = args,
-      ---@param item snacks.picker.finder.Item
-      transform = function(item)
-        if item.text:match('"id":') then
-          return { text = item.text:match('"id":%s*"([^"]+)"') }
-        else
-          return false
+local function find_nuget_packages(_, ctx)
+  local Async = require("snacks.picker.util.async")
+  ---@async
+  return function(cb)
+    local self = Async.running()
+    local aborted = false
+    local handle = nil
+
+    self:on("abort", function()
+      aborted = true
+      cb = function() end
+      if handle and handle.cancel then pcall(handle.cancel, handle) end
+    end)
+
+    client:initialize(function()
+      if aborted then return end
+
+      local query = (ctx.filter and ctx.filter.search) or ""
+      handle = client.nuget:nuget_search(query, nil, function(res)
+        if aborted then return end
+
+        if not res or type(res) ~= "table" or vim.tbl_isempty(res) then
+          self:resume()
+          return
         end
-      end,
-    },
-  }, ctx)
+
+        for _, pkg in ipairs(res) do
+          ---@type NugetPackageMetadata
+          cb({ text = pkg.id or "(unknown id)" })
+        end
+
+        self:resume()
+      end)
+    end)
+
+    self:suspend()
+  end
 end
 
 M.nuget_search = function()
