@@ -9,17 +9,17 @@ local function find_nuget_packages(opts, ctx)
     "json",
   }
 
-  local merged_opts= vim.tbl_extend("keep", opts, {
+  local merged_opts = vim.tbl_extend("keep", opts, {
     cmd = "dotnet",
-      args = args,
-      ---@param item snacks.picker.finder.Item
-      transform = function(item)
-        if item.text:match('"id":') then
-          return { text = item.text:match('"id":%s*"([^"]+)"') }
-        else
-          return false
-        end
-      end,
+    args = args,
+    ---@param item snacks.picker.finder.Item
+    transform = function(item)
+      if item.text:match('"id":') then
+        return { text = item.text:match('"id":%s*"([^"]+)"') }
+      else
+        return false
+      end
+    end,
   })
 
   return require("snacks.picker.source.proc").proc(merged_opts, ctx)
