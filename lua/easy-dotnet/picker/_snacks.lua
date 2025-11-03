@@ -8,10 +8,9 @@ local function find_nuget_packages(opts, ctx)
     "--format",
     "json",
   }
-  return require("snacks.picker.source.proc").proc({
-    opts,
-    {
-      cmd = "dotnet",
+
+  local merged_opts= vim.tbl_extend("keep", opts, {
+    cmd = "dotnet",
       args = args,
       ---@param item snacks.picker.finder.Item
       transform = function(item)
@@ -21,8 +20,9 @@ local function find_nuget_packages(opts, ctx)
           return false
         end
       end,
-    },
-  }, ctx)
+  })
+
+  return require("snacks.picker.source.proc").proc(merged_opts, ctx)
 end
 
 M.nuget_search = function()
