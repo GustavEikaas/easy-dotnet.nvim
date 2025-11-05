@@ -119,8 +119,14 @@ M.push = {
 M.add = {
   subcommands = {
     package = {
-      handle = function() require("easy-dotnet.nuget").search_nuget(nil) end,
+      handle = function() require("easy-dotnet.nuget").search_nuget(nil, false) end,
       passthrough = true,
+      subcommands = {
+        prerelease = {
+          passthrough = true,
+          handle = function() require("easy-dotnet.nuget").search_nuget(nil, true) end,
+        },
+      },
     },
   },
 }

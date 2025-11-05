@@ -437,6 +437,7 @@ Dotnet build solution quickfix
 Dotnet build default
 Dotnet build default quickfix
 Dotnet add package
+Dotnet add package prerelease
 Dotnet remove package
 Dotnet project view
 Dotnet project view default
