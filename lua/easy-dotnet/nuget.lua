@@ -21,12 +21,13 @@ local function list_reverse(tbl)
   return rev
 end
 
-local function get_all_versions(package)
+---@param allow_prerelease boolean
+local function get_all_versions(package, allow_prerelease)
   local co = coroutine.running()
 
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   client:initialize(function()
-    client.nuget:nuget_get_package_versions(package, nil, false, function(i) coroutine.resume(co, list_reverse(i)) end)
+    client.nuget:nuget_get_package_versions(package, nil, allow_prerelease, function(i) coroutine.resume(co, list_reverse(i)) end)
   end)
   return coroutine.yield()
 end
@@ -47,8 +48,9 @@ local function get_project()
 end
 
 ---@param project_path string | nil
-local function add_package(package, project_path)
-  local versions = polyfills.tbl_map(function(v) return { value = v, display = v } end, get_all_versions(package))
+---@param allow_prerelease boolean
+local function add_package(package, project_path, allow_prerelease)
+  local versions = polyfills.tbl_map(function(v) return { value = v, display = v } end, get_all_versions(package, allow_prerelease))
 
   local selected_version = picker.pick_sync(nil, versions, "Select a version", true)
   local finished = job.register_job({
@@ -84,9 +86,11 @@ local function add_package(package, project_path)
 end
 
 ---@param project_path string | nil
-M.search_nuget = function(project_path)
+---@param allow_prerelease boolean | nil
+M.search_nuget = function(project_path, allow_prerelease)
+  allow_prerelease = allow_prerelease or false
   local package = picker.search_nuget()
-  if package ~= nil then add_package(package, project_path) end
+  if package ~= nil then add_package(package, project_path, allow_prerelease) end
 end
 
 local function get_package_refs(project_path)
