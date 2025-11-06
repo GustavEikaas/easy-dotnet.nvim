@@ -61,7 +61,7 @@ function M:msbuild_query_properties(request, cb, opts)
   local proj_name = vim.fn.fnamemodify(request.targetPath, ":t:r")
   return helper.create_rpc_call({
     client = self._client,
-    job = { name = "Loading " .. proj_name, on_success_text = proj_name .. " loaded", on_error_text = "Failed to load " .. proj_name },
+    job = { name = "Loading " .. proj_name, on_success_text = proj_name .. " loaded", on_error_text = "Failed to load " .. proj_name, timeout = -1 },
     cb = cb,
     on_crash = opts.on_crash,
     method = "msbuild/project-properties",
@@ -137,7 +137,7 @@ end
 function M:msbuild_build(request, cb, opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
-  local finished = jobs.register_job({ name = "Building...", on_error_text = "Build failed", on_success_text = "Built successfully" })
+  local finished = jobs.register_job({ name = "Building...", on_error_text = "Build failed", on_success_text = "Built successfully", timeout = -1 })
   return helper.create_rpc_call({
     client = self._client,
     job = nil,
