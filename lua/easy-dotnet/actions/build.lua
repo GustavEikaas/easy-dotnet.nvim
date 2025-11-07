@@ -69,7 +69,7 @@ local function select_project(solution_file_path, cb, use_default)
   end
 
   local cmd = require("easy-dotnet.options").get_option("server").use_visual_studio
-    and string.format('dotnet easydotnet compat build "%s" --msbuild "%s"', solution_file_path, require("easy-dotnet.rpc.rpc").global_rpc_client.initialized_msbuild_path)
+      and string.format('dotnet easydotnet compat build "%s" --msbuild "%s"', solution_file_path, require("easy-dotnet.rpc.rpc").global_rpc_client.initialized_msbuild_path)
     or string.format("dotnet build %s %s", solution_file_path, "")
   local choices = {
     { path = solution_file_path, display = "Solution", name = "Solution", msbuild_props = { buildCommand = cmd } },
@@ -150,7 +150,7 @@ M.build_solution = function(term, args)
     return
   end
   local cmd = require("easy-dotnet.options").get_option("server").use_visual_studio
-    and string.format('dotnet easydotnet compat build "%s" --msbuild "%s"', solution_file_path, require("easy-dotnet.rpc.rpc").global_rpc_client.initialized_msbuild_path)
+      and string.format('dotnet easydotnet compat build "%s" --msbuild "%s"', solution_file_path, require("easy-dotnet.rpc.rpc").global_rpc_client.initialized_msbuild_path)
     or string.format("dotnet build %s %s", solution_file_path, args)
   term(solution_file_path, "build", args or "", { cmd = cmd })
 end
