@@ -1,4 +1,3 @@
-local extensions = require("easy-dotnet.extensions")
 local logger = require("easy-dotnet.logger")
 
 ---@class DotnetServer
