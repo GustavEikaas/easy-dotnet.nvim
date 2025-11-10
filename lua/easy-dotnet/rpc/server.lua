@@ -58,18 +58,9 @@ function M.start(cb)
 
       for _, line in ipairs(data) do
         if line:find(server_ready_prefix, 1, true) then
-          local pipename = line:sub(#server_ready_prefix + 1)
-          local pipe_name = vim.trim(pipename)
-          local full_pipe_path
-          if extensions.isWindows() then
-            full_pipe_path = [[\\.\pipe\]] .. pipe_name
-          elseif extensions.isDarwin() then
-            full_pipe_path = os.getenv("TMPDIR") .. "CoreFxPipe_" .. pipe_name
-          else
-            full_pipe_path = "/tmp/CoreFxPipe_" .. pipe_name
-          end
+          local pipe_name = vim.trim(line:sub(#server_ready_prefix + 1))
 
-          M.pipe_path = full_pipe_path
+          M.pipe_path = require("easy-dotnet.rpc.rpc").get_pipe_path(pipe_name)
           M.ready = true
           M.is_negotiating = false
 
