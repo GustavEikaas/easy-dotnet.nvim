@@ -46,8 +46,8 @@ local M = {
   finished_job = nil,
   finished_job_time = nil,
   _clear_timer = nil,
-  -- 15 seconds
-  default_timeout = 15000,
+  -- 60 seconds
+  default_timeout = 60000,
 }
 
 ---Register a job and get a function to remove it
