@@ -21,24 +21,25 @@ local function group_by_project(errors)
   end)
 end
 
-local function rpc_build_quickfix(target_path, args)
+function M.rpc_build_quickfix(target_path, configuration, args, cb)
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 
   if M.pending == true then
     logger.error("Build already pending...")
     return
   end
-  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
-  if solutionFilePath == nil then
+  local solution_file_path = sln_parse.find_solution_file() or csproj_parse.find_project_file()
+  if solution_file_path == nil then
     logger.error(error_messages.no_project_definition_found)
     return
   end
 
   client:initialize(function()
     M.pending = true
-    client.msbuild:msbuild_build({ targetPath = target_path, buildArgs = args }, function(res)
+    client.msbuild:msbuild_build({ targetPath = target_path, configuration = configuration, buildArgs = args }, function(res)
       local ext = vim.fn.fnamemodify(target_path, ":e")
       M.pending = false
+      if cb then cb(res.success) end
       if res.success then
         if ext == "sln" then
           qf_list.clear_all()
@@ -130,13 +131,13 @@ M.build_project_quickfix = function(use_default, dotnet_args)
       logger.error(messages.no_project_definition_found)
       return
     end
-    rpc_build_quickfix(csproj, dotnet_args)
+    M.rpc_build_quickfix(csproj, nil, dotnet_args)
     return
   end
 
   select_project(solutionFilePath, function(project)
     if project == nil then return end
-    rpc_build_quickfix(project.path, dotnet_args)
+    M.rpc_build_quickfix(project.path, nil, dotnet_args)
   end, use_default)
 end
 
@@ -164,7 +165,7 @@ M.build_solution_quickfix = function(dotnet_args)
     return
   end
 
-  rpc_build_quickfix(solution_file_path, dotnet_args)
+  M.rpc_build_quickfix(solution_file_path, nil, dotnet_args)
 end
 
 return M
