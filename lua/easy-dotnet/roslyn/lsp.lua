@@ -1,4 +1,3 @@
-local extensions = require("easy-dotnet.extensions")
 local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
 local root_finder = require("easy-dotnet.roslyn.root_finder")
@@ -13,15 +12,6 @@ local function get_running_lsp_clients()
   return vim.iter(vim.lsp.get_clients({ name = constants.lsp_client_name })):filter(function(client) return not client:is_stopped() end):totable()
 end
 
-local function get_correct_pipe_path(roslyn_pipe)
-  if extensions.isWindows() then
-    return [[\\.\pipe\]] .. roslyn_pipe
-  elseif extensions.isDarwin() then
-    return os.getenv("TMPDIR") .. "CoreFxPipe_" .. roslyn_pipe
-  else
-    return "/tmp/CoreFxPipe_" .. roslyn_pipe
-  end
-end
 local M = {
   max_clients = 5,
 }
@@ -34,7 +24,7 @@ local function easy_dotnet_lsp_start(bufnr, root)
     end
 
     dotnet_client.lsp:lsp_start(function(res)
-      local pipe_path = get_correct_pipe_path(res.pipe)
+      local pipe_path = require("easy-dotnet.rpc.rpc").get_pipe_path(res.pipe)
       local user_lsp_config = options.get_option("lsp").config or {}
       local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, user_lsp_config, {
         cmd = function(dispatchers) return vim.lsp.rpc.connect(pipe_path)(dispatchers) end,

@@ -70,21 +70,21 @@ M.outdated = function()
 
   vim.api.nvim_buf_clear_namespace(bnr, ns_id, 0, -1)
 
-  if path:match("[^/\\]+%.%a+proj") then
+  if constants.dotnet_files.is_any_project(path) then
     client:initialize(function()
       client:outdated_packages(path, function(res) apply_ext_marks(res, "reference") end)
     end)
-  elseif filename == "directory.packages.props" or filename == "packages.props" then
+  elseif filename == constants.dotnet_files.directory_packages_props or filename == constants.dotnet_files.packages_props then
     local sln_parse = require("easy-dotnet.parsers.sln-parse")
-    local solutionFilePath = sln_parse.find_solution_file()
+    local solution_file_path = sln_parse.find_solution_file()
     client:initialize(function()
-      client:outdated_packages(solutionFilePath or "", function(res) apply_ext_marks(res, "version") end)
+      client:outdated_packages(solution_file_path or "", function(res) apply_ext_marks(res, "version") end)
     end)
-  elseif filename == "directory.build.props" then
+  elseif filename == constants.dotnet_files.directory_build_props then
     local sln_parse = require("easy-dotnet.parsers.sln-parse")
-    local solutionFilePath = sln_parse.find_solution_file()
+    local solution_file_path = sln_parse.find_solution_file()
     client:initialize(function()
-      client:outdated_packages(solutionFilePath or "", function(res) apply_ext_marks(res, "reference") end)
+      client:outdated_packages(solution_file_path or "", function(res) apply_ext_marks(res, "reference") end)
     end)
   else
     logger.error("Current buffer is not *.csproj, *.fsproj, directory.packages.props, packages.props or directory.build.props")

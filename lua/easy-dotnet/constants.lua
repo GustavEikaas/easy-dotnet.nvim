@@ -38,4 +38,18 @@ M.signs = {
   EasyDotnetTestInProgress = "EasyDotnetTestInProgress",
 }
 
+M.dotnet_files = {
+  --- Checks if a path points to any .NET project file (*.csproj, *.fsproj, etc.)
+  --- @param path string
+  --- @return boolean
+  is_any_project = function(path) return path:match("[^/\\]+%.%a+proj") ~= nil end,
+  --- Checks if a path points specifically to a C# project file (*.csproj)
+  --- @param path string
+  --- @return boolean
+  is_csharp_project = function(path) return path:match("%.csproj$") ~= nil end,
+  directory_packages_props = "directory.packages.props",
+  directory_build_props = "directory.build.props",
+  packages_props = "packages.props",
+}
+
 return M
