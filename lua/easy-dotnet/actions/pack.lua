@@ -33,11 +33,9 @@ end
 local M = {}
 
 local function build_project(project, configuration)
-  local build_job = job.register_job({ name = "Building...", on_error_text = "Build failed", on_success_text = "Build success" })
-  local cmd = { "dotnet", "build", project.path, "-c", configuration }
-  local build_res = async.await(async.job_run_async)(cmd)
-  build_job(build_res.success, format_command_failure(cmd, build_res))
-  return build_res.success
+  local co = coroutine.running()
+  require("easy-dotnet.actions.build").rpc_build_quickfix(project.path, configuration, nil, function(res) coroutine.resume(co, res) end)
+  return coroutine.yield()
 end
 
 local function pack_project(project, configuration)
