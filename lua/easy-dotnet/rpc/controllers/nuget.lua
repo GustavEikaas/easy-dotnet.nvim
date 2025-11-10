@@ -4,6 +4,7 @@
 ---@field nuget_search fun(self: NugetClient, searchTerm: string, sources?: string[], cb?: fun(res: NugetPackageMetadata[]), opts?: RPC_CallOpts): RPC_CallHandle # Request a NuGet restore
 ---@field nuget_get_package_versions fun(self: NugetClient, packageId: string, sources?: string[], include_prerelease?: boolean, cb?: fun(res: string[]), opts?: RPC_CallOpts): RPC_CallHandle # Request a NuGet restore
 ---@field nuget_push fun(self: NugetClient, packages: string[], source: string, cb?: fun(success: boolean), opts?: RPC_CallOpts): RPC_CallHandle # Request a NuGet restore
+---@field nuget_list_sources fun(self: NugetClient, cb?: fun(res: NugetSourceResponse[]), opts?: RPC_CallOpts): RPC_CallHandle # Enumerate configured NuGet sources
 
 local M = {}
 M.__index = M
@@ -112,6 +113,26 @@ function M:nuget_get_package_versions(package, sources, include_prerelease, cb, 
     job = { name = "Getting versions for " .. package, on_error_text = string.format("Failed to get versions for %s", package) },
     method = "nuget/get-package-versions",
     params = { packageId = package, includePrerelease = include_prerelease, sources = sources },
+    cb = cb,
+    on_yield = nil,
+    on_crash = opts.on_crash,
+  })()
+end
+
+---@class NugetSourceResponse
+---@field name string        # Display name of the NuGet source
+---@field uri string         # Source URI or file path
+---@field isLocal boolean    # True if the source is a local file path, false if remote (HTTP, etc.)
+
+function M:nuget_list_sources(cb, opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+
+  return helper.create_enumerate_rpc_call({
+    client = self._client,
+    job = nil,
+    method = "nuget/list-sources",
+    params = {},
     cb = cb,
     on_yield = nil,
     on_crash = opts.on_crash,

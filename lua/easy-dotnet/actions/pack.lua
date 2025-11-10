@@ -49,7 +49,6 @@ end
 
 ---@param project DotnetProject
 ---@param configuration string
----@param source NugetSource
 local function push_nuget_package(project, configuration, source)
   local res = async.await(async.job_run_async)({
     "dotnet",

@@ -1,10 +1,6 @@
 local M = {}
 
----@class NugetSource
----@field name string  # The source URL or path
----@field display string  # Display-friendly name (same as URL here)
-
-local async = require("easy-dotnet.async-utils")
+local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local polyfills = require("easy-dotnet.polyfills")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
@@ -25,7 +21,6 @@ end
 local function get_all_versions(package, allow_prerelease)
   local co = coroutine.running()
 
-  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   client:initialize(function()
     client.nuget:nuget_get_package_versions(package, nil, allow_prerelease, function(i) coroutine.resume(co, list_reverse(i)) end)
   end)
@@ -101,28 +96,14 @@ local function get_package_refs(project_path)
   return packages
 end
 
----@async
---- Asynchronously lists NuGet sources using `dotnet nuget list source`.
---- Returns a list of `NugetSource` objects representing each source.
---- Throws an error if the command fails.
----
---- @return NugetSource[] List of NuGet source objects.
 M.get_nuget_sources_async = function()
-  local pack_res = async.await(async.job_run_async)({ "dotnet", "nuget", "list", "source", "--format", "short" })
-
-  if not pack_res.success then
-    vim.print(pack_res.stderr)
-    error("Listing nuget sources failed")
-  end
-  return vim
-    .iter(pack_res.stdout)
-    :map(function(line)
-      local url = vim.trim(line):match("^%u%s+(.*)")
-      if not url then return nil end
-      return { name = url, display = url }
+  local co = coroutine.running()
+  client:initialize(function()
+    client.nuget:nuget_list_sources(function(res)
+      coroutine.resume(co, vim.tbl_map(function(value) return { name = value.name, display = value.name } end, res))
     end)
-    :filter(function(val) return val ~= nil end)
-    :totable()
+  end)
+  return coroutine.yield()
 end
 
 M.remove_nuget = function()
