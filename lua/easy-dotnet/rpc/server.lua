@@ -66,7 +66,7 @@ function M.start(cb)
           elseif extensions.isDarwin() then
             full_pipe_path = os.getenv("TMPDIR") .. "CoreFxPipe_" .. pipe_name
           else
-            full_pipe_path = "/tmp/CoreFxPipe_" .. pipe_name
+            full_pipe_path = "/tmp/CoreFxPipe_EasyDotnet_ROcrjwn9kiox3tKvRWcQg"
           end
 
           M.pipe_path = full_pipe_path

@@ -133,6 +133,9 @@ local function preload_msbuild_async_or_sync(project_lines)
 
   for _, proj_path in ipairs(project_lines) do
     require("easy-dotnet.parsers.csproj-parse").preload_msbuild_properties(proj_path, function()
+      client:initialize(function()
+        client.msbuild:msbuild_get_references(proj_path, function(res) vim.print(res) end)
+      end)
       remaining = remaining - 1
       if remaining == 0 then
         if co then coroutine.resume(co) end

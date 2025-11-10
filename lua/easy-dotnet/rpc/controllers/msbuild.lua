@@ -7,6 +7,7 @@ local jobs = require("easy-dotnet.ui-modules.jobs")
 ---@field msbuild_add_project_reference fun(self: MsBuildClient, projectPath: string, targetPath: string, cb?: fun(success: boolean), opts?: RPC_CallOpts): RPC_CallHandle # Request project references
 ---@field msbuild_remove_project_reference fun(self: MsBuildClient, projectPath: string, targetPath: string, cb?: fun(success: boolean), opts?: RPC_CallOpts): RPC_CallHandle # Request project references
 ---@field msbuild_build fun(self: MsBuildClient, request: BuildRequest, cb?: fun(res: BuildResult), opts?: RPC_CallOpts): RPC_CallHandle # Request msbuild
+---@field msbuild_get_references fun(self: MsBuildClient, project_path: string, cb?: fun(res: any), opts?: RPC_CallOpts): RPC_CallHandle
 
 local M = {}
 M.__index = M
@@ -66,6 +67,47 @@ function M:msbuild_query_properties(request, cb, opts)
     on_crash = opts.on_crash,
     method = "msbuild/project-properties",
     params = { request = request },
+  })()
+end
+
+function M:msbuild_get_references(project_path, cb, opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+  return helper.create_rpc_call({
+    client = self._client,
+    job = nil,
+    cb = function(result)
+      local pending = #vim.tbl_keys(result) * 2
+
+      local function done()
+        if pending == 0 then
+          if cb then cb(result) end
+        end
+      end
+
+      for key, value in pairs(result) do
+        if value.projects and value.projects.token then
+          self._client:request_property_enumerate(value.projects.token, nil, function(res)
+            result[key].projects = res
+            pending = pending - 1
+            done()
+          end)
+        end
+
+        if value.packages and value.packages.token then
+          self._client:request_property_enumerate(value.packages.token, nil, function(res)
+            result[key].packages = res
+            pending = pending - 1
+            done()
+          end)
+        end
+      end
+
+      done()
+    end,
+    on_crash = opts.on_crash,
+    method = "msbuild/references",
+    params = { projectPath = project_path },
   })()
 end
 
