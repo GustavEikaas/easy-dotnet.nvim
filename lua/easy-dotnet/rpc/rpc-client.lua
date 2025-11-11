@@ -45,6 +45,10 @@ local M = {
 ---@field method string
 ---@field params? any
 
+---@class RPC_PromptSelection
+---@field id string
+---@field display string
+
 ---@alias NotificationCallback fun(method: string, params: any | nil): nil
 
 ---@alias DotnetPipeMethod
@@ -87,20 +91,16 @@ local cancellation_callbacks = {}
 
 ---@type NotificationCallback[]
 local notification_callbacks = {}
-local debug_mode = false
 
-local function debug_log(msg)
-  if debug_mode then vim.notify("StreamJsonRpc Debug: " .. msg, vim.log.levels.DEBUG) end
-end
-
+---Initializes the StreamJsonRpc client with configuration.
+---@param opts { pipe_path: string, debug?: boolean }
+---@return StreamJsonRpc
 function M.setup(opts)
   opts = opts or {}
   pipe_path = opts.pipe_path
-  debug_mode = opts.debug or false
 
   if not pipe_path then error("StreamJsonRpc client: pipe_path is required") end
 
-  debug_log("Setup complete with pipe_path: " .. pipe_path)
   return M
 end
 
@@ -123,10 +123,10 @@ local handlers = {
   startDebugSession = require("easy-dotnet.rpc.handlers.start_debug_session"),
 }
 
----@class RPC_PromptSelection
----@field id string
----@field display string
-
+---Handles a server-initiated RPC request using a registered handler.
+---@param decoded table The decoded JSON-RPC message
+---@param response fun(result: any, err?: string|table) Response callback
+---@param handler fun(params: table, respond: fun(any), throw: fun(any), validate: fun(any)) The handler function
 local function handle_server_request(decoded, response, handler)
   local params = decoded.params or {}
 
@@ -159,13 +159,13 @@ local function make_response(decoded)
 
     local full_message = encode_rpc_message(message)
 
-    debug_log("Sending response for ID " .. tostring(decoded.id) .. ": " .. vim.inspect(message))
-
     local ok, write_result = pcall(vim.loop.write, connection, full_message)
     if not ok or not write_result then vim.schedule(function() vim.notify("StreamJsonRpc: failed to send response for ID " .. tostring(decoded.id), vim.log.levels.ERROR) end) end
   end
 end
 
+---Handles incoming JSON-RPC responses from the server.
+---@param decoded table The decoded JSON message
 local function handle_response(decoded)
   local cb = callbacks[decoded.id]
   local handler = handlers[decoded.method]
@@ -178,6 +178,8 @@ local function handle_response(decoded)
   end
 end
 
+---Dispatches JSON-RPC notifications to all subscribed callbacks.
+---@param decoded JsonRpcNotification
 local function handle_server_notification(decoded)
   vim.schedule(function()
     for _, cb in ipairs(notification_callbacks) do
@@ -186,6 +188,7 @@ local function handle_server_notification(decoded)
   end)
 end
 
+---Starts reading from the JSON-RPC pipe and dispatching messages.
 local function read_loop()
   local buffer = ""
 
@@ -236,14 +239,11 @@ local function read_loop()
   end)
 end
 
+---Connects to the RPC pipe and starts listening for messages.
+---@param cb fun() Called when connection is established (or fail
 function M.connect(cb)
-  if is_connected and connection then
-    debug_log("Already connected, skipping connection attempt")
-    cb()
-  end
+  if is_connected and connection then cb() end
   if not pipe_path then error("StreamJsonRpc client: setup() must be called before connect()") end
-
-  debug_log("Attempting to connect to pipe: " .. pipe_path)
 
   local pipe = vim.loop.new_pipe(false)
 
@@ -265,6 +265,12 @@ function M.connect(cb)
   end)
 end
 
+---Sends a JSON-RPC request to the server.
+---@param method DotnetPipeMethod
+---@param params table
+---@param callback fun(result: RPC_Response)
+---@param options? RpcRequestOptions
+---@return integer|false request_id or false if failed
 function M.request(method, params, callback, options)
   options = options or {}
   if not vim.tbl_contains(M.routes, method) and method ~= "$/enumerator/next" then
@@ -282,22 +288,17 @@ function M.request(method, params, callback, options)
     params = params or {},
   }
 
-  debug_log("Registering callback for request ID: " .. id)
-
   callbacks[id] = callback
   cancellation_callbacks[id] = options.on_cancel
 
   local full_message = encode_rpc_message(message)
 
-  debug_log("Sending request: " .. method .. " (ID: " .. id .. "), content: " .. vim.inspect(message))
-
   local ok, write_result = pcall(vim.loop.write, connection, full_message)
 
   if not ok or not write_result then
-    debug_log("Write failed: " .. (not ok and write_result or "unknown error"))
     callbacks[id] = nil
     cancellation_callbacks[id] = nil
-    if callback then vim.schedule(function() callback(nil, "Failed to send request") end) end
+    if callback then vim.schedule(function() callback(nil) end) end
     return false
   end
 
@@ -360,6 +361,8 @@ function M:request_property_enumerate(token, on_yield, on_finished, on_error)
   handle_next(token)
 end
 
+---Cancels an active request by ID.
+---@param id integer Request ID to cancel
 function M.cancel(id)
   if callbacks[id] then
     M.notify("$/cancelRequest", { id = id })
@@ -372,6 +375,9 @@ end
 
 function M._enumerable_next(id, cb) M.request("$/enumerator/next", { token = id }, cb) end
 
+---Registers a callback for JSON-RPC notifications.
+---@param cb NotificationCallback
+---@return fun() unsubscribe Function to remove the callback
 function M.subscribe_notifications(cb)
   table.insert(notification_callbacks, cb)
 
@@ -380,13 +386,14 @@ function M.subscribe_notifications(cb)
   end
 end
 
+---Sends a JSON-RPC notification (no response expected).
+---@param method string
+---@param params table
+---@return boolean success
 function M.notify(method, params)
   if not is_connected then error("Client not connected") end
 
-  if not connection then
-    debug_log("Connection object is nil, cannot send notification")
-    return false
-  end
+  if not connection then return false end
 
   local message = {
     jsonrpc = "2.0",
@@ -396,21 +403,16 @@ function M.notify(method, params)
 
   local full_message = encode_rpc_message(message)
 
-  debug_log("Sending notification: " .. method .. ", content: " .. vim.inspect(message))
-
   local ok, write_result = pcall(vim.loop.write, connection, full_message)
 
-  if not ok or not write_result then
-    debug_log("Write failed: " .. (not ok and write_result or "unknown error"))
-    return false
-  end
+  if not ok or not write_result then return false end
 
   return true
 end
 
+---Disconnects from the server and resets all state.
+---@return boolean success
 function M.disconnect()
-  debug_log("Disconnecting...")
-
   if connection then
     connection:read_stop()
     connection:close()
@@ -421,10 +423,11 @@ function M.disconnect()
   callbacks = {}
   request_id = 0
 
-  debug_log("Disconnected successfully")
   return true
 end
 
+---Checks if the client is currently connected.
+---@return boolean
 function M.is_connected() return is_connected and connection ~= nil end
 
 return M
