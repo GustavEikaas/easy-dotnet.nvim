@@ -109,15 +109,15 @@ local function handle_choices(params, done)
 end
 
 local no_name_templates = {
-  "Microsoft.Standard.QuickStarts.DirectoryProps",
-  "Microsoft.Standard.QuickStarts.DirectoryTargets",
-  "Microsoft.Standard.QuickStarts.DirectoryPackages",
-  "Microsoft.Standard.QuickStarts.EditorConfigFile",
-  "Microsoft.Standard.QuickStarts.GitignoreFile",
-  "Microsoft.Standard.QuickStarts.GlobalJsonFile",
-  "Microsoft.Standard.QuickStarts.Nuget.Config",
-  "Microsoft.Standard.QuickStarts.Web.Config",
-  "Microsoft.Standard.QuickStarts.ToolManifestFile",
+  ["Microsoft.Standard.QuickStarts.DirectoryProps"] = "Directory.Build.props",
+  ["Microsoft.Standard.QuickStarts.DirectoryTargets"] = "Directory.Build.targets",
+  ["Microsoft.Standard.QuickStarts.DirectoryPackages"] = "NuGet.Config",
+  ["Microsoft.Standard.QuickStarts.EditorConfigFile"] = ".editorconfig",
+  ["Microsoft.Standard.QuickStarts.GitignoreFile"] = ".gitignore",
+  ["Microsoft.Standard.QuickStarts.GlobalJsonFile"] = "global.json",
+  ["Microsoft.Standard.QuickStarts.Nuget.Config"] = "NuGet.Config",
+  ["Microsoft.Standard.QuickStarts.Web.Config"] = "web.config",
+  ["Microsoft.Standard.QuickStarts.ToolManifestFile"] = "dotnet-tools.json",
 }
 
 local function prompt_parameters(identity, client, name, cwd, cb)
@@ -144,17 +144,20 @@ function M.new()
       require("easy-dotnet.picker").picker(nil, choices, function(selection)
         ---@type DotnetNewTemplate
         local val = selection.value
+
+        local default_name = no_name_templates[val.identity]
+
         if val.type == "project" then
           vim.ui.input({ prompt = "Enter name:" }, function(input)
             local args = get_project_name_and_output(input)
             prompt_parameters(val.identity, client.template_engine, args.project_name, args.output, function() sln_add_project(args.sln_path, args.output) end)
           end)
-        elseif not vim.tbl_contains(no_name_templates, selection.value.identity) then
+        elseif default_name then
+          prompt_parameters(val.identity, client.template_engine, default_name, nil, function() print("Success") end)
+        else
           vim.ui.input({ prompt = "Enter name:" }, function(input)
             prompt_parameters(val.identity, client.template_engine, input, nil, function() print("Success") end)
           end)
-        else
-          prompt_parameters(val.identity, client.template_engine, nil, nil, function() print("Success") end)
         end
       end, "New", false, true)
     end)
