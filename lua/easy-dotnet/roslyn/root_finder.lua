@@ -38,9 +38,7 @@ local function find_files_in_directory_or_parents(directory, patterns)
       end
     end
 
-    if directory == cwd then
-      break
-    end
+    if directory == cwd then break end
 
     local parent = Path:new(directory):parent()
     if parent and parent:absolute() ~= directory then
