@@ -11,6 +11,7 @@ local M = {}
 ---@field targetFramework string | nil The target framework moniker (e.g., "net9.0")
 ---@field targetFrameworks string[] | nil The target framework list [net9.0,net8.0]
 ---@field isTestProject boolean Whether the project is a test project ("true"/"false")
+---@field isTestingPlatformApplication boolean Whether the project is a Microsoft.Testing.Platform test project
 ---@field userSecretsId string | nil The GUID used for User Secrets configuration
 ---@field testingPlatformDotnetTestSupport boolean Custom property, likely used by test tooling
 ---@field targetPath string | nil Full path to the built output artifact
@@ -175,7 +176,7 @@ M.get_project_from_project_file = function(project_file_path)
     local is_worker_project = msbuild_props.isWorkerProject
     local is_console_project = string.lower(msbuild_props.outputType) == "exe"
     local is_test_project = msbuild_props.isTestProject or M.is_directly_referencing_test_packages(lines)
-    local is_test_platform_project = msbuild_props.testingPlatformDotnetTestSupport
+    local is_test_platform_project = msbuild_props.isTestingPlatformApplication or msbuild_props.testingPlatformDotnetTestSupport
     local is_win_project = string.lower(msbuild_props.outputType) == "winexe"
     local is_nuget_package = msbuild_props.generatePackageOnBuild or msbuild_props.isPackable
     local maybe_secret_guid = msbuild_props.userSecretsId
