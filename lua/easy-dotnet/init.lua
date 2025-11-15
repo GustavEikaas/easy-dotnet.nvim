@@ -237,8 +237,18 @@ local function auto_install_easy_dotnet()
     end,
   })
 end
+
+local function merge_lsp_opts(opts)
+  --TODO: mutate
+  vim.lsp.config[constants.lsp_client_name] = require("easy-dotnet.roslyn.config")
+  vim.lsp.enable(constants.lsp_client_name)
+end
+
 M.setup = function(opts)
   local merged_opts = require("easy-dotnet.options").set_options(opts)
+
+  if merged_opts.lsp.enabled == true then merge_lsp_opts(merged_opts) end
+
   define_highlights()
   check_picker_config(merged_opts)
 
@@ -287,7 +297,7 @@ M.setup = function(opts)
 
   register_legacy_functions()
 
-  if merged_opts.lsp.enabled == true then require("easy-dotnet.roslyn.lsp").enable() end
+  -- if merged_opts.lsp.enabled == true then require("easy-dotnet.roslyn.lsp").enable() end
   wrap(auto_register_dap)(merged_opts)
   wrap(background_scanning)(merged_opts)
   wrap(auto_install_easy_dotnet)()
