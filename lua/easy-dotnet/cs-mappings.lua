@@ -28,6 +28,10 @@ local function auto_bootstrap_namespace(bufnr, mode)
 
   if not vim.startswith(vim.fs.normalize(curr_file), vim.fs.normalize(vim.fn.getcwd())) then return end
   if not is_buffer_empty(bufnr) then return end
+  if vim.endswith(curr_file, "__virtual.cs") then
+    vim.print("skipping virtual file")
+    return
+  end
 
   local file_name = vim.fn.fnamemodify(curr_file, ":t:r")
 
