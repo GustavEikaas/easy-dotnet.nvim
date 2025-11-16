@@ -62,7 +62,7 @@ local M = {
 ---@param project_path string path to csproject file
 ---@return boolean indicating success
 function M.request_build(project_path)
-  qf_list.clear_project(project_path)
+  qf_list.clear_all()
   local co = coroutine.running()
   local success = false
 
@@ -298,15 +298,7 @@ local function start_test_discovery(project, options, solution_file_path)
   local project_node = create_test_node_from_dotnet_project(project, solution_file_path, options, function() start_test_discovery(project, options, solution_file_path) end)
   win.tree.children[project_node.name] = project_node
 
-  project_node.job = { name = "build", state = "pending" }
   win.refreshTree()
-  local build_success = M.request_build(project.path)
-  if not build_success then
-    project_node.job = { name = "build", state = "error" }
-    win.refreshTree()
-    return
-  end
-
   project_node.job = { name = "discover", state = "pending" }
   win.refreshTree()
 
@@ -345,6 +337,9 @@ local function refresh_runner(options, solution_file_path)
   win.refreshTree()
 
   local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(project) return project.isTestProject end)
+
+  local success = M.request_build(solution_file_path)
+  if not success then return end
 
   for _, value in ipairs(test_projects) do
     M.client:initialize(function()
