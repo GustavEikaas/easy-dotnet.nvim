@@ -5,8 +5,15 @@ local dotnet_client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local options = require("easy-dotnet.options")
+local Progress = require("easy-dotnet.roslyn.progress")
 local roslyn_starting
 local selected_file_for_init
+
+local function get_running_lsp_clients_curr_buffer()
+  local bufnr = vim.api.nvim_get_current_buf()
+  if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then return nil end
+  return vim.iter(vim.lsp.get_clients({ name = constants.lsp_client_name, bufnr = bufnr })):filter(function(client) return not client:is_stopped() end):totable()
+end
 
 local function get_running_lsp_clients()
   return vim.iter(vim.lsp.get_clients({ name = constants.lsp_client_name })):filter(function(client) return not client:is_stopped() end):totable()
@@ -15,6 +22,27 @@ end
 local M = {
   max_clients = 5,
 }
+
+function M.client_from_curr_buffer()
+  local clients = get_running_lsp_clients_curr_buffer()
+  local client_count = #clients
+
+  if not clients or client_count == 0 then
+    error("[easy-dotnet] No Roslyn LSP client attached to the current buffer.")
+  elseif client_count > 1 then
+    vim.notify(string.format("[easy-dotnet] Multiple Roslyn LSP clients (%d) attached to this buffer. Using the first one.", client_count), vim.log.levels.WARN)
+  end
+
+  local client = clients[1]
+
+  return {
+    client = client,
+    requests = {
+      run_tests = function(params, on_res, on_err) require("easy-dotnet.roslyn.to_server.requests.run_tests").run_tests(client, params, on_res, on_err) end,
+    },
+    notifications = {},
+  }
+end
 
 local function easy_dotnet_lsp_start(bufnr, root)
   dotnet_client:initialize(function()
@@ -91,16 +119,17 @@ M.lsp_config = {
     },
   },
   on_init = function(client)
+    local roslyn_client = require("easy-dotnet.roslyn.to_server").from_client(client)
     roslyn_starting = job.register_job({ name = "Roslyn starting", on_error_text = "Roslyn failed to start", on_success_text = "Roslyn started" })
     M.client_state[client.id] = {
       selected_file_for_init = selected_file_for_init,
     }
+
     if selected_file_for_init then
-      local uri = vim.uri_from_fname(selected_file_for_init)
       if selected_file_for_init:match("%.slnx?$") then
-        client:notify("solution/open", { solution = uri })
+        roslyn_client.notifications.solution_open(selected_file_for_init)
       elseif selected_file_for_init:match("%.csproj$") then
-        client:notify("project/open", { projects = { uri } })
+        roslyn_client.notifications.projects_open({ selected_file_for_init })
       else
         roslyn_starting(true)
       end
@@ -115,23 +144,15 @@ M.lsp_config = {
     ["roslyn.client.nestedCodeAction"] = require("easy-dotnet.roslyn.lsp.nested_code_action"),
   },
   handlers = {
+    ["$/progress"] = function(_, params)
+      for i = 1, #params, 2 do
+        local token, value = params[i], params[i + 1]
+        if token and value then Progress.report(token, value) end
+      end
+    end,
     ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
       vim.defer_fn(function()
-        local client = vim.lsp.get_client_by_id(ctx.client_id)
-        if not client then return end
-
-        local bufnr = vim.api.nvim_get_current_buf()
-        if not vim.api.nvim_buf_is_valid(bufnr) then return end
-
-        local params = {
-          textDocument = {
-            uri = vim.uri_from_bufnr(bufnr),
-            version = vim.lsp.util.buf_versions[bufnr] or 0,
-          },
-          contentChanges = {},
-        }
-
-        client:notify("textDocument/didChange", params)
+        require("easy-dotnet.roslyn.to_server").from_client_id(ctx.client_id).refresh_document()
         if roslyn_starting then
           roslyn_starting(true)
           roslyn_starting = nil
