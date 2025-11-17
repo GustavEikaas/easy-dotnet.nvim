@@ -115,6 +115,7 @@ function M.enable()
       elseif type == "csproj" then
         client:notify("project/open", { projects = { uri } })
       else
+        logger.warn("Unknown file selected as root_file " .. file)
       end
     end,
     on_exit = function(code, signal, client_id)
