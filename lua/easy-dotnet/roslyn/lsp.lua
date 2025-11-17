@@ -87,6 +87,22 @@ function M.find_sln_or_csproj(dir)
   return nil
 end
 
+---@param client vim.lsp.Client
+local function refresh_diag(client)
+  local bufnr = vim.api.nvim_get_current_buf()
+  if not vim.api.nvim_buf_is_valid(bufnr) then return end
+
+  local params = {
+    textDocument = {
+      uri = vim.uri_from_bufnr(bufnr),
+      version = vim.lsp.util.buf_versions[bufnr] or 0,
+    },
+    contentChanges = {},
+  }
+
+  client:notify("textDocument/didChange", params)
+end
+
 function M.enable()
   if vim.fn.has("nvim-0.11") == 0 then
     logger.warn("easy-dotnet LSP requires neovim 0.11 or higher ")
@@ -118,11 +134,8 @@ function M.enable()
         logger.warn("Unknown file selected as root_file " .. file)
       end
     end,
-    on_exit = function(code, signal, client_id)
+    on_exit = function(code)
       vim.schedule(function()
-        vim.print(code)
-        vim.print(signal)
-        vim.print(client_id)
         if code ~= 0 and code ~= 143 then
           vim.notify("[easy-dotnet] Roslyn crashed", vim.log.levels.ERROR)
           return
@@ -138,19 +151,7 @@ function M.enable()
       ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         if not client then return end
-
-        local bufnr = vim.api.nvim_get_current_buf()
-        if not vim.api.nvim_buf_is_valid(bufnr) then return end
-
-        local params = {
-          textDocument = {
-            uri = vim.uri_from_bufnr(bufnr),
-            version = vim.lsp.util.buf_versions[bufnr] or 0,
-          },
-          contentChanges = {},
-        }
-
-        client:notify("textDocument/didChange", params)
+        vim.defer_fn(function() refresh_diag(client) end, 500)
         vim.print("Workspace ready")
       end,
       ["workspace/_roslyn_projectNeedsRestore"] = function(_, params, ctx, _)
@@ -159,14 +160,18 @@ function M.enable()
 
         if vim.tbl_isempty(csproj_files) then return {} end
 
-        dotnet_client:initialize(function()
-          local selected_file = M.client_state[ctx.client_id] and M.client_state[ctx.client_id].selected_file_for_init
+        local restore = #csproj_files == 1 and csproj_files[1] or sln_parse.try_get_selected_solution_file()
 
-          if selected_file then
-            dotnet_client.nuget:nuget_restore(selected_file, function() end)
-            return
-          end
-        end)
+        if restore then
+          dotnet_client:initialize(function()
+            dotnet_client.nuget:nuget_restore(restore, function()
+              local client = vim.lsp.get_client_by_id(ctx.client_id)
+              if not client then return end
+              vim.defer_fn(function() refresh_diag(client) end, 500)
+              vim.defer_fn(function() refresh_diag(client) end, 15000)
+            end)
+          end)
+        end
 
         return {}
       end,
