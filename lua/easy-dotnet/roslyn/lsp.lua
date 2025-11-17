@@ -1,70 +1,27 @@
-local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
 local root_finder = require("easy-dotnet.roslyn.root_finder")
 local dotnet_client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
-local options = require("easy-dotnet.options")
-local roslyn_starting
-local selected_file_for_init
 
-local function get_running_lsp_clients()
-  return vim.iter(vim.lsp.get_clients({ name = constants.lsp_client_name })):filter(function(client) return not client:is_stopped() end):totable()
-end
-
-local M = {
-  max_clients = 5,
-}
-
-local function easy_dotnet_lsp_start(bufnr, root)
-  dotnet_client:initialize(function()
-    if not dotnet_client.has_lsp then
-      vim.defer_fn(function() logger.warn("Roslyn LSP unable to start, server outdated. :Dotnet _server update") end, 500)
-      return
-    end
-
-    dotnet_client.lsp:lsp_start(function(res)
-      local pipe_path = require("easy-dotnet.rpc.rpc").get_pipe_path(res.pipe)
-      local user_lsp_config = options.get_option("lsp").config or {}
-      local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, user_lsp_config, {
-        cmd = function(dispatchers) return vim.lsp.rpc.connect(pipe_path)(dispatchers) end,
-        root_dir = root,
-      })
-      vim.lsp.start(lsp_opts, { bufnr = bufnr })
-    end)
-  end)
-end
+local M = {}
 
 function M.start()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local path = vim.api.nvim_buf_get_name(bufnr)
-  if not path or #path == 0 or vim.fn.filereadable(path) == 0 then
-    vim.notify("[easy-dotnet] Cannot start: buffer has no valid file", vim.log.levels.WARN)
-    return
-  end
-
-  local clients = get_running_lsp_clients()
-  for _, client in ipairs(clients) do
-    if vim.lsp.buf_is_attached(bufnr, client.id) then
-      vim.notify("[easy-dotnet] Roslyn already attached to this buffer", vim.log.levels.INFO)
-      return
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(bufnr) then
+      local ft = vim.bo[bufnr].filetype
+      if ft == "cs" then vim.api.nvim_exec_autocmds("FileType", {
+        buffer = bufnr,
+      }) end
     end
   end
-
-  M.find_project_or_solution(bufnr, function(root, selected_file)
-    selected_file_for_init = selected_file
-    easy_dotnet_lsp_start(bufnr, root)
-  end)
 end
 
 function M.stop()
   local bufnr = vim.api.nvim_get_current_buf()
-  local attached_clients = vim.lsp.get_active_clients({ bufnr = bufnr })
+  local attached_clients = vim.lsp.get_clients({ bufnr = bufnr, name = constants.lsp_client_name })
   for _, client in ipairs(attached_clients) do
-    if client.name == constants.lsp_client_name then
-      client:stop(true)
-      M.client_state[client.id] = nil
-    end
+    client:stop(true)
   end
 end
 
@@ -73,107 +30,22 @@ function M.restart()
   M.start()
 end
 
----@class EasyDotnetClientStateEntry
----@field selected_file_for_init string|nil
-
----@type table<number, EasyDotnetClientStateEntry>
-M.client_state = {}
-
----@type vim.lsp.Config
-M.lsp_config = {
-  name = constants.lsp_client_name,
-  filetypes = { "cs" },
-  capabilities = {
-    textDocument = {
-      diagnostic = {
-        dynamicRegistration = true,
-      },
-    },
-  },
-  on_init = function(client)
-    roslyn_starting = job.register_job({ name = "Roslyn starting", on_error_text = "Roslyn failed to start", on_success_text = "Roslyn started" })
-    M.client_state[client.id] = {
-      selected_file_for_init = selected_file_for_init,
-    }
-    if selected_file_for_init then
-      local uri = vim.uri_from_fname(selected_file_for_init)
-      if selected_file_for_init:match("%.slnx?$") then
-        client:notify("solution/open", { solution = uri })
-      elseif selected_file_for_init:match("%.csproj$") then
-        client:notify("project/open", { projects = { uri } })
-      else
-        roslyn_starting(true)
-      end
-    end
-  end,
-  on_exit = function(_, _, client_id)
-    vim.schedule(function() vim.notify("[easy-dotnet] Roslyn stopped", vim.log.levels.WARN) end)
-    M.client_state[client_id] = nil
-  end,
-  commands = {
-    ["roslyn.client.fixAllCodeAction"] = require("easy-dotnet.roslyn.lsp.fix_all_code_action"),
-    ["roslyn.client.nestedCodeAction"] = require("easy-dotnet.roslyn.lsp.nested_code_action"),
-  },
-  handlers = {
-    ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
-      vim.defer_fn(function()
-        local client = vim.lsp.get_client_by_id(ctx.client_id)
-        if not client then return end
-
-        local bufnr = vim.api.nvim_get_current_buf()
-        if not vim.api.nvim_buf_is_valid(bufnr) then return end
-
-        local params = {
-          textDocument = {
-            uri = vim.uri_from_bufnr(bufnr),
-            version = vim.lsp.util.buf_versions[bufnr] or 0,
-          },
-          contentChanges = {},
-        }
-
-        client:notify("textDocument/didChange", params)
-        if roslyn_starting then
-          roslyn_starting(true)
-          roslyn_starting = nil
-        end
-      end, 500)
-    end,
-    ["workspace/_roslyn_projectNeedsRestore"] = function(_, params, ctx)
-      local paths = params.projectFilePaths or {}
-      local csproj_files = vim.tbl_filter(function(path) return path:match("%.csproj$") end, paths)
-
-      if vim.tbl_isempty(csproj_files) then return {} end
-
-      dotnet_client:initialize(function()
-        local selected_file = M.client_state[ctx.client_id] and M.client_state[ctx.client_id].selected_file_for_init
-
-        if selected_file then
-          dotnet_client.nuget:nuget_restore(selected_file, function() end)
-          return
-        end
-      end)
-
-      return {}
-    end,
-  },
-}
-
 function M.find_project_or_solution(bufnr, cb)
   local buf_path = vim.api.nvim_buf_get_name(bufnr)
+  if buf_path:match("^%a+://") then return nil end
+  if vim.fn.filereadable(buf_path) == 0 then return nil end
+
   local project = root_finder.find_csproj_from_file(buf_path)
-  local selected_file
 
   if not project then
-    selected_file = buf_path
-    cb(vim.fs.dirname(selected_file), selected_file)
+    cb(vim.fs.dirname(buf_path))
     return
   end
 
   local sln = root_finder.find_solutions_from_file(project)
 
   if vim.tbl_isempty(sln) then
-    selected_file = project
-    cb(vim.fs.dirname(selected_file), selected_file)
+    cb(vim.fs.dirname(project))
     return
   end
 
@@ -191,15 +63,28 @@ function M.find_project_or_solution(bufnr, cb)
   end
 
   if selected_sln then
-    selected_file = selected_sln
-    cb(vim.fs.dirname(selected_file), selected_file)
+    cb(vim.fs.dirname(selected_sln))
     return
   end
 
-  require("easy-dotnet.picker").picker(nil, vim.tbl_map(function(value) return { display = value } end, sln), function(r)
-    selected_file = r.display
-    cb(vim.fs.dirname(selected_file), selected_file)
-  end, "Pick solution file to start Roslyn from", true, true)
+  require("easy-dotnet.picker").picker(
+    nil,
+    vim.tbl_map(function(value) return { display = value } end, sln),
+    function(r) cb(vim.fs.dirname(r.display)) end,
+    "Pick solution file to start Roslyn from",
+    true,
+    true
+  )
+end
+
+function M.find_sln_or_csproj(dir)
+  local sln = vim.fs.find(function(name) return name:match("%.slnx?$") end, { path = dir, upward = false, limit = 1 })
+  if sln[1] then return sln[1], "sln" end
+
+  local csproj = vim.fs.find(function(name) return name:match("%.csproj$") end, { path = dir, upward = false, limit = 1 })
+  if csproj[1] then return csproj[1], "csproj" end
+
+  return nil
 end
 
 function M.enable()
@@ -208,37 +93,86 @@ function M.enable()
     return
   end
 
-  local function start_easy_dotnet_lsp(bufnr)
-    M.find_project_or_solution(bufnr, function(root, selected_file)
-      selected_file_for_init = selected_file
+  ---@type vim.lsp.Config
+  vim.lsp.config[constants.lsp_client_name] = {
+    cmd = { "dotnet", "easydotnet", "roslyn", "start", "--roslynator" },
+    filetypes = { "cs" },
+    root_dir = M.find_project_or_solution,
+    capabilities = {
+      textDocument = {
+        diagnostic = {
+          dynamicRegistration = true,
+        },
+      },
+    },
+    on_init = function(client)
+      local file, type = M.find_sln_or_csproj(client.root_dir)
+      if not file then return end
 
-      local existing_clients = get_running_lsp_clients()
-
-      for _, client in ipairs(existing_clients) do
-        if client.config.root_dir == root or root:match("/MetadataAsSource/") then
-          vim.lsp.buf_attach_client(bufnr, client.id)
+      local uri = vim.uri_from_fname(file)
+      if type == "sln" then
+        client:notify("solution/open", { solution = uri })
+      elseif type == "csproj" then
+        client:notify("project/open", { projects = { uri } })
+      else
+      end
+    end,
+    on_exit = function(code, signal, client_id)
+      vim.schedule(function()
+        vim.print(code)
+        vim.print(signal)
+        vim.print(client_id)
+        if code ~= 0 and code ~= 143 then
+          vim.notify("[easy-dotnet] Roslyn crashed", vim.log.levels.ERROR)
           return
         end
-      end
-
-      if #existing_clients >= M.max_clients then
-        vim.notify(string.format("[easy-dotnet] Cannot start new client: already %d running", M.max_clients), vim.log.levels.WARN)
-        return
-      end
-
-      easy_dotnet_lsp_start(bufnr, root)
-    end)
-  end
-  vim.api.nvim_create_autocmd("FileType", {
-    pattern = "cs",
-    callback = function(args)
-      local path = vim.api.nvim_buf_get_name(args.buf)
-      if path:match("^%a+://") then return end
-      if not path or #path == 0 then return end
-      if vim.fn.filereadable(path) == 0 then return end
-      start_easy_dotnet_lsp(args.buf)
+        vim.notify("[easy-dotnet] Roslyn stopped", vim.log.levels.INFO)
+      end)
     end,
-  })
+    commands = {
+      ["roslyn.client.fixAllCodeAction"] = require("easy-dotnet.roslyn.lsp.fix_all_code_action"),
+      ["roslyn.client.nestedCodeAction"] = require("easy-dotnet.roslyn.lsp.nested_code_action"),
+    },
+    handlers = {
+      ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
+        local client = vim.lsp.get_client_by_id(ctx.client_id)
+        if not client then return end
+
+        local bufnr = vim.api.nvim_get_current_buf()
+        if not vim.api.nvim_buf_is_valid(bufnr) then return end
+
+        local params = {
+          textDocument = {
+            uri = vim.uri_from_bufnr(bufnr),
+            version = vim.lsp.util.buf_versions[bufnr] or 0,
+          },
+          contentChanges = {},
+        }
+
+        client:notify("textDocument/didChange", params)
+        vim.print("Workspace ready")
+      end,
+      ["workspace/_roslyn_projectNeedsRestore"] = function(_, params, ctx, _)
+        local paths = params.projectFilePaths or {}
+        local csproj_files = vim.tbl_filter(function(path) return path:match("%.csproj$") end, paths)
+
+        if vim.tbl_isempty(csproj_files) then return {} end
+
+        dotnet_client:initialize(function()
+          local selected_file = M.client_state[ctx.client_id] and M.client_state[ctx.client_id].selected_file_for_init
+
+          if selected_file then
+            dotnet_client.nuget:nuget_restore(selected_file, function() end)
+            return
+          end
+        end)
+
+        return {}
+      end,
+    },
+  }
+
+  vim.lsp.enable(constants.lsp_client_name)
 end
 
 return M
