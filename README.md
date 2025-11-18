@@ -135,6 +135,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
       },
       debugger = {
         -- The path to netcoredbg executable
+        --example mason path: vim.fs.joinpath(vim.fn.stdpath("data"), "mason/bin/netcoredbg.cmd"),
         bin_path = nil,
         auto_register_dap = true,
         mappings = {
