@@ -1,3 +1,4 @@
+-- local constants = require("easy-dotnet.constants")
 local M = {}
 
 local function is_buffer_empty(buf)
@@ -45,6 +46,11 @@ local function auto_bootstrap_namespace(bufnr, mode)
   local on_finished = function()
     vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
     vim.cmd("checktime")
+    --TODO: get roslyn client from file and refresh sln
+    -- local lsp = vim.lsp.get_clients({ bufnr = bufnr, name = constants.lsp_client_name })[1]
+    -- if not lsp then return end
+    -- local sln = vim.uri_from_fname("C:\\Users\\gustav.eikaas\\repo\\fusion-data-gateway\\src\\CCApplications.sln")
+    -- lsp:notify("solution/open", { solution = sln })
   end
 
   local from_json = function(clipboard) client.roslyn:roslyn_bootstrap_file_json(curr_file, clipboard, mode == "file_scoped", on_finished) end
