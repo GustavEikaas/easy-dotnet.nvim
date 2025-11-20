@@ -128,6 +128,14 @@ M.lsp_config = {
         local bufnr = vim.api.nvim_get_current_buf()
         if not vim.api.nvim_buf_is_valid(bufnr) then return end
 
+        local open_doc = client.server_capabilities and client.attached_buffers and client.attached_buffers[bufnr]
+
+        if not open_doc then
+          if roslyn_starting then roslyn_starting(true) end
+          roslyn_starting = nil
+          return
+        end
+
         local params = {
           textDocument = {
             uri = vim.uri_from_bufnr(bufnr),
@@ -137,6 +145,7 @@ M.lsp_config = {
         }
 
         client:notify("textDocument/didChange", params)
+
         if roslyn_starting then
           roslyn_starting(true)
           roslyn_starting = nil
