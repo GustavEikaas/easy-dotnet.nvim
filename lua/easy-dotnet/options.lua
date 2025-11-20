@@ -97,7 +97,7 @@ local M = {
     },
     ---@type TestRunnerOptions
     test_runner = {
-      viewmode = "split",
+      viewmode = "float",
       vsplit_width = nil,
       vsplit_pos = nil,
       enable_buffer_test_execution = true,
