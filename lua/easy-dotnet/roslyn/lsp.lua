@@ -26,10 +26,13 @@ local function easy_dotnet_lsp_start(bufnr, root)
     dotnet_client.lsp:lsp_start(function(res)
       local pipe_path = require("easy-dotnet.rpc.rpc").get_pipe_path(res.pipe)
       local user_lsp_config = options.get_option("lsp").config or {}
-      local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, user_lsp_config, {
+      local ok, razor_handlers = pcall(require, "rzls.roslyn_handlers")
+      local razor = ok and { handlers = razor_handlers } or {}
+      local lsp_opts = vim.tbl_deep_extend("force", M.lsp_config, razor, user_lsp_config, {
         cmd = function(dispatchers) return vim.lsp.rpc.connect(pipe_path)(dispatchers) end,
         root_dir = root,
       })
+
       vim.lsp.start(lsp_opts, { bufnr = bufnr })
     end)
   end)
@@ -120,7 +123,43 @@ M.lsp_config = {
     ["roslyn.client.nestedCodeAction"] = require("easy-dotnet.roslyn.lsp.nested_code_action"),
   },
   handlers = {
+    ["workspace/refreshSourceGeneratedDocument"] = function(_, _, ctx)
+      local client = assert(vim.lsp.get_client_by_id(ctx.client_id))
+      for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+        local uri = vim.api.nvim_buf_get_name(buf)
+        if vim.api.nvim_buf_get_name(buf):match("^roslyn%-source%-generated://") then
+          local function handler(err, result)
+            assert(not err, vim.inspect(err))
+            if vim.b[buf].resultId == result.resultId then return end
+            local content = result.text
+            if content == nil then content = "" end
+            local normalized = string.gsub(content, "\r\n", "\n")
+            local source_lines = vim.split(normalized, "\n", { plain = true })
+            vim.bo[buf].modifiable = true
+            vim.api.nvim_buf_set_lines(buf, 0, -1, false, source_lines)
+            vim.b[buf].resultId = result.resultId
+            vim.bo[buf].modifiable = false
+          end
+
+          local params = {
+            textDocument = {
+              uri = uri,
+            },
+            resultId = vim.b[buf].resultId,
+          }
+
+          ---@diagnostic disable-next-line: param-type-mismatch
+          client:request("sourceGeneratedDocument/_roslyn_getText", params, handler, buf)
+        end
+      end
+    end,
     ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
+      vim.api.nvim_exec_autocmds("User", {
+        pattern = "RoslynInitialized",
+        modeline = false,
+        data = { client_id = ctx.client_id },
+      })
+      _G.roslyn_initialized = true
       vim.defer_fn(function()
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         if not client then return end
@@ -243,8 +282,18 @@ function M.enable()
       easy_dotnet_lsp_start(bufnr, root)
     end)
   end
+
+  vim.filetype.add({
+    extension = {
+      razor = "razor",
+      cshtml = "razor",
+    },
+  })
+
+  local ok = pcall(require, "rzls")
+  if ok then logger.info("enabling cshtml") end
   vim.api.nvim_create_autocmd("FileType", {
-    pattern = "cs",
+    pattern = ok and { "cs", "razor" } or { "cs" },
     callback = function(args)
       local path = vim.api.nvim_buf_get_name(args.buf)
       if path:match("^%a+://") then return end
