@@ -84,6 +84,11 @@ M.lsp_config = {
   name = constants.lsp_client_name,
   filetypes = { "cs" },
   capabilities = {
+    workspace = {
+      didChangeWatchedFiles = {
+        dynamicRegistration = true,
+      },
+    },
     textDocument = {
       diagnostic = {
         dynamicRegistration = true,
