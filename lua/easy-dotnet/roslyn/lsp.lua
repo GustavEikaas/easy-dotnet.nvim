@@ -92,6 +92,9 @@ local function refresh_diag(client)
   local bufnr = vim.api.nvim_get_current_buf()
   if not vim.api.nvim_buf_is_valid(bufnr) then return end
 
+  local open_doc = client.server_capabilities and client.attached_buffers and client.attached_buffers[bufnr]
+  if not open_doc then return end
+
   local params = {
     textDocument = {
       uri = vim.uri_from_bufnr(bufnr),
@@ -103,20 +106,36 @@ local function refresh_diag(client)
   client:notify("textDocument/didChange", params)
 end
 
-function M.enable()
+---@param opts LspOpts
+function M.enable(opts)
   if vim.fn.has("nvim-0.11") == 0 then
     logger.warn("easy-dotnet LSP requires neovim 0.11 or higher ")
     return
   end
+  local cmd = { "dotnet", "easydotnet", "roslyn", "start" }
+
+  if opts.roslynator_enabled then table.insert(cmd, "--roslynator") end
+
+  if opts.analyzer_assemblies then
+    for _, dll in ipairs(opts.analyzer_assemblies) do
+      table.insert(cmd, "--analyzer")
+      table.insert(cmd, dll)
+    end
+  end
 
   ---@type vim.lsp.Config
   vim.lsp.config[constants.lsp_client_name] = {
-    cmd = { "dotnet", "easydotnet", "roslyn", "start", "--roslynator" },
+    cmd = cmd,
     filetypes = { "cs" },
     root_dir = M.find_project_or_solution,
     capabilities = {
       textDocument = {
         diagnostic = {
+          dynamicRegistration = true,
+        },
+      },
+      workspace = {
+        didChangeWatchedFiles = {
           dynamicRegistration = true,
         },
       },
@@ -177,6 +196,7 @@ function M.enable()
         return {}
       end,
     },
+    settings = opts.config.settings,
   }
 
   vim.lsp.enable(constants.lsp_client_name)
