@@ -2,6 +2,18 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## Roslyn native lsp setup
+Read more [here](./docs/lsp.md) or in the PR #632
+
+### Pros 
+
+- Uses the new vim.lsp.config api
+- Easier
+- :LspRestart works now
+- More maintainable
+- More extendable for end users
+- Users can register lsp config in `./lsp/easy_dotnet.lua`
+
 
 ## Roslyn LSP 0 click setup ([#539](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/539))
 This release marks a major milestone for easy-dotnet.nvim.

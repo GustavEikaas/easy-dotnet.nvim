@@ -71,6 +71,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 
 ## Features
 
+- Roslyn LSP support out of the box — powered by the official .NET Roslyn language server (see [LSP details](./docs/lsp.md))
 - Solution, slnx, csproj and fsproj support: Whether its a single project or a solution containing multiple projects easy-dotnet has you covered.
 - Action Commands: Execute common tasks like building, running, testing, cleaning and restoring with ease.
 - User Secrets Management: Edit, create, and preview .NET user secrets directly within Neovim.
@@ -455,6 +456,13 @@ Dotnet _server update
 Dotnet _server stop
 Dotnet _server start
 ```
+
+## Roslyn LSP
+
+Roslyn LSP support is enabled **out of the box** — no configuration required.  
+Just open a C# file and the official .NET language server starts automatically.
+
+For more information [check out](./docs/lsp.md)
 
 ## Testrunner
 
