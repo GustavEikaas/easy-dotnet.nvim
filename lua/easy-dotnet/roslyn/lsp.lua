@@ -1,10 +1,13 @@
+local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
 local root_finder = require("easy-dotnet.roslyn.root_finder")
 local dotnet_client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 
-local M = {}
+local M = {
+  state = {},
+}
 
 function M.start()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
@@ -146,14 +149,17 @@ function M.enable(opts)
 
       local uri = vim.uri_from_fname(file)
       if type == "sln" then
+        M.state[client.id] = job.register_job({ name = "Opening solution", on_error_text = "Failed to open solution", on_success_text = "Workspace ready", timeout = 15000 })
         client:notify("solution/open", { solution = uri })
       elseif type == "csproj" then
+        M.state[client.id] = job.register_job({ name = "Opening project", on_error_text = "Failed to open project", on_success_text = "Workspace ready", timeout = 15000 })
         client:notify("project/open", { projects = { uri } })
       else
         logger.warn("Unknown file selected as root_file " .. file)
       end
     end,
-    on_exit = function(code)
+    on_exit = function(code, _, client_id)
+      M.state[client_id] = nil
       vim.schedule(function()
         if code ~= 0 and code ~= 143 then
           vim.notify("[easy-dotnet] Roslyn crashed", vim.log.levels.ERROR)
@@ -170,8 +176,12 @@ function M.enable(opts)
       ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         if not client then return end
+        local workspace_job = M.state[client.id]
+        if workspace_job and type(workspace_job) == "function" then vim.defer_fn(function()
+          workspace_job(true)
+          M.state[client.id] = nil
+        end, 2000) end
         vim.defer_fn(function() refresh_diag(client) end, 500)
-        vim.print("Workspace ready")
       end,
       ["workspace/_roslyn_projectNeedsRestore"] = function(_, params, ctx, _)
         local paths = params.projectFilePaths or {}
