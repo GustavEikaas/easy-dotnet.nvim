@@ -3,7 +3,7 @@
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
 ## Roslyn native lsp setup
-Read more [here](./docs/lsp.md)
+Read more [here](./docs/lsp.md) or in the PR #632
 
 ### Pros 
 
