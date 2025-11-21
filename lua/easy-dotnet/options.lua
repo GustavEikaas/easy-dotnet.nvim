@@ -1,5 +1,6 @@
 ---@class Options
 ---@field test_runner TestRunnerOptions
+---@field lsp LspOpts
 ---@field csproj_mappings boolean
 ---@field fsproj_mappings boolean
 ---@field new { project: {prefix: "sln" | "none"} }
@@ -15,7 +16,7 @@
 ---@field enabled boolean                -- Whether the LSP is enabled
 ---@field analyzer_assemblies string[]|nil -- Optional list of analyzer DLLs
 ---@field roslynator_enabled boolean     -- Whether Roslynator is enabled
----@field config vim.lsp.config          -- LSP configuration table
+---@field config vim.lsp.config?          -- LSP configuration table
 
 ---@class DiagnosticsOptions
 ---@field default_severity "error" | "warning"
