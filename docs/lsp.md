@@ -201,7 +201,7 @@ Because of this, the LSP treats them as **standalone files**, resulting in:
 * Limited completions
 * Missing project-level diagnostics
 * No project-wide references
-* link gh issue here
+* issue: #639 
 
 To work around this, run:
 ```
