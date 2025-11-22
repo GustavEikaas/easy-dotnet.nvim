@@ -2,6 +2,7 @@ local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
 local apply_workspace_edit = require("easy-dotnet.roslyn.lsp.apply_workspace_edit")
 
+---@param ctx CommandContext
 return function(data, ctx)
   local title = data.title
   local options = data.arguments[1].FixAllFlavors
