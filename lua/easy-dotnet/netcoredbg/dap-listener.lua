@@ -167,8 +167,7 @@ function M.register_listener()
     end)
   end
 
-  require("dap").listeners.after.event_exited["easy-dotnet-cleanup"] = function()
-    ---@type Keymap
+  local function cleanup_debugging_session()
     local opt = require("easy-dotnet.options").options.debugger.mappings.open_variable_viewer
     require("easy-dotnet.netcoredbg.debugger-float").close()
     require("easy-dotnet.netcoredbg").variable_cache = {}
@@ -192,6 +191,10 @@ function M.register_listener()
     end
 
     keymap_backup = {}
+  end
+
+  require("dap").listeners.on_session["easy-dotnet-cleanup"] = function(old, _)
+    if old and old.config and old.config.name == "easy-dotnet" then cleanup_debugging_session() end
   end
 end
 
