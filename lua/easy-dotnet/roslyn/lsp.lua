@@ -168,6 +168,7 @@ function M.enable(opts)
         vim.notify("[easy-dotnet] Roslyn stopped", vim.log.levels.INFO)
       end)
     end,
+    on_attach = function(client, buf) require("easy-dotnet.roslyn.new-file-handler").register_new_file(client, buf) end,
     commands = {
       ["roslyn.client.fixAllCodeAction"] = require("easy-dotnet.roslyn.lsp.fix_all_code_action"),
       ["roslyn.client.nestedCodeAction"] = require("easy-dotnet.roslyn.lsp.nested_code_action"),
