@@ -1,5 +1,3 @@
-local window = require("easy-dotnet.test-runner.window")
-
 ---@class ReferenceRange
 ---@field start { line: number, character: number }
 ---@field end { line: number, character: number }
@@ -59,6 +57,7 @@ end
 
 ---@param references ReferenceItem[]
 local function open_references_float(references)
+  local _ = references
   --TODO: render some beatiful UI
 end
 
