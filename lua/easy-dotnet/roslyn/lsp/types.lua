@@ -1,0 +1,3 @@
+---@class CommandContext
+---@field client_id integer LSP client id
+---@field bufnr integer buffer number
