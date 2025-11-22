@@ -19,6 +19,7 @@
 ---@param ctx CommandContext
 return function(command, ctx)
   local arg = command.arguments[1] -- usually only one
+  local _ = ctx.client_id
   local file_uri = arg.textDocument.uri
   local fname = vim.uri_to_fname(file_uri)
 
@@ -31,6 +32,11 @@ return function(command, ctx)
       line = arg.range["end"].line,
       character = arg.range["end"].character,
     },
+  }
+
+  local _ = {
+    file = fname,
+    range = range,
   }
 
   --TODO: send request to easy-dotnet-server
