@@ -2,6 +2,7 @@ local M = {}
 
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local ns = require("easy-dotnet.constants").ns_id
+local debug_adapter_name = require("easy-dotnet.constants").debug_adapter_name
 local hi = require("easy-dotnet.constants").highlights.EasyDotnetDebuggerVirtualVariable
 
 local function redraw(cache, bufnr)
@@ -194,7 +195,7 @@ function M.register_listener()
   end
 
   require("dap").listeners.on_session["easy-dotnet-cleanup"] = function(old, _)
-    if old and old.config and old.config.name == "easy-dotnet" then cleanup_debugging_session() end
+    if old and old.config and old.config.name == debug_adapter_name then cleanup_debugging_session() end
   end
 end
 
