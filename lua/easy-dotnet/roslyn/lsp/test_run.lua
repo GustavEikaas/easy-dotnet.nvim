@@ -1,0 +1,43 @@
+---@class RangePosition
+---@field line number
+---@field character number
+
+---@class TextDocument
+---@field uri string
+
+---@class TestArgument
+---@field attachDebugger boolean
+---@field range { start: RangePosition, ["end"]: RangePosition }
+---@field textDocument TextDocument
+
+---@class TestCommand
+---@field arguments TestArgument[]
+---@field command string
+---@field title string
+
+---@param command TestCommand
+---@param ctx CommandContext
+return function(command, ctx)
+  local arg = command.arguments[1] -- usually only one
+  local _ = ctx.client_id
+  local file_uri = arg.textDocument.uri
+  local fname = vim.uri_to_fname(file_uri)
+
+  local range = {
+    start = {
+      line = arg.range.start.line, -- LSP is 0-indexed, Vim is 1-indexed
+      character = arg.range.start.character,
+    },
+    ["end"] = {
+      line = arg.range["end"].line,
+      character = arg.range["end"].character,
+    },
+  }
+
+  local _ = {
+    file = fname,
+    range = range,
+  }
+
+  --TODO: send request to easy-dotnet-server
+end
