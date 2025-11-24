@@ -63,9 +63,20 @@ M.aspire = {
   subcommands = {
     debug = {
       handle = function()
+        local sln_parse = require("easy-dotnet.parsers.sln-parse")
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
         client:initialize(function()
-          client.debugger:aspire_debug("./aspire.AppHost/aspire.AppHost.csproj", function(res) vim.print(res) end)
+          local sln = sln_parse.try_get_selected_solution_file()
+          if not sln then
+            logger.warn("No sln found.")
+            return
+          end
+          local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(sln, function(i) return i.isAspireHost == true end)
+          require("easy-dotnet.picker").picker(nil, projects, function(i)
+            ---@type DotnetProject
+            local r = i
+            client.debugger:aspire_debug(r.path, function(res) end)
+          end, "Pick aspire app host to debug", true, true)
         end)
       end,
     },
