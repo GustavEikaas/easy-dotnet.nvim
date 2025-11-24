@@ -16,7 +16,10 @@ return function(params, response, throw, validate)
 
   ---@type dap.Session
   local session = vim.iter(dap.sessions()):find(function(i) return i.id == session_id end)
-  if not session then response(true) end
+  if not session then
+    response(true)
+    return
+  end
   session:close()
   response(true)
 end
