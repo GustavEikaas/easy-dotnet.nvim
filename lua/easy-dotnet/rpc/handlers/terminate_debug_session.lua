@@ -14,11 +14,12 @@ return function(params, response, throw, validate)
     return
   end
 
-  vim.print(params)
-
   ---@type dap.Session
   local session = vim.iter(dap.sessions()):find(function(i) return i.id == session_id end)
-  vim.print("Stopping session " .. session.id)
+  if not session then
+    response(true)
+    return
+  end
   session:close()
   response(true)
 end
