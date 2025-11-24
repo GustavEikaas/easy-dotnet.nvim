@@ -59,6 +59,19 @@ M.run = {
   },
 }
 
+M.aspire = {
+  subcommands = {
+    debug = {
+      handle = function()
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function()
+          client.debugger:aspire_debug("./aspire.AppHost/aspire.AppHost.csproj", function(res) vim.print(res) end)
+        end)
+      end,
+    },
+  },
+}
+
 M._cached_files = {
   handle = function()
     local dir = require("easy-dotnet.constants").get_data_directory()

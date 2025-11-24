@@ -1,4 +1,5 @@
 return function(params, response, throw, validate)
+  vim.print("Set breakpoint invoked", params)
   local path = params.path
   local line = params.lineNumber
 
