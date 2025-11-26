@@ -60,32 +60,55 @@ end
 
 ---@param slnpath string
 function M.remove_project_from_solution(slnpath)
-  local projects = M.get_projects_from_sln(slnpath)
+  client:initialize(function()
+    client:solution_list_projects(slnpath, function(res)
+      ---@param i SolutionFileProjectResponse
+      local projects = vim.tbl_map(function(i)
+        local exists = vim.fn.filereadable(i.absolutePath) == 1
+        return {
+          display = exists and i.projectName or (i.projectName .. " (not found)"),
+          path = i.absolutePath,
+          exists = exists,
+        }
+      end, res)
 
-  if #projects == 0 then
-    print("No projects found")
-    return
-  end
-
-  local value = require("easy-dotnet.picker").pick_sync(nil, projects, "Project to remove from sln", false)
-  if not value then return end
-  vim.fn.jobstart({
-    "dotnet",
-    "sln",
-    slnpath,
-    "remove",
-    value.path,
-  }, {
-    stdout_buffered = true,
-    stderr_buffered = true,
-    on_exit = function(_, exit_code)
-      if exit_code == 0 then
-        vim.schedule(function() logger.info("Success") end)
-      else
-        vim.schedule(function() logger.error("Failed to remove project from solution") end)
+      if #projects == 0 then
+        logger.warn(string.format("No projects found in solution %s", vim.fs.basename(slnpath)))
+        return
       end
-    end,
-  })
+
+      table.sort(projects, function(a, b)
+        if a.exists == b.exists then
+          return a.display < b.display
+        else
+          return not a.exists
+        end
+      end)
+
+      require("easy-dotnet.picker").picker(nil, projects, function(value)
+        if not value then return end
+        local project_name = vim.fs.basename(value.path)
+        local solution_name = vim.fs.basename(slnpath)
+        vim.fn.jobstart({
+          "dotnet",
+          "sln",
+          slnpath,
+          "remove",
+          value.path,
+        }, {
+          stdout_buffered = true,
+          stderr_buffered = true,
+          on_exit = function(_, exit_code)
+            if exit_code == 0 then
+              logger.info(string.format("Project '%s' successfully removed from solution '%s'", project_name, solution_name))
+            else
+              logger.error(string.format("Failed to remove project '%s' from solution '%s'", project_name, solution_name))
+            end
+          end,
+        })
+      end, "Project to remove from sln", false)
+    end, true)
+  end)
 end
 
 ---Parses a .sln file and returns a flattened list of DotnetProject objects,
