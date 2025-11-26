@@ -8,9 +8,7 @@ M.global_rpc_client = require("easy-dotnet.rpc.dotnet-client"):new()
 local function get_tmpdir()
   local tmp = os.getenv("TMPDIR") or os.getenv("TEMP") or os.getenv("TMP") or "/tmp"
   -- ensure trailing slash
-  if not tmp:match("/$") then
-    tmp = tmp .. "/"
-  end
+  if not tmp:match("/$") then tmp = tmp .. "/" end
   return tmp
 end
 
