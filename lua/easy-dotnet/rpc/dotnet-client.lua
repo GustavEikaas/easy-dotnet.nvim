@@ -125,7 +125,7 @@ end
 ---@field roslyn RoslynClient
 ---@field test TestClient
 ---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: RPC_ProjectUserSecretsInitResponse), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
----@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), include_non_existing?: boolean, opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
+---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), include_non_existing?: boolean, opts?: RPC_CallOpts): RPC_CallHandle
 ---@field outdated_packages fun(self: DotnetClient, target_path: string, cb?: fun(res: OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
 ---@field get_state fun(self: DotnetClient): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
 ---@field _initializing boolean? # True while initialization is in progress
