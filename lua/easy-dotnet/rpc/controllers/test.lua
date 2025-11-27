@@ -2,6 +2,8 @@
 ---@field _client StreamJsonRpc
 ---@field test_run fun(self: TestClient, request: RPC_TestRunRequest, cb?: fun(res: RPC_TestRunResult), opts?: RPCCallOpts): RPC_CallHandle # Request running multiple tests for MTP
 ---@field test_discover fun(self: TestClient, request: RPC_TestDiscoverRequest, cb?: fun(res: RPC_DiscoveredTest[]), opts?: RPCCallOpts): RPC_CallHandle # Request test discovery for MTP
+---@field test_runner_initialize fun(self: TestClient, solution_file_path: string, cb?: fun(), opts?: RPCCallOpts): RPC_CallHandle
+---@field test_runner_discover fun(self: TestClient, cb?: fun(), opts?: RPCCallOpts): RPC_CallHandle
 
 local M = {}
 M.__index = M
@@ -103,6 +105,36 @@ function M:test_run(request, cb, opts)
     end,
     on_yield = nil,
     on_crash = opts.on_crash,
+  })()
+end
+
+function M:test_runner_initialize(sln, cb, opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+
+  return helper.create_rpc_call({
+    client = self._client,
+    job = nil,
+    cb = cb,
+    on_crash = opts.on_crash,
+    method = "testrunner/initialize",
+    params = {
+      solutionFilePath = sln,
+    },
+  })()
+end
+
+function M:test_runner_discover(cb, opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+
+  return helper.create_rpc_call({
+    client = self._client,
+    job = nil,
+    cb = cb,
+    on_crash = opts.on_crash,
+    method = "testrunner/discover",
+    params = {},
   })()
 end
 

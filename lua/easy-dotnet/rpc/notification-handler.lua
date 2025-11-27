@@ -20,6 +20,10 @@ M.handler = function(client, method, params)
       logger.warn(params.message)
     elseif method == "displayMessage" then
       logger.info(params.message)
+    elseif method == "updateStatus" then
+      require("easy-dotnet.test-runnerv2.v2").update_status(params.nodeId, params.status)
+    elseif method == "registerTest" then
+      require("easy-dotnet.test-runnerv2.v2").register_node(params)
     else
       vim.print("Unknown server notification " .. method)
     end

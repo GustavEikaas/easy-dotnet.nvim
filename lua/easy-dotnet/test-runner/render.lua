@@ -1,10 +1,7 @@
 local ns_id = require("easy-dotnet.constants").ns_id
-local polyfills = require("easy-dotnet.polyfills")
 
 ---@class Window
----@field tree table<string,TestNode>
----@field jobs table
----@field appendJob table
+---@field tree table<string, TestNode>
 ---@field buf integer | nil
 ---@field win integer | nil
 ---@field height integer
@@ -22,9 +19,7 @@ local polyfills = require("easy-dotnet.polyfills")
 ---@alias TestResult '"Failed"' | '"NotExecuted"' | '"Passed"'
 
 local M = {
-  tree = {},
-  jobs = {},
-  appendJob = nil,
+  tree_mod = require("easy-dotnet.test-runnerv2.v2"),
   buf = nil,
   win = nil,
   height = 10,
@@ -36,102 +31,7 @@ local M = {
   options = {},
 }
 
----Traverses a tree from the given node, giving a callback for every item
----@param node TestNode | nil
----@param cb function
-M.traverse = function(node, cb)
-  if not node then node = M.tree end
-  --HACK: handle no tree set
-  if not node.name then return end
-
-  cb(node)
-  local keys = vim.tbl_keys(node.children or {})
-  table.sort(keys)
-  for _, key in ipairs(keys) do
-    M.traverse(node.children[key], cb)
-  end
-end
-
-M.traverse_expanded = function(node, cb)
-  if not node then node = M.tree end
-  --HACK: handle no tree set
-  if not node.name then return end
-  cb(node)
-  local keys = vim.tbl_keys(node.children or {})
-  table.sort(keys)
-  for _, key in ipairs(keys) do
-    local child_node = node.children[key]
-    local filterpass = M.filter == nil or (M.filter == child_node.icon or child_node.icon == "<Running>")
-    if node.expanded and filterpass then M.traverse_expanded(child_node, cb) end
-  end
-end
-
-M.traverse_filtered = function(node, cb)
-  if not node then node = M.tree end
-  --HACK: handle no tree set
-  if not node.name then return end
-  cb(node)
-  local keys = vim.tbl_keys(node.children or {})
-  table.sort(keys)
-  for _, key in ipairs(keys) do
-    local child_node = node.children[key]
-    local filterpass = M.filter == nil or (M.filter == child_node.icon)
-    if filterpass then M.traverse_filtered(child_node, cb) end
-  end
-end
-
----@param id string
----@param type "Run" | "Server"
----@param subtask_count number | nil
-function M.appendJob(id, type, subtask_count)
-  local job = {
-    type = type,
-    id = id,
-    subtask_count = (subtask_count and subtask_count > 0) and subtask_count or 1,
-  }
-  table.insert(M.jobs, job)
-  M.refreshTree()
-
-  local on_job_finished_callback = function()
-    job.completed = true
-    local is_all_finished = polyfills.iter(M.jobs):all(function(s) return s.completed end)
-    if is_all_finished == true then M.jobs = {} end
-    M.refreshTree()
-  end
-
-  return on_job_finished_callback
-end
-
-function M.redraw_virtual_text()
-  if #M.jobs > 0 then
-    local total_subtask_count = 0
-    local completed_count = 0
-    for _, value in ipairs(M.jobs) do
-      total_subtask_count = total_subtask_count + value.subtask_count
-      if value.completed == true then completed_count = completed_count + value.subtask_count end
-    end
-
-    local job_type = M.jobs[1].type
-
-    vim.api.nvim_buf_set_extmark(M.buf, ns_id, 0, 0, {
-      virt_text = {
-        {
-          string.format(
-            "%s %s/%s",
-            job_type == "Run" and "Running" or job_type == "Discovery" and "Discovering" or job_type == "Build" and "Building" or "Starting server",
-            completed_count,
-            total_subtask_count
-          ),
-          "Character",
-        },
-      },
-      virt_text_pos = "right_align",
-      priority = 200,
-    })
-  end
-end
-
-local function setBufferOptions()
+local function set_buffer_options()
   if M.options.viewmode ~= "buf" and M.options.viewmode ~= "vsplit" then vim.api.nvim_win_set_height(M.win, M.height) end
   vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
   vim.api.nvim_buf_set_name(M.buf, M.buf_name)
@@ -144,13 +44,12 @@ end
 ---Only expanded nodes contribute to the line number count, while collapsed nodes and their children are ignored.
 ---
 ---@param line_num number The line number in the buffer to be translated to a node in the tree structure.
----@param tree TestNode The root node of the tree structure to traverse.
 ---@return TestNode | nil
-local function translateIndex(line_num, tree)
+local function translate_index(line_num)
   local current_line = 1
   local result = nil
 
-  M.traverse_expanded(tree, function(node)
+  M.tree_mod.traverse_expanded(nil, function(node)
     if result ~= nil then return end
     if current_line == line_num then result = node end
     current_line = current_line + 1
@@ -169,22 +68,35 @@ end
 ---@param node TestNode
 ---@return string | nil
 local function calculate_highlight(node)
-  if node.job then
-    if node.job.state == "pending" then
+  local status = M.tree_mod.status_by_id[node.id]
+  if not status then return nil end
+
+  vim.print(node.displayName .. "status " .. status)
+  if status == nil or status == "Idle" or status == "Discovering" then
+    --TODO: color based on node.type
+    if node.type == "Solution" then
       return "EasyDotnetTestRunnerRunning"
-    elseif node.job.state == "error" then
-      return "EasyDotnetTestRunnerFailed"
+    elseif node.type == "Project" then
+      return "EasyDotnetTestRunnerPassed"
     end
-  end
-  if node.icon == M.options.icons.failed then
-    return "EasyDotnetTestRunnerFailed"
-  elseif node.icon == "<Running>" then
     return "EasyDotnetTestRunnerRunning"
-  elseif node.icon == M.options.icons.passed then
-    return "EasyDotnetTestRunnerPassed"
-  elseif node.highlight ~= nil and type(node.highlight) == "string" then
-    return node.highlight
   end
+  -- if node.job then
+  --   if node.job.state == "pending" then
+  --     return "EasyDotnetTestRunnerRunning"
+  --   elseif node.job.state == "error" then
+  --     return "EasyDotnetTestRunnerFailed"
+  --   end
+  -- end
+  -- if node.icon == M.options.icons.failed then
+  --   return "EasyDotnetTestRunnerFailed"
+  -- elseif node.icon == "<Running>" then
+  --   return "EasyDotnetTestRunnerRunning"
+  -- elseif node.icon == M.options.icons.passed then
+  --   return "EasyDotnetTestRunnerPassed"
+  -- elseif node.highlight ~= nil and type(node.highlight) == "string" then
+  --   return node.highlight
+  -- end
   return nil
 end
 
@@ -210,38 +122,19 @@ local function convert_time(time_str)
   end
 end
 
----@param a BuildJob | DiscoverJob
-local function stringify_job(a)
-  if a.name == "build" then return a.state == "pending" and "Building" or a.state == "error" and "build failed" or "" end
-
-  if a.name == "discover" then return a.state == "pending" and "Discovering" or a.state == "error" and "discovery failed" or "" end
-end
-
 ---@param node TestNode
 local function node_to_string(node)
   local total_tests = 0
   ---@param i TestNode
-  M.traverse(node, function(i)
+  M.tree_mod.traverse(node, function(i)
     if i.type == "subcase" or i.type == "test" then total_tests = total_tests + 1 end
   end)
-
-  if node.job then
-    local formatted = string.format(
-      "%s%s%s%s  <%s>",
-      string.rep(" ", node.indent or 0),
-      node.preIcon and (node.preIcon .. " ") or "",
-      node.name,
-      node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
-      stringify_job(node.job)
-    )
-    return formatted
-  end
 
   local formatted = string.format(
     "%s%s%s%s %s %s",
     string.rep(" ", node.indent or 0),
     node.preIcon and (node.preIcon .. " ") or "",
-    node.name,
+    node.displayName,
     node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
     node.type ~= "subcase" and node.type ~= "test" and string.format("(%s)", total_tests) or "",
     type(node.duration) == "string" and convert_time(node.duration) or ""
@@ -250,14 +143,13 @@ local function node_to_string(node)
   return formatted
 end
 
----@param tree TestNode
 ---@return string[], table[]
-local function tree_to_string(tree)
+local function tree_to_string()
   local result = {}
   local highlights = {}
   local index = 0
-  ---@param node TestNode
-  M.traverse_expanded(tree, function(node)
+
+  M.tree_mod.traverse_expanded(nil, function(node)
     index = index + 1
 
     local formatted = node_to_string(node)
@@ -265,41 +157,41 @@ local function tree_to_string(tree)
     table.insert(highlights, { index = index, highlight = highlight })
     table.insert(result, formatted)
   end)
+
   return result, highlights
 end
 
-local function printNodes()
+local function print_nodes()
   vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
-  local stringLines, highlights = tree_to_string(M.tree)
+  local stringLines, highlights = tree_to_string()
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, stringLines)
   vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
 
-  M.redraw_virtual_text()
   apply_highlights(highlights)
 end
 
-local function setMappings()
+local function set_mappings()
   if M.keymap == nil then return end
   if M.buf == nil or not vim.api.nvim_buf_is_valid(M.buf) then return end
   for key, value in pairs(M.keymap()) do
     vim.keymap.set("n", key, function()
       local line_num = vim.api.nvim_win_get_cursor(0)[1]
-      local node = translateIndex(line_num, M.tree)
+      local node = translate_index(line_num)
       if not node then error("Current line is not a node") end
       value.handle(node, M)
     end, { buffer = M.buf, desc = value.desc, noremap = true, silent = true })
   end
 end
 
-M.setKeymaps = function(mappings)
+M.set_keymaps = function(mappings)
   M.keymap = mappings
-  setMappings()
+  set_mappings()
   return M
 end
 
 ---@param options TestRunnerOptions
-M.setOptions = function(options)
+M.set_options = function(options)
   if options then M.options = options end
   return M
 end
@@ -413,29 +305,30 @@ M.render = function(mode)
   local isVisible = M.toggle(mode)
   if not isVisible then return end
 
-  printNodes()
-  setBufferOptions()
-  setMappings()
+  print_nodes()
+  set_buffer_options()
+  set_mappings()
   return M
 end
 
 M.refreshMappings = function()
   if M.buf == nil then error("Can not refresh buffer before render() has been called") end
-  setMappings()
+  set_mappings()
   return M
 end
 
 M.refreshTree = function()
   if M.buf == nil then error("Can not refresh buffer before render() has been called") end
-  printNodes()
+  print_nodes()
   return M
 end
 
 --- Refreshes the buffer if lines have changed
 M.refresh = function()
   if M.buf == nil then error("Can not refresh buffer before render() has been called") end
-  printNodes()
-  setBufferOptions()
+  print_nodes()
+  set_buffer_options()
+  set_mappings()
   return M
 end
 
