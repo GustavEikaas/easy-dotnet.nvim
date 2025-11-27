@@ -184,7 +184,6 @@ function M.enable(opts)
 
       local uri = vim.uri_from_fname(file)
       if type == "sln" then
-        print("LSP server cmd:", vim.inspect(client.config.cmd))
         M.state[client.id] = job.register_job({ name = "Opening solution", on_error_text = "Failed to open solution", on_success_text = "Workspace ready", timeout = 120000 })
         client:notify("solution/open", { solution = uri })
       elseif type == "csproj" then
