@@ -47,7 +47,7 @@ local function rebuild_tree()
     node.expanded = node.expanded == nil and true or node.expanded
 
     for _, child in pairs(node.children or {}) do
-      set_indent_and_expand(child, indent + 2)
+      set_indent_and_expand(child, indent + 1)
     end
   end
 

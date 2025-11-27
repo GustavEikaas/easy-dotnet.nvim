@@ -136,7 +136,8 @@ local function node_to_string(node)
     node.preIcon and (node.preIcon .. " ") or "",
     node.displayName,
     node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
-    node.type ~= "subcase" and node.type ~= "test" and string.format("(%s)", total_tests) or "",
+    -- node.type ~= "subcase" and node.type ~= "test" and string.format("(%s)", total_tests) or "",
+    string.format("(%s)", node.type) or "",
     type(node.duration) == "string" and convert_time(node.duration) or ""
   )
 
