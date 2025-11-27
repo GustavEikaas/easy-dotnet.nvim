@@ -5,6 +5,41 @@ local dotnet_client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 
+local default_register_capability_handler = vim.lsp.handlers["client/registerCapability"]
+
+local function tbl_isempty(tbl)
+  if vim.tbl_isempty then return vim.tbl_isempty(tbl) end
+  return vim.tbl_count(tbl) == 0
+end
+
+---@param err lsp.ResponseError?
+---@param res table|nil
+---@param ctx lsp.HandlerContext|nil
+---@param config table|nil
+---@return any
+local function filter_roslyn_watch_registration(err, res, ctx, config)
+  if not ctx or not ctx.client_id or not res or not res.registrations then
+    if default_register_capability_handler then return default_register_capability_handler(err, res, ctx, config) end
+    return nil
+  end
+
+  local client = vim.lsp.get_client_by_id(ctx.client_id)
+  if not client or client.name ~= constants.lsp_client_name then
+    if default_register_capability_handler then return default_register_capability_handler(err, res, ctx, config) end
+    return nil
+  end
+
+  local filtered = vim.tbl_filter(function(reg) return reg.method ~= "workspace/didChangeWatchedFiles" end, res.registrations)
+
+  if tbl_isempty(filtered) then return nil end
+
+  res.registrations = filtered
+
+  if default_register_capability_handler then return default_register_capability_handler(err, res, ctx, config) end
+
+  return nil
+end
+
 local M = {
   state = {},
 }
@@ -139,7 +174,7 @@ function M.enable(opts)
       },
       workspace = {
         didChangeWatchedFiles = {
-          dynamicRegistration = true,
+          dynamicRegistration = false,
         },
       },
     },
@@ -149,7 +184,8 @@ function M.enable(opts)
 
       local uri = vim.uri_from_fname(file)
       if type == "sln" then
-        M.state[client.id] = job.register_job({ name = "Opening solution", on_error_text = "Failed to open solution", on_success_text = "Workspace ready", timeout = 15000 })
+        print("LSP server cmd:", vim.inspect(client.config.cmd))
+        M.state[client.id] = job.register_job({ name = "Opening solution", on_error_text = "Failed to open solution", on_success_text = "Workspace ready", timeout = 120000 })
         client:notify("solution/open", { solution = uri })
       elseif type == "csproj" then
         M.state[client.id] = job.register_job({ name = "Opening project", on_error_text = "Failed to open project", on_success_text = "Workspace ready", timeout = 15000 })
@@ -176,14 +212,15 @@ function M.enable(opts)
       -- ["dotnet.test.run"] = require("easy-dotnet.roslyn.lsp.test_run"),
     },
     handlers = {
+      ["client/registerCapability"] = filter_roslyn_watch_registration,
       ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         if not client then return end
         local workspace_job = M.state[client.id]
-        if workspace_job and type(workspace_job) == "function" then vim.defer_fn(function()
+        if workspace_job and type(workspace_job) == "function" then
           workspace_job(true)
           M.state[client.id] = nil
-        end, 2000) end
+        end
         vim.defer_fn(function() refresh_diag(client) end, 500)
       end,
       ["workspace/_roslyn_projectNeedsRestore"] = function(_, params, ctx, _)
