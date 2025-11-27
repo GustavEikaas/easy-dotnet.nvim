@@ -1,4 +1,5 @@
 local constants = require("easy-dotnet.constants")
+local logger = require("easy-dotnet.logger")
 
 return function(params, response, throw, validate)
   local host = params.host
@@ -18,6 +19,13 @@ return function(params, response, throw, validate)
   end
 
   local session = dap.attach({ type = "server", host = host, port = port }, { type = constants.debug_adapter_name, name = constants.debug_adapter_name, request = "attach" }, {})
+  if not session then
+    throw({ code = -32000, message = "Failed to start debugging session" })
+    return
+  end
+
+  vim.print("Session: " .. session.id)
+  dap.set_session(session)
 
   if not session then
     local msg = "failed to start debug session"

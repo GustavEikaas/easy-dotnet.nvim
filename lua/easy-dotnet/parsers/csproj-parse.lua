@@ -12,6 +12,7 @@ local M = {}
 ---@field targetFrameworks string[] | nil The target framework list [net9.0,net8.0]
 ---@field isTestProject boolean Whether the project is a test project ("true"/"false")
 ---@field isTestingPlatformApplication boolean Whether the project is a Microsoft.Testing.Platform test project
+---@field isAspireHost boolean
 ---@field userSecretsId string | nil The GUID used for User Secrets configuration
 ---@field testingPlatformDotnetTestSupport boolean Custom property, likely used by test tooling
 ---@field targetPath string | nil Full path to the built output artifact
@@ -44,6 +45,7 @@ local M = {}
 ---@field isNugetPackage boolean
 ---@field isTestPlatformProject boolean
 ---@field isConsoleProject boolean
+---@field isAspireHost boolean
 ---@field isWebProject boolean
 ---@field isWorkerProject boolean
 ---@field isWinProject boolean
@@ -215,6 +217,7 @@ M.get_project_from_project_file = function(project_file_path)
       dll_path = msbuild_props.targetPath,
       isTestProject = is_test_project,
       isTestPlatformProject = is_test_platform_project,
+      isAspireHost = msbuild_props.isAspireHost,
       isConsoleProject = is_console_project,
       isNugetPackage = is_nuget_package,
       isWorkerProject = is_worker_project,
