@@ -72,7 +72,8 @@ local function calculate_highlight(node)
   if not status then return nil end
 
   vim.print(node.displayName .. "status " .. status)
-  if status == nil or status == "Idle" or status == "Discovering" then
+
+  if status == nil or status == "Idle" then
     --TODO: color based on node.type
     if node.type == "Solution" then
       return "EasyDotnetTestRunnerRunning"
@@ -81,6 +82,8 @@ local function calculate_highlight(node)
     end
     return "EasyDotnetTestRunnerRunning"
   end
+
+  if status == "Discovering" then return "EasyDotnetTestRunnerRunning" end
   -- if node.job then
   --   if node.job.state == "pending" then
   --     return "EasyDotnetTestRunnerRunning"

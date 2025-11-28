@@ -24,6 +24,13 @@ M.handler = function(client, method, params)
       require("easy-dotnet.test-runnerv2.v2").update_status(params.nodeId, params.status)
     elseif method == "registerTest" then
       require("easy-dotnet.test-runnerv2.v2").register_node(params)
+    elseif method == "changeParent" then
+      local nodeId = params.targetId
+      local newParentId = params.newParentId
+      require("easy-dotnet.test-runnerv2.v2").change_parent(nodeId, newParentId)
+    elseif method == "removeNode" then
+      local nodeId = params.nodeId
+      require("easy-dotnet.test-runnerv2.v2").remove_node(nodeId)
     else
       vim.print("Unknown server notification " .. method)
     end

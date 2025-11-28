@@ -176,6 +176,9 @@ function M.enable(opts)
       -- ["dotnet.test.run"] = require("easy-dotnet.roslyn.lsp.test_run"),
     },
     handlers = {
+      ["window/logMessage"] = function(_, param, ctx, _)
+        if param.type == 1 then logger.error(param.message) end
+      end,
       ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         if not client then return end

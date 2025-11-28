@@ -76,6 +76,52 @@ function M.register_node(node)
   render.refresh()
 end
 
+---Change the parent of a node
+---@param nodeId string
+---@param newParentId string
+function M.change_parent(nodeId, newParentId)
+  local node = M.nodes_by_id[nodeId]
+  if not node then error("Node not found: " .. nodeId) end
+
+  local oldParent = node.parentId and M.nodes_by_id[node.parentId] or nil
+  local newParent = M.nodes_by_id[newParentId]
+  if not newParent then error("New parent not found: " .. newParentId) end
+
+  if not oldParent then error("Cant change parent when old parent is nil") end
+  oldParent.children[nodeId] = nil
+
+  node.parentId = newParentId
+  newParent.children = newParent.children or {}
+  newParent.children[nodeId] = node
+
+  rebuild_tree()
+  local render = require("easy-dotnet.test-runner.render")
+  render.refresh()
+end
+
+---Remove a node
+---@param nodeId string
+function M.remove_node(nodeId)
+  local node = M.nodes_by_id[nodeId]
+  if not node then error("Node not found: " .. nodeId) end
+
+  if node.children and next(node.children) ~= nil then error("Cannot remove node with children: " .. nodeId) end
+
+  local parent = node.parentId and M.nodes_by_id[node.parentId] or nil
+  if parent then
+    parent.children[nodeId] = nil
+  elseif M.root == node then
+    M.root = nil
+  end
+
+  M.nodes_by_id[nodeId] = nil
+  M.status_by_id[nodeId] = nil
+
+  rebuild_tree()
+  local render = require("easy-dotnet.test-runner.render")
+  render.refresh()
+end
+
 ---Update ephemeral status
 ---@param nodeId string
 ---@param status TestNodeStatus
