@@ -263,10 +263,10 @@ function M:_initialize(cb, opts)
   coroutine.wrap(function()
     local use_visual_studio = require("easy-dotnet.options").options.server.use_visual_studio == true
     local debugger_path = require("easy-dotnet.options").options.debugger.bin_path
+    local apply_value_converters = require("easy-dotnet.options").options.debugger.apply_value_converters
     local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
 
-    local debuggerOptions = vim.empty_dict()
-    debuggerOptions["binaryPath"] = debugger_path
+    local debuggerOptions = { applyValueConverters = apply_value_converters, binaryPath = debugger_path }
 
     return M.create_rpc_call({
       client = self._client,
