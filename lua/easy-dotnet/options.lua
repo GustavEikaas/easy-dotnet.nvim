@@ -183,7 +183,7 @@ local M = {
       },
       -- The path to netcoredbg
       bin_path = nil,
-      apply_value_converters = true,
+      apply_value_converters = false,
       auto_register_dap = true,
     },
     lsp = {
