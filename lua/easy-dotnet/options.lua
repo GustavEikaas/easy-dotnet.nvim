@@ -183,6 +183,7 @@ local M = {
       },
       -- The path to netcoredbg
       bin_path = nil,
+      --TODO: update README later when making the apply_value_converters option true by default
       apply_value_converters = false,
       auto_register_dap = true,
     },
