@@ -86,13 +86,18 @@ M.prepare_debugger = function(use_default)
   local project = pick_project(use_default)
   --TODO: pick configuration?
   local co = coroutine.running()
-  client.msbuild:msbuild_build({ targetPath = project.path, targetFramework = project.msbuild_props.targetFramework }, function() coroutine.resume(co) end, {
+  client.msbuild:msbuild_build({ targetPath = project.path, targetFramework = project.msbuild_props.targetFramework }, function(res) coroutine.resume(co, res.success) end, {
     on_crash = function()
-      logger.error("Debugger failed to start")
-      coroutine.resume(co)
+      coroutine.resume(co, false)
     end,
   })
-  coroutine.yield()
+  local build_res = coroutine.yield()
+
+  if build_res == false then
+    --TODO: add build errors to qf list
+    error("Aborting debug session due to build failure")
+    return nil
+  end
 
   local launch_profile_name = select_launch_profile_name(vim.fs.dirname(project.path))
 
