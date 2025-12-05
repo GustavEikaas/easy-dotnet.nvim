@@ -87,9 +87,7 @@ M.prepare_debugger = function(use_default)
   --TODO: pick configuration?
   local co = coroutine.running()
   client.msbuild:msbuild_build({ targetPath = project.path, targetFramework = project.msbuild_props.targetFramework }, function(res) coroutine.resume(co, res.success) end, {
-    on_crash = function()
-      coroutine.resume(co, false)
-    end,
+    on_crash = function() coroutine.resume(co, false) end,
   })
   local build_res = coroutine.yield()
 
