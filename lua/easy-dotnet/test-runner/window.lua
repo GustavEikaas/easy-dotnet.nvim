@@ -100,6 +100,7 @@ end
 function Window:create()
   local win = vim.api.nvim_open_win(self.buf, true, self.opts)
   self.win = win
+  vim.wo[win].winfixbuf = true
 
   vim.keymap.set("n", "q", function() vim.api.nvim_win_close(self.win, true) end, { buffer = self.buf, noremap = true, silent = true })
 

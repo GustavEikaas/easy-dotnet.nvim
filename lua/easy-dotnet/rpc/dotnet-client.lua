@@ -125,7 +125,7 @@ end
 ---@field roslyn RoslynClient
 ---@field test TestClient
 ---@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: RPC_ProjectUserSecretsInitResponse), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
----@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
+---@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), include_non_existing?: boolean, opts?: RPC_CallOpts): RPC_CallHandle
 ---@field outdated_packages fun(self: DotnetClient, target_path: string, cb?: fun(res: OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
 ---@field get_state fun(self: DotnetClient): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
 ---@field _initializing boolean? # True while initialization is in progress
@@ -263,10 +263,10 @@ function M:_initialize(cb, opts)
   coroutine.wrap(function()
     local use_visual_studio = require("easy-dotnet.options").options.server.use_visual_studio == true
     local debugger_path = require("easy-dotnet.options").options.debugger.bin_path
+    local apply_value_converters = require("easy-dotnet.options").options.debugger.apply_value_converters
     local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
 
-    local debuggerOptions = vim.empty_dict()
-    debuggerOptions["binaryPath"] = debugger_path
+    local debuggerOptions = { applyValueConverters = apply_value_converters, binaryPath = debugger_path }
 
     return M.create_rpc_call({
       client = self._client,
@@ -287,15 +287,26 @@ end
 
 ---@class SolutionFileProjectResponse
 ---@field projectName string
----@field relativePath string
 ---@field absolutePath string
 
-function M:solution_list_projects(solution_file_path, cb, opts)
+function M:solution_list_projects(solution_file_path, cb, include_non_existing, opts)
+  include_non_existing = include_non_existing or false
   opts = opts or {}
   return M.create_rpc_call({
     client = self._client,
     job = nil,
-    cb = cb,
+    cb = function(res)
+      local basename_solution = vim.fs.basename(solution_file_path)
+
+      vim.iter(res):each(function(project)
+        local ok = vim.fn.filereadable(project.absolutePath) == 1
+        if not ok then logger.warn(string.format("%s references non existent project %s", basename_solution, vim.fs.basename(project.absolutePath))) end
+      end)
+
+      local filtered_projects = include_non_existing and res or vim.iter(res):filter(function(project) return vim.fn.filereadable(project.absolutePath) == 1 end):totable()
+
+      cb(filtered_projects)
+    end,
     on_crash = opts.on_crash,
     method = "solution/list-projects",
     params = { solutionFilePath = solution_file_path },

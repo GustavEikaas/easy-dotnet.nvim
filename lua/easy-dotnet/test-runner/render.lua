@@ -365,6 +365,7 @@ function M.open(mode)
     if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
     local win_opts = get_default_win_opts()
     M.win = vim.api.nvim_open_win(M.buf, true, win_opts)
+    vim.wo[M.win].winfixbuf = true
     vim.api.nvim_buf_set_option(M.buf, "bufhidden", "hide")
     return true
   elseif mode == "split" or mode == "vsplit" then
