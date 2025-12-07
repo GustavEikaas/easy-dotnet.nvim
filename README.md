@@ -286,6 +286,11 @@ require("lualine").setup {
 | `dotnet.run_default()` | `dotnet run --project <TS Default> <DArgs>` |
 | `dotnet.run_profile_default()` | `dotnet run --project <TS Default> --launch-profile <TS> <DArgs>` |
 ||  
+| `dotnet.debug_profile()`                        | ``                                                                                                       |
+| `dotnet.debug()` | ``                                                                                                             |
+| `dotnet.debug_default()` | `` |
+| `dotnet.debug_profile_default()` | `` |
+||  
 | `dotnet.build()` | `dotnet build <TS> <DArgs>` |
 | `dotnet.build_solution()` | `dotnet build <sln> <DArgs>` |
 | `dotnet.build_solution_quickfix()` | `dotnet build <sln> <DArgs>` and opens build errors in the quickfix list |
@@ -410,6 +415,10 @@ Dotnet run
 Dotnet run default
 Dotnet run profile
 Dotnet run profile default
+Dotnet debug
+Dotnet debug default
+Dotnet debug profile
+Dotnet debug profile default
 Dotnet watch
 Dotnet watch default
 Dotnet test

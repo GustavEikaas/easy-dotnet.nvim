@@ -1,5 +1,6 @@
 local M = {}
 local picker = require("easy-dotnet.picker")
+local constants = require("easy-dotnet.constants")
 local parsers = require("easy-dotnet.parsers")
 local logger = require("easy-dotnet.logger")
 local csproj_parse = parsers.csproj_parser
@@ -14,14 +15,24 @@ local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 ---@param project DotnetProject: The full path to the Dotnet project.
 ---@param args string: Additional arguments to pass to `dotnet run`.
 ---@param term function: terminal callback
-local function run_project(project, args, term)
-  args = args or ""
-  local arg = ""
-  if project.type == "project_framework" then arg = arg .. " --framework " .. project.msbuild_props.targetFramework end
-  local cmd = project.msbuild_props.runCommand
-  term(project.path, "run", arg .. " " .. args, { cmd = cmd })
+local function run_project(project, args, term, attach_debugger)
+  if attach_debugger == true then
+    client:initialize(function()
+      client.debugger:debugger_start(
+        { targetPath = project.path, launchProfileName = nil, targetFramework = nil, configuration = nil },
+        function(res) require("dap").run({ type = constants.debug_adapter_name, name = constants.debug_adapter_name, request = "attach", host = "127.0.0.1", port = res.port }, { new = true }) end
+      )
+    end)
+  else
+    args = args or ""
+    local arg = ""
+    if project.type == "project_framework" then arg = arg .. " --framework " .. project.msbuild_props.targetFramework end
+    local cmd = project.msbuild_props.runCommand
+    term(project.path, "run", arg .. " " .. args, { cmd = cmd })
+  end
 end
 
+---@return DotnetProject | nil
 local pick_project_without_solution = function()
   local csproject_path = csproj_parse.find_project_file()
   if not csproject_path then return nil end
@@ -46,10 +57,10 @@ local single_file_fallback = function(term, args)
 end
 
 ---@param term function
-local function csproj_fallback_run(term, args)
+local function csproj_fallback_run(term, args, attach_debugger)
   local project = pick_project_without_solution()
   if project then
-    run_project(project, args, term)
+    run_project(project, args, term, attach_debugger)
     return
   end
 
@@ -67,7 +78,7 @@ end
 ---If a project is selected, the default is updated for future invocations.
 ---
 ---@param use_default boolean: If true, allows using the stored default project if available.
----@return DotnetProject: The selected or default DotnetProject.
+---@return DotnetProject | nil: The selected or default DotnetProject.
 ---@return string|nil: The path to the solution file, or nil if no solution is used.
 local function pick_project_framework(use_default)
   local default_manager = require("easy-dotnet.default-manager")
@@ -97,19 +108,21 @@ end
 ---@param term function | nil
 ---@param use_default boolean | nil
 ---@param args string | nil
-M.run_project_picker = function(term, use_default, args)
+M.run_project_picker = function(term, use_default, args, attach_debugger)
   term = term or require("easy-dotnet.options").options.terminal
   use_default = use_default or false
   args = args or ""
   local default_manager = require("easy-dotnet.default-manager")
   local solution_file_path = sln_parse.find_solution_file()
   if solution_file_path == nil then
-    csproj_fallback_run(term, args)
+    csproj_fallback_run(term, args, attach_debugger)
     return
   end
 
   local project = pick_project_framework(use_default)
-  run_project(project, args, term)
+  if not project then return end
+
+  run_project(project, args, term, attach_debugger)
 
   if not use_default then default_manager.set_default_project(project, solution_file_path, "run") end
 end
@@ -152,7 +165,7 @@ local function get_or_pick_profile(use_default, project, solution_file_path)
 end
 
 ---@param use_default boolean
-M.run_project_with_profile = function(term, use_default, args)
+M.run_project_with_profile = function(term, use_default, args, attach_debugger)
   term = term or require("easy-dotnet.options").options.terminal
   use_default = use_default or false
   args = args or ""
@@ -163,7 +176,7 @@ M.run_project_with_profile = function(term, use_default, args)
   end
   local profile = get_or_pick_profile(use_default, project, solution_file_path)
   local arg = profile and string.format("--launch-profile %s", vim.fn.shellescape(profile)) or ""
-  run_project(project, arg .. " " .. args, term)
+  run_project(project, arg .. " " .. args, term, attach_debugger)
 end
 
 return M
