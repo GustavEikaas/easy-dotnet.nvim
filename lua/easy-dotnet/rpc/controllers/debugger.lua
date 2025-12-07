@@ -29,7 +29,7 @@ function M:debugger_start(request, cb, opts)
   opts = opts or {}
   return helper.create_rpc_call({
     client = self._client,
-    job = nil,
+    job = {name = "Starting debugger", on_success_text = "Debugger attached", on_error_text = "Failed to start debugger"},
     cb = cb,
     on_crash = opts.on_crash,
     method = "debugger/start",
