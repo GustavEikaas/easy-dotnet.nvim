@@ -17,11 +17,15 @@ local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 ---@param term function: terminal callback
 local function run_project(project, args, term, attach_debugger)
   if attach_debugger == true then
-    client:initialize(function()
-      client.debugger:debugger_start(
-        { targetPath = project.path, launchProfileName = nil, targetFramework = nil, configuration = nil },
-        function(res) require("dap").run({ type = constants.debug_adapter_name, name = constants.debug_adapter_name, request = "attach", host = "127.0.0.1", port = res.port }, { new = true }) end
-      )
+    require("easy-dotnet.actions.build").rpc_build_quickfix(project.path, nil, nil, function(res)
+      if res then
+        client.debugger:debugger_start(
+          { targetPath = project.path, launchProfileName = nil, targetFramework = nil, configuration = nil },
+          function(debugger_config)
+            require("dap").run({ type = constants.debug_adapter_name, name = constants.debug_adapter_name, request = "attach", host = "127.0.0.1", port = debugger_config.port }, { new = true })
+          end
+        )
+      end
     end)
   else
     args = args or ""
