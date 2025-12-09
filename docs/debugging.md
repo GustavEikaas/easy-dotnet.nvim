@@ -8,8 +8,7 @@ This guide describes how to integrate .NET Core debugging in Neovim using nvim-d
   * [Setting up .NET Debugging with nvim-dap and netcoredbg](#setting-up-.net-debugging-with-nvim-dap-and-netcoredbg)
     * [Debugging](#debugging)
     * [Configuration](#configuration)
-    * [Variables Viewer](#variables-viewer)
-    * [Debugging with launch-profiles](#debugging-with-launch-profiles)
+    * [Programmatic Debugging](#programmatic-debugging)
 
 ## Debugging
 To start debugging do the following. Ensure you have configured the code below
@@ -50,73 +49,16 @@ return {
     vim.keymap.set("n", "<leader>dj", dap.down, { desc = "Go down stack frame" })
     vim.keymap.set("n", "<leader>dk", dap.up, { desc = "Go up stack frame" })
 
-    -- .NET specific setup using `easy-dotnet`
-    require("easy-dotnet.netcoredbg").register_dap_variables_viewer() -- special variables viewer specific for .NET
     end
 }
 ```
 
-## Variables viewer
+## Programmatic Debugging
 
-Debugging in statically typed languages like C# often involves navigating deeply nested runtime types such as `List<T>`, `Dictionary<K,V>`, or `HashSet<T>`. While tools like [`nvim-dap-ui`](https://github.com/rcarriga/nvim-dap-ui) provide a fantastic general-purpose interface for any language, they can’t always interpret the internal structure of .NET collections in a way that's intuitive to the user.
-
-This plugin includes a custom variables viewer tailored specifically for the .NET ecosystem. It **automatically unwraps common C# types**, displaying concise, human-readable summaries of your data structures during debugging—no need to drill into private fields like `_items`, `_size`, or internal buckets.
-
-This dramatically improves the debugging experience for C# and F# developers using Neovim.
-
-## 📦 Supported Types
-
-Out of the box, the following .NET types are recognized and automatically prettified:
-
-* `System.Collections.ObjectModel.ReadOnlyCollection`
-* `System.Collections.Generic.List`
-* `System.Collections.Generic.SortedList`
-* `System.Collections.Immutable.ImmutableList`
-* `System.Collections.Concurrent.ConcurrentDictionary`
-* `System.Collections.Generic.Dictionary`
-* `System.Collections.Generic.OrderedDictionary`
-* `System.Collections.ObjectModel.ReadOnlyDictionary`
-* `System.Collections.Generic.HashSet`
-* `System.Collections.Generic.Queue`
-* `System.Collections.Generic.Stack`
-* `System.DateOnly`
-* `System.DateTime`
-* `System.DateTimeOffset`
-* `System.TimeOnly`
-* `System.TimeSpan`
-* `System.Enum`
-* `System.Version`
-* `System.RuntimeType`
-* `System.Uri`
-* `System.Exception`
-* `System.Guid`
-* `System.Tuple<>`
-* `System.Text.Json.JsonElement`
-* `System.Text.Json.Nodes.JsonArray`
-* `System.Text.Json.Nodes.JsonObject`
-* `Newtonsoft.Json.Linq.JArray`
-* `Newtonsoft.Json.Linq.JObject`
-* `Newtonsoft.Json.Linq.JProperty`
-* `Newtonsoft.Json.Linq.JValue`
-
-## 🛠 How to Enable
-
-Simply call this function during your DAP setup:
-
+You can bind a key just like `<F5>` / Run in Visual Studio that triggers debugging for the default project or a selected profile.
 ```lua
-require("easy-dotnet.netcoredbg").register_dap_variables_viewer()
+vim.keymap.set("n", "<C-p>", function()
+  vim.cmd "Dotnet debug default profile"
+end, { nowait = true, desc = "Start debugging" })
 ```
-
-## Any missing types
-
-If you encounter a type that isn’t yet handled, feel free to [open an issue](https://github.com/GustavEikaas/easy-dotnet.nvim/issues). Community contributions are always welcome!
-
-## Virtual text 
-Easy preview of variables while debugging, unwraps complex types
-![image](https://github.com/user-attachments/assets/b6d53325-6527-43fd-bdb1-332dc8439197)
-
-## Variable explorer
-Let's you view and expand more complex variables. With automatic unwrapping
-* Default keybind: `T`
-![image](https://github.com/user-attachments/assets/4e4c2cff-687b-4715-b5a8-b7ca67f7955b)
 
