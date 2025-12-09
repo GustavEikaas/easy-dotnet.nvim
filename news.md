@@ -2,7 +2,7 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
-## Automatic .NET Variable Conversion ([#XXX](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/XXX))
+## Automatic .NET Variable Conversion ([#666](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/666))
 
 Debugging in C# and F# just got significantly more readable. With this release, **common .NET types are automatically unwrapped and displayed in a concise, human-friendly format** across any DAP-compliant UI in Neovim, including `nvim-dap-ui`, `nvim-dap-view`, and others.
 
