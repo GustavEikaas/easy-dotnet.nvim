@@ -2,6 +2,53 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## Bundled NetCoreDbg - Zero Installation Debugging ([#204](https://github.com/GustavEikaas/easy-dotnet-server/pull/204))
+
+Debugging just got even easier.  NetCoreDbg is now bundled directly with easy-dotnet-server for all platforms. 
+
+Previously, users had to manually install NetCoreDbg (typically via Mason) and configure the `bin_path` option to point to the debugger executable. This added unnecessary friction to the setup process and could lead to version mismatches or platform-specific issues.
+
+With this release, easy-dotnet-server automatically includes NetCoreDbg binaries for Linux (x64/ARM64), macOS (x64), and Windows (x64). The plugin intelligently selects the correct binary for your platform at runtime.
+
+### What this means for you
+
+- **No manual installation**: NetCoreDbg comes bundled — just install easy-dotnet-server and start debugging
+- **No bin_path configuration**: The `debugger.bin_path` option is now completely optional
+- **Always compatible**: NetCoreDbg version is guaranteed to work with your server version
+- **Automatic updates**: When you run `dotnet tool update -g EasyDotnet`, you get the latest debugger too
+- **Cross-platform by default**: Works seamlessly on Linux, macOS, and Windows without platform-specific setup
+
+### Migration guide
+
+If you previously configured NetCoreDbg manually, you can now simplify your setup:
+
+**Before:**
+```lua
+dotnet.setup {
+  debugger = {
+    bin_path = vim.fn.stdpath("data") .. "/mason/bin/netcoredbg", -- Required
+    auto_register_dap = true,
+  }
+}
+```
+
+**After:**
+```lua
+dotnet.setup {
+  debugger = {
+    -- bin_path is now optional - falls back to bundled NetCoreDbg
+    auto_register_dap = true,
+  }
+}
+```
+**Note**: If you still prefer to use your own NetCoreDbg installation (e.g., via Mason) or another CoreCLR DAP adapter, the `bin_path` option continues to work as before.
+
+### Technical details
+
+The bundled NetCoreDbg is extracted from official [Samsung/netcoredbg](https://github.com/Samsung/netcoredbg) releases during the CI build process and packaged with the . NET tool. At runtime, easy-dotnet-server automatically detects your platform and uses the appropriate binary.
+
+This approach ensures you always have a working, tested debugger without any manual intervention. 
+
 ## Roslyn native lsp setup
 Read more [here](./docs/lsp.md) or in the PR #632
 
