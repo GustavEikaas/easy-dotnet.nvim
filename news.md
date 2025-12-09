@@ -2,6 +2,69 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## Automatic .NET Variable Conversion ([#XXX](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/XXX))
+
+Debugging in C# and F# just got significantly more readable. With this release, **common .NET types are automatically unwrapped and displayed in a concise, human-friendly format** across any DAP-compliant UI in Neovim, including `nvim-dap-ui`, `nvim-dap-view`, and others.
+
+Previously, inspecting variables often required navigating internal fields such as `_items`, `_size`, or thread-local queues. Now, with **value converters enabled by default**, variables like `List<T>`, `Dictionary<K,V>`, and `CancellationTokenSource` are displayed cleanly without drilling into private fields.
+
+### What this means for you
+
+* **Immediate readability:** See the contents of collections and other common types directly.
+* **DAP-compliant:** Works with any DAP UI plugin — no custom UI required.
+* **Optional:** Can be disabled globally by setting:
+
+```lua
+require("easy-dotnet").setup({    
+  debugger = {
+    apply_value_converters = false,
+  }
+})
+```
+
+
+### Example: `List<string>`
+
+**Converted (new):**
+
+```
+x System.Collections.Generic.List<string> = {System.Collections.Generic.List<string>}
+  [0] string = "hello"
+  [1] string = "world"
+```
+
+**Previous view (old):**
+
+```
+x System.Collections.Generic.List<string> = {System.Collections.Generic.List<string>}
+  _items string[] = {string[4]}
+    [0] string = "hello"
+    [1] string = "world"
+    [2] string = null
+    [3] string = null
+  _size int = 2
+  _version int = 2
+  Capacity int = 4
+  Count int = 2
+  System.Collections.IList.IsFixedSize bool = false
+  System.Collections.Generic.ICollection<T>.IsReadOnly bool = false
+  System.Collections.IList.IsReadOnly bool = false
+  System.Collections.ICollection.IsSynchronized bool = false
+  System.Collections.ICollection.SyncRoot System.Collections.Generic.List<string> = {…}
+  Item System.Reflection.TargetParameterCountException = {…}
+  System.Collections.IList.Item System.Reflection.TargetParameterCountException = {…}
+  Static members
+```
+
+## Supported Types
+
+The converters currently handle most basic types, lists, hashsets, queues, read-only collections, time types, and threading primitives like `CancellationToken`.
+
+If you encounter a type that isn’t yet handled, or want a specific value converter, please file an issue
+
+Community contributions are always welcome.
+
+
 ## Bundled NetCoreDbg - Zero Installation Debugging ([#204](https://github.com/GustavEikaas/easy-dotnet-server/pull/204))
 
 Debugging just got even easier.  NetCoreDbg is now bundled directly with easy-dotnet-server for all platforms. 
