@@ -135,8 +135,8 @@ Although not *required* by the plugin, it is highly recommended to install one o
         config = {},
       },
       debugger = {
-        -- The path to netcoredbg executable
-        --example mason path: vim.fs.joinpath(vim.fn.stdpath("data"), "mason/bin/netcoredbg.cmd"),
+        -- Path to custom coreclr DAP adapter
+        -- easy-dotnet-server falls back to its own netcoredbg binary if bin_path is nil
         bin_path = nil,
         auto_register_dap = true,
         mappings = {

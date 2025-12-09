@@ -24,24 +24,6 @@ Dont start the project before doing this, debugger has to start it for you
 6. You can now `<F10>` step over, `<F11>` step into, `<F5>` continue and more (see code)
 
 ## Configuration
-The only thing required for easy-dotnet to automatically configure dap for you is that you supply the bin_path option in `options.debugger.bin_path`
-```lua
---lazy.nvim
--- easy-dotnet config
-return {
-  "GustavEikaas/easy-dotnet.nvim",
-  dependencies = { "nvim-lua/plenary.nvim", "nvim-telescope/telescope.nvim" },
-  config = function()
-    local dotnet = require "easy-dotnet"
-    dotnet.setup {
-      debugger = {
-        --name if netcoredbg is in PATH or full path like 'C:\Users\gusta\AppData\Local\nvim-data\mason\bin\netcoredbg.cmd'
-        bin_path = "netcoredbg",
-      }
-    }
-  end
-}
-```
 
 ```lua
 --lazy.nvim
