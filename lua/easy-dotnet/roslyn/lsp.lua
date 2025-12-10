@@ -70,14 +70,10 @@ function M.find_project_or_solution(bufnr, cb)
     return
   end
 
-  require("easy-dotnet.picker").picker(
-    nil,
-    vim.tbl_map(function(value) return { display = value } end, sln),
-    function(r) cb(vim.fs.dirname(r.display)) end,
-    "Pick solution file to start Roslyn from",
-    true,
-    true
-  )
+  require("easy-dotnet.picker").picker(nil, vim.tbl_map(function(value) return { display = value } end, sln), function(r)
+    require("easy-dotnet.default-manager").set_default_solution(nil, r.display)
+    cb(vim.fs.dirname(r.display))
+  end, "Pick solution file to start Roslyn from", true, true)
 end
 
 function M.find_sln_or_csproj(dir)
