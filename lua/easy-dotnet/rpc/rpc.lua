@@ -21,6 +21,7 @@ end
 --- @param pipe_name string The name of the pipe.
 --- @return string The full path to the pipe on the current platform.
 function M.get_pipe_path(pipe_name)
+  pipe_name = "EasyDotnet_ROcrjwn9kiox3tKvRWcQg"
   if extensions.isWindows() then
     return [[\\.\pipe\]] .. pipe_name
   else
