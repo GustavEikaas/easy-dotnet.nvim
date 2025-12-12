@@ -186,7 +186,7 @@ local M = {
       auto_register_dap = true,
     },
     projx_lsp = {
-      enabled = true,
+      enabled = false,
     },
     lsp = {
       enabled = true,
