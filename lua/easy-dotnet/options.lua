@@ -185,6 +185,9 @@ local M = {
       apply_value_converters = true,
       auto_register_dap = true,
     },
+    projx_lsp = {
+      enabled = true,
+    },
     lsp = {
       enabled = true,
       analyzer_assemblies = {},

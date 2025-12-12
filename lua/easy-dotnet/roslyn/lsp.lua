@@ -215,36 +215,4 @@ function M.enable(opts)
   vim.lsp.enable(constants.lsp_client_name)
 end
 
-vim.lsp.log.set_level("trace")
-vim.lsp.log.set_format_func(vim.inspect)
-local lsp_proj_name = "proj-lang-server"
-
----@type vim.lsp.Config
-vim.lsp.config[lsp_proj_name] = {
-  cmd = {
-    "dotnet",
-    "easydotnet",
-    "project-language-server",
-  },
-  filetypes = { "csproj", "xml" },
-  root_dir = function(buf_nr, cb)
-    local buf_path = vim.fs.normalize(vim.api.nvim_buf_get_name(buf_nr))
-    local root_dir = vim.fs.dirname(buf_path)
-    vim.print("root dir", root_dir)
-    cb(root_dir)
-  end,
-  on_init = function(e) vim.print("Init success") end,
-  on_exit = function(code, _, client_id)
-    vim.schedule(function()
-      if code ~= 0 and code ~= 143 then
-        vim.notify("[easy-dotnet] proj server crashed", vim.log.levels.ERROR)
-        return
-      end
-      vim.notify("[easy-dotnet] proj server stopped", vim.log.levels.INFO)
-    end)
-  end,
-}
-
-vim.lsp.enable(lsp_proj_name)
-
 return M
