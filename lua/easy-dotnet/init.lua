@@ -104,7 +104,7 @@ local register_legacy_functions = function()
 end
 
 local function auto_register_dap(merged_opts)
-  if merged_opts.debugger.auto_register_dap == true and merged_opts.debugger.bin_path ~= nil then
+  if merged_opts.debugger.auto_register_dap == true then
     local success, dap = pcall(require, "dap")
     if not success then return end
     local dotnet = require("easy-dotnet")
@@ -294,6 +294,7 @@ M.setup = function(opts)
   register_legacy_functions()
 
   if merged_opts.lsp.enabled == true then require("easy-dotnet.roslyn.lsp").enable(merged_opts.lsp) end
+  if merged_opts.projx_lsp.enabled == true then require("easy-dotnet.projx.lsp").enable() end
   wrap(auto_register_dap)(merged_opts)
   wrap(background_scanning)(merged_opts)
   wrap(auto_install_easy_dotnet)()

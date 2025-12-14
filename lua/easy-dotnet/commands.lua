@@ -83,6 +83,27 @@ M.aspire = {
   },
 }
 
+M.debug = {
+  handle = function(args, options) actions.run(options.terminal, false, passthrough_dotnet_cli_args_handler(args), true) end,
+  passthrough = true,
+  subcommands = {
+    default = {
+      handle = function(args, options) actions.run(options.terminal, true, passthrough_dotnet_cli_args_handler(args), true) end,
+      passthrough = true,
+    },
+    profile = {
+      handle = function(args, options) actions.run_with_profile(options.terminal, false, passthrough_dotnet_cli_args_handler(args), true) end,
+      passthrough = true,
+      subcommands = {
+        default = {
+          handle = function(args, options) actions.run_with_profile(options.terminal, true, passthrough_dotnet_cli_args_handler(args), true) end,
+          passthrough = true,
+        },
+      },
+    },
+  },
+}
+
 M._cached_files = {
   handle = function()
     local dir = require("easy-dotnet.constants").get_data_directory()

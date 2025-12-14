@@ -181,11 +181,12 @@ local M = {
       mappings = {
         open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
       },
-      -- The path to netcoredbg
       bin_path = nil,
-      --TODO: update README later when making the apply_value_converters option true by default
-      apply_value_converters = false,
+      apply_value_converters = true,
       auto_register_dap = true,
+    },
+    projx_lsp = {
+      enabled = false,
     },
     lsp = {
       enabled = true,
