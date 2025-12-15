@@ -11,6 +11,8 @@ M.handler = function(client, method, params)
     if method == "request/restore" then
       logger.info("Server requested restore for " .. vim.fs.basename(params.targetPath))
       nuget_restore_handler(client, params.targetPath)
+    elseif method == "_server/update-available" then
+      logger.info(string.format("easy-dotnet-server %s update available, update using `:Dotnet _server update`", params.updateType))
     elseif method == "project/changed" then
       csproj_parse.invalidate(params.projectPath)
       csproj_parse.get_project_from_project_file(params.projectPath)
