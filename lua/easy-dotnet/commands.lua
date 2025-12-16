@@ -272,7 +272,7 @@ M.new = {
 M.reset = {
   handle = function()
     local dir = require("easy-dotnet.constants").get_data_directory()
-    vim.fs.rm(dir, {recursive = true, force = true})
+    vim.fs.rm(dir, { recursive = true, force = true })
     logger.info("Cached files deleted")
   end,
 }
