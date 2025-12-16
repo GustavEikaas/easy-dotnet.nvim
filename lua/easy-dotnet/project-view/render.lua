@@ -70,33 +70,17 @@ end
 ---@param project DotnetProject
 local function discover_package_references(project)
   local finished = M.append_job("Discovering package references")
-  --Incase of out of mem, do some jq tricks to read line by line
-  --TODO: research the frameworks[]
-  --TODO: is it possible to resolve transitive dependencies?
-  local command = string.format('dotnet list %s package --format json | jq "[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]"', project.path)
-  vim.fn.jobstart(command, {
-    stdout_buffered = true,
-    on_exit = function(_, code)
+
+  client:initialize(function()
+    client.msbuild:msbuild_list_package_reference(project.path, project.msbuild_props.targetFramework, function(res)
+      ---@param value PackageReference
+      local package_refs = vim.tbl_map(function(value) return string.format("%s@%s", value.id, value.resolvedVersion) end, res)
       finished()
-      M.refresh()
-      M.refresh_mappings()
-      if code ~= 0 then return end
-    end,
-    on_stdout = function(_, data, _)
-      if data[1] == "" then
-        M.package_refs = nil
-        return
-      end
-      local package_refs = {}
-      local packages = vim.fn.json_decode(data)
-      for _, v in ipairs(packages) do
-        table.insert(package_refs, string.format("%s@%s", v.name, v.version))
-      end
       M.package_refs = package_refs
       M.refresh()
       M.refresh_mappings()
-    end,
-  })
+    end)
+  end)
 end
 
 ---@param id string
