@@ -140,7 +140,6 @@ M.check = function()
   vim.health.start("easy-dotnet CLI dependencies")
   ensure_dep_installed({ "dotnet", "-h" })
   ensure_dep_installed({ "dotnet", "easydotnet", "-v" }, "dotnet tool install --global EasyDotnet")
-  ensure_dep_installed({ "jq" })
   ensure_dep_installed({ "dotnet", "ef" }, "dotnet tool install --global dotnet-ef")
 
   vim.health.start("easy-dotnet lua dependencies")
