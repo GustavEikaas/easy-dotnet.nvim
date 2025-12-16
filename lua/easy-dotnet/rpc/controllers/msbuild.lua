@@ -4,6 +4,7 @@ local jobs = require("easy-dotnet.ui-modules.jobs")
 ---@field _client StreamJsonRpc
 ---@field msbuild_query_properties fun(self: MsBuildClient, request: QueryProjectPropertiesRequest, cb?: fun(res: DotnetProjectProperties), opts?: RPC_CallOpts): RPC_CallHandle # Request msbuild
 ---@field msbuild_list_project_reference fun(self: MsBuildClient, targetPath: string, cb?: fun(res: string[]), opts?: RPC_CallOpts): RPC_CallHandle # Request project references
+---@field msbuild_list_package_reference fun(self: MsBuildClient, targetPath: string, target_framework: string, cb?: fun(res: PackageReference[]), opts?: RPC_CallOpts): RPC_CallHandle # Request package references
 ---@field msbuild_add_project_reference fun(self: MsBuildClient, projectPath: string, targetPath: string, cb?: fun(success: boolean), opts?: RPC_CallOpts): RPC_CallHandle # Request project references
 ---@field msbuild_remove_project_reference fun(self: MsBuildClient, projectPath: string, targetPath: string, cb?: fun(success: boolean), opts?: RPC_CallOpts): RPC_CallHandle # Request project references
 ---@field msbuild_build fun(self: MsBuildClient, request: BuildRequest, cb?: fun(res: BuildResult), opts?: RPC_CallOpts): RPC_CallHandle # Request msbuild
@@ -19,6 +20,11 @@ function M.new(client)
   self._client = client
   return self
 end
+
+---@class PackageReference
+---@field id string
+---@field requestedVersion string
+---@field resolvedVersion string
 
 ---@class DotnetProjectProperties
 ---@field projectName string
@@ -170,6 +176,20 @@ function M:msbuild_build(request, cb, opts)
     on_crash = opts.on_crash,
     method = "msbuild/build",
     params = { request = request },
+  })()
+end
+
+function M:msbuild_list_package_reference(target_path, target_framework, cb, opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+  return helper.create_enumerate_rpc_call({
+    client = self._client,
+    job = nil,
+    method = "msbuild/list-package-reference",
+    params = { projectPath = target_path, targetFramework = target_framework },
+    cb = cb,
+    on_yield = nil,
+    on_crash = opts.on_crash,
   })()
 end
 
