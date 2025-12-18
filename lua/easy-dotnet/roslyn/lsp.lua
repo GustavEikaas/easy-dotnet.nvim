@@ -161,11 +161,16 @@ function M.enable(opts)
     on_exit = function(code, _, client_id)
       M.state[client_id] = nil
       vim.schedule(function()
-        if code ~= 0 and code ~= 143 then
-          vim.notify("[easy-dotnet] Roslyn crashed", vim.log.levels.ERROR)
+        if code == 0 or code == 143 then
+          logger.info("[easy-dotnet] Roslyn stopped")
           return
         end
-        vim.notify("[easy-dotnet] Roslyn stopped", vim.log.levels.INFO)
+
+        if code == 75 then
+          logger.error("[easy-dotnet]: Roslyn requires dotnet 10 sdk installed")
+        else
+          logger.error("[easy-dotnet] Roslyn crashed")
+        end
       end)
     end,
     on_attach = function(client, buf) require("easy-dotnet.roslyn.new-file-handler").register_new_file(client, buf) end,
