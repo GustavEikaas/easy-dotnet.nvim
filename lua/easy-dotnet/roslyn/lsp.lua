@@ -122,23 +122,26 @@ function M.enable(opts)
     end
   end
 
+  local cap = vim.tbl_deep_extend(
+    "keep",
+    vim.lsp.config[constants.lsp_client_name].capabilities or {},
+    { textDocument = {
+      diagnostic = {
+        dynamicRegistration = true,
+      },
+    }, workspace = {
+      didChangeWatchedFiles = {
+        dynamicRegistration = true,
+      },
+    } }
+  )
+
   ---@type vim.lsp.Config
   vim.lsp.config[constants.lsp_client_name] = {
     cmd = cmd,
     filetypes = { "cs" },
     root_dir = M.find_project_or_solution,
-    capabilities = {
-      textDocument = {
-        diagnostic = {
-          dynamicRegistration = true,
-        },
-      },
-      workspace = {
-        didChangeWatchedFiles = {
-          dynamicRegistration = true,
-        },
-      },
-    },
+    capabilities = cap,
     on_init = function(client)
       local file, type = M.find_sln_or_csproj(client.root_dir)
       if not file then return end
