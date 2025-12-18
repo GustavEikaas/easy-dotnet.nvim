@@ -122,9 +122,10 @@ function M.enable(opts)
     end
   end
 
+  local existing_config = vim.lsp.config[constants.lsp_client_name]
   local cap = vim.tbl_deep_extend(
     "keep",
-    vim.lsp.config[constants.lsp_client_name].capabilities or {},
+    existing_config and existing_config.capabilities or {},
     { textDocument = {
       diagnostic = {
         dynamicRegistration = true,
