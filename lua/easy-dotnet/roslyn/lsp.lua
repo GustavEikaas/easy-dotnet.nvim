@@ -122,23 +122,27 @@ function M.enable(opts)
     end
   end
 
+  local existing_config = vim.lsp.config[constants.lsp_client_name]
+  local cap = vim.tbl_deep_extend(
+    "keep",
+    existing_config and existing_config.capabilities or {},
+    { textDocument = {
+      diagnostic = {
+        dynamicRegistration = true,
+      },
+    }, workspace = {
+      didChangeWatchedFiles = {
+        dynamicRegistration = true,
+      },
+    } }
+  )
+
   ---@type vim.lsp.Config
   vim.lsp.config[constants.lsp_client_name] = {
     cmd = cmd,
     filetypes = { "cs" },
     root_dir = M.find_project_or_solution,
-    capabilities = {
-      textDocument = {
-        diagnostic = {
-          dynamicRegistration = true,
-        },
-      },
-      workspace = {
-        didChangeWatchedFiles = {
-          dynamicRegistration = true,
-        },
-      },
-    },
+    capabilities = cap,
     on_init = function(client)
       local file, type = M.find_sln_or_csproj(client.root_dir)
       if not file then return end
@@ -157,11 +161,16 @@ function M.enable(opts)
     on_exit = function(code, _, client_id)
       M.state[client_id] = nil
       vim.schedule(function()
-        if code ~= 0 and code ~= 143 then
-          vim.notify("[easy-dotnet] Roslyn crashed", vim.log.levels.ERROR)
+        if code == 0 or code == 143 then
+          logger.info("[easy-dotnet] Roslyn stopped")
           return
         end
-        vim.notify("[easy-dotnet] Roslyn stopped", vim.log.levels.INFO)
+
+        if code == 75 then
+          logger.error("[easy-dotnet]: Roslyn requires dotnet 10 sdk installed")
+        else
+          logger.error("[easy-dotnet] Roslyn crashed")
+        end
       end)
     end,
     on_attach = function(client, buf) require("easy-dotnet.roslyn.new-file-handler").register_new_file(client, buf) end,

@@ -88,14 +88,6 @@ M.search_nuget = function(project_path, allow_prerelease)
   if package ~= nil then add_package(package, project_path, allow_prerelease) end
 end
 
-local function get_package_refs(project_path)
-  local command = string.format('dotnet list %s package --format json | jq "[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]"', project_path)
-  local out = vim.fn.system(command)
-  if vim.v.shell_error then logger.error("Failed to get packages for " .. project_path) end
-  local packages = vim.fn.json_decode(out)
-  return packages
-end
-
 M.get_nuget_sources_async = function()
   local co = coroutine.running()
   client:initialize(function()
@@ -108,28 +100,36 @@ end
 
 M.remove_nuget = function()
   local project_path = get_project()
-  local packages = get_package_refs(project_path)
-  local choices = polyfills.tbl_map(function(i) return { display = i.name .. "@" .. i.version, value = i.name } end, packages)
-  local package = picker.pick_sync(nil, choices, "Pick package to remove", false).value
-  vim.fn.jobstart(string.format("dotnet remove %s package %s ", project_path, package), {
-    on_exit = function(_, code)
-      if code ~= 0 then
-        logger.error("Command failed")
-      else
-        logger.info("Package removed " .. package)
-        vim.fn.jobstart(string.format("dotnet restore %s", project_path), {
-          on_exit = function(_, ex_code)
-            if ex_code ~= 0 then
-              logger.error("Failed to restore packages")
-              require("easy-dotnet.options").options.terminal(project_path, "restore", "")
+  local project = csproj_parse.get_project_from_project_file(project_path)
+
+  client:initialize(function()
+    client.msbuild:msbuild_list_package_reference(project.path, project.msbuild_props.targetFramework, function(res)
+      ---@param i PackageReference
+      local choices = polyfills.tbl_map(function(i) return { display = i.id .. "@" .. i.resolvedVersion, value = i.id } end, res)
+      picker.picker(nil, choices, function(val)
+        local package = val.value
+        vim.fn.jobstart(string.format("dotnet remove %s package %s ", project_path, package), {
+          on_exit = function(_, code)
+            if code ~= 0 then
+              logger.error("Command failed")
             else
-              logger.info("Packages restored...")
+              logger.info("Package removed " .. package)
+              vim.fn.jobstart(string.format("dotnet restore %s", project_path), {
+                on_exit = function(_, ex_code)
+                  if ex_code ~= 0 then
+                    logger.error("Failed to restore packages")
+                    require("easy-dotnet.options").options.terminal(project_path, "restore", "")
+                  else
+                    logger.info("Packages restored...")
+                  end
+                end,
+              })
             end
           end,
         })
-      end
-    end,
-  })
+      end, "Pick package to remove", false)
+    end)
+  end)
 end
 
 return M

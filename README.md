@@ -91,7 +91,6 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 
 - Neovim needs to be built with **LuaJIT**
 - [EasyDotnet](https://www.nuget.org/packages/EasyDotnet) `dotnet tool install -g EasyDotnet`
-- `jq`
 
 Although not *required* by the plugin, it is highly recommended to install one of:
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
@@ -621,10 +620,6 @@ Adding nuget packages are available using the `:Dotnet add package` command. Thi
 
 ![image](https://github.com/user-attachments/assets/00a9d38a-6afe-42ec-b971-04191fee1d59)
 
-### Requirements
-
-This functionality relies on `jq` so ensure that is installed on your system.
-
 ## Project mappings
 
 Key mappings are available automatically within `.csproj` and `.fsproj` files
@@ -639,7 +634,6 @@ Key mappings are available automatically within `.csproj` and `.fsproj` files
 
 When editing package references inside a .csproject file it is possible to enable autocomplete.
 This will trigger autocomplete for `<PackageReference Include="<cmp-trigger>" Version="<cmp-trigger>" />`
-This functionality relies on `jq` so ensure that is installed on your system.
 
 #### Using nvim-cmp
 

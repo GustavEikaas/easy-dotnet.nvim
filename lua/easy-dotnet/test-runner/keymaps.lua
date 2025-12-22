@@ -196,7 +196,10 @@ M.keymaps = function()
       ---@param node TestNode
       handle = function(node)
         if node.type == "csproject" then
-          coroutine.wrap(function() node.refresh() end)()
+          coroutine.wrap(function()
+            local res = runner.request_build(node.cs_project_path)
+            if res == true then node.refresh() end
+          end)()
         else
           vim.cmd("Dotnet testrunner refresh build")
         end

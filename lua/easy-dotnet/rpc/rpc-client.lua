@@ -59,6 +59,7 @@ local M = {
 ---| "launch-profiles"
 ---| "nuget/restore"
 ---| "msbuild/pack"
+---| "msbuild/list-package-reference"
 ---| "msbuild/list-project-reference"
 ---| "msbuild/add-project-reference"
 ---| "msbuild/remove-project-reference"

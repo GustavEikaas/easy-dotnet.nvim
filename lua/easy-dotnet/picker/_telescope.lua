@@ -13,7 +13,6 @@ M.nuget_search = function()
     .new(opts, {
       prompt_title = "Nuget search",
       finder = finders.new_async_job({
-        --TODO: this part sucks I want to use JQ but it seems to be impossible to use it with telescope due to pipes and making OS independent
         command_generator = function(prompt) return { "dotnet", "package", "search", prompt or "", "--format", "json" } end,
         entry_maker = function(line)
           --HACK: ohgod.jpeg
