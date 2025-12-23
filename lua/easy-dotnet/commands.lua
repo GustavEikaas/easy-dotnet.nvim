@@ -229,7 +229,10 @@ M.build = {
 
 M.createfile = {
   passthrough = true,
-  handle = function(args) require("easy-dotnet.actions.new").create_new_item(args[1]) end,
+  handle = function(args)
+    local path = type(args) == "string" and args or args[1]
+    require("easy-dotnet.actions.new").create_new_item(path)
+  end,
 }
 
 M.testrunner = {
