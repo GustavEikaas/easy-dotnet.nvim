@@ -3,6 +3,8 @@
 ---@field on_success_text? string Text shown if the job succeeds
 ---@field on_error_text? string Text shown if the job fails
 ---@field timeout? integer Time (ms) after which the job auto-fails if not finished
+---@field is_server_job? boolean
+---@field server_token? string
 
 ---@alias JobEventType "started" | "finished"
 
@@ -29,6 +31,7 @@
 ---@field register_listener fun(listener: JobLifecycleListener): fun() Registers a listener and returns a function to remove it.
 ---@field notify_listeners fun(event: JobEvent): (fun(event: JobEvent)?)[] Calls all registered listeners with a job event and returns their optional finish callbacks.
 ---@field lualine fun(): string Returns a string representing current job state, intended for statusline display.
+---@field update_server_job fun(token, new_name): boolean
 
 --- A listener receives a JobEvent on "started"
 --- and returns a function that will be called with a JobEvent on "finished"
@@ -54,6 +57,7 @@ local M = {
 ---@param job JobData The job description
 ---@return fun(success: boolean, error?: string[]) remove_callback
 function M.register_job(job)
+  if job.is_server_job and not job.server_token then error("Server jobs must provide a server_token") end
   job.timeout = job.timeout or M.default_timeout
   local index = #M.jobs + 1
   M.jobs[index] = job
@@ -150,6 +154,16 @@ function M.lualine()
   else
     return string.format("%s %s", spinner_frame, job_desc)
   end
+end
+
+function M.update_server_job(token, new_name)
+  for _, job in ipairs(M.jobs) do
+    if job.is_server_job and job.server_token == token then
+      job.name = new_name
+      return true
+    end
+  end
+  return false
 end
 
 return M
