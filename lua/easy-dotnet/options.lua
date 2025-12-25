@@ -172,7 +172,7 @@ local M = {
       --Set this to false if you have configured lualine to avoid double logging
       handler = function(start_event)
         local spinner = require("easy-dotnet.ui-modules.spinner").new()
-        spinner:start_spinner(start_event.job.name)
+        spinner:start_spinner(function() return start_event.job.name end)
         ---@param finished_event JobEvent
         return function(finished_event) spinner:stop_spinner(finished_event.result.msg, finished_event.result.level) end
       end,
