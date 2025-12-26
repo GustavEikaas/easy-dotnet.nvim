@@ -107,6 +107,6 @@ function M:test_run(request, cb, opts)
   })()
 end
 
-function M:set_run_settings() self._client.notify("test/set-run-settings", {}) end
+function M:set_run_settings() self._client.notify("test/set-project-run-settings", {}) end
 
 return M
