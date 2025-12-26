@@ -1,6 +1,6 @@
 ---@class TrackedJob
----@field jobId string The GUID from C#
----@field command RunCommand The actual command details
+---@field jobId string
+---@field command RunCommand
 
 ---@class RunCommand
 ---@field executable string The executable to run (e.g., "dotnet")
