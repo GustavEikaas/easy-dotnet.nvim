@@ -73,10 +73,14 @@ local function discover_package_references(project)
 
   client:initialize(function()
     client.msbuild:msbuild_list_package_reference(project.path, project.msbuild_props.targetFramework, function(res)
-      ---@param value PackageReference
-      local package_refs = vim.tbl_map(function(value) return string.format("%s@%s", value.id, value.resolvedVersion) end, res)
+      if #res == 0 then
+        M.package_refs = nil
+      else
+        ---@param value PackageReference
+        local package_refs = vim.tbl_map(function(value) return string.format("%s@%s", value.id, value.resolvedVersion) end, res)
+        M.package_refs = package_refs
+      end
       finished()
-      M.package_refs = package_refs
       M.refresh()
       M.refresh_mappings()
     end)
