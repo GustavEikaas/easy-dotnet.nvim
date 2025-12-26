@@ -179,6 +179,16 @@ M.test = {
       handle = function(args, options) actions.test_solution(options.terminal, passthrough_dotnet_cli_args_handler(args)) end,
       passthrough = true,
     },
+    ["run-settings"] = {
+      subcommands = {
+        set = {
+          handle = function()
+            local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+            client:initialize(function() client.test:set_run_settings() end)
+          end,
+        },
+      },
+    },
   },
 }
 
