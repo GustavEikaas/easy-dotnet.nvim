@@ -182,6 +182,18 @@ function M.enable(opts)
       -- ["dotnet.test.run"] = require("easy-dotnet.roslyn.lsp.test_run"),
     },
     handlers = {
+      ["client/registerCapability"] = function(err, params, ctx, config)
+        --HACK: roslyn sends watchers for non-existing dotnet directory on linux based systems #670
+        for _, registration in ipairs(params.registrations) do
+          if registration.method == "workspace/didChangeWatchedFiles" and registration.registerOptions and registration.registerOptions.watchers then
+            registration.registerOptions.watchers = vim
+              .iter(registration.registerOptions.watchers)
+              :filter(function(watch) return vim.loop.fs_stat(vim.uri_to_fname(watch.globPattern.baseUri)) ~= nil end)
+              :totable()
+          end
+        end
+        return vim.lsp.handlers["client/registerCapability"](err, params, ctx, config)
+      end,
       ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         if not client then return end
