@@ -123,6 +123,7 @@ local handlers = {
   promptMultiSelection = require("easy-dotnet.rpc.handlers.prompt_selections"),
   startDebugSession = require("easy-dotnet.rpc.handlers.start_debug_session"),
   terminateDebugSession = require("easy-dotnet.rpc.handlers.terminate_debug_session"),
+  runCommand = require("easy-dotnet.rpc.handlers.run_command"),
 }
 
 ---Handles a server-initiated RPC request using a registered handler.
