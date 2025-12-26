@@ -2,6 +2,7 @@
 ---@field _client StreamJsonRpc
 ---@field test_run fun(self: TestClient, request: RPC_TestRunRequest, cb?: fun(res: RPC_TestRunResult), opts?: RPCCallOpts): RPC_CallHandle # Request running multiple tests for MTP
 ---@field test_discover fun(self: TestClient, request: RPC_TestDiscoverRequest, cb?: fun(res: RPC_DiscoveredTest[]), opts?: RPCCallOpts): RPC_CallHandle # Request test discovery for MTP
+---@field set_run_settings fun(self: TestClient)
 
 local M = {}
 M.__index = M
@@ -105,5 +106,7 @@ function M:test_run(request, cb, opts)
     on_crash = opts.on_crash,
   })()
 end
+
+function M:set_run_settings() self._client.notify("test/set-run-settings", {}) end
 
 return M
