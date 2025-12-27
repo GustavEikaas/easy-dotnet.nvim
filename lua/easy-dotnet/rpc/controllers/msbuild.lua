@@ -101,17 +101,16 @@ function M:msbuild_add_project_reference(projectPath, targetPath, cb, opts)
   })()
 end
 
----@param client StreamJsonRpc
 ---@param projectPath string
 ---@param targetPath string
 ---@param cb? fun(success: boolean)
 ---@param opts? RPC_CallOpts
 ---@return RPC_CallHandle
-function M:msbuild_remove_project_reference(client, projectPath, targetPath, cb, opts)
+function M:msbuild_remove_project_reference(projectPath, targetPath, cb, opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
   return helper.create_rpc_call({
-    client = client,
+    client = self._client,
     job = nil,
     cb = cb,
     on_crash = opts.on_crash,
