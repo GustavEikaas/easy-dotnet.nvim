@@ -132,9 +132,7 @@ M.run_test_picker = function(term, use_default, args)
   end
 end
 
-M.test_solution = function(term, args)
-  test_solution(args, term)
-end
+M.test_solution = function(term, args) test_solution(args, term) end
 
 M.test_watcher = function(icons)
   local dn = require("easy-dotnet.parsers").sln_parser
