@@ -7,6 +7,7 @@ M.lsp_client_name = "easy_dotnet"
 M.lsp_projx_client_name = "easy_dotnet_projx"
 M.debug_adapter_name = "easy-dotnet"
 M.compat_command = "dotnet easydotnet compat"
+M.server_quickfix_title = "dotnet server quickfix"
 
 M.get_data_directory = function()
   local dir = polyfills.fs.joinpath(vim.fs.normalize(vim.fn.stdpath("data")), "easy-dotnet")
