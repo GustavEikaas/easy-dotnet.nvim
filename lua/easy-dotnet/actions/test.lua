@@ -62,6 +62,28 @@ local function pick_project_framework_or_solution(use_default)
   return project_framework, solution_file_path
 end
 
+---Tests a dotnet solution with the given arguments using the terminal runner.
+---
+---This is a wrapper around `term(path, "test", args)`.
+---
+---@param args string: Additional arguments to pass to `dotnet test`.
+---@param term function: terminal callback
+local function test_solution(args, term)
+  term = term or require("easy-dotnet.options").options.terminal
+  args = args or ""
+
+  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
+
+  if solutionFilePath == nil then
+    logger.error(error_messages.no_project_definition_found)
+    return
+  end
+
+  local cmd = string.format("dotnet test %s", solutionFilePath)
+
+  term(solutionFilePath, "test", args or "", { cmd = cmd })
+end
+
 ---Tests a dotnet project with the given arguments using the terminal runner.
 ---
 ---This is a wrapper around `term(path, "test", args)`.
@@ -71,8 +93,9 @@ end
 ---@param term function: terminal callback
 local function test_project(project, args, term)
   args = args or ""
+
   if project.name:lower() == "solution" then
-    term(project.path, "test", args)
+    test_solution(args, term)
     return
   end
 
@@ -103,22 +126,14 @@ M.run_test_picker = function(term, use_default, args)
 
   local project, sln = pick_project_framework_or_solution(use_default)
   if project == nil and sln ~= nil then
-    ---@diagnostic disable-next-line: missing-fields
-    test_project({ name = "Solution", path = solutionFilePath }, args, term)
+    test_solution(args, term)
   elseif project ~= nil then
     test_project(project, args, term)
   end
 end
 
 M.test_solution = function(term, args)
-  term = term or require("easy-dotnet.options").options.terminal
-  args = args or ""
-  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
-  if solutionFilePath == nil then
-    logger.error(error_messages.no_project_definition_found)
-    return
-  end
-  term(solutionFilePath, "test", args or "")
+  test_solution(args, term)
 end
 
 M.test_watcher = function(icons)
