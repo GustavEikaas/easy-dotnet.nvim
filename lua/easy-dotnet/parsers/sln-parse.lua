@@ -225,7 +225,7 @@ end
 
 ---@return table<string>
 function M.get_solutions()
-  local sln_files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.slnx?$", depth = 5 })
+  local sln_files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.slnx?$", depth = 2 })
   return sln_files
 end
 

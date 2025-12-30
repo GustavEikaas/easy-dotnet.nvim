@@ -189,7 +189,7 @@ local function get_solutions_async(cb)
   scan.scan_dir_async(".", {
     respect_gitignore = true,
     search_pattern = "%.slnx?$",
-    depth = 5,
+    depth = 2,
     silent = true,
     on_exit = function(output)
       vim.schedule(function() wrap(cb)(output) end)
