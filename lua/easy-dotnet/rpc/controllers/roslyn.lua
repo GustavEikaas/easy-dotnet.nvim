@@ -1,8 +1,12 @@
 ---@class easy-dotnet.RPC.Client.Roslyn
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
+-- luacheck: no max line length
 ---@field roslyn_bootstrap_file fun(self: easy-dotnet.RPC.Client.Roslyn, file_path: string, type: "Class" | "Interface" | "Record", prefer_file_scoped: boolean, cb?: fun(success: true), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+-- luacheck: no max line length
 ---@field roslyn_bootstrap_file_json fun(self: easy-dotnet.RPC.Client.Roslyn, file_path: string, json_data: string, prefer_file_scoped: boolean, cb?: fun(success: true), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+-- luacheck: no max line length
 ---@field roslyn_scope_variables fun(self: easy-dotnet.RPC.Client.Roslyn, file_path: string, line: number, cb?: fun(variables: easy-dotnet.Roslyn.VariableLocation[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+-- luacheck: no max line length
 ---@field get_workspace_diagnostics fun(self: easy-dotnet.RPC.Client.Roslyn, project_path: string, include_warnings: boolean, cb?: fun(res: easy-dotnet.RPC.Response), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 
 local M = {}

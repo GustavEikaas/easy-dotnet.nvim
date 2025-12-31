@@ -13,7 +13,9 @@ local M = {
 ---@field _enumerable_next fun (token: integer, cb): nil
 ---@field setup fun(opts: { pipe_path: string, debug?: boolean }): easy-dotnet.RPC.StreamJsonRpc
 ---@field connect fun(cb: fun()): nil
+-- luacheck: no max line length
 ---@field request fun(method: easy-dotnet.RPC.DotnetPipeMethod, params: table, callback: fun(result: easy-dotnet.RPC.Response), options?: RpcRequestOptions): integer|false
+-- luacheck: no max line length
 ---@field request_enumerate fun(self: easy-dotnet.RPC.StreamJsonRpc, method: easy-dotnet.RPC.DotnetPipeMethod, params: table, on_yield: fun(result: table)|nil, on_finished: fun(results: table[])|nil, on_error: fun(res: easy-dotnet.RPC.Response)|nil): integer|false
 ---@field request_property_enumerate fun(self: easy-dotnet.RPC.StreamJsonRpc, token: string, on_yield: fun(result: table)|nil, on_finished: fun(results: table[])|nil, on_error: fun(res: easy-dotnet.RPC.Response)|nil): nil
 ---@field notify fun(method: string, params: table): boolean

@@ -1,5 +1,6 @@
 ---@class easy-dotnet.RPC.Client.Debugger
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
+-- luacheck: no max line length
 ---@field debugger_start fun(self: easy-dotnet.RPC.Client.Debugger, request: easy-dotnet.Debugger.StartRequest, cb?: fun(res: easy-dotnet.Debugger.StartResponse), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 
 local M = {}

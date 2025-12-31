@@ -2,10 +2,15 @@ local jobs = require("easy-dotnet.ui-modules.jobs")
 
 ---@class easy-dotnet.RPC.Client.MsBuild
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
+-- luacheck: no max line length
 ---@field msbuild_query_properties fun(self: easy-dotnet.RPC.Client.MsBuild, request: easy-dotnet.MSBuild.QueryPropertiesRequest, cb?: fun(res: easy-dotnet.Project.Properties), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request msbuild
+-- luacheck: no max line length
 ---@field msbuild_list_project_reference fun(self: easy-dotnet.RPC.Client.MsBuild, targetPath: string, cb?: fun(res: string[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request project references
+-- luacheck: no max line length
 ---@field msbuild_list_package_reference fun(self: easy-dotnet.RPC.Client.MsBuild, targetPath: string, target_framework: string, cb?: fun(res: easy-dotnet.MSBuild.PackageReference[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request package references
+-- luacheck: no max line length
 ---@field msbuild_add_project_reference fun(self: easy-dotnet.RPC.Client.MsBuild, projectPath: string, targetPath: string, cb?: fun(success: boolean), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request project references
+-- luacheck: no max line length
 ---@field msbuild_remove_project_reference fun(self: easy-dotnet.RPC.Client.MsBuild, projectPath: string, targetPath: string, cb?: fun(success: boolean), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request project references
 ---@field msbuild_build fun(self: easy-dotnet.RPC.Client.MsBuild, request: easy-dotnet.MSBuild.BuildRequest, cb?: fun(res: easy-dotnet.MSBuild.BuildResult), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request msbuild
 

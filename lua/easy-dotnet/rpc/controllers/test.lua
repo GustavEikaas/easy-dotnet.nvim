@@ -1,6 +1,8 @@
 ---@class easy-dotnet.RPC.Client.Test
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
+-- luacheck: no max line length
 ---@field test_run fun(self: easy-dotnet.RPC.Client.Test, request: easy-dotnet.RPC.TestRunRequest, cb?: fun(res: RPC_TestRunResult), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request running multiple tests for MTP
+-- luacheck: no max line length
 ---@field test_discover fun(self: easy-dotnet.RPC.Client.Test, request: easy-dotnet.RPC.TestDiscoverRequest, cb?: fun(res: easy-dotnet.RPC.DiscoveredTest[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request test discovery for MTP
 ---@field set_run_settings fun(self: easy-dotnet.RPC.Client.Test)
 

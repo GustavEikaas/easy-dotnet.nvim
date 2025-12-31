@@ -1,7 +1,9 @@
 ---@class easy-dotnet.RPC.Client.Nuget
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
 ---@field nuget_restore fun(self: easy-dotnet.RPC.Client.Nuget, targetPath: string, cb?: fun(res: easy-dotnet.MSBuild.BuildResult), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request a NuGet restore
+-- luacheck: no max line length
 ---@field nuget_search fun(self: easy-dotnet.RPC.Client.Nuget, searchTerm: string, sources?: string[], cb?: fun(res: easy-dotnet.Nuget.PackageMetadata[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request a NuGet restore
+-- luacheck: no max line length
 ---@field nuget_get_package_versions fun(self: easy-dotnet.RPC.Client.Nuget, packageId: string, sources?: string[], include_prerelease?: boolean, cb?: fun(res: string[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request a NuGet restore
 ---@field nuget_push fun(self: easy-dotnet.RPC.Client.Nuget, packages: string[], source: string, cb?: fun(success: boolean), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request a NuGet restore
 ---@field nuget_list_sources fun(self: easy-dotnet.RPC.Client.Nuget, cb?: fun(res: easy-dotnet.Nuget.SourceResponse[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Enumerate configured NuGet sources

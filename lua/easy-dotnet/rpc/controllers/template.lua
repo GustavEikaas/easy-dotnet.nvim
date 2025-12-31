@@ -2,6 +2,7 @@
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
 ---@field template_list fun(self: easy-dotnet.RPC.Client.TemplateEngine, cb?: fun(variables: easy-dotnet.Template.Template[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field template_parameters fun(self: easy-dotnet.RPC.Client.TemplateEngine, identity: string, cb?: fun(variables: easy-dotnet.Template.Parameter[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+-- luacheck: no max line length
 ---@field template_instantiate fun(self: easy-dotnet.RPC.Client.TemplateEngine, identity: string, name: string, output_path: string, params: table<string,string>, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 
 ---@type easy-dotnet.RPC.Client.TemplateEngine

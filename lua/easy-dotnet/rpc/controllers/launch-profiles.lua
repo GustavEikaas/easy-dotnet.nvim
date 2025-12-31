@@ -1,5 +1,6 @@
 ---@class easy-dotnet.RPC.Client.LaunchProfiles
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
+-- luacheck: no max line length
 ---@field get_launch_profiles fun(self: easy-dotnet.RPC.Client.LaunchProfiles, target_path: string, cb?: fun(res: easy-dotnet.LaunchProfile.Response[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request msbuild
 
 local M = {}

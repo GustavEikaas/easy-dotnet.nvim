@@ -124,7 +124,9 @@ end
 ---@field nuget easy-dotnet.RPC.Client.Nuget
 ---@field roslyn easy-dotnet.RPC.Client.Roslyn
 ---@field test easy-dotnet.RPC.Client.Test
+-- luacheck: no max line length
 ---@field secrets_init fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.RPC.ProjectUserSecretsInitResponse), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request adding package
+-- luacheck: no max line length
 ---@field solution_list_projects fun(self: easy-dotnet.RPC.Client.Dotnet, solution_file_path: string, cb?: fun(res: easy-dotnet.Server.SolutionFileProjectResponse[]), include_non_existing?: boolean, opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field outdated_packages fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.Nuget.OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
 ---@field get_state fun(self: easy-dotnet.RPC.Client.Dotnet): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
