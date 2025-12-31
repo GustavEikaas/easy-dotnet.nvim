@@ -1,4 +1,4 @@
----@type ValueConverter
+---@type easy-dotnet.Debugger.ValueConverter
 return {
   satisfies_type = function(_, vars)
     if #vars < 2 then return false end

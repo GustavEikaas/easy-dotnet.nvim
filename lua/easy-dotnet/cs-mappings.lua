@@ -8,7 +8,7 @@ local function is_buffer_empty(buf)
   return true
 end
 
----@alias BootstrapNamespaceMode "file_scoped" | "block_scoped"
+---@alias easy-dotnet.BootstrapNamespaceMode "file_scoped" | "block_scoped"
 
 local function is_key_value_table(tbl)
   if type(tbl) ~= "table" then return false end
@@ -22,7 +22,7 @@ local function is_key_value_table(tbl)
   return false
 end
 
----@param mode BootstrapNamespaceMode
+---@param mode easy-dotnet.BootstrapNamespaceMode
 local function auto_bootstrap_namespace(bufnr, mode)
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
@@ -72,7 +72,7 @@ local function auto_bootstrap_namespace(bufnr, mode)
   end)
 end
 
----@param mode BootstrapNamespaceMode
+---@param mode easy-dotnet.BootstrapNamespaceMode
 M.auto_bootstrap_namespace = function(mode)
   vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
     pattern = "*.cs",

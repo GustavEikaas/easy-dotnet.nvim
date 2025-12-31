@@ -69,20 +69,20 @@
 --- @diagnostic disable:no-unknown
 
 ---@nodoc
----@class IterMod
+---@class easy-dotnet.IterMod
 ---@operator call:Iter
 
 local M = {}
 
 ---@nodoc
----@class Iter
+---@class easy-dotnet.Iter
 local Iter = {}
 Iter.__index = Iter
 Iter.__call = function(self) return self:next() end
 
 --- Special case implementations for iterators on list tables.
 ---@nodoc
----@class ArrayIter : Iter
+---@class easy-dotnet.ArrayIter : easy-dotnet.Iter
 ---@field _table table Underlying table data
 ---@field _head number Index to the front of a table iterator
 ---@field _tail number Index to the end of a table iterator (exclusive)
@@ -176,7 +176,7 @@ end
 ---@param f fun(...):boolean Takes all values returned from the previous stage
 ---                       in the pipeline and returns false or nil if the
 ---                       current iterator element should be removed.
----@return Iter
+---@return easy-dotnet.Iter
 function Iter:filter(f)
   return self:map(function(...)
     if f(...) then return ... end
@@ -216,7 +216,7 @@ end
 ---
 ---@param depth? number Depth to which |list-iterator| should be flattened
 ---                        (defaults to 1)
----@return Iter
+---@return easy-dotnet.Iter
 ---@diagnostic disable-next-line:unused-local
 function Iter:flatten(depth) -- luacheck: no unused args
   error("flatten() requires an array-like table")
@@ -266,7 +266,7 @@ end
 ---                      and returns one or more new values, which are used
 ---                      in the next pipeline stage. Nil return values
 ---                      are filtered from the output.
----@return Iter
+---@return easy-dotnet.Iter
 function Iter:map(f)
   -- Implementation note: the reader may be forgiven for observing that this
   -- function appears excessively convoluted. The problem to solve is that each
@@ -520,7 +520,7 @@ end
 ---
 --- ```
 ---
----@return Iter
+---@return easy-dotnet.Iter
 function Iter.rev() error("rev() requires an array-like table") end
 
 ---@private
@@ -659,7 +659,7 @@ end
 --- ```
 ---
 ---@param n integer
----@return Iter
+---@return easy-dotnet.Iter
 function Iter:take(n)
   local next = self.next
   local i = 0
@@ -744,7 +744,7 @@ end
 --- ```
 ---
 ---@param n number Number of values to skip.
----@return Iter
+---@return easy-dotnet.Iter
 function Iter:skip(n)
   for _ = 1, n do
     local _ = self:next()
@@ -773,7 +773,7 @@ end
 --- ```
 ---
 ---@param n number Number of values to skip.
----@return Iter
+---@return easy-dotnet.Iter
 ---@diagnostic disable-next-line: unused-local
 function Iter:rskip(n) -- luacheck: no unused args
   error("rskip() requires an array-like table")
@@ -823,7 +823,7 @@ end
 ---
 ---@param first number
 ---@param last number
----@return Iter
+---@return easy-dotnet.Iter
 ---@diagnostic disable-next-line: unused-local
 function Iter:slice(first, last) -- luacheck: no unused args
   error("slice() requires an array-like table")
@@ -944,7 +944,7 @@ end
 ---
 --- ```
 ---
----@return Iter
+---@return easy-dotnet.Iter
 function Iter:enumerate()
   local i = 0
   return self:map(function(...)
@@ -966,7 +966,7 @@ end
 --- Creates a new Iter object from a table or other |iterable|.
 ---
 ---@param src table|function Table or iterator to drain values from
----@return Iter
+---@return easy-dotnet.Iter
 ---@private
 function Iter.new(src, ...)
   local it = {}
@@ -1017,7 +1017,7 @@ end
 ---
 ---@param t table Array-like table. Caller guarantees that this table is a valid array. Can have
 ---               holes (nil values).
----@return Iter
+---@return easy-dotnet.Iter
 ---@private
 function ArrayIter.new(t)
   local it = {}

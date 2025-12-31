@@ -275,7 +275,7 @@ M.setup = function(opts)
     job.register_listener(merged_opts.notifications.handler)
   else
     job.register_listener(function()
-      ---@param e JobEvent
+      ---@param e easy-dotnet.Job.Event
       return function(e)
         if not e.success then logger.error(e.result.msg) end
       end

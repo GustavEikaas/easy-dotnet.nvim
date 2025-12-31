@@ -25,7 +25,7 @@ local function move_to_global_offset(bufnr, global_offset, encoding)
   end
 end
 
----@param ctx CommandContext
+---@param ctx easy-dotnet.Roslyn.CommandContext
 return function(data, ctx)
   local textDocument, edit, is_snippet, new_offset = unpack(data.arguments)
   if is_snippet then

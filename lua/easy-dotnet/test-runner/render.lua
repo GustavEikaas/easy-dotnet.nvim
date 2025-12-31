@@ -1,8 +1,8 @@
 local ns_id = require("easy-dotnet.constants").ns_id
 local polyfills = require("easy-dotnet.polyfills")
 
----@class Window
----@field tree table<string,TestNode>
+---@class easy-dotnet.Window
+---@field tree table<string,easy-dotnet.TestRunner.Node>
 ---@field jobs table
 ---@field appendJob table
 ---@field buf integer | nil
@@ -11,15 +11,15 @@ local polyfills = require("easy-dotnet.polyfills")
 ---@field modifiable boolean
 ---@field buf_name string
 ---@field filetype string
----@field filter TestResult
+---@field filter easy-dotnet.TestRunner.Result
 ---@field keymap table
 ---@field options table
 
----@class Highlight
+---@class easy-dotnet.Highlight
 ---@field index number
 ---@field highlight string
 
----@alias TestResult '"Failed"' | '"NotExecuted"' | '"Passed"'
+---@alias easy-dotnet.TestRunner.Result '"Failed"' | '"NotExecuted"' | '"Passed"'
 
 local M = {
   tree = {},
@@ -37,7 +37,7 @@ local M = {
 }
 
 ---Traverses a tree from the given node, giving a callback for every item
----@param node TestNode | nil
+---@param node easy-dotnet.TestRunner.Node | nil
 ---@param cb function
 M.traverse = function(node, cb)
   if not node then node = M.tree end
@@ -144,8 +144,8 @@ end
 ---Only expanded nodes contribute to the line number count, while collapsed nodes and their children are ignored.
 ---
 ---@param line_num number The line number in the buffer to be translated to a node in the tree structure.
----@param tree TestNode The root node of the tree structure to traverse.
----@return TestNode | nil
+---@param tree easy-dotnet.TestRunner.Node The root node of the tree structure to traverse.
+---@return easy-dotnet.TestRunner.Node | nil
 local function translateIndex(line_num, tree)
   local current_line = 1
   local result = nil
@@ -159,14 +159,14 @@ local function translateIndex(line_num, tree)
   return result
 end
 
----@param highlights Highlight[]
+---@param highlights easy-dotnet.Highlight[]
 local function apply_highlights(highlights)
   for _, value in ipairs(highlights) do
     if value.highlight ~= nil then vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, value.index - 1, 0, -1) end
   end
 end
 
----@param node TestNode
+---@param node easy-dotnet.TestRunner.Node
 ---@return string | nil
 local function calculate_highlight(node)
   if node.job then
@@ -210,17 +210,17 @@ local function convert_time(time_str)
   end
 end
 
----@param a BuildJob | DiscoverJob
+---@param a easy-dotnet.MSBuild.BuildJob | easy-dotnet.Job.DiscoverJob
 local function stringify_job(a)
   if a.name == "build" then return a.state == "pending" and "Building" or a.state == "error" and "build failed" or "" end
 
   if a.name == "discover" then return a.state == "pending" and "Discovering" or a.state == "error" and "discovery failed" or "" end
 end
 
----@param node TestNode
+---@param node easy-dotnet.TestRunner.Node
 local function node_to_string(node)
   local total_tests = 0
-  ---@param i TestNode
+  ---@param i easy-dotnet.TestRunner.Node
   M.traverse(node, function(i)
     if i.type == "subcase" or i.type == "test" then total_tests = total_tests + 1 end
   end)
@@ -250,13 +250,13 @@ local function node_to_string(node)
   return formatted
 end
 
----@param tree TestNode
+---@param tree easy-dotnet.TestRunner.Node
 ---@return string[], table[]
 local function tree_to_string(tree)
   local result = {}
   local highlights = {}
   local index = 0
-  ---@param node TestNode
+  ---@param node easy-dotnet.TestRunner.Node
   M.traverse_expanded(tree, function(node)
     index = index + 1
 
@@ -298,7 +298,7 @@ M.setKeymaps = function(mappings)
   return M
 end
 
----@param options TestRunnerOptions
+---@param options easy-dotnet.TestRunner.Options
 M.setOptions = function(options)
   if options then M.options = options end
   return M

@@ -27,7 +27,7 @@ local function select_launch_profile_name(project_path)
 end
 
 ---@param use_default boolean
----@return DotnetProject, string | nil
+---@return easy-dotnet.Project.Project, string | nil
 local function pick_project(use_default)
   local default_manager = require("easy-dotnet.default-manager")
   local solution_file_path = sln_parse.find_solution_file()
@@ -75,7 +75,7 @@ M.get_debug_dll = function(default)
   }
 end
 
----@class PrepareDebuggerResult
+---@class easy-dotnet.Debugger.PrepareResult
 ---@field path string
 ---@field target_framework_moniker string | nil
 ---@field configuration string | nil

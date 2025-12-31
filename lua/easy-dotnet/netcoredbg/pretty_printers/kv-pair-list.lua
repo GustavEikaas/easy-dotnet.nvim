@@ -1,6 +1,6 @@
 local M = {}
 
----@param vars Variable[]
+---@param vars easy-dotnet.Debugger.Variable[]
 M.pretty_print = function(vars)
   local max_items = 5
   local max_chars = 50

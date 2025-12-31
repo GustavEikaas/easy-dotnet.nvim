@@ -1,4 +1,4 @@
----@class Spinner
+---@class easy-dotnet.Spinner
 local M = {}
 M.__index = M
 
@@ -11,7 +11,7 @@ M.spinner_presets = {
 }
 
 ---Creates a new spinner instance.
----@return Spinner
+---@return easy-dotnet.Spinner
 function M.new()
   ---@class Spinner
   local self = setmetatable({}, M)

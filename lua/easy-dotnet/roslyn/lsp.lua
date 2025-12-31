@@ -105,7 +105,7 @@ local function refresh_diag(client)
   client:notify("textDocument/didChange", params)
 end
 
----@param opts LspOpts
+---@param opts easy-dotnet.LspOpts
 function M.enable(opts)
   if vim.fn.has("nvim-0.11") == 0 then
     logger.warn("easy-dotnet LSP requires neovim 0.11 or higher ")

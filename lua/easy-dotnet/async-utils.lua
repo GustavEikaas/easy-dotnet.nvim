@@ -1,5 +1,5 @@
 local M = {}
----@alias JobCallback fun(stdout: string[], stderr: string[], exit_code: number)
+---@alias easy-dotnet.Job.Callback fun(stdout: string[], stderr: string[], exit_code: number)
 
 --- Runs a command asynchronously using `vim.fn.jobstart`.
 --- @param cmd string[] Command and its arguments.
@@ -41,7 +41,7 @@ end
 --- end)()
 --- ```
 ---
---- @param async_function fun(cmd: string[], callback: JobCallback)
+--- @param async_function fun(cmd: string[], callback: easy-dotnet.Job.Callback)
 --- @return fun(cmd: string[]): { stdout: string[], stderr: string[], exit_code: number, success: boolean }
 M.await = function(async_function)
   return function(...)

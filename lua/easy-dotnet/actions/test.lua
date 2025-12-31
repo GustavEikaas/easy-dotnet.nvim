@@ -27,7 +27,7 @@ end
 ---If a project is selected, the default is updated for future invocations.
 ---
 ---@param use_default boolean: If true, allows using the stored default project if available.
----@return DotnetProject | nil: The selected or default DotnetProject.
+---@return easy-dotnet.Project.Project | nil: The selected or default DotnetProject.
 ---@return string|nil: The path to the solution file, or nil if no solution is used.
 local function pick_project_framework_or_solution(use_default)
   local default_manager = require("easy-dotnet.default-manager")
@@ -45,7 +45,7 @@ local function pick_project_framework_or_solution(use_default)
   table.insert(projects_with_sln, { display = "Solution" })
 
   if #projects_with_sln == 0 then error(error_messages.no_test_projects_found) end
-  ---@type DotnetProject
+  ---@type easy-dotnet.Project.Project
   local project_framework = picker.pick_sync(nil, projects_with_sln, "Test project")
   if not project_framework then
     logger.error("No project selected")

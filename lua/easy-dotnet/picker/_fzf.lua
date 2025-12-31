@@ -1,7 +1,7 @@
 local M = {}
 
 ---@param prompt string search term
----@param client DotnetClient rpc client
+---@param client easy-dotnet.RPC.Client.Dotnet rpc client
 local function nuget_search_rpc(prompt, client)
   local co = coroutine.running()
   assert(co, "nuget_search_yielding must be called inside a coroutine")

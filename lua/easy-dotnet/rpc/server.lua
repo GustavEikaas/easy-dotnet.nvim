@@ -1,6 +1,6 @@
 local logger = require("easy-dotnet.logger")
 
----@class DotnetServer
+---@class easy-dotnet.Server.Server
 ---@field id integer? Job ID of the running dotnet process
 ---@field ready boolean Whether the server is ready
 ---@field is_negotiating boolean Whether the server is starting
@@ -11,7 +11,7 @@ local logger = require("easy-dotnet.logger")
 ---@field stop fun(): nil Stops the running dotnet server, if any
 ---@field get_state fun(): "Running" | "Starting" | "Stopped" gets the state of the dotnet server
 
----@type DotnetServer
+---@type easy-dotnet.Server.Server
 local M = {
   id = nil,
   ready = false,

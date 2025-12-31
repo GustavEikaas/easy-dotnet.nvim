@@ -1,26 +1,26 @@
----@class DebuggerClient
----@field _client StreamJsonRpc
----@field debugger_start fun(self: DebuggerClient, request: DebuggerStartRequest, cb?: fun(res: DebuggerStartResponse), opts?: RPC_CallOpts): RPC_CallHandle
+---@class easy-dotnet.RPC.Client.Debugger
+---@field _client easy-dotnet.RPC.StreamJsonRpc
+---@field debugger_start fun(self: easy-dotnet.RPC.Client.Debugger, request: easy-dotnet.Debugger.StartRequest, cb?: fun(res: easy-dotnet.Debugger.StartResponse), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 
 local M = {}
 M.__index = M
 
 --- Constructor
----@param client StreamJsonRpc
----@return DebuggerClient
+---@param client easy-dotnet.RPC.StreamJsonRpc
+---@return easy-dotnet.RPC.Client.Debugger
 function M.new(client)
   local self = setmetatable({}, M)
   self._client = client
   return self
 end
 
----@class DebuggerStartRequest
+---@class easy-dotnet.Debugger.StartRequest
 ---@field targetPath string
 ---@field targetFramework string?
 ---@field configuration string?
 ---@field launchProfileName string?
 
----@class DebuggerStartResponse
+---@class easy-dotnet.Debugger.StartResponse
 ---@field success boolean
 ---@field port integer | nil
 

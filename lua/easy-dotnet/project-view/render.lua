@@ -3,7 +3,7 @@ local polyfills = require("easy-dotnet.polyfills")
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local logger = require("easy-dotnet.logger")
 
----@class ProjectWindow
+---@class easy-dotnet.ProjectWindow
 ---@field jobs table
 ---@field appendJob table
 ---@field buf integer | nil
@@ -38,7 +38,7 @@ M.keymap = {
   ["q"] = function() M.hide() end,
 }
 
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 local function discover_project_references(project)
   local finished = M.append_job("Discovering project references")
 
@@ -67,7 +67,7 @@ local function dotnet_restore(project, cb)
   end)
 end
 
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 local function discover_package_references(project)
   local finished = M.append_job("Discovering package references")
 
@@ -76,7 +76,7 @@ local function discover_package_references(project)
       if #res == 0 then
         M.package_refs = nil
       else
-        ---@param value PackageReference
+        ---@param value easy-dotnet.MSBuild.PackageReference
         local package_refs = vim.tbl_map(function(value) return string.format("%s@%s", value.id, value.resolvedVersion) end, res)
         M.package_refs = package_refs
       end
@@ -123,7 +123,7 @@ local function set_buffer_options()
   -- vim.api.nvim_buf_set_option(M.buf, "cursorline", true)
 end
 
----@param highlights Highlight[]
+---@param highlights easy-dotnet.Highlight[]
 local function apply_highlights(highlights)
   for _, value in ipairs(highlights) do
     if value.highlight ~= nil then vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, value.index - 1, 0, -1) end
@@ -338,7 +338,7 @@ M.set_keymaps = function(mappings)
   return M
 end
 
----@param options TestRunnerOptions
+---@param options easy-dotnet.TestRunner.Options
 M.set_options = function(options)
   if options then M.options = options end
   return M
@@ -421,7 +421,7 @@ local function window_destroy()
   M.win = nil
 end
 
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 ---@param sln_path string | nil
 M.render = function(project, sln_path)
   window_destroy()

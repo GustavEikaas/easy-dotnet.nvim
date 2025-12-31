@@ -72,7 +72,7 @@ end
 ---Entry point: handles Roslyn nested code actions.
 ---
 ---@param data lsp.Command              # The command arguments containing NestedCodeActions
----@param ctx CommandContext
+---@param ctx easy-dotnet.Roslyn.CommandContext
 ---@return nil
 return function(data, ctx)
   local client = vim.lsp.get_client_by_id(ctx.client_id)
