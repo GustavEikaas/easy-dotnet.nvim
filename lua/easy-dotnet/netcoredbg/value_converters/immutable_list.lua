@@ -37,7 +37,7 @@ local function traverse_node(var_path, var, cb, acc)
   end
 end
 
----@type ValueConverter
+---@type easy-dotnet.Debugger.ValueConverter
 return {
   satisfies_type = function(class_name) return type(class_name) == "string" and class_name:match("^System%.Collections%.Immutable%.ImmutableList") ~= nil end,
   extract = function(_, vars, var_path, _, cb)

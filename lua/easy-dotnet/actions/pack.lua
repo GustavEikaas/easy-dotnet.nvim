@@ -45,7 +45,7 @@ local function pack_project(project, configuration)
   pack_job(pack_res.success, format_command_failure(cmd, pack_res))
 end
 
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 ---@param configuration string
 local function push_nuget_package(project, configuration, source)
   local res = async.await(async.job_run_async)({
@@ -85,7 +85,7 @@ local function push_nuget_package(project, configuration, source)
   push_job(push_res.success, format_command_failure(cmd, push_res))
 end
 
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 ---@param configuration string
 local function build_and_pack_project(project, configuration)
   local res = build_project(project, configuration)
@@ -93,7 +93,7 @@ local function build_and_pack_project(project, configuration)
   pack_project(project, configuration)
 end
 
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 ---@param configuration string
 local function select_source_and_push(project, configuration)
   local sources = nuget.get_nuget_sources_async()

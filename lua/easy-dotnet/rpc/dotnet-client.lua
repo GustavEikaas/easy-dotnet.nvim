@@ -9,12 +9,12 @@ local function dump_to_file(obj, filepath)
   f:close()
 end
 
----@type DotnetClient
+---@type easy-dotnet.RPC.Client.Dotnet
 local M = {}
 M.__index = M
 
 --- Handles an RPC response and displays/logs error info if present
----@param response RPC_Response
+---@param response easy-dotnet.RPC.Response
 ---@return boolean did_error
 function M.handle_rpc_error(response)
   if response.error then
@@ -32,25 +32,25 @@ function M.handle_rpc_error(response)
   return false
 end
 
----@class RPCCallOpts
----@field client StreamJsonRpc The RPC client object
+---@class easy-dotnet.RPC.CallOpts
+---@field client easy-dotnet.RPC.StreamJsonRpc The RPC client object
 ---@field job? JobData Optional job function wrapper
 ---@field cb? fun(result: any) Callback function with RPC result
----@field on_crash? fun(err: RPC_Error) Optional crash callback
----@field method DotnetPipeMethod The RPC method to call
+---@field on_crash? fun(err: easy-dotnet.RPC.Error) Optional crash callback
+---@field method easy-dotnet.RPC.DotnetPipeMethod The RPC method to call
 ---@field params table Parameters for the RPC call
 
----@class RPC_CallHandle
+---@class easy-dotnet.RPC.CallHandle
 ---@field id number The RPC request ID
 ---@field cancel fun() Cancels the RPC request
 
----@param opts RPCCallOpts
----@return fun():RPC_CallHandle
+---@param opts easy-dotnet.RPC.CallOpts
+---@return fun():easy-dotnet.RPC.CallHandle
 function M.create_rpc_call(opts)
   return function()
     local maybe_job = nil
     if opts.job then maybe_job = jobs.register_job(opts.job) end
-    ---@param response RPC_Response
+    ---@param response easy-dotnet.RPC.Response
     local id = opts.client.request(opts.method, opts.params, function(response)
       local crash = M.handle_rpc_error(response)
       if crash then
@@ -70,17 +70,17 @@ function M.create_rpc_call(opts)
   end
 end
 
----@class RPC_EnumerateCallOpts
----@field client StreamJsonRpc The RPC client object
+---@class easy-dotnet.RPC.EnumerateCallOpts
+---@field client easy-dotnet.RPC.StreamJsonRpc The RPC client object
 ---@field job? JobData Optional job function wrapper
 ---@field cb? fun(result: any[]) Callback function with RPC result
----@field on_crash? fun(err: RPC_Error) Optional crash callback
+---@field on_crash? fun(err: easy-dotnet.RPC.Error) Optional crash callback
 ---@field on_yield? fun(item: any)
----@field method DotnetPipeMethod The RPC method to call
+---@field method easy-dotnet.RPC.DotnetPipeMethod The RPC method to call
 ---@field params table Parameters for the RPC call
 
----@param opts RPC_EnumerateCallOpts
----@return fun():RPC_CallHandle
+---@param opts easy-dotnet.RPC.EnumerateCallOpts
+---@return fun():easy-dotnet.RPC.CallHandle
 function M.create_enumerate_rpc_call(opts)
   return function()
     local maybe_job = nil
@@ -103,38 +103,40 @@ function M.create_enumerate_rpc_call(opts)
   end
 end
 
----@class RPC_CallOpts
----@field on_crash? fun(err: RPC_Error)
+---@class easy-dotnet.RPC.CallOpts
+---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
----@class DotnetClient
----@field new fun(self: DotnetClient): DotnetClient # Constructor
+---@class easy-dotnet.RPC.Client.Dotnet
+---@field new fun(self: easy-dotnet.RPC.Client.Dotnet): easy-dotnet.RPC.Client.Dotnet # Constructor
 ---@field initialized_msbuild_path string
 ---@field has_lsp boolean
 ---@field supports_single_file_execution boolean
----@field _client StreamJsonRpc # Underlying StreamJsonRpc client used for communication
----@field _server DotnetServer # Manages the .NET named pipe server process
----@field initialize fun(self: DotnetClient, cb: fun()): nil # Starts the dotnet server and connects the JSON-RPC client
----@field stop fun(self: DotnetClient, cb: fun()): nil # Stops the dotnet server
----@field restart fun(self: DotnetClient, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
----@field msbuild MsBuildClient
----@field debugger DebuggerClient
----@field lsp LspClient
----@field template_engine TemplateEngineClient
----@field launch_profiles LaunchProfilesClient
----@field nuget NugetClient
----@field roslyn RoslynClient
----@field test TestClient
----@field secrets_init fun(self: DotnetClient, target_path: string, cb?: fun(res: RPC_ProjectUserSecretsInitResponse), opts?: RPC_CallOpts): RPC_CallHandle # Request adding package
----@field solution_list_projects fun(self: DotnetClient, solution_file_path: string, cb?: fun(res: SolutionFileProjectResponse[]), include_non_existing?: boolean, opts?: RPC_CallOpts): RPC_CallHandle
----@field outdated_packages fun(self: DotnetClient, target_path: string, cb?: fun(res: OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
----@field get_state fun(self: DotnetClient): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
+---@field _client easy-dotnet.RPC.StreamJsonRpc # Underlying StreamJsonRpc client used for communication
+---@field _server easy-dotnet.Server.Server # Manages the .NET named pipe server process
+---@field initialize fun(self: easy-dotnet.RPC.Client.Dotnet, cb: fun()): nil # Starts the dotnet server and connects the JSON-RPC client
+---@field stop fun(self: easy-dotnet.RPC.Client.Dotnet, cb: fun()): nil # Stops the dotnet server
+---@field restart fun(self: easy-dotnet.RPC.Client.Dotnet, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
+---@field msbuild easy-dotnet.RPC.Client.MsBuild
+---@field debugger easy-dotnet.RPC.Client.Debugger
+---@field lsp easy-dotnet.RPC.Client.Lsp
+---@field template_engine easy-dotnet.RPC.Client.TemplateEngine
+---@field launch_profiles easy-dotnet.RPC.Client.LaunchProfiles
+---@field nuget easy-dotnet.RPC.Client.Nuget
+---@field roslyn easy-dotnet.RPC.Client.Roslyn
+---@field test easy-dotnet.RPC.Client.Test
+-- luacheck: no max line length
+---@field secrets_init fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.RPC.ProjectUserSecretsInitResponse), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request adding package
+-- luacheck: no max line length
+---@field solution_list_projects fun(self: easy-dotnet.RPC.Client.Dotnet, solution_file_path: string, cb?: fun(res: easy-dotnet.Server.SolutionFileProjectResponse[]), include_non_existing?: boolean, opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+---@field outdated_packages fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.Nuget.OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
+---@field get_state fun(self: easy-dotnet.RPC.Client.Dotnet): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
 ---@field _initializing boolean? # True while initialization is in progress
 ---@field _initialized boolean? # True once initialization is complete
----@field _initialize fun(self: DotnetClient, cb?: fun(response: table), opts?: RPC_CallOpts) # Sends the "initialize" RPC request to the server
+---@field _initialize fun(self: easy-dotnet.RPC.Client.Dotnet, cb?: fun(response: table), opts?: easy-dotnet.RPC.CallOpts) # Sends the "initialize" RPC request to the server
 ---@field _init_callbacks table<function> List of callback functions waiting for initialization to complete
 
 --- Constructor
----@return DotnetClient
+---@return easy-dotnet.RPC.Client.Dotnet
 function M:new()
   local instance = setmetatable({}, self)
   local client = require("easy-dotnet.rpc.rpc-client")
@@ -285,7 +287,7 @@ function M:_initialize(cb, opts)
   end)()
 end
 
----@class SolutionFileProjectResponse
+---@class easy-dotnet.Server.SolutionFileProjectResponse
 ---@field projectName string
 ---@field absolutePath string
 
@@ -313,7 +315,7 @@ function M:solution_list_projects(solution_file_path, cb, include_non_existing, 
   })()
 end
 
----@class RPC_ProjectUserSecretsInitResponse
+---@class easy-dotnet.RPC.ProjectUserSecretsInitResponse
 ---@field id string
 ---@field filePath string
 
@@ -329,7 +331,7 @@ function M:secrets_init(project_path, cb, opts)
   })()
 end
 
----@class OutdatedPackage
+---@class easy-dotnet.Nuget.OutdatedPackage
 ---@field name string
 ---@field currentVersion string
 ---@field latestVersion string

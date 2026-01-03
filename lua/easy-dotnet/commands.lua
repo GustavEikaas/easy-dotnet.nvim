@@ -1,10 +1,10 @@
 local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
----@type table<string,Command>
+---@type table<string,easy-dotnet.Command>
 local M = {}
 
----@class Command
----@field subcommands table<string,Command> | nil
+---@class easy-dotnet.Command
+---@field subcommands table<string,easy-dotnet.Command> | nil
 ---@field handle nil | fun(args: table<string>|string, options: table): nil
 ---@field passthrough boolean | nil
 
@@ -37,7 +37,7 @@ end
 local actions = require("easy-dotnet.actions")
 
 ---This entire object is exposed, any change to this will possibly be a breaking change, tread carefully
----@type Command
+---@type easy-dotnet.Command
 M.run = {
   handle = function(args, options) actions.run(options.terminal, false, passthrough_dotnet_cli_args_handler(args)) end,
   passthrough = true,

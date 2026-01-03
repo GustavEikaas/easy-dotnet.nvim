@@ -36,7 +36,7 @@ local function run_project(project, args, term, attach_debugger)
   end
 end
 
----@return DotnetProject | nil
+---@return easy-dotnet.Project.Project | nil
 local pick_project_without_solution = function()
   local csproject_path = csproj_parse.find_project_file()
   if not csproject_path then return nil end
@@ -82,7 +82,7 @@ end
 ---If a project is selected, the default is updated for future invocations.
 ---
 ---@param use_default boolean: If true, allows using the stored default project if available.
----@return DotnetProject | nil: The selected or default DotnetProject.
+---@return easy-dotnet.Project.Project | nil: The selected or default DotnetProject.
 ---@return string|nil: The path to the solution file, or nil if no solution is used.
 local function pick_project_framework(use_default)
   local default_manager = require("easy-dotnet.default-manager")
@@ -99,7 +99,7 @@ local function pick_project_framework(use_default)
   local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(i) return i.runnable == true end)
 
   if #projects == 0 then error(error_messages.no_runnable_projects_found) end
-  ---@type DotnetProject
+  ---@type easy-dotnet.Project.Project
   local project_framework = picker.pick_sync(nil, projects, "Run project")
   if not project_framework then
     logger.error("No project selected")
@@ -131,7 +131,7 @@ M.run_project_picker = function(term, use_default, args, attach_debugger)
   if not use_default then default_manager.set_default_project(project, solution_file_path, "run") end
 end
 
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 local function pick_profile(project)
   local co = coroutine.running()
   assert(co, "coroutine required for getting launch profiles")
@@ -153,7 +153,7 @@ local function pick_profile(project)
 end
 
 ---@param use_default boolean
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 ---@param solution_file_path string | nil
 ---@return string | nil
 local function get_or_pick_profile(use_default, project, solution_file_path)

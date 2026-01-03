@@ -43,7 +43,7 @@ local function create_directory(dir)
 end
 
 --- Initializes secrets for a given project
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 local init_secrets = function(project)
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   client:initialize(function()

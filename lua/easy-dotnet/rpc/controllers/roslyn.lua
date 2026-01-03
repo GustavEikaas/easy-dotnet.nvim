@@ -1,16 +1,20 @@
----@class RoslynClient
----@field _client StreamJsonRpc
----@field roslyn_bootstrap_file fun(self: RoslynClient, file_path: string, type: "Class" | "Interface" | "Record", prefer_file_scoped: boolean, cb?: fun(success: true), opts?: RPC_CallOpts): RPC_CallHandle
----@field roslyn_bootstrap_file_json fun(self: RoslynClient, file_path: string, json_data: string, prefer_file_scoped: boolean, cb?: fun(success: true), opts?: RPC_CallOpts): RPC_CallHandle
----@field roslyn_scope_variables fun(self: RoslynClient, file_path: string, line: number, cb?: fun(variables: VariableLocation[]), opts?: RPC_CallOpts): RPC_CallHandle
----@field get_workspace_diagnostics fun(self: RoslynClient, project_path: string, include_warnings: boolean, cb?: fun(res: RPC_Response), opts?: RPC_CallOpts): RPC_CallHandle
+---@class easy-dotnet.RPC.Client.Roslyn
+---@field _client easy-dotnet.RPC.StreamJsonRpc
+-- luacheck: no max line length
+---@field roslyn_bootstrap_file fun(self: easy-dotnet.RPC.Client.Roslyn, file_path: string, type: "Class" | "Interface" | "Record", prefer_file_scoped: boolean, cb?: fun(success: true), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+-- luacheck: no max line length
+---@field roslyn_bootstrap_file_json fun(self: easy-dotnet.RPC.Client.Roslyn, file_path: string, json_data: string, prefer_file_scoped: boolean, cb?: fun(success: true), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+-- luacheck: no max line length
+---@field roslyn_scope_variables fun(self: easy-dotnet.RPC.Client.Roslyn, file_path: string, line: number, cb?: fun(variables: easy-dotnet.Roslyn.VariableLocation[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+-- luacheck: no max line length
+---@field get_workspace_diagnostics fun(self: easy-dotnet.RPC.Client.Roslyn, project_path: string, include_warnings: boolean, cb?: fun(res: easy-dotnet.RPC.Response), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 
 local M = {}
 M.__index = M
 
 --- Constructor
----@param client StreamJsonRpc
----@return RoslynClient
+---@param client easy-dotnet.RPC.StreamJsonRpc
+---@return easy-dotnet.RPC.Client.Roslyn
 function M.new(client)
   local self = setmetatable({}, M)
   self._client = client
@@ -43,7 +47,7 @@ function M:roslyn_bootstrap_file(file_path, type, prefer_file_scoped, cb, opts)
   })()
 end
 
----@class VariableLocation
+---@class easy-dotnet.Roslyn.VariableLocation
 ---@field columnEnd integer
 ---@field columnStart integer
 ---@field identifier string

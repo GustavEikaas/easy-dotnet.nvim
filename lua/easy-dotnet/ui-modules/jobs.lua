@@ -1,4 +1,4 @@
----@class JobData
+---@class easy-dotnet.Job.Data
 ---@field name string The job description text (e.g., "building...")
 ---@field on_success_text? string Text shown if the job succeeds
 ---@field on_error_text? string Text shown if the job fails
@@ -6,38 +6,38 @@
 ---@field is_server_job? boolean
 ---@field server_token? string
 
----@alias JobEventType "started" | "finished"
+---@alias easy-dotnet.Job.EventType "started" | "finished"
 
----@class JobEvent
----@field event JobEventType The type of job event.
----@field job JobData The job identifier or description.
+---@class easy-dotnet.Job.Event
+---@field event easy-dotnet.Job.EventType The type of job event.
+---@field job easy-dotnet.Job.Data The job identifier or description.
 ---@field success? boolean Whether the job was successful (only for "finished" events).
 ---@field result? JobResult
 
----@class JobResult
+---@class easy-dotnet.Job.Result
 ---@field msg string The result text of the job
 ---@field level vim.log.levels The log level of the result
 ---@field stack_trace? string[]
 
----@class JobTracker
----@field jobs JobData[] List of current jobs.
+---@class easy-dotnet.Job.Tracker
+---@field jobs easy-dotnet.Job.Data[] List of current jobs.
 ---@field job_counter integer Job ID counter.
 ---@field spinner_counter integer Spinner frame counter.
 ---@field MAX_DESC_LEN integer Max length of job description.
 ---@field spinner_frames string[] Spinner animation frames.
----@field listeners JobLifecycleListener[]
----@field register_job fun(job: JobData): fun(success: boolean, error?: string[]) Adds a job and returns a function to remove it.
+---@field listeners easy-dotnet.Job.LifecycleListener[]
+---@field register_job fun(job: easy-dotnet.Job.Data): fun(success: boolean, error?: string[]) Adds a job and returns a function to remove it.
 ---@field default_timeout integer
----@field register_listener fun(listener: JobLifecycleListener): fun() Registers a listener and returns a function to remove it.
----@field notify_listeners fun(event: JobEvent): (fun(event: JobEvent)?)[] Calls all registered listeners with a job event and returns their optional finish callbacks.
+---@field register_listener fun(listener: easy-dotnet.Job.LifecycleListener): fun() Registers a listener and returns a function to remove it.
+---@field notify_listeners fun(event: easy-dotnet.Job.Event): (fun(event: easy-dotnet.Job.Event)?)[] Calls all registered listeners with a job event and returns their optional finish callbacks.
 ---@field lualine fun(): string Returns a string representing current job state, intended for statusline display.
 ---@field update_server_job fun(token, new_name): boolean
 
 --- A listener receives a JobEvent on "started"
 --- and returns a function that will be called with a JobEvent on "finished"
----@alias JobLifecycleListener fun(event: JobEvent): fun(event: JobEvent)?
+---@alias easy-dotnet.Job.LifecycleListener fun(event: easy-dotnet.Job.Event): fun(event: easy-dotnet.Job.Event)?
 
----@type JobTracker
+---@type easy-dotnet.Job.Tracker
 ---@diagnostic disable-next-line: missing-fields
 local M = {
   jobs = {},
@@ -54,7 +54,7 @@ local M = {
 }
 
 ---Register a job and get a function to remove it
----@param job JobData The job description
+---@param job easy-dotnet.Job.Data The job description
 ---@return fun(success: boolean, error?: string[]) remove_callback
 function M.register_job(job)
   if job.is_server_job and not job.server_token then error("Server jobs must provide a server_token") end
@@ -115,7 +115,7 @@ function M.register_job(job)
 end
 
 ---Register a job lifecycle listener
----@param listener JobLifecycleListener
+---@param listener easy-dotnet.Job.LifecycleListener
 ---@return fun() remove_callback
 function M.register_listener(listener)
   table.insert(M.listeners, listener)

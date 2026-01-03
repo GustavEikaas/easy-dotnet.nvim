@@ -91,11 +91,11 @@ local function run_test_from_buffer()
 
   local handlers = {}
 
-  ---@param node TestNode
+  ---@param node easy-dotnet.TestRunner.Node
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then table.insert(handlers, node) end
   end)
-  ---@type TestNode
+  ---@type easy-dotnet.TestRunner.Node
   local first_node = handlers[1]
 
   if requires_rebuild and first_node then
@@ -123,13 +123,13 @@ local function open_stack_trace_from_buffer()
 
   local handlers = {}
 
-  ---@param node TestNode
+  ---@param node easy-dotnet.TestRunner.Node
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
     if (node.type == "test" or node.type == "subcase") and compare_paths(node.file_path, curr_file) then table.insert(handlers, node) end
   end)
 
   -- In case of multiple tests on the same line (e.g. [TheoryData]), show the first one with a stack trace
-  ---@type TestNode
+  ---@type easy-dotnet.TestRunner.Node
   for _, node in ipairs(handlers) do
     if node.expand then
       local window = require("easy-dotnet.test-runner.window")
@@ -145,7 +145,7 @@ function M.add_gutter_test_signs()
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
-  ---@param node TestNode
+  ---@param node easy-dotnet.TestRunner.Node
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then
       is_test_file = true
@@ -208,7 +208,7 @@ function M.add_gutter_test_signs()
   end
 end
 
----@class EasyDotnetTestResult
+---@class easy-dotnet.TestResult
 ---@field passed integer Number of passed tests
 ---@field failed integer Number of failed tests
 ---@field skipped integer Number of skipped tests
@@ -222,12 +222,12 @@ end
 ---
 ---@param file_path string Absolute path to the file containing the test(s)
 ---@param line_number integer The line number of the test or test group
----@return EasyDotnetTestResult | nil res Aggregated results or `nil` if not found
+---@return easy-dotnet.TestResult | nil res Aggregated results or `nil` if not found
 M.get_test_results = function(file_path, line_number)
   local options = require("easy-dotnet.test-runner.render").options
   local res = { passed = 0, failed = 0, skipped = 0, running = 0 }
 
-  ---@param node TestNode
+  ---@param node easy-dotnet.TestRunner.Node
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, file_path) and line_number == node.line_number then
       if node.icon then

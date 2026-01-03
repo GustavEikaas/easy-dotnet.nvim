@@ -3,10 +3,10 @@ local constants = require("easy-dotnet.constants")
 local logger = require("easy-dotnet.logger")
 local M = {}
 
----@alias PatternType "reference" | "version"
+---@alias easy-dotnet.PatternType "reference" | "version"
 
 ---@param package_name string # The name of the package to search for.
----@param pattern_type PatternType # The pattern type to use ("reference" or "version").
+---@param pattern_type easy-dotnet.PatternType # The pattern type to use ("reference" or "version").
 ---@return integer|nil # Returns the line number where the package is found, or nil if not found
 local function find_package_in_buffer(package_name, pattern_type)
   local buf = vim.api.nvim_get_current_buf()
@@ -35,8 +35,8 @@ local function find_package_in_buffer(package_name, pattern_type)
   return nil
 end
 
----@param deps OutdatedPackage[]
----@param pattern_type PatternType
+---@param deps easy-dotnet.Nuget.OutdatedPackage[]
+---@param pattern_type easy-dotnet.PatternType
 local function apply_ext_marks(deps, pattern_type)
   local ns_id = constants.ns_id
   local bnr = vim.fn.bufnr("%")

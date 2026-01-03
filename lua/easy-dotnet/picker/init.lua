@@ -2,7 +2,7 @@ local M = {}
 
 ---@return "telescope"|"fzf"|"snacks"|"basic" active_picker
 local function get_active_picker()
-  ---@type PickerType
+  ---@type easy-dotnet.PickerType
   local selected_picker = require("easy-dotnet.options").get_option("picker")
 
   if selected_picker ~= nil and selected_picker ~= "telescope" and selected_picker ~= "fzf" and selected_picker ~= "snacks" and selected_picker ~= "basic" then

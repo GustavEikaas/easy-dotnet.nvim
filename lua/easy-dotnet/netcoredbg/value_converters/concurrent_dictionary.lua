@@ -1,4 +1,4 @@
----@type ValueConverter
+---@type easy-dotnet.Debugger.ValueConverter
 return {
   satisfies_type = function(class_name)
     class_name = vim.trim(class_name or "")

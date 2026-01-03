@@ -4,7 +4,7 @@ M.projects = {}
 M.qf_title = "Easy Dotnet | Build Output"
 
 --- Convert diagnostics to quickfix items
----@param diagnostics Diagnostic[]
+---@param diagnostics easy-dotnet.MSBuild.Diagnostic[]
 ---@return table[]
 local function diagnostics_to_qf(diagnostics)
   local items = {}

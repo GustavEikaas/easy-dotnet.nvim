@@ -134,7 +134,7 @@ function M.new()
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   client:initialize(function()
     client.template_engine:template_list(function(templates)
-      ---@param value DotnetNewTemplate
+      ---@param value easy-dotnet.Template.Template
       local choices = vim.tbl_map(function(value)
         return {
           value = value,
@@ -142,7 +142,7 @@ function M.new()
         }
       end, templates)
       require("easy-dotnet.picker").picker(nil, choices, function(selection)
-        ---@type DotnetNewTemplate
+        ---@type easy-dotnet.Template.Template
         local val = selection.value
 
         local default_name = no_name_templates[val.identity]

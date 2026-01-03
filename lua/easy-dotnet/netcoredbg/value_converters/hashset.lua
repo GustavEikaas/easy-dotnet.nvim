@@ -1,5 +1,5 @@
 local index_to_number = function(r) return tonumber(r:match("%[(%d+)%]")) or 0 end
----@type ValueConverter
+---@type easy-dotnet.Debugger.ValueConverter
 return {
   satisfies_type = function(class_name)
     class_name = vim.trim(class_name or "")

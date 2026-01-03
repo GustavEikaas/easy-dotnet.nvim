@@ -1,11 +1,11 @@
----@type ValueConverter
+---@type easy-dotnet.Debugger.ValueConverter
 return {
   satisfies_type = function(class_name)
     class_name = vim.trim(class_name)
     return class_name:match("^Newtonsoft%.Json%.Linq%.JObject$") ~= nil
   end,
   extract = function(frame_id, vars, var_path, _, cb)
-    ---@type Variable
+    ---@type easy-dotnet.Debugger.Variable
     local var_ref = nil
 
     for _, property in ipairs(vars) do

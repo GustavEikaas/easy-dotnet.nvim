@@ -1,23 +1,24 @@
----@class TemplateEngineClient
----@field _client StreamJsonRpc
----@field template_list fun(self: TemplateEngineClient, cb?: fun(variables: DotnetNewTemplate[]), opts?: RPC_CallOpts): RPC_CallHandle
----@field template_parameters fun(self: TemplateEngineClient, identity: string, cb?: fun(variables: DotnetNewParameter[]), opts?: RPC_CallOpts): RPC_CallHandle
----@field template_instantiate fun(self: TemplateEngineClient, identity: string, name: string, output_path: string, params: table<string,string>, cb?: fun(), opts?: RPC_CallOpts): RPC_CallHandle
+---@class easy-dotnet.RPC.Client.TemplateEngine
+---@field _client easy-dotnet.RPC.StreamJsonRpc
+---@field template_list fun(self: easy-dotnet.RPC.Client.TemplateEngine, cb?: fun(variables: easy-dotnet.Template.Template[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+---@field template_parameters fun(self: easy-dotnet.RPC.Client.TemplateEngine, identity: string, cb?: fun(variables: easy-dotnet.Template.Parameter[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+-- luacheck: no max line length
+---@field template_instantiate fun(self: easy-dotnet.RPC.Client.TemplateEngine, identity: string, name: string, output_path: string, params: table<string,string>, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 
----@type TemplateEngineClient
+---@type easy-dotnet.RPC.Client.TemplateEngine
 local M = {}
 M.__index = M
 
 --- Constructor
----@param client StreamJsonRpc
----@return TemplateEngineClient
+---@param client easy-dotnet.RPC.StreamJsonRpc
+---@return easy-dotnet.RPC.Client.TemplateEngine
 function M.new(client)
   local self = setmetatable({}, M)
   self._client = client
   return self
 end
 
----@class DotnetNewTemplate
+---@class easy-dotnet.Template.Template
 ---@field displayName string
 ---@field identity string
 ---@field type string|nil
@@ -35,17 +36,17 @@ function M:template_list(cb, opts)
   })()
 end
 
----@alias DotnetNewParameterDataType
+---@alias easy-dotnet.Template.ParameterDataType
 ---| '"text"'
 ---| '"bool"'
 ---| '"choice"'
 ---| '"string"'
 
----@class DotnetNewParameter
+---@class easy-dotnet.Template.Parameter
 ---@field name string
 ---@field defaultValue string|nil
 ---@field defaultIfOptionWithoutValue string|nil
----@field dataType DotnetNewParameterDataType
+---@field dataType easy-dotnet.Template.ParameterDataType
 ---@field description string|nil
 ---@field isRequired boolean
 ---@field choices table<string, string>|nil

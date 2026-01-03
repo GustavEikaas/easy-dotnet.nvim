@@ -1,22 +1,22 @@
----@class RangePosition
+---@class easy-dotnet.Roslyn.RangePosition
 ---@field line number
 ---@field character number
 
----@class TextDocument
+---@class easy-dotnet.Roslyn.TextDocument
 ---@field uri string
 
----@class TestArgument
+---@class easy-dotnet.TestRunner.Argument
 ---@field attachDebugger boolean
 ---@field range { start: RangePosition, ["end"]: RangePosition }
----@field textDocument TextDocument
+---@field textDocument easy-dotnet.Roslyn.TextDocument
 
----@class TestCommand
----@field arguments TestArgument[]
+---@class easy-dotnet.TestRunner.Command
+---@field arguments easy-dotnet.TestRunner.Argument[]
 ---@field command string
 ---@field title string
 
----@param command TestCommand
----@param ctx CommandContext
+---@param command easy-dotnet.TestRunner.Command
+---@param ctx easy-dotnet.Roslyn.CommandContext
 return function(command, ctx)
   local arg = command.arguments[1] -- usually only one
   local _ = ctx.client_id

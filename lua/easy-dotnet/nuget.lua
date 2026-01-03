@@ -104,7 +104,7 @@ M.remove_nuget = function()
 
   client:initialize(function()
     client.msbuild:msbuild_list_package_reference(project.path, project.msbuild_props.targetFramework, function(res)
-      ---@param i PackageReference
+      ---@param i easy-dotnet.MSBuild.PackageReference
       local choices = polyfills.tbl_map(function(i) return { display = i.id .. "@" .. i.resolvedVersion, value = i.id } end, res)
       picker.picker(nil, choices, function(val)
         local package = val.value

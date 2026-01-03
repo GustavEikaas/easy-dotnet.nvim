@@ -1,22 +1,24 @@
----@class TestClient
----@field _client StreamJsonRpc
----@field test_run fun(self: TestClient, request: RPC_TestRunRequest, cb?: fun(res: RPC_TestRunResult), opts?: RPCCallOpts): RPC_CallHandle # Request running multiple tests for MTP
----@field test_discover fun(self: TestClient, request: RPC_TestDiscoverRequest, cb?: fun(res: RPC_DiscoveredTest[]), opts?: RPCCallOpts): RPC_CallHandle # Request test discovery for MTP
----@field set_run_settings fun(self: TestClient)
+---@class easy-dotnet.RPC.Client.Test
+---@field _client easy-dotnet.RPC.StreamJsonRpc
+-- luacheck: no max line length
+---@field test_run fun(self: easy-dotnet.RPC.Client.Test, request: easy-dotnet.RPC.TestRunRequest, cb?: fun(res: RPC_TestRunResult), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request running multiple tests for MTP
+-- luacheck: no max line length
+---@field test_discover fun(self: easy-dotnet.RPC.Client.Test, request: easy-dotnet.RPC.TestDiscoverRequest, cb?: fun(res: easy-dotnet.RPC.DiscoveredTest[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request test discovery for MTP
+---@field set_run_settings fun(self: easy-dotnet.RPC.Client.Test)
 
 local M = {}
 M.__index = M
 
 --- Constructor
----@param client StreamJsonRpc
----@return TestClient
+---@param client easy-dotnet.RPC.StreamJsonRpc
+---@return easy-dotnet.RPC.Client.Test
 function M.new(client)
   local self = setmetatable({}, M)
   self._client = client
   return self
 end
 
----@class RPC_DiscoveredTest
+---@class easy-dotnet.RPC.DiscoveredTest
 ---@field id string
 ---@field namespace? string
 ---@field name string
@@ -24,7 +26,7 @@ end
 ---@field filePath string
 ---@field lineNumber? integer
 
----@class RPC_TestDiscoverRequest
+---@class easy-dotnet.RPC.TestDiscoverRequest
 ---@field projectPath string
 ---@field targetFrameworkMoniker string
 ---@field configuration string
@@ -43,15 +45,15 @@ function M:test_discover(request, cb, opts)
   })()
 end
 
----@class RunRequestNode
+---@class easy-dotnet.RunRequestNode
 ---@field uid string Unique test run identifier
 ---@field displayName string Human-readable name for the run
 
----@class RPC_TestRunRequest
+---@class easy-dotnet.RPC.TestRunRequest
 ---@field projectPath string
 ---@field targetFrameworkMoniker string
 ---@field configuration string
----@field filter? table<RunRequestNode>
+---@field filter? table<easy-dotnet.RunRequestNode>
 
 --- @class RPC_TestRunResult
 --- @field id string

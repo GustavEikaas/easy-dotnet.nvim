@@ -62,7 +62,7 @@ end
 function M.remove_project_from_solution(slnpath)
   client:initialize(function()
     client:solution_list_projects(slnpath, function(res)
-      ---@param i SolutionFileProjectResponse
+      ---@param i easy-dotnet.Server.SolutionFileProjectResponse
       local projects = vim.tbl_map(function(i)
         local exists = vim.fn.filereadable(i.absolutePath) == 1
         return {
@@ -119,8 +119,8 @@ end
 ---over each project-framework combination individually.
 ---
 ---@param solution_file_path string: The path to the .sln solution file.
----@param filter_fn? fun(project: DotnetProject): boolean Optional predicate to filter projects.
----@return DotnetProject[]: A list of DotnetProject objects, duplicated and updated for each target framework.
+---@param filter_fn? fun(project: easy-dotnet.Project.Project): boolean Optional predicate to filter projects.
+---@return easy-dotnet.Project.Project[]: A list of DotnetProject objects, duplicated and updated for each target framework.
 M.get_projects_and_frameworks_flattened_from_sln = function(solution_file_path, filter_fn)
   local projects = M.get_projects_from_sln(solution_file_path, filter_fn)
   local project_frameworks = {}
@@ -138,7 +138,7 @@ M.get_projects_and_frameworks_flattened_from_sln = function(solution_file_path, 
 end
 
 ---@param project_paths string[]
----@return DotnetProject[]
+---@return easy-dotnet.Project.Project[]
 local function get_all_projects_from_paths(project_paths)
   return polyfills.tbl_map(function(proj_path)
     local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
@@ -170,8 +170,8 @@ end
 ---If a callback is provided, only projects for which the callback returns true will be included.
 ---
 ---@param solution_file_path string: The path to the .sln solution file.
----@param filter_fn? fun(project: DotnetProject): boolean Optional predicate to filter projects.
----@return DotnetProject[]: A list of DotnetProject objects from the solution, optionally filtered.
+---@param filter_fn? fun(project: easy-dotnet.Project.Project): boolean Optional predicate to filter projects.
+---@return easy-dotnet.Project.Project[]: A list of DotnetProject objects from the solution, optionally filtered.
 function M.get_projects_from_sln_async(solution_file_path, filter_fn)
   ---@type string[]
   local project_lines = cache.get(solution_file_path, function()
@@ -199,8 +199,8 @@ end
 ---If a callback is provided, only projects for which the callback returns true will be included.
 ---
 ---@param solution_file_path string: The path to the .sln solution file.
----@param filter_fn? fun(project: DotnetProject): boolean Optional predicate to filter projects.
----@return DotnetProject[]: A list of DotnetProject objects from the solution, optionally filtered.
+---@param filter_fn? fun(project: easy-dotnet.Project.Project): boolean Optional predicate to filter projects.
+---@return easy-dotnet.Project.Project[]: A list of DotnetProject objects from the solution, optionally filtered.
 function M.get_projects_from_sln(solution_file_path, filter_fn)
   local co = coroutine.running()
   ---@type string[]

@@ -1,10 +1,10 @@
----@class ValueConverter
----@field extract fun(stack_frame_id: integer, vars: Variable[], var_path: string, var_type: string, cb: fun(result: table, pretty_string: string, highlight?: string))
----@field satisfies_type fun(var_type: string, vars: Variable[]): boolean
+---@class easy-dotnet.Debugger.ValueConverter
+---@field extract fun(stack_frame_id: integer, vars: easy-dotnet.Debugger.Variable[], var_path: string, var_type: string, cb: fun(result: table, pretty_string: string, highlight?: string))
+---@field satisfies_type fun(var_type: string, vars: easy-dotnet.Debugger.Variable[]): boolean
 
 local M = {}
 
----@type ValueConverter[]
+---@type easy-dotnet.Debugger.ValueConverter[]
 M.value_converters = {
   require("easy-dotnet.netcoredbg.value_converters.exception"),
   require("easy-dotnet.netcoredbg.value_converters.type"),
@@ -70,13 +70,13 @@ end
 
 ---Resolves any C# type and invokes the given callback with the lua result
 ---@param stack_frame_id integer
----@param vars Variable[]
+---@param vars easy-dotnet.Debugger.Variable[]
 ---@param var_path string
 ---@param var_type string
 ---@param cb fun(result: table, pretty_string: string, highlight?: string)
 M.extract = function(stack_frame_id, vars, var_path, var_type, cb)
-  ---@param r ValueConverter
-  ---@type ValueConverter[]
+  ---@param r easy-dotnet.Debugger.ValueConverter
+  ---@type easy-dotnet.Debugger.ValueConverter[]
   local matches = vim.iter(M.value_converters):filter(function(r) return r.satisfies_type(var_type, vars) end):totable()
 
   if #matches > 1 then

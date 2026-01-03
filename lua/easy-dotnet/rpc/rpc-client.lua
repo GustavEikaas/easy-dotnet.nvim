@@ -1,57 +1,59 @@
 local logger = require("easy-dotnet.logger")
----@type StreamJsonRpc
+---@type easy-dotnet.RPC.StreamJsonRpc
 local M = {
   routes = { "initialize" },
 }
 
 ---@meta
 
----@class RpcRequestOptions
+---@class easy-dotnet.RPC.RequestOptions
 ---@field on_cancel? fun(): nil  -- optional callback for cancellation
 
----@class StreamJsonRpc
+---@class easy-dotnet.RPC.StreamJsonRpc
 ---@field _enumerable_next fun (token: integer, cb): nil
----@field setup fun(opts: { pipe_path: string, debug?: boolean }): StreamJsonRpc
+---@field setup fun(opts: { pipe_path: string, debug?: boolean }): easy-dotnet.RPC.StreamJsonRpc
 ---@field connect fun(cb: fun()): nil
----@field request fun(method: DotnetPipeMethod, params: table, callback: fun(result: RPC_Response), options?: RpcRequestOptions): integer|false
----@field request_enumerate fun(self: StreamJsonRpc, method: DotnetPipeMethod, params: table, on_yield: fun(result: table)|nil, on_finished: fun(results: table[])|nil, on_error: fun(res: RPC_Response)|nil): integer|false
----@field request_property_enumerate fun(self: StreamJsonRpc, token: string, on_yield: fun(result: table)|nil, on_finished: fun(results: table[])|nil, on_error: fun(res: RPC_Response)|nil): nil
+-- luacheck: no max line length
+---@field request fun(method: easy-dotnet.RPC.DotnetPipeMethod, params: table, callback: fun(result: easy-dotnet.RPC.Response), options?: RpcRequestOptions): integer|false
+-- luacheck: no max line length
+---@field request_enumerate fun(self: easy-dotnet.RPC.StreamJsonRpc, method: easy-dotnet.RPC.DotnetPipeMethod, params: table, on_yield: fun(result: table)|nil, on_finished: fun(results: table[])|nil, on_error: fun(res: easy-dotnet.RPC.Response)|nil): integer|false
+---@field request_property_enumerate fun(self: easy-dotnet.RPC.StreamJsonRpc, token: string, on_yield: fun(result: table)|nil, on_finished: fun(results: table[])|nil, on_error: fun(res: easy-dotnet.RPC.Response)|nil): nil
 ---@field notify fun(method: string, params: table): boolean
 ---@field cancel fun(id: integer): nil
 ---@field disconnect fun(): boolean
 ---@field is_connected fun(): boolean
----@field subscribe_notifications fun(cb: NotificationCallback): fun(): nil
+---@field subscribe_notifications fun(cb: easy-dotnet.RPC.NotificationCallback): fun(): nil
 ---@field routes table<string>? List of routes broadcasted by server
 
----@class RPC_Error
+---@class easy-dotnet.RPC.Error
 ---@field code number
 ---@field message string
 ---@field data? RPC_Error_Stack
 
----@class RPC_Error_Stack
+---@class easy-dotnet.RPC.ErrorStack
 ---@field type string
 ---@field message string
 ---@field stack string
 ---@field code number
 
----@class RPC_Response
+---@class easy-dotnet.RPC.Response
 ---@field id number
 ---@field jsonrpc "2.0"
 ---@field result? table
 ---@field error? RPC_Error
 
----@class JsonRpcNotification
+---@class easy-dotnet.RPC.JsonRpcNotification
 ---@field jsonrpc "2.0"
 ---@field method string
 ---@field params? any
 
----@class RPC_PromptSelection
+---@class easy-dotnet.RPC.PromptSelection
 ---@field id string
 ---@field display string
 
----@alias NotificationCallback fun(method: string, params: any | nil): nil
+---@alias easy-dotnet.RPC.NotificationCallback fun(method: string, params: any | nil): nil
 
----@alias DotnetPipeMethod
+---@alias easy-dotnet.RPC.DotnetPipeMethod
 ---| "initialize"
 ---| "debugger/start"
 ---| "lsp/start"
@@ -90,12 +92,12 @@ local request_id = 0
 local callbacks = {}
 local cancellation_callbacks = {}
 
----@type NotificationCallback[]
+---@type easy-dotnet.RPC.NotificationCallback[]
 local notification_callbacks = {}
 
 ---Initializes the StreamJsonRpc client with configuration.
 ---@param opts { pipe_path: string, debug?: boolean }
----@return StreamJsonRpc
+---@return easy-dotnet.RPC.StreamJsonRpc
 function M.setup(opts)
   opts = opts or {}
   pipe_path = opts.pipe_path
@@ -182,7 +184,7 @@ local function handle_response(decoded)
 end
 
 ---Dispatches JSON-RPC notifications to all subscribed callbacks.
----@param decoded JsonRpcNotification
+---@param decoded easy-dotnet.RPC.JsonRpcNotification
 local function handle_server_notification(decoded)
   vim.schedule(function()
     for _, cb in ipairs(notification_callbacks) do
@@ -269,9 +271,9 @@ function M.connect(cb)
 end
 
 ---Sends a JSON-RPC request to the server.
----@param method DotnetPipeMethod
+---@param method easy-dotnet.RPC.DotnetPipeMethod
 ---@param params table
----@param callback fun(result: RPC_Response)
+---@param callback fun(result: easy-dotnet.RPC.Response)
 ---@param options? RpcRequestOptions
 ---@return integer|false request_id or false if failed
 function M.request(method, params, callback, options)
@@ -379,7 +381,7 @@ end
 function M._enumerable_next(id, cb) M.request("$/enumerator/next", { token = id }, cb) end
 
 ---Registers a callback for JSON-RPC notifications.
----@param cb NotificationCallback
+---@param cb easy-dotnet.RPC.NotificationCallback
 ---@return fun() unsubscribe Function to remove the callback
 function M.subscribe_notifications(cb)
   table.insert(notification_callbacks, cb)

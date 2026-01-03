@@ -1,21 +1,21 @@
----@class Variable
+---@class easy-dotnet.Debugger.Variable
 ---@field name string The variable's name.
 ---@field value string A one-line or multi-line string representing the variable.
 ---@field type? string The type of the variable, shown in the UI on hover.
 ---@field variablesReference integer Reference ID for child variables (0 = none).
----@field children? table<Variable>
+---@field children? table<easy-dotnet.Debugger.Variable>
 
----@class ResolvedVariable
+---@class easy-dotnet.Debugger.ResolvedVariable
 ---@field formatted_value string
 ---@field value table | string
 ---@field type string
----@field vars Variable[]
+---@field vars easy-dotnet.Debugger.Variable[]
 ---@field variablesReference integer
 
 local M = {
-  ---@type table<integer, table<string, ResolvedVariable | "pending">>
+  ---@type table<integer, table<string, easy-dotnet.Debugger.ResolvedVariable | "pending">>
   variable_cache = {},
-  ---@type table<integer, table<string, (fun(value: ResolvedVariable))[]>>
+  ---@type table<integer, table<string, (fun(value: easy-dotnet.Debugger.ResolvedVariable))[]>>
   pending_callbacks = {},
 }
 
@@ -75,7 +75,7 @@ M.extract = require("easy-dotnet.netcoredbg.value_converters").extract
 ---@param stack_frame_id integer
 ---@param vars_reference integer
 ---@param var_type string
----@param cb fun(value: ResolvedVariable): nil
+---@param cb fun(value: easy-dotnet.Debugger.ResolvedVariable): nil
 ---@return false | nil
 function M.resolve_by_vars_reference(stack_frame_id, vars_reference, var_path, var_type, cb)
   if stack_frame_id == nil then error("Stack frame id cannot be nil") end
@@ -97,10 +97,10 @@ function M.resolve_by_vars_reference(stack_frame_id, vars_reference, var_path, v
   cache[vars_reference] = "pending"
   callback_queue[vars_reference] = { cb }
 
-  ---@param children table<Variable>
+  ---@param children table<easy-dotnet.Debugger.Variable>
   M.fetch_variables(vars_reference, 0, function(children)
     M.extract(stack_frame_id, children, var_path, var_type, function(lua_type, res, hi)
-      ---@type ResolvedVariable
+      ---@type easy-dotnet.Debugger.ResolvedVariable
       local value = {
         formatted_value = "",
         hi = hi,
@@ -123,7 +123,7 @@ end
 
 ---@param stack_frame_id integer
 ---@param var_name string
----@param cb fun(value: ResolvedVariable): nil
+---@param cb fun(value: easy-dotnet.Debugger.ResolvedVariable): nil
 ---@return false | nil
 function M.resolve_by_var_name(stack_frame_id, var_name, cb)
   local dap = require("dap")
@@ -158,7 +158,7 @@ function M.resolve_by_var_name(stack_frame_id, var_name, cb)
     if response.variablesReference == 0 then
       --TODO: its a primitive
 
-      ---@type ResolvedVariable
+      ---@type easy-dotnet.Debugger.ResolvedVariable
       local value = {
         formatted_value = response.result,
         vars = {},
@@ -180,10 +180,10 @@ function M.resolve_by_var_name(stack_frame_id, var_name, cb)
       end
       callback_queue[var_name] = nil
     else
-      ---@param children table<Variable>
+      ---@param children table<easy-dotnet.Debugger.Variable>
       M.fetch_variables(response.variablesReference, 0, function(children)
         M.extract(stack_frame_id, children, var_name, response.type, function(lua_type, res, hi)
-          ---@type ResolvedVariable
+          ---@type easy-dotnet.Debugger.ResolvedVariable
           local value = {
             formatted_value = "",
             var_path = var_name,

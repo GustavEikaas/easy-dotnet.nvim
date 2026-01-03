@@ -1,28 +1,28 @@
----@class Options
----@field test_runner TestRunnerOptions
----@field lsp LspOpts
+---@class easy-dotnet.Options
+---@field test_runner easy-dotnet.TestRunner.Options
+---@field lsp easy-dotnet.LspOpts
 ---@field csproj_mappings boolean
 ---@field fsproj_mappings boolean
 ---@field new { project: {prefix: "sln" | "none"} }
 ---@field enable_filetypes boolean
----@field picker PickerType
----@field notifications Notifications
----@field diagnostics DiagnosticsOptions
+---@field picker easy-dotnet.PickerType
+---@field notifications easy-dotnet.Notifications
+---@field diagnostics easy-dotnet.DiagnosticsOptions
 
----@class Notifications
----@field handler fun(start_event: JobEvent): fun(finished_event: JobEvent)
+---@class easy-dotnet.Notifications
+---@field handler fun(start_event: easy-dotnet.Job.Event): fun(finished_event: easy-dotnet.Job.Event)
 
----@class LspOpts
+---@class easy-dotnet.LspOpts
 ---@field enabled boolean                -- Whether the LSP is enabled
 ---@field analyzer_assemblies string[]|nil -- Optional list of analyzer DLLs
 ---@field roslynator_enabled boolean     -- Whether Roslynator is enabled
 ---@field config vim.lsp.config?          -- LSP configuration table
 
----@class DiagnosticsOptions
+---@class easy-dotnet.DiagnosticsOptions
 ---@field default_severity "error" | "warning"
 ---@field setqflist boolean
 
----@class TestRunnerIcons
+---@class easy-dotnet.TestRunner.Icons
 ---@field passed string
 ---@field skipped string
 ---@field failed string
@@ -34,37 +34,37 @@
 ---@field dir string
 ---@field package string
 
----@class TestRunnerMappings
----@field run_test_from_buffer Keymap
----@field peek_stack_trace_from_buffer Keymap
----@field debug_test_from_buffer Keymap
----@field go_to_file Keymap
----@field debug_test Keymap
----@field filter_failed_tests Keymap
----@field expand_all Keymap
----@field collapse_all Keymap
----@field expand Keymap
----@field peek_stacktrace Keymap
----@field run_all Keymap
----@field run Keymap
----@field close Keymap
----@field refresh_testrunner Keymap
+---@class easy-dotnet.TestRunner.Mappings
+---@field run_test_from_buffer easy-dotnet.Keymap
+---@field peek_stack_trace_from_buffer easy-dotnet.Keymap
+---@field debug_test_from_buffer easy-dotnet.Keymap
+---@field go_to_file easy-dotnet.Keymap
+---@field debug_test easy-dotnet.Keymap
+---@field filter_failed_tests easy-dotnet.Keymap
+---@field expand_all easy-dotnet.Keymap
+---@field collapse_all easy-dotnet.Keymap
+---@field expand easy-dotnet.Keymap
+---@field peek_stacktrace easy-dotnet.Keymap
+---@field run_all easy-dotnet.Keymap
+---@field run easy-dotnet.Keymap
+---@field close easy-dotnet.Keymap
+---@field refresh_testrunner easy-dotnet.Keymap
 
----@class Keymap
+---@class easy-dotnet.Keymap
 ---@field lhs string
 ---@field desc string
 
----@class TestRunnerOptions
+---@class easy-dotnet.TestRunner.Options
 ---@field viewmode string
 ---@field vsplit_width number|nil
 ---@field vsplit_pos string|nil
 ---@field enable_buffer_test_execution boolean
 ---@field noBuild boolean
----@field icons TestRunnerIcons
----@field mappings TestRunnerMappings
+---@field icons easy-dotnet.TestRunner.Icons
+---@field mappings easy-dotnet.TestRunner.Mappings
 ---@field additional_args table
 
----@alias PickerType nil | "telescope" | "fzf" | "snacks" | "basic"
+---@alias easy-dotnet.PickerType nil | "telescope" | "fzf" | "snacks" | "basic"
 
 local function get_secret_path(secret_guid)
   local path
@@ -80,7 +80,7 @@ local function get_secret_path(secret_guid)
 end
 
 local M = {
-  ---@type Options
+  ---@type easy-dotnet.Options
   options = {
     ---@param path string
     ---@param action "test"|"restore"|"build"|"run"|"watch"
@@ -102,7 +102,7 @@ local M = {
     secrets = {
       path = get_secret_path,
     },
-    ---@type TestRunnerOptions
+    ---@type easy-dotnet.TestRunner.Options
     test_runner = {
       viewmode = "float",
       vsplit_width = nil,
@@ -164,7 +164,7 @@ local M = {
     -- choose which picker to use with the plugin
     -- possible values are "telescope" | "fzf" | "snacks" | "basic"
     -- if nil, will auto-detect available pickers in order: telescope -> fzf -> basic
-    ---@type PickerType
+    ---@type easy-dotnet.PickerType
     picker = nil,
     --For performance reasons this will query msbuild properties as soon as vim starts
     background_scanning = true,
@@ -173,7 +173,7 @@ local M = {
       handler = function(start_event)
         local spinner = require("easy-dotnet.ui-modules.spinner").new()
         spinner:start_spinner(function() return start_event.job.name end)
-        ---@param finished_event JobEvent
+        ---@param finished_event easy-dotnet.Job.Event
         return function(finished_event) spinner:stop_spinner(finished_event.result.msg, finished_event.result.level) end
       end,
     },
