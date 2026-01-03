@@ -268,7 +268,7 @@ function M:_initialize(cb, opts)
     local apply_value_converters = require("easy-dotnet.options").options.debugger.apply_value_converters
     local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
 
-    local debuggerOptions = { applyValueConverters = apply_value_converters, binaryPath = debugger_path }
+    local debuggerOptions = { applyValueConverters = apply_value_converters, binaryPath = debugger_path, externalOutputWindow = true }
 
     return M.create_rpc_call({
       client = self._client,
