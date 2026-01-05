@@ -37,11 +37,8 @@ local function debug_test_from_buffer()
   local current_line = vim.api.nvim_win_get_cursor(0)[1]
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and node.line_number - 1 == current_line then
-      --TODO: Investigate why netcoredbg wont work without reopening the buffer????
-      vim.cmd("bdelete")
-      vim.cmd("edit " .. node.file_path)
       vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
-      dap.toggle_breakpoint()
+      dap.set_breakpoint()
 
       local dap_configuration = {
         type = "coreclr",
