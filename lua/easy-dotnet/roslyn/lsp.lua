@@ -97,10 +97,9 @@ function M.register_watchers_bulk(client)
   if not pending or #pending == 0 then return end
 
   client:_register(pending)
-  
+
   M.pending_watchers[client_id] = nil
 end
-
 
 ---@param client vim.lsp.Client
 local function refresh_diag(client)
@@ -210,21 +209,17 @@ function M.enable(opts)
               registration.registerOptions.watchers = vim
                 .iter(registration.registerOptions.watchers)
                 :filter(function(watch)
-                  if type(watch.globPattern) == "table" and watch.globPattern.baseUri then
-                    return vim.loop.fs_stat(vim.uri_to_fname(watch.globPattern.baseUri)) ~= nil
-                  end
+                  if type(watch.globPattern) == "table" and watch.globPattern.baseUri then return vim.loop.fs_stat(vim.uri_to_fname(watch.globPattern.baseUri)) ~= nil end
                   return true -- Keep watchers without baseUri (string patterns)
                 end)
                 :totable()
-              
+
               -- If solution is already loaded, let registration through normally
               if M.solution_loaded[client_id] then
                 -- Let it through, already filtered
               else
                 -- Cache the entire registration (will register in bulk on solution/open)
-                if not M.pending_watchers[client_id] then
-                  M.pending_watchers[client_id] = {}
-                end
+                if not M.pending_watchers[client_id] then M.pending_watchers[client_id] = {} end
                 table.insert(M.pending_watchers[client_id], registration)
                 -- Block the registration
                 registration.registerOptions.watchers = {}
@@ -238,14 +233,16 @@ function M.enable(opts)
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         if not client then return end
         local workspace_job = M.state[client.id]
-        if workspace_job and type(workspace_job) == "function" then vim.defer_fn(function()
-          workspace_job(true)
-          M.state[client.id] = nil
-          -- Register all collected watchers in bulk after solution/project is ready
-          M.register_watchers_bulk(client)
-          -- Mark solution as loaded - future registrations will go through normally
-          M.solution_loaded[client.id] = true
-        end, 2000) end
+        if workspace_job and type(workspace_job) == "function" then
+          vim.defer_fn(function()
+            workspace_job(true)
+            M.state[client.id] = nil
+            -- Register all collected watchers in bulk after solution/project is ready
+            M.register_watchers_bulk(client)
+            -- Mark solution as loaded - future registrations will go through normally
+            M.solution_loaded[client.id] = true
+          end, 2000)
+        end
         vim.defer_fn(function() refresh_diag(client) end, 500)
       end,
       ["workspace/_roslyn_projectNeedsRestore"] = function(_, params, ctx, _)
