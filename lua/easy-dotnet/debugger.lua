@@ -57,6 +57,7 @@ local function pick_project(use_default)
   return project, solution_file_path
 end
 
+---@deprecated remove later
 M.get_debug_dll = function(default)
   local sln_file = sln_parse.find_solution_file()
   local result = sln_file ~= nil and M.get_dll_for_solution_project(default) or M.get_dll_for_project()
@@ -114,6 +115,7 @@ M.prepare_debugger = function(use_default)
   return curr_debugger_port
 end
 
+---@deprecated remove later
 local function run_job_sync(cmd)
   local result = {}
   local co = coroutine.running()
@@ -137,6 +139,7 @@ local function run_job_sync(cmd)
   return result
 end
 
+---@deprecated remove later
 ---@param path string
 local function start_test_process(path)
   local command = string.format("dotnet test %s --environment=VSTEST_HOST_DEBUG=1", path)
@@ -145,6 +148,7 @@ local function start_test_process(path)
   return res.process_id
 end
 
+---@deprecated remove later
 M.start_debugging_test_project = function(project_path)
   local sln_file = sln_parse.find_solution_file()
   assert(sln_file, "Failed to find a solution file")
@@ -176,6 +180,7 @@ M.get_launch_profiles = function(relative_project_path)
   return dictionary
 end
 
+---@deprecated remove later
 M.get_environment_variables = function(project_name, relative_project_path, autoselect)
   if autoselect == nil then autoselect = true end
 
@@ -194,6 +199,7 @@ M.get_environment_variables = function(project_name, relative_project_path, auto
   return launch_profile.environmentVariables
 end
 
+---@deprecated remove later
 M.get_dll_for_solution_project = function(default)
   if default == nil then default = false end
   local project = pick_project(default)
@@ -205,6 +211,7 @@ M.get_dll_for_solution_project = function(default)
   }
 end
 
+---@deprecated remove later
 M.get_dll_for_project = function()
   local project_file_path = csproj_parse.find_project_file()
   if project_file_path == nil then error("No project or solution file found") end
