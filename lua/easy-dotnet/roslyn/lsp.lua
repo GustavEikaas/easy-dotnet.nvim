@@ -215,9 +215,7 @@ function M.enable(opts)
                 :totable()
 
               -- If solution is already loaded, let registration through normally
-              if M.solution_loaded[client_id] then
-                -- Let it through, already filtered
-              else
+              if not M.solution_loaded[client_id] then
                 -- Cache the entire registration (will register in bulk on solution/open)
                 if not M.pending_watchers[client_id] then M.pending_watchers[client_id] = {} end
                 table.insert(M.pending_watchers[client_id], registration)
