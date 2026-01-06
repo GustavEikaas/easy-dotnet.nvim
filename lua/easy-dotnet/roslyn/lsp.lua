@@ -10,8 +10,10 @@ local M = {
   watcher_registered = {},
   pending_watchers = {}, -- Collect all watcher registrations per client
   solution_loaded = {}, -- Track if solution is loaded per client
+  solution_state = {},
+  checked_buffers = {},
 }
-
+local function now() return vim.uv.now() end
 function M.start()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_loaded(bufnr) then
@@ -34,6 +36,57 @@ end
 function M.restart()
   M.stop()
   M.start()
+end
+
+local function check_project_context(client, bufnr)
+  local solution_ts = M.solution_state[client.id] and M.solution_state[client.id].loaded_at
+  if not solution_ts then return end
+
+  local buf_opened_at = vim.b[bufnr].roslyn_buf_opened_at or 0
+  if buf_opened_at < solution_ts then return end
+
+  if M.checked_buffers[bufnr] == "valid" then return end
+
+  local params = {
+    _vs_textDocument = { uri = vim.uri_from_bufnr(bufnr) },
+  }
+
+  local function query_server(is_retry)
+    client:request("textDocument/_vs_getProjectContexts", params, function(err, result)
+      if err then
+        logger.error(vim.inspect(err))
+        return
+      end
+      if not result or not result._vs_projectContexts then return end
+
+      local default_idx = result._vs_defaultIndex or 1
+      local context = result._vs_projectContexts[default_idx + 1]
+
+      if not context then return end
+
+      local is_misc = context._vs_is_miscellaneous
+
+      if not is_misc then
+        M.checked_buffers[bufnr] = "valid"
+      elseif is_misc and not is_retry then
+        local uri = vim.uri_from_bufnr(bufnr)
+        client:notify("workspace/didChangeWatchedFiles", {
+          changes = {
+            { uri = uri, type = 1 },
+          },
+        })
+
+        vim.defer_fn(function()
+          if vim.api.nvim_buf_is_valid(bufnr) then query_server(true) end
+        end, 1000)
+      elseif is_misc and is_retry then
+        logger.warn("Active file is not part of the workspace. IntelliSense may be limited.")
+        M.checked_buffers[bufnr] = "misc"
+      end
+    end, bufnr)
+  end
+
+  query_server(false)
 end
 
 function M.find_project_or_solution(bufnr, cb)
@@ -159,6 +212,7 @@ function M.enable(opts)
     root_dir = M.find_project_or_solution,
     capabilities = cap,
     on_init = function(client)
+      M.solution_state[client.id] = { loaded_at = nil }
       local file, type = M.find_sln_or_csproj(client.root_dir)
       if not file then return end
 
@@ -178,6 +232,8 @@ function M.enable(opts)
       M.watcher_registered[client_id] = nil
       M.pending_watchers[client_id] = nil
       M.solution_loaded[client_id] = nil
+      M.solution_state[client_id] = nil
+      M.checked_buffers = nil
       vim.schedule(function()
         if code == 0 or code == 143 then
           logger.info("[easy-dotnet] Roslyn stopped")
@@ -191,7 +247,11 @@ function M.enable(opts)
         end
       end)
     end,
-    on_attach = function(client, buf) require("easy-dotnet.roslyn.new-file-handler").register_new_file(client, buf) end,
+    on_attach = function(client, buf)
+      vim.b[buf].roslyn_buf_opened_at = now()
+
+      check_project_context(client, buf)
+    end,
     commands = {
       ["roslyn.client.fixAllCodeAction"] = require("easy-dotnet.roslyn.lsp.fix_all_code_action"),
       ["roslyn.client.nestedCodeAction"] = require("easy-dotnet.roslyn.lsp.nested_code_action"),
@@ -230,6 +290,7 @@ function M.enable(opts)
       ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         if not client then return end
+        if M.solution_state[client.id] then M.solution_state[client.id].loaded_at = now() end
         local workspace_job = M.state[client.id]
         if workspace_job and type(workspace_job) == "function" then
           vim.defer_fn(function()
