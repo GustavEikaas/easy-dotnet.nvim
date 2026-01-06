@@ -7,6 +7,9 @@ local constants = require("easy-dotnet.constants")
 
 local M = {
   state = {},
+  watcher_registered = {},
+  pending_watchers = {}, -- Collect all watcher registrations per client
+  solution_loaded = {}, -- Track if solution is loaded per client
 }
 
 function M.start()
@@ -86,6 +89,19 @@ function M.find_sln_or_csproj(dir)
   return nil
 end
 
+---Register all collected registrations in bulk
+---@param client vim.lsp.Client
+function M.register_watchers_bulk(client)
+  local client_id = client.id
+  local pending = M.pending_watchers[client_id]
+  if not pending or #pending == 0 then return end
+
+  client:_register(pending)
+  
+  M.pending_watchers[client_id] = nil
+end
+
+
 ---@param client vim.lsp.Client
 local function refresh_diag(client)
   local bufnr = vim.api.nvim_get_current_buf()
@@ -149,7 +165,7 @@ function M.enable(opts)
 
       local uri = vim.uri_from_fname(file)
       if type == "sln" then
-        M.state[client.id] = job.register_job({ name = "Opening solution", on_error_text = "Failed to open solution", on_success_text = "Workspace ready", timeout = 15000 })
+        M.state[client.id] = job.register_job({ name = "Opening solution", on_error_text = "Failed to open solution", on_success_text = "Workspace ready", timeout = 150000 })
         client:notify("solution/open", { solution = uri })
       elseif type == "csproj" then
         M.state[client.id] = job.register_job({ name = "Opening project", on_error_text = "Failed to open project", on_success_text = "Workspace ready", timeout = 15000 })
@@ -160,6 +176,9 @@ function M.enable(opts)
     end,
     on_exit = function(code, _, client_id)
       M.state[client_id] = nil
+      M.watcher_registered[client_id] = nil
+      M.pending_watchers[client_id] = nil
+      M.solution_loaded[client_id] = nil
       vim.schedule(function()
         if code == 0 or code == 143 then
           logger.info("[easy-dotnet] Roslyn stopped")
@@ -183,13 +202,34 @@ function M.enable(opts)
     },
     handlers = {
       ["client/registerCapability"] = function(err, params, ctx, config)
-        --HACK: roslyn sends watchers for non-existing dotnet directory on linux based systems #670
-        for _, registration in ipairs(params.registrations) do
-          if registration.method == "workspace/didChangeWatchedFiles" and registration.registerOptions and registration.registerOptions.watchers then
-            registration.registerOptions.watchers = vim
-              .iter(registration.registerOptions.watchers)
-              :filter(function(watch) return vim.loop.fs_stat(vim.uri_to_fname(watch.globPattern.baseUri)) ~= nil end)
-              :totable()
+        local client_id = ctx.client_id
+        if params.registrations then
+          for _, registration in ipairs(params.registrations) do
+            if registration.method == "workspace/didChangeWatchedFiles" and registration.registerOptions and registration.registerOptions.watchers then
+              -- Filter out watchers for non-existing paths
+              registration.registerOptions.watchers = vim
+                .iter(registration.registerOptions.watchers)
+                :filter(function(watch)
+                  if type(watch.globPattern) == "table" and watch.globPattern.baseUri then
+                    return vim.loop.fs_stat(vim.uri_to_fname(watch.globPattern.baseUri)) ~= nil
+                  end
+                  return true -- Keep watchers without baseUri (string patterns)
+                end)
+                :totable()
+              
+              -- If solution is already loaded, let registration through normally
+              if M.solution_loaded[client_id] then
+                -- Let it through, already filtered
+              else
+                -- Cache the entire registration (will register in bulk on solution/open)
+                if not M.pending_watchers[client_id] then
+                  M.pending_watchers[client_id] = {}
+                end
+                table.insert(M.pending_watchers[client_id], registration)
+                -- Block the registration
+                registration.registerOptions.watchers = {}
+              end
+            end
           end
         end
         return vim.lsp.handlers["client/registerCapability"](err, params, ctx, config)
@@ -201,6 +241,10 @@ function M.enable(opts)
         if workspace_job and type(workspace_job) == "function" then vim.defer_fn(function()
           workspace_job(true)
           M.state[client.id] = nil
+          -- Register all collected watchers in bulk after solution/project is ready
+          M.register_watchers_bulk(client)
+          -- Mark solution as loaded - future registrations will go through normally
+          M.solution_loaded[client.id] = true
         end, 2000) end
         vim.defer_fn(function() refresh_diag(client) end, 500)
       end,
