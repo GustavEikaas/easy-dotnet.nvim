@@ -1,5 +1,6 @@
 local M = {}
 local window = require("easy-dotnet.test-runner.window")
+local constants = require("easy-dotnet.constants")
 local runner = require("easy-dotnet.test-runner.runner")
 local logger = require("easy-dotnet.logger")
 
@@ -220,20 +221,20 @@ M.keymaps = function()
         win.hide()
         vim.cmd("edit " .. node.file_path)
         vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
-        dap.toggle_breakpoint()
+        dap.set_breakpoint()
 
-        local dap_configuration = {
-          type = "coreclr",
-          name = node.name,
-          request = "attach",
-          processId = function()
-            local project_path = node.cs_project_path
-            local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
-            return res.process_id
-          end,
-        }
-
-        dap.run(dap_configuration)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function()
+          client.debugger:debugger_start({ targetPath = node.cs_project_path }, function(res)
+            local debug_conf = {
+              type = constants.debug_adapter_name,
+              name = constants.debug_adapter_name,
+              request = "attach",
+              port = res.port,
+            }
+            dap.run(debug_conf)
+          end)
+        end)
       end,
       desc = keymap.debug_test.desc,
     },
