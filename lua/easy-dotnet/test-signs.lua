@@ -1,3 +1,5 @@
+local picker = require("easy-dotnet.picker")
+local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
@@ -39,19 +41,24 @@ local function debug_test_from_buffer()
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and node.line_number - 1 == current_line then
       vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
       dap.set_breakpoint()
-
-      local dap_configuration = {
-        type = "coreclr",
-        name = node.name,
-        request = "attach",
-        processId = function()
-          local project_path = node.cs_project_path
-          local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
-          return res.process_id
-        end,
-      }
-      dap.run(dap_configuration)
-      --return to avoid running multiple times in case of InlineData|ClassData
+      local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+      local project_path = node.cs_project_path
+      local sln_file = sln_parse.find_solution_file()
+      assert(sln_file, "Failed to find a solution file")
+      local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(sln_file, function(i) return i.isTestProject end)
+      local test_project = project_path and project_path or picker.pick_sync(nil, test_projects, "Pick test project").path
+      assert(test_project, "No project selected")
+      client:initialize(function()
+        client.debugger:debugger_start({ targetPath = test_project }, function(res)
+          local debug_conf = {
+            type = constants.debug_adapter_name,
+            name = constants.debug_adapter_name,
+            request = "attach",
+            port = res.port,
+          }
+          dap.run(debug_conf)
+        end)
+      end)
       return
     end
   end)
