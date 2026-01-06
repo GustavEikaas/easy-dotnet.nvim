@@ -72,12 +72,37 @@ local function auto_bootstrap_namespace(bufnr, mode)
   end)
 end
 
+local function get_project_contexts(bufnr)
+  local params = {
+    _vs_textDocument = {
+      uri = vim.uri_from_bufnr(bufnr),
+    },
+  }
+
+  local clients = vim.lsp.get_clients({ bufnr = bufnr })
+  if #clients == 0 then return end
+
+  local client = clients[1] -- or pick a specific one
+
+  client:request("textDocument/_vs_getProjectContexts", params, function(err, result, ctx, _)
+    if err then
+      if err.code == vim.lsp.protocol.ErrorCodes.RequestCancelled then return end
+      vim.notify("LSP error: " .. err.message, vim.log.levels.ERROR)
+      return
+    end
+
+    -- result is VSProjectContextList
+    vim.print(result)
+  end, bufnr)
+end
+
 ---@param mode easy-dotnet.BootstrapNamespaceMode
 M.auto_bootstrap_namespace = function(mode)
   vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
     pattern = "*.cs",
     callback = function()
       local bufnr = vim.api.nvim_get_current_buf()
+      vim.keymap.set("n", "<leader>y", function() get_project_contexts(bufnr) end, { buffer = bufnr })
       auto_bootstrap_namespace(bufnr, mode)
     end,
   })
