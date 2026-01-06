@@ -88,7 +88,7 @@ M.package_completion_cmp = {
             local items = polyfills.tbl_map(function(value) return { label = value.id, kind = 18 } end, res)
             callback({ items = items, isIncomplete = true })
           end)
-          .cancel()
+          .cancel
       end)
     elseif inside_version then
       local package_name = current_line:match('Include="([^"]+)"')
