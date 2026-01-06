@@ -83,12 +83,10 @@ M.package_completion_cmp = {
         M.include_pending_cancel_cb = nil
       end
       client:initialize(function()
-        M.include_pending_cancel_cb = client.nuget
-          :nuget_search(search_term, nil, function(res)
-            local items = polyfills.tbl_map(function(value) return { label = value.id, kind = 18 } end, res)
-            callback({ items = items, isIncomplete = true })
-          end)
-          .cancel()
+        M.include_pending_cancel_cb = client.nuget:nuget_search(search_term, nil, function(res)
+          local items = polyfills.tbl_map(function(value) return { label = value.id, kind = 18 } end, res)
+          callback({ items = items, isIncomplete = true })
+        end).cancel
       end)
     elseif inside_version then
       local package_name = current_line:match('Include="([^"]+)"')
