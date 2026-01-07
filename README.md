@@ -68,6 +68,8 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
     - [Support matrix](#support-matrix)
 18. [Nvim-dap configuration](#nvim-dap-configuration)
 19. [Troubleshooting](#troubleshooting)
+20. [Highlight groups](#highlight-groups)
+21. [Local Development](#local-development)
 
 ## Features
 
@@ -908,4 +910,6 @@ Check out [debugging-setup](./docs/debugging.md) for a full walkthrough of debug
 </details>
 
 
+## Local Development
 
+Check out [setup guid](./docs/server-development.md)

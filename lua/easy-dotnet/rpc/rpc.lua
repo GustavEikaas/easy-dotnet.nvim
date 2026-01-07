@@ -10,7 +10,7 @@ local function get_tmpdir()
   -- ensure trailing slash
   if not tmp:match("/$") then tmp = tmp .. "/" end
   return tmp
-end 
+end
 
 --- Returns the full platform-specific path for a named pipe.
 ---
