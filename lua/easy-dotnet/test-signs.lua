@@ -28,6 +28,28 @@ local function compare_paths(path1, path2)
   return vim.fs.normalize(path1):lower() == vim.fs.normalize(path2):lower()
 end
 
+---@return integer? start_row, integer? end_row
+local function get_nearest_method_range()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local cursor = vim.api.nvim_win_get_cursor(0)
+  local row, col = cursor[1] - 1, cursor[2]
+
+  local parser = vim.treesitter.get_parser(bufnr)
+  if not parser then return nil end
+  local tree = parser:parse()[1]
+  local root = tree:root()
+
+  local node = root:named_descendant_for_range(row, col, row, col)
+
+  while node do
+    if node:type() == "method_declaration" then
+      local start_row, _, end_row, _ = node:range()
+      return start_row + 1, end_row + 1
+    end
+    node = node:parent()
+  end
+end
+
 local function debug_test_from_buffer()
   local success, dap = pcall(function() return require("dap") end)
   if not success then
@@ -36,9 +58,10 @@ local function debug_test_from_buffer()
   end
 
   local curr_file = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
-  local current_line = vim.api.nvim_win_get_cursor(0)[1]
+  local start_row, end_row = get_nearest_method_range()
+
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
-    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and node.line_number - 1 == current_line then
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and (node.line_number >= start_row and node.line_number <= end_row) then
       vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
       dap.set_breakpoint()
       local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -64,35 +87,12 @@ local function debug_test_from_buffer()
   end)
 end
 
-local function get_nearest_method_line()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local cursor = vim.api.nvim_win_get_cursor(0)
-  local row, col = cursor[1] - 1, cursor[2]
-
-  local parser = vim.treesitter.get_parser(bufnr)
-  if not parser then return nil end
-  local tree = parser:parse()[1]
-  local root = tree:root()
-
-  local node = root:named_descendant_for_range(row, col, row, col)
-
-  while node do
-    if node:type() == "method_declaration" then
-      local name_node = node:field("name")[1]
-      if name_node then
-        local start_row = name_node:start()
-        return start_row + 1
-      end
-    end
-    node = node:parent()
-  end
-end
-
 local function run_test_from_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
   local requires_rebuild = get_buf_mtime() ~= get_mtime(curr_file)
 
+  ---@type easy-dotnet.TestRunner.Node[]
   local handlers = {}
 
   ---@param node easy-dotnet.TestRunner.Node
@@ -110,11 +110,9 @@ local function run_test_from_buffer()
     on_finished(res)
   end
 
+  local start_row, end_row = get_nearest_method_range()
   for _, node in ipairs(handlers) do
-    if node.is_MTP and node.line_number == vim.api.nvim_win_get_cursor(0)[1] then
-      keymaps.test_run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
-      M.add_gutter_test_signs()
-    elseif not node.is_MTP and (node.line_number - 1 == vim.api.nvim_win_get_cursor(0)[1] or node.line_number - 1 == get_nearest_method_line()) then
+    if node.line_number >= start_row and node.line_number <= end_row then
       keymaps.test_run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
       M.add_gutter_test_signs()
     end
