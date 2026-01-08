@@ -169,6 +169,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
           },
         mappings = {
           run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
+          run_all_tests_from_buffer = { lhs = "<leader>t", desc = "run all tests from buffer" },
           peek_stack_trace_from_buffer = { lhs = "<leader>p", desc = "peek stack trace from buffer" },
           filter_failed_tests = { lhs = "<leader>fe", desc = "filter failed tests" },
           debug_test = { lhs = "<leader>d", desc = "debug test" },

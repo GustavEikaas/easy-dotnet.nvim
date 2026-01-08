@@ -87,7 +87,8 @@ local function debug_test_from_buffer()
   end)
 end
 
-local function run_test_from_buffer()
+---@param predicate (fun(node: easy-dotnet.TestRunner.Node): boolean)|nil
+local function run_tests_from_buffer(predicate)
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
   local requires_rebuild = get_buf_mtime() ~= get_mtime(curr_file)
@@ -110,13 +111,17 @@ local function run_test_from_buffer()
     on_finished(res)
   end
 
-  local start_row, end_row = get_nearest_method_range()
   for _, node in ipairs(handlers) do
-    if node.line_number >= start_row and node.line_number <= end_row then
+    if not predicate or predicate(node) then
       keymaps.test_run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
       M.add_gutter_test_signs()
     end
   end
+end
+
+local function run_test_from_buffer()
+  local start_row, end_row = get_nearest_method_range()
+  run_tests_from_buffer(function(node) return node.line_number >= start_row and node.line_number <= end_row end)
 end
 
 local function open_stack_trace_from_buffer()
@@ -203,6 +208,10 @@ function M.add_gutter_test_signs()
     vim.keymap.set("n", keymap.run_test_from_buffer.lhs, function()
       coroutine.wrap(function() run_test_from_buffer() end)()
     end, { silent = true, buffer = bufnr, desc = keymap.run_test_from_buffer.desc })
+
+    vim.keymap.set("n", keymap.run_all_tests_from_buffer.lhs, function()
+      coroutine.wrap(function() run_tests_from_buffer(nil) end)()
+    end, { silent = true, buffer = bufnr, desc = keymap.run_all_tests_from_buffer.desc })
 
     vim.keymap.set("n", keymap.peek_stack_trace_from_buffer.lhs, function()
       coroutine.wrap(function() open_stack_trace_from_buffer() end)()
