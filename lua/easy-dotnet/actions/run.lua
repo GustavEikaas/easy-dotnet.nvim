@@ -12,15 +12,16 @@ local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 ---
 ---This is a wrapper around `term(path, "run", args)`.
 ---
----@param project DotnetProject: The full path to the Dotnet project.
+---@param project easy-dotnet.Project.Project: The full path to the Dotnet project.
 ---@param args string: Additional arguments to pass to `dotnet run`.
 ---@param term function: terminal callback
-local function run_project(project, args, term, attach_debugger)
+---@param profile string | nil: name of launch profile
+local function run_project(project, args, term, attach_debugger, profile)
   if attach_debugger == true then
     require("easy-dotnet.actions.build").rpc_build_quickfix(project.path, nil, nil, function(res)
       if res then
         client.debugger:debugger_start(
-          { targetPath = project.path, launchProfileName = nil, targetFramework = nil, configuration = nil },
+          { targetPath = project.path, launchProfileName = profile, targetFramework = nil, configuration = nil },
           function(debugger_config)
             require("dap").run({ type = constants.debug_adapter_name, name = constants.debug_adapter_name, request = "attach", host = "127.0.0.1", port = debugger_config.port }, { new = true })
           end
@@ -180,7 +181,7 @@ M.run_project_with_profile = function(term, use_default, args, attach_debugger)
   end
   local profile = get_or_pick_profile(use_default, project, solution_file_path)
   local arg = profile and string.format("--launch-profile %s", vim.fn.shellescape(profile)) or ""
-  run_project(project, arg .. " " .. args, term, attach_debugger)
+  run_project(project, arg .. " " .. args, term, attach_debugger, profile)
 end
 
 return M
