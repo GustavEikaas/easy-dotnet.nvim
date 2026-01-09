@@ -67,6 +67,12 @@ M.debug = {
       handle = function(args, options) actions.run(options.terminal, true, passthrough_dotnet_cli_args_handler(args), true) end,
       passthrough = true,
     },
+    watch = {
+      handle = function()
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client.msbuild:msbuild_watch({ targetPath = [[C:\Users\gusta\repo\easy-dotnet-server-test\EasyDotnet.IDE\EasyDotnet.IDE.csproj]], configuration = "Debug" }) end)
+      end,
+    },
     profile = {
       handle = function(args, options) actions.run_with_profile(options.terminal, false, passthrough_dotnet_cli_args_handler(args), true) end,
       passthrough = true,
