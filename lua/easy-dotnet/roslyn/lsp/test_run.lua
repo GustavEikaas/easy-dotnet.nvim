@@ -18,6 +18,7 @@
 ---@param command easy-dotnet.TestRunner.Command
 ---@param ctx easy-dotnet.Roslyn.CommandContext
 return function(command, ctx)
+  vim.print("Roslyn requested to run tests", command)
   local arg = command.arguments[1] -- usually only one
   local _ = ctx.client_id
   local file_uri = arg.textDocument.uri

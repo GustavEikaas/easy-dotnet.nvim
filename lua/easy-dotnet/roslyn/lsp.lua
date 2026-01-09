@@ -257,7 +257,7 @@ function M.enable(opts)
       ["roslyn.client.nestedCodeAction"] = require("easy-dotnet.roslyn.lsp.nested_code_action"),
       ["roslyn.client.completionComplexEdit"] = require("easy-dotnet.roslyn.lsp.complex_edit"),
       -- ["roslyn.client.peekReferences"] = require("easy-dotnet.roslyn.lsp.peek_references"),
-      -- ["dotnet.test.run"] = require("easy-dotnet.roslyn.lsp.test_run"),
+      ["dotnet.test.run"] = require("easy-dotnet.roslyn.lsp.test_run"),
     },
     handlers = {
       ["client/registerCapability"] = function(err, params, ctx, config)
