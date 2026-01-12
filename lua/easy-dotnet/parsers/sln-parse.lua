@@ -2,6 +2,7 @@ local polyfills = require("easy-dotnet.polyfills")
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local logger = require("easy-dotnet.logger")
 local cache = require("easy-dotnet.modules.file-cache")
+local current_solution = require("easy-dotnet.current_solution")
 local M = {}
 
 M.find_project_files = function()
@@ -229,33 +230,14 @@ function M.get_solutions()
   return sln_files
 end
 
-M.try_get_selected_solution_file = function()
-  local files = M.get_solutions()
-  for _, value in ipairs(files) do
-    local file = require("easy-dotnet.default-manager").try_get_cache_file(value)
-    if file then return value end
-  end
-end
+M.try_get_selected_solution_file = function() return current_solution.try_get_selected_solution() end
 
+---@deprecated prefer async version current_solution.get_or_pick_solution
 ---@return string | nil
-M.find_solution_file = function(no_cache)
-  local files = M.get_solutions()
-  local opts = {}
-  for _, value in ipairs(files) do
-    local file = require("easy-dotnet.default-manager").try_get_cache_file(value)
-    if file and not no_cache then
-      ---@type string
-      return value
-    end
-    table.insert(opts, { display = value, ordinal = value, value = value })
-  end
-  if #opts == 0 then return nil end
-  local selection = require("easy-dotnet.picker").pick_sync(nil, opts, "Pick solution file")
-
-  if selection.value then
-    require("easy-dotnet.default-manager").set_default_solution(nil, selection.value)
-    return selection.value
-  end
+M.find_solution_file = function()
+  local co = coroutine.running()
+  current_solution.get_or_pick_solution(function(solution_path) coroutine.resume(co, solution_path) end)
+  return coroutine.yield()
 end
 
 return M
