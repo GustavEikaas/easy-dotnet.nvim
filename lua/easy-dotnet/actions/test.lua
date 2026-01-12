@@ -3,9 +3,11 @@ local picker = require("easy-dotnet.picker")
 local error_messages = require("easy-dotnet.error-messages")
 local parsers = require("easy-dotnet.parsers")
 local logger = require("easy-dotnet.logger")
+local current_solution = require("easy-dotnet.current_solution")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 
+---@return easy-dotnet.Project.Project | nil
 local pick_project_without_solution = function()
   local csproject_path = csproj_parse.find_project_file()
   if not csproject_path then
@@ -31,7 +33,7 @@ end
 ---@return string|nil: The path to the solution file, or nil if no solution is used.
 local function pick_project_framework_or_solution(use_default)
   local default_manager = require("easy-dotnet.default-manager")
-  local solution_file_path = sln_parse.find_solution_file()
+  local solution_file_path = sln_parse.try_get_selected_solution_file()
   if solution_file_path == nil then return pick_project_without_solution(), nil end
 
   local default = default_manager.check_default_project(solution_file_path, "test")
@@ -72,23 +74,25 @@ local function test_solution(args, term)
   term = term or require("easy-dotnet.options").options.terminal
   args = args or ""
 
-  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
+  current_solution.get_or_pick_solution(function(solution_path)
+    solution_path = solution_path or csproj_parse.find_project_file()
 
-  if solutionFilePath == nil then
-    logger.error(error_messages.no_project_definition_found)
-    return
-  end
+    if solution_path == nil then
+      logger.error(error_messages.no_project_definition_found)
+      return
+    end
 
-  local cmd = string.format("dotnet test %s", solutionFilePath)
+    local cmd = string.format("dotnet test %s", solution_path)
 
-  term(solutionFilePath, "test", args or "", { cmd = cmd })
+    term(solution_path, "test", args or "", { cmd = cmd })
+  end)
 end
 
 ---Tests a dotnet project with the given arguments using the terminal runner.
 ---
 ---This is a wrapper around `term(path, "test", args)`.
 ---
----@param project DotnetProject: The full path to the Dotnet project.
+---@param project easy-dotnet.Project.Project: The full path to the Dotnet project.
 ---@param args string: Additional arguments to pass to `dotnet test`.
 ---@param term function: terminal callback
 local function test_project(project, args, term)
@@ -118,25 +122,26 @@ M.run_test_picker = function(term, use_default, args)
   use_default = use_default or false
   args = args or ""
 
-  local solutionFilePath = sln_parse.find_solution_file()
-  if solutionFilePath == nil then
-    csproj_fallback_test(term, args)
-    return
-  end
+  current_solution.get_or_pick_solution(function(solution_path)
+    if solution_path == nil then
+      csproj_fallback_test(term, args)
+      return
+    end
 
-  local project, sln = pick_project_framework_or_solution(use_default)
-  if project == nil and sln ~= nil then
-    test_solution(args, term)
-  elseif project ~= nil then
-    test_project(project, args, term)
-  end
+    local project, sln = pick_project_framework_or_solution(use_default)
+    if project == nil and sln ~= nil then
+      test_solution(args, term)
+    elseif project ~= nil then
+      test_project(project, args, term)
+    end
+  end)
 end
 
 M.test_solution = function(term, args) test_solution(args, term) end
 
 M.test_watcher = function(icons)
   local dn = require("easy-dotnet.parsers").sln_parser
-  local slnPath = dn.find_solution_file()
+  local slnPath = dn.try_get_selected_solution_file()
   local projects = dn.get_projects_from_sln(slnPath)
   local testProjects = {}
   for _, value in pairs(projects) do

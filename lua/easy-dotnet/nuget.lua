@@ -29,7 +29,7 @@ end
 
 ---@return string
 local function get_project()
-  local sln_file_path = sln_parse.find_solution_file()
+  local sln_file_path = sln_parse.try_get_selected_solution_file()
   if not sln_file_path then
     local proj = csproj_parse.find_project_file()
     if not proj then

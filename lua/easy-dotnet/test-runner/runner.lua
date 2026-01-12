@@ -4,6 +4,7 @@ local error_messages = require("easy-dotnet.error-messages")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local logger = require("easy-dotnet.logger")
 local qf_list = require("easy-dotnet.build-output.qf-list")
+local current_solution = require("easy-dotnet.current_solution")
 
 ---@class easy-dotnet.TestRunner.Module
 ---@field client easy-dotnet.RPC.Client.Dotnet
@@ -351,21 +352,22 @@ end
 
 ---@param options easy-dotnet.TestRunner.Options
 local function open_runner(options)
-  local solutionFilePath = sln_parse.find_solution_file()
-  if solutionFilePath == nil then
-    logger.error(error_messages.no_project_definition_found)
-    return
-  end
+  current_solution.get_or_pick_solution(function(solution_path)
+    if solution_path == nil then
+      logger.error(error_messages.no_project_definition_found)
+      return
+    end
 
-  local is_reused = win.buf ~= nil and vim.api.nvim_buf_is_valid(win.buf) and win.tree and win.tree.solution_file_path == solutionFilePath
+    local is_reused = win.buf ~= nil and vim.api.nvim_buf_is_valid(win.buf) and win.tree and win.tree.solution_file_path == solution_path
 
-  win.buf_name = "Test manager"
-  win.filetype = "easy-dotnet"
-  win.setOptions(options).setKeymaps(require("easy-dotnet.test-runner.keymaps").keymaps).render(options.viewmode)
+    win.buf_name = "Test manager"
+    win.filetype = "easy-dotnet"
+    win.setOptions(options).setKeymaps(require("easy-dotnet.test-runner.keymaps").keymaps).render(options.viewmode)
 
-  if is_reused then return end
+    if is_reused then return end
 
-  refresh_runner(options, solutionFilePath)
+    refresh_runner(options, solution_path)
+  end)
 end
 
 M.refresh = function(options)
@@ -376,16 +378,18 @@ M.refresh = function(options)
     return
   end
 
-  local solutionFilePath = sln_parse.find_solution_file() or csproj_parse.find_project_file()
+  current_solution.get_or_pick_solution(function(solution_path)
+    solution_path = solution_path or csproj_parse.find_project_file()
 
-  if solutionFilePath == nil then
-    logger.error(error_messages.no_project_definition_found)
-    return
-  end
+    if solution_path == nil then
+      logger.error(error_messages.no_project_definition_found)
+      return
+    end
 
-  local is_active = win.buf ~= nil
-  if not is_active then error("Testrunner not initialized") end
-  refresh_runner(options, solutionFilePath)
+    local is_active = win.buf ~= nil
+    if not is_active then error("Testrunner not initialized") end
+    refresh_runner(options, solution_path)
+  end)
 end
 
 local function run_with_traceback(func)

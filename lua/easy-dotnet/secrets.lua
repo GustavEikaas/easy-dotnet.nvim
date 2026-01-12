@@ -1,6 +1,7 @@
 local M = {}
 local parsers = require("easy-dotnet.parsers")
 local logger = require("easy-dotnet.logger")
+local current_solution = require("easy-dotnet.current_solution")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local picker = require("easy-dotnet.picker")
@@ -69,25 +70,26 @@ local function csproj_fallback(get_secret_path)
 end
 
 M.edit_secrets_picker = function(get_secret_path)
-  local solutionFilePath = sln_parse.find_solution_file()
-  if solutionFilePath == nil then
-    csproj_fallback(get_secret_path)
-    return
-  end
+  current_solution.get_or_pick_solution(function(solution_path)
+    if solution_path == nil then
+      csproj_fallback(get_secret_path)
+      return
+    end
 
-  local projectsWithSecrets = polyfills.tbl_filter(function(i) return i.path ~= nil and i.runnable == true end, sln_parse.get_projects_from_sln(solutionFilePath))
+    local projectsWithSecrets = polyfills.tbl_filter(function(i) return i.path ~= nil and i.runnable == true end, sln_parse.get_projects_from_sln(solution_path))
 
-  if #projectsWithSecrets == 0 then
-    logger.error(error_messages.no_runnable_projects_found)
-    return
-  end
-  picker.preview_picker(nil, projectsWithSecrets, function(item)
-    if not item.secrets then return init_secrets(item) end
-    local path = get_secret_path(item.secrets)
-    local parentDir = vim.fs.dirname(path)
-    create_directory(parentDir)
-    vim.cmd("edit! " .. path)
-  end, "Secrets", function(self, entry) secrets_preview(self, entry, get_secret_path) end, get_secret_path, readFile)
+    if #projectsWithSecrets == 0 then
+      logger.error(error_messages.no_runnable_projects_found)
+      return
+    end
+    picker.preview_picker(nil, projectsWithSecrets, function(item)
+      if not item.secrets then return init_secrets(item) end
+      local path = get_secret_path(item.secrets)
+      local parentDir = vim.fs.dirname(path)
+      create_directory(parentDir)
+      vim.cmd("edit! " .. path)
+    end, "Secrets", function(self, entry) secrets_preview(self, entry, get_secret_path) end, get_secret_path, readFile)
+  end)
 end
 
 return M

@@ -167,13 +167,12 @@ local function complete_command(arg_lead, cmdline)
   local all_commands = collect_commands(commands)
   local args = cmdline:match(".*Dotnet[!]*%s+(.*)")
   if not args then return all_commands end
-  -- Everything before arg_lead
   local pre_arg_lead = args:match("^(.*)" .. arg_lead .. "$")
 
   local matches = polyfills
     .iter(all_commands)
     :map(function(command)
-      if pre_arg_lead ~= "" then
+      if pre_arg_lead ~= "" and pre_arg_lead ~= nil then
         local truncated_command = command:match("^" .. pre_arg_lead .. "(.*)")
         if truncated_command == nil then return nil end
         command = truncated_command

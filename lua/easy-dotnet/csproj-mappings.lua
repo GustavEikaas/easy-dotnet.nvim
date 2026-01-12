@@ -18,7 +18,7 @@ function M.add_project_reference(curr_project_path, cb)
   local this_project = csproj.get_project_from_project_file(curr_project_path)
   local references = csproj.get_project_references_from_projects(curr_project_path)
 
-  local solutionFilePath = sln_parse.find_solution_file()
+  local solutionFilePath = sln_parse.try_get_selected_solution_file()
   if solutionFilePath == nil then
     logger.error(error_messages.no_project_definition_found)
     return false

@@ -66,7 +66,7 @@ local function debug_test_from_buffer()
       dap.set_breakpoint()
       local client = require("easy-dotnet.rpc.rpc").global_rpc_client
       local project_path = node.cs_project_path
-      local sln_file = sln_parse.find_solution_file()
+      local sln_file = sln_parse.try_get_selected_solution_file()
       assert(sln_file, "Failed to find a solution file")
       local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(sln_file, function(i) return i.isTestProject end)
       local test_project = project_path and project_path or picker.pick_sync(nil, test_projects, "Pick test project").path

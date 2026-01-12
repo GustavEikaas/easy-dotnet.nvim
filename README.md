@@ -329,7 +329,7 @@ require("lualine").setup {
 | `dotnet.new()`                                | Picker for creating a new template based on `Dotnet new`                                                                                                            |
 | `dotnet.outdated()`                           | Runs `Dotnet outdated` in supported file types (`.csproj`, `.fsproj`, `Directory.Packages.props`, `Packages.props`, `Directory.Build.props`) and displays virtual text with the latest package versions. |
 ||
-| `dotnet.solution_select()`                    | Select the solution file for easy-dotnet.nvim to use, useful when multiple .sln files are present in the project.     |
+| `dotnet.solution_select(path: string)`        | Manually set a solution file for the current working directory. Useful for non-standard layouts where the solution file is outside the normal search depth or in a different location. |
 | `dotnet.solution_add()`                       | `dotnet sln <sln> add <TS>`.                                                                                                            |
 | `dotnet.solution_remove()`                    | `dotnet sln <sln> remove <TS>`.                                                                                                            |
 ||
@@ -370,7 +370,7 @@ dotnet.new()
 dotnet.outdated()
 dotnet.add_package()
 dotnet.remove_package()
-dotnet.solution_select()
+dotnet.solution_select(path: string)
 dotnet.ef_migrations_remove()
 dotnet.ef_migrations_add(name: string)
 dotnet.ef_migrations_list()
@@ -451,7 +451,7 @@ Dotnet restore
 Dotnet clean
 Dotnet new
 Dotnet createfile
-Dotnet solution select
+Dotnet solution select <path>
 Dotnet solution add
 Dotnet solution remove
 Dotnet outdated

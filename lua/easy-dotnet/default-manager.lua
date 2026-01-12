@@ -64,20 +64,6 @@ local function get_or_create_cache_file(solution_file_path)
   }
 end
 
-M.set_default_solution = function(old_solution_file, solution_file_path)
-  if old_solution_file then
-    local sln_name = vim.fs.basename(old_solution_file)
-    local dir = get_or_create_cache_dir()
-    local file = polyfills.fs.joinpath(dir, sln_name .. ".json")
-    if file_exists(file) then
-      local success, err = pcall(vim.loop.fs_unlink, file)
-      if not success then print("Failed to delete file: " .. err) end
-    end
-  end
-
-  get_or_create_cache_file(solution_file_path)
-end
-
 ---@param project string | easy-dotnet.PersistedDefinition | nil
 ---@return easy-dotnet.PersistedDefinition | nil
 local function backwards_compatible(project)

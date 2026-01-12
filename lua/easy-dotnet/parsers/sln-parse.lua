@@ -178,10 +178,9 @@ function M.get_projects_from_sln_async(solution_file_path, filter_fn)
   local project_lines = cache.get(solution_file_path, function()
     local co = coroutine.running()
     assert(co, "get_projects_from_sln_async must be called within a coroutine")
-    local full_path = vim.fs.joinpath(vim.fn.getcwd(), solution_file_path)
 
     client:initialize(function()
-      client:solution_list_projects(full_path, function(res)
+      client:solution_list_projects(solution_file_path, function(res)
         coroutine.resume(co, vim.tbl_map(function(value) return value.absolutePath end, res))
       end)
     end)
@@ -204,11 +203,11 @@ end
 ---@return easy-dotnet.Project.Project[]: A list of DotnetProject objects from the solution, optionally filtered.
 function M.get_projects_from_sln(solution_file_path, filter_fn)
   local co = coroutine.running()
+  assert(co, "get_projects_from_sln must be called from inside a coroutine")
   ---@type string[]
   local result = cache.get(solution_file_path, function()
-    local full_path = vim.fs.joinpath(vim.fn.getcwd(), solution_file_path)
     client:initialize(function()
-      client:solution_list_projects(full_path, function(res)
+      client:solution_list_projects(solution_file_path, function(res)
         coroutine.resume(co, vim.tbl_map(function(value) return value.absolutePath end, res))
       end)
     end)
@@ -231,13 +230,5 @@ function M.get_solutions()
 end
 
 M.try_get_selected_solution_file = function() return current_solution.try_get_selected_solution() end
-
----@deprecated prefer async version current_solution.get_or_pick_solution
----@return string | nil
-M.find_solution_file = function()
-  local co = coroutine.running()
-  current_solution.get_or_pick_solution(function(solution_path) coroutine.resume(co, solution_path) end)
-  return coroutine.yield()
-end
 
 return M

@@ -1,6 +1,7 @@
 local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
 local current_solution = require("easy-dotnet.current_solution")
+local messages = require("easy-dotnet.error-messages")
 ---@type table<string,easy-dotnet.Command>
 local M = {}
 
@@ -304,16 +305,24 @@ M.solution = {
     },
     add = {
       handle = function()
-        local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
-        assert(type(sln_file) == "string")
-        require("easy-dotnet.parsers.sln-parse").add_project_to_solution(sln_file)
+        current_solution.get_or_pick_solution(function(solution_path)
+          if not solution_path then
+            logger.info("No solutions found")
+            return
+          end
+          require("easy-dotnet.parsers.sln-parse").add_project_to_solution(solution_path)
+        end)
       end,
     },
     remove = {
       handle = function()
-        local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
-        assert(type(sln_file) == "string")
-        require("easy-dotnet.parsers.sln-parse").remove_project_from_solution(sln_file)
+        current_solution.get_or_pick_solution(function(solution_path)
+          if not solution_path then
+            logger.info("No solutions found")
+            return
+          end
+          require("easy-dotnet.parsers.sln-parse").remove_project_from_solution(solution_path)
+        end)
       end,
     },
   },

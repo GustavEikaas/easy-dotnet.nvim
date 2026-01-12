@@ -2,6 +2,7 @@ local constants = require("easy-dotnet.constants")
 
 ---@class SolutionCache
 ---@field solution_path string Absolute path to the solution file
+---@field root_dir string convenience to check where it was cached from
 
 ---@class SolutionOption
 ---@field display string
@@ -89,7 +90,7 @@ local function clear_cache()
 end
 
 --- Reads the cache file and returns the decoded data
----@return SolutionCache?
+---@return SolutionCache | nil
 local function read_cache_file()
   local cache_path = get_cache_file_path()
 
@@ -154,7 +155,7 @@ end
 function M.try_get_selected_solution() return try_get_solution_path() end
 
 --- Gets existing solution or prompts user to pick one
----@param cb fun(solution_path: string?) Callback with selected solution path or nil if cancelled
+---@param cb fun(solution_path: string | nil) Callback with selected solution path or nil if cancelled
 function M.get_or_pick_solution(cb)
   local curr_solution = try_get_solution_path()
   if curr_solution then
@@ -164,6 +165,7 @@ function M.get_or_pick_solution(cb)
 
   pick_solution(function(path)
     if path then M.set_solution(path) end
+    coroutine.wrap(cb)(path)
     cb(path)
   end)
 end
@@ -182,6 +184,7 @@ function M.set_solution(path)
   ---@type SolutionCache
   local cache_data = {
     solution_path = normalized_path,
+    root_dir = normalized_path,
   }
 
   return write_cache_file(cache_data)

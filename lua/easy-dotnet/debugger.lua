@@ -30,7 +30,7 @@ end
 ---@return easy-dotnet.Project.Project, string | nil
 local function pick_project(use_default)
   local default_manager = require("easy-dotnet.default-manager")
-  local solution_file_path = sln_parse.find_solution_file()
+  local solution_file_path = sln_parse.try_get_selected_solution_file()
   if solution_file_path == nil then
     local csproject_path = csproj_parse.find_project_file()
     if not csproject_path then logger.error(error_messages.no_runnable_projects_found) end
@@ -59,7 +59,7 @@ end
 
 ---@deprecated remove later
 M.get_debug_dll = function(default)
-  local sln_file = sln_parse.find_solution_file()
+  local sln_file = sln_parse.try_get_selected_solution_file()
   local result = sln_file ~= nil and M.get_dll_for_solution_project(default) or M.get_dll_for_project()
   local target_path = result.dll
   local absolute_project_path = result.project
@@ -150,7 +150,7 @@ end
 
 ---@deprecated remove later
 M.start_debugging_test_project = function(project_path)
-  local sln_file = sln_parse.find_solution_file()
+  local sln_file = sln_parse.try_get_selected_solution_file()
   assert(sln_file, "Failed to find a solution file")
   local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(sln_file, function(i) return i.isTestProject end)
   local test_project = project_path and project_path or picker.pick_sync(nil, test_projects, "Pick test project").path
