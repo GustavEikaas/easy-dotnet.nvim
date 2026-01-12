@@ -1,7 +1,6 @@
 local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
 local current_solution = require("easy-dotnet.current_solution")
-local messages = require("easy-dotnet.error-messages")
 ---@type table<string,easy-dotnet.Command>
 local M = {}
 
