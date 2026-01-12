@@ -5,6 +5,7 @@ local commands = require("easy-dotnet.commands")
 local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
 local job = require("easy-dotnet.ui-modules.jobs")
+local current_solution = require("easy-dotnet.current_solution")
 
 local M = {}
 local function wrap(callback)
@@ -166,13 +167,12 @@ local function complete_command(arg_lead, cmdline)
   local all_commands = collect_commands(commands)
   local args = cmdline:match(".*Dotnet[!]*%s+(.*)")
   if not args then return all_commands end
-  -- Everything before arg_lead
   local pre_arg_lead = args:match("^(.*)" .. arg_lead .. "$")
 
   local matches = polyfills
     .iter(all_commands)
     :map(function(command)
-      if pre_arg_lead ~= "" then
+      if pre_arg_lead ~= "" and pre_arg_lead ~= nil then
         local truncated_command = command:match("^" .. pre_arg_lead .. "(.*)")
         if truncated_command == nil then return nil end
         command = truncated_command
@@ -200,7 +200,7 @@ end
 local function background_scanning(merged_opts)
   if merged_opts.background_scanning then
     --prewarm msbuild properties
-    local selected_solution = require("easy-dotnet.parsers.sln-parse").try_get_selected_solution_file()
+    local selected_solution = current_solution.try_get_selected_solution()
     if selected_solution then
       require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(selected_solution)
     else
@@ -323,6 +323,7 @@ M.entity_framework = {
   migration = require("easy-dotnet.ef-core.migration"),
 }
 
+---@deprecated very poorly optimized, please do not use
 M.is_dotnet_project = function()
   local project_files = require("easy-dotnet.parsers.sln-parse").get_solutions() or require("easy-dotnet.parsers.csproj-parse").find_project_file()
   return project_files ~= nil

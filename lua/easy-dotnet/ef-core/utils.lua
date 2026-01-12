@@ -4,7 +4,7 @@ local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local M = {}
 
 M.pick_projects = function()
-  local sln = require("easy-dotnet.parsers.sln-parse").find_solution_file()
+  local sln = require("easy-dotnet.parsers.sln-parse").try_get_selected_solution_file()
   assert(sln, "No solution file found")
   local projects = sln_parse.get_projects_from_sln(sln)
 

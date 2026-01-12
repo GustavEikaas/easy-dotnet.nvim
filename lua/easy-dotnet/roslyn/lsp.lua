@@ -4,6 +4,7 @@ local root_finder = require("easy-dotnet.roslyn.root_finder")
 local dotnet_client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
+local current_solution = require("easy-dotnet.current_solution")
 
 local M = {
   state = {},
@@ -94,6 +95,12 @@ function M.find_project_or_solution(bufnr, cb)
   if buf_path:match("^%a+://") then return nil end
   if vim.fn.filereadable(buf_path) == 0 then return nil end
 
+  local sln_by_root_dir = current_solution.try_get_selected_solution()
+  if sln_by_root_dir then
+    cb(vim.fs.dirname(sln_by_root_dir))
+    return
+  end
+
   local project = root_finder.find_csproj_from_file(buf_path)
 
   if not project then
@@ -127,7 +134,7 @@ function M.find_project_or_solution(bufnr, cb)
   end
 
   require("easy-dotnet.picker").picker(nil, vim.tbl_map(function(value) return { display = value } end, sln), function(r)
-    require("easy-dotnet.default-manager").set_default_solution(nil, r.display)
+    current_solution.set_solution(r.display)
     cb(vim.fs.dirname(r.display))
   end, "Pick solution file to start Roslyn from", true, true)
 end

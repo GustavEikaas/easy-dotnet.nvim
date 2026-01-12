@@ -1,5 +1,6 @@
 local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
+local current_solution = require("easy-dotnet.current_solution")
 ---@type table<string,easy-dotnet.Command>
 local M = {}
 
@@ -294,31 +295,33 @@ M.solution = {
   handle = nil,
   subcommands = {
     select = {
-      handle = function()
-        local files = require("easy-dotnet.parsers.sln-parse").get_solutions()
-        local old = nil
-        for _, value in ipairs(files) do
-          local file = require("easy-dotnet.default-manager").try_get_cache_file(value)
-          if file then old = value end
-        end
-
-        local sln = require("easy-dotnet.parsers.sln-parse").find_solution_file(true)
-        if sln == nil then print("No solutions found") end
-        require("easy-dotnet.default-manager").set_default_solution(old, sln)
+      handle = function(args)
+        local path = type(args) == "string" and args or args[1]
+        current_solution.set_solution(path)
+        logger.info(string.format("Selected solution: %s", vim.fs.basename(path)))
       end,
+      passthrough = true,
     },
     add = {
       handle = function()
-        local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
-        assert(type(sln_file) == "string")
-        require("easy-dotnet.parsers.sln-parse").add_project_to_solution(sln_file)
+        current_solution.get_or_pick_solution(function(solution_path)
+          if not solution_path then
+            logger.info("No solutions found")
+            return
+          end
+          require("easy-dotnet.parsers.sln-parse").add_project_to_solution(solution_path)
+        end)
       end,
     },
     remove = {
       handle = function()
-        local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
-        assert(type(sln_file) == "string")
-        require("easy-dotnet.parsers.sln-parse").remove_project_from_solution(sln_file)
+        current_solution.get_or_pick_solution(function(solution_path)
+          if not solution_path then
+            logger.info("No solutions found")
+            return
+          end
+          require("easy-dotnet.parsers.sln-parse").remove_project_from_solution(solution_path)
+        end)
       end,
     },
   },

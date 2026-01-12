@@ -87,7 +87,7 @@ end
 ---@return string|nil: The path to the solution file, or nil if no solution is used.
 local function pick_project_framework(use_default)
   local default_manager = require("easy-dotnet.default-manager")
-  local solution_file_path = sln_parse.find_solution_file()
+  local solution_file_path = sln_parse.try_get_selected_solution_file()
   if solution_file_path == nil then return pick_project_without_solution(), nil end
 
   local default = default_manager.check_default_project(solution_file_path, "run")
@@ -118,7 +118,7 @@ M.run_project_picker = function(term, use_default, args, attach_debugger)
   use_default = use_default or false
   args = args or ""
   local default_manager = require("easy-dotnet.default-manager")
-  local solution_file_path = sln_parse.find_solution_file()
+  local solution_file_path = sln_parse.try_get_selected_solution_file()
   if solution_file_path == nil then
     csproj_fallback_run(term, args, attach_debugger)
     return

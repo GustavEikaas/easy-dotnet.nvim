@@ -1,6 +1,7 @@
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local constants = require("easy-dotnet.constants")
 local logger = require("easy-dotnet.logger")
+local current_solution = require("easy-dotnet.current_solution")
 local M = {}
 
 ---@alias easy-dotnet.PatternType "reference" | "version"
@@ -75,16 +76,12 @@ M.outdated = function()
       client:outdated_packages(path, function(res) apply_ext_marks(res, "reference") end)
     end)
   elseif filename == constants.dotnet_files.directory_packages_props or filename == constants.dotnet_files.packages_props then
-    local sln_parse = require("easy-dotnet.parsers.sln-parse")
-    local solution_file_path = sln_parse.find_solution_file()
     client:initialize(function()
-      client:outdated_packages(solution_file_path or "", function(res) apply_ext_marks(res, "version") end)
+      client:outdated_packages(current_solution.try_get_selected_solution() or "", function(res) apply_ext_marks(res, "version") end)
     end)
   elseif filename == constants.dotnet_files.directory_build_props then
-    local sln_parse = require("easy-dotnet.parsers.sln-parse")
-    local solution_file_path = sln_parse.find_solution_file()
     client:initialize(function()
-      client:outdated_packages(solution_file_path or "", function(res) apply_ext_marks(res, "reference") end)
+      client:outdated_packages(current_solution.try_get_selected_solution() or "", function(res) apply_ext_marks(res, "reference") end)
     end)
   else
     logger.error("Current buffer is not *.csproj, *.fsproj, directory.packages.props, packages.props or directory.build.props")
