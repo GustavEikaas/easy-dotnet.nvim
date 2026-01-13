@@ -59,6 +59,10 @@ local function debug_test_from_buffer()
 
   local curr_file = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
   local start_row, end_row = get_nearest_method_range()
+  if not start_row or not end_row then
+    logger.warn("Didn't find nearest method range")
+    return
+  end
 
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and (node.line_number >= start_row and node.line_number <= end_row) then
@@ -121,6 +125,11 @@ end
 
 local function run_test_from_buffer()
   local start_row, end_row = get_nearest_method_range()
+  if not start_row or not end_row then
+    logger.warn("Didn't find nearest method range")
+    return
+  end
+
   run_tests_from_buffer(function(node) return node.line_number >= start_row and node.line_number <= end_row end)
 end
 
@@ -128,11 +137,19 @@ local function open_stack_trace_from_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
+  local start_row, end_row = get_nearest_method_range()
+  if not start_row or not end_row then
+    logger.warn("Didn't find nearest method range")
+    return
+  end
+
   local handlers = {}
 
   ---@param node easy-dotnet.TestRunner.Node
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
-    if (node.type == "test" or node.type == "subcase") and compare_paths(node.file_path, curr_file) then table.insert(handlers, node) end
+    if (node.type == "test" or node.type == "subcase") and compare_paths(node.file_path, curr_file) and node.line_number >= start_row and node.line_number <= end_row then
+      table.insert(handlers, node)
+    end
   end)
 
   -- In case of multiple tests on the same line (e.g. [TheoryData]), show the first one with a stack trace
