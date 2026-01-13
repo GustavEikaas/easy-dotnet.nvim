@@ -90,13 +90,24 @@ local function check_project_context(client, bufnr)
   query_server(false)
 end
 
+local function is_file_in_cwd(filepath)
+  local cwd = vim.fn.getcwd()
+
+  local abs_file = vim.fs.normalize(vim.fn.fnamemodify(filepath, ":p"))
+  local abs_cwd = vim.fs.normalize(vim.fn.fnamemodify(cwd, ":p"))
+
+  if not abs_cwd:match("/$") then abs_cwd = abs_cwd .. "/" end
+
+  return abs_file:sub(1, #abs_cwd) == abs_cwd
+end
+
 function M.find_project_or_solution(bufnr, cb)
   local buf_path = vim.api.nvim_buf_get_name(bufnr)
   if buf_path:match("^%a+://") then return nil end
   if vim.fn.filereadable(buf_path) == 0 then return nil end
 
   local sln_by_root_dir = current_solution.try_get_selected_solution()
-  if sln_by_root_dir then
+  if sln_by_root_dir and is_file_in_cwd(buf_path) then
     cb(vim.fs.dirname(sln_by_root_dir))
     return
   end
