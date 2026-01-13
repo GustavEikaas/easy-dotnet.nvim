@@ -68,8 +68,9 @@ local function debug_test_from_buffer()
       local project_path = node.cs_project_path
       local sln_file = sln_parse.try_get_selected_solution_file()
       assert(sln_file, "Failed to find a solution file")
-      local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(sln_file, function(i) return i.isTestProject end)
-      local test_project = project_path and project_path or picker.pick_sync(nil, test_projects, "Pick test project").path
+      local get_projects = coroutine.wrap(sln_parse.get_projects_and_frameworks_flattened_from_sln)
+      local test_projects = get_projects(sln_file, function(i) return i.isTestProject end)
+      local test_project = project_path or picker.pick_sync(nil, test_projects, "Pick test project").path
       assert(test_project, "No project selected")
       client:initialize(function()
         client.debugger:debugger_start({ targetPath = test_project }, function(res)
