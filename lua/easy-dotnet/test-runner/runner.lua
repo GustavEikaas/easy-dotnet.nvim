@@ -283,12 +283,15 @@ end
 
 ---@param project_node easy-dotnet.TestRunner.Node
 ---@param options table
-local function handle_rpc_response(project_node, options)
+---@param co thread
+local function handle_rpc_response(project_node, options, co)
   return function(tests)
     register_rpc_discovered_tests(tests, project_node, options)
 
     project_node.job = nil
     win.refreshTree()
+
+    if co then coroutine.resume(co) end
   end
 end
 
@@ -296,6 +299,8 @@ end
 ---@param options table
 ---@param solution_file_path string
 local function start_test_discovery(project, options, solution_file_path)
+  local co = coroutine.running()
+
   local project_node = create_test_node_from_dotnet_project(project, solution_file_path, options, function() start_test_discovery(project, options, solution_file_path) end)
   win.tree.children[project_node.name] = project_node
 
@@ -303,7 +308,9 @@ local function start_test_discovery(project, options, solution_file_path)
   project_node.job = { name = "discover", state = "pending" }
   win.refreshTree()
 
-  M.client.test:test_discover({ projectPath = project.path, configuration = "Debug", targetFrameworkMoniker = project_node.framework }, handle_rpc_response(project_node, options))
+  M.client.test:test_discover({ projectPath = project.path, configuration = "Debug", targetFrameworkMoniker = project_node.framework }, handle_rpc_response(project_node, options, co))
+
+  coroutine.yield()
 end
 
 local function refresh_runner(options, solution_file_path)

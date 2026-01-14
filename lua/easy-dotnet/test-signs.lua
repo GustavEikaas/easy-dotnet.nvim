@@ -93,23 +93,45 @@ local function run_tests_from_buffer(predicate)
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
   local requires_rebuild = get_buf_mtime() ~= get_mtime(curr_file)
 
-  ---@type easy-dotnet.TestRunner.Node[]
-  local handlers = {}
+  ---@type easy-dotnet.TestRunner.Node
+  local first_node
+  ---@type easy-dotnet.TestRunner.Node
+  local project_node
 
   ---@param node easy-dotnet.TestRunner.Node
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
-    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then table.insert(handlers, node) end
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then
+      first_node = node
+      return
+    end
   end)
-  ---@type easy-dotnet.TestRunner.Node
-  local first_node = handlers[1]
 
-  if requires_rebuild and first_node then
+  ---@param node easy-dotnet.TestRunner.Node
+  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+    if node.type == "csproject" and node.cs_project_path == first_node.cs_project_path then
+      project_node = node
+      return
+    end
+  end)
+
+  if requires_rebuild and project_node then
     local on_finished = job.register_job({ name = "Building...", on_error_text = "Build failed", on_success_text = "Built successfully" })
 
-    local res = runner.request_build(first_node.cs_project_path)
-    if res then reset_buf_mtime(curr_file) end
+    local res = runner.request_build(project_node.cs_project_path)
+    if res then
+      reset_buf_mtime(curr_file)
+      project_node.refresh()
+    end
+
     on_finished(res)
   end
+
+  ---@type easy-dotnet.TestRunner.Node[]
+  local handlers = {}
+
+  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then table.insert(handlers, node) end
+  end)
 
   for _, node in ipairs(handlers) do
     if not predicate or predicate(node) then
