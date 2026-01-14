@@ -66,7 +66,7 @@ local function debug_test_from_buffer()
 
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and (node.line_number >= start_row and node.line_number <= end_row) then
-      vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
+      vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - (node.is_MTP and 0 or 1)) or 0, 0 })
       dap.set_breakpoint()
       local client = require("easy-dotnet.rpc.rpc").global_rpc_client
       local project_path = node.cs_project_path
