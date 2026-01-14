@@ -269,24 +269,31 @@ function M:_initialize(cb, opts)
     local apply_value_converters = require("easy-dotnet.options").options.debugger.apply_value_converters
 
     local debuggerOptions = { applyValueConverters = apply_value_converters, binaryPath = debugger_path }
-    current_solution.get_or_pick_solution(
-      function(sln_file)
-        M.create_rpc_call({
-          client = self._client,
-          job = { name = "Initializing...", on_success_text = "Client initialized", on_error_text = "Failed to initialize server" },
-          cb = cb,
-          on_crash = opts.on_crash,
-          method = "initialize",
-          params = {
-            request = {
-              clientInfo = { name = "EasyDotnet", version = "2.0.0" },
-              projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
-              options = { useVisualStudio = use_visual_studio, debuggerOptions = debuggerOptions },
+    current_solution.get_or_pick_solution(function(sln_file)
+      --TODO: resolve picker and inform server whether we support push
+      M.create_rpc_call({
+        client = self._client,
+        job = { name = "Initializing...", on_success_text = "Client initialized", on_error_text = "Failed to initialize server" },
+        cb = cb,
+        on_crash = opts.on_crash,
+        method = "initialize",
+        params = {
+          request = {
+            clientInfo = {
+              name = "EasyDotnet",
+              version = "2.0.0",
+              capabilities = {
+                picker = {
+                  supportsAutoCancel = true,
+                },
+              },
             },
+            projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
+            options = { useVisualStudio = use_visual_studio, debuggerOptions = debuggerOptions },
           },
-        })()
-      end
-    )
+        },
+      })()
+    end)
   end)()
 end
 

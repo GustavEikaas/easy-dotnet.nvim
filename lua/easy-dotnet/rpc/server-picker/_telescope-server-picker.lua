@@ -3,7 +3,7 @@ local conf = require("telescope.config").values
 ---@type easy-dotnet.RPC.Picker
 local M = {
   supports_auto_cancel_detection = true,
-  pick = function(options, title, on_select, on_cancel)
+  pick = function(title, options, on_select, on_cancel)
     local picker = require("telescope.pickers").new({}, {
       prompt_title = title,
       finder = require("telescope.finders").new_table({
