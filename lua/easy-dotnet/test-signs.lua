@@ -59,17 +59,22 @@ local function debug_test_from_buffer()
 
   local curr_file = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
   local start_row, end_row = get_nearest_method_range()
+  if not start_row or not end_row then
+    logger.warn("Didn't find nearest method range")
+    return
+  end
 
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and (node.line_number >= start_row and node.line_number <= end_row) then
-      vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
+      vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - (node.is_MTP and 0 or 1)) or 0, 0 })
       dap.set_breakpoint()
       local client = require("easy-dotnet.rpc.rpc").global_rpc_client
       local project_path = node.cs_project_path
       local sln_file = sln_parse.try_get_selected_solution_file()
       assert(sln_file, "Failed to find a solution file")
-      local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(sln_file, function(i) return i.isTestProject end)
-      local test_project = project_path and project_path or picker.pick_sync(nil, test_projects, "Pick test project").path
+      local get_projects = coroutine.wrap(sln_parse.get_projects_and_frameworks_flattened_from_sln)
+      local test_projects = get_projects(sln_file, function(i) return i.isTestProject end)
+      local test_project = project_path or picker.pick_sync(nil, test_projects, "Pick test project").path
       assert(test_project, "No project selected")
       client:initialize(function()
         client.debugger:debugger_start({ targetPath = test_project }, function(res)
@@ -143,6 +148,11 @@ end
 
 local function run_test_from_buffer()
   local start_row, end_row = get_nearest_method_range()
+  if not start_row or not end_row then
+    logger.warn("Didn't find nearest method range")
+    return
+  end
+
   run_tests_from_buffer(function(node) return node.line_number >= start_row and node.line_number <= end_row end)
 end
 
@@ -150,11 +160,19 @@ local function open_stack_trace_from_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
+  local start_row, end_row = get_nearest_method_range()
+  if not start_row or not end_row then
+    logger.warn("Didn't find nearest method range")
+    return
+  end
+
   local handlers = {}
 
   ---@param node easy-dotnet.TestRunner.Node
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
-    if (node.type == "test" or node.type == "subcase") and compare_paths(node.file_path, curr_file) then table.insert(handlers, node) end
+    if (node.type == "test" or node.type == "subcase") and compare_paths(node.file_path, curr_file) and node.line_number >= start_row and node.line_number <= end_row then
+      table.insert(handlers, node)
+    end
   end)
 
   -- In case of multiple tests on the same line (e.g. [TheoryData]), show the first one with a stack trace
