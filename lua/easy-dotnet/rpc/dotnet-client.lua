@@ -120,6 +120,7 @@ end
 ---@field msbuild easy-dotnet.RPC.Client.MsBuild
 ---@field debugger easy-dotnet.RPC.Client.Debugger
 ---@field lsp easy-dotnet.RPC.Client.Lsp
+---@field entity_framework easy-dotnet.RPC.Client.EntityFramework
 ---@field template_engine easy-dotnet.RPC.Client.TemplateEngine
 ---@field launch_profiles easy-dotnet.RPC.Client.LaunchProfiles
 ---@field nuget easy-dotnet.RPC.Client.Nuget
@@ -151,6 +152,7 @@ function M:new()
   instance.msbuild = require("easy-dotnet.rpc.controllers.msbuild").new(client)
   instance.template_engine = require("easy-dotnet.rpc.controllers.template").new(client)
   instance.launch_profiles = require("easy-dotnet.rpc.controllers.launch-profiles").new(client)
+  instance.entity_framework = require("easy-dotnet.rpc.controllers.entity-framework").new(client)
   instance.nuget = require("easy-dotnet.rpc.controllers.nuget").new(client)
   instance.roslyn = require("easy-dotnet.rpc.controllers.roslyn").new(client)
   instance.debugger = require("easy-dotnet.rpc.controllers.debugger").new(client)
