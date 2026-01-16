@@ -200,6 +200,7 @@ function M.enable(opts)
   local cmd = { "dotnet", "easydotnet", "roslyn", "start" }
 
   if opts.roslynator_enabled then table.insert(cmd, "--roslynator") end
+  if opts.easy_dotnet_analyzer_enabled then table.insert(cmd, "--easy-dotnet-analyzer") end
 
   if opts.analyzer_assemblies then
     for _, dll in ipairs(opts.analyzer_assemblies) do

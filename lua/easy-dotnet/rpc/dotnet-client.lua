@@ -309,7 +309,8 @@ function M:solution_list_projects(solution_file_path, cb, include_non_existing, 
         if not ok then logger.warn(string.format("%s references non existent project %s", basename_solution, vim.fs.basename(project.absolutePath))) end
       end)
 
-      local filtered_projects = include_non_existing and res or vim.iter(res):filter(function(project) return vim.fn.filereadable(project.absolutePath) == 1 end):totable()
+      local filtered_projects = include_non_existing and res
+        or vim.iter(res):filter(function(project) return vim.fn.filereadable(project.absolutePath) == 1 and vim.fn.fnamemodify(project.absolutePath, ":e") ~= "dcproj" end):totable()
 
       cb(filtered_projects)
     end,

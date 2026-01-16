@@ -169,18 +169,12 @@ local function make_response(decoded)
   end
 end
 
----Handles incoming JSON-RPC responses from the server.
----@param decoded table The decoded JSON message
-local function handle_response(decoded)
+local function handle_server_response(decoded)
   local cb = callbacks[decoded.id]
-  local handler = handlers[decoded.method]
   if cb then
     callbacks[decoded.id] = nil
     cancellation_callbacks[decoded.id] = nil
     vim.schedule(function() cb(decoded) end)
-  elseif handler then
-    vim.print(decoded)
-    vim.schedule(function() handle_server_request(decoded, make_response(decoded), handler) end)
   end
 end
 
@@ -192,6 +186,15 @@ local function handle_server_notification(decoded)
       pcall(cb, decoded.method, decoded.params)
     end
   end)
+end
+
+local function dispatch_server_request(decoded)
+  local handler = handlers[decoded.method]
+  if handler then
+    vim.schedule(function() handle_server_request(decoded, make_response(decoded), handler) end)
+  else
+    logger.warn("Server sent unknown method: " .. tostring(decoded.method))
+  end
 end
 
 ---Starts reading from the JSON-RPC pipe and dispatching messages.
@@ -222,13 +225,17 @@ local function read_loop()
 
       local ok, decoded = pcall(vim.json.decode, body)
       if ok and decoded then
-        if decoded.id then
-          handle_response(decoded)
-        elseif decoded.method then
+        if decoded.method and decoded.id then
+          dispatch_server_request(decoded)
+        elseif decoded.method and not decoded.id then
           handle_server_notification(decoded)
+        elseif not decoded.method and decoded.id then
+          handle_server_response(decoded)
+        else
+          logger.warn("Received invalid JSON-RPC message structure")
         end
       else
-        vim.notify("Malformed JSON: " .. body, vim.log.levels.WARN)
+        vim.notify("Malformed JSON body: " .. body, vim.log.levels.WARN)
       end
     end
   end
@@ -285,7 +292,7 @@ function M.request(method, params, callback, options)
   if not is_connected then error("Client not connected") end
 
   request_id = request_id + 1
-  local id = request_id
+  local id = "c-" .. tostring(request_id)
 
   local message = {
     jsonrpc = "2.0",
