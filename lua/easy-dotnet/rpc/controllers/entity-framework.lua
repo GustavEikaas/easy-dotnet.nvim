@@ -49,7 +49,7 @@ function M:migration_apply(opts)
   return helper.create_rpc_call({
     client = self._client,
     job = nil,
-    method = "ef/migration-apply",
+    method = "ef/migrations-apply",
     params = {},
     cb = nil,
     on_crash = opts.on_crash,
