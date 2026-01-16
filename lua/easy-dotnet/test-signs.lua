@@ -186,6 +186,36 @@ local function open_stack_trace_from_buffer()
   end
 end
 
+local function open_output_from_buffer()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local curr_file = vim.api.nvim_buf_get_name(bufnr)
+
+  local start_row, end_row = get_nearest_method_range()
+  if not start_row or not end_row then
+    logger.warn("Didn't find nearest method range")
+    return
+  end
+
+  local handlers = {}
+
+  ---@param node easy-dotnet.TestRunner.Node
+  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+    if (node.type == "test" or node.type == "subcase") and compare_paths(node.file_path, curr_file) and node.line_number >= start_row and node.line_number <= end_row then
+      table.insert(handlers, node)
+    end
+  end)
+
+  -- In case of multiple tests on the same line (e.g. [TheoryData]), show the first one with output
+  ---@type easy-dotnet.TestRunner.Node
+  for _, node in ipairs(handlers) do
+    if node.output then
+      local window = require("easy-dotnet.test-runner.window")
+      window:new_float():write_buf(node.output):create()
+      return
+    end
+  end
+end
+
 function M.add_gutter_test_signs()
   local options = require("easy-dotnet.test-runner.render").options
   local is_test_file = false
@@ -256,6 +286,10 @@ function M.add_gutter_test_signs()
     vim.keymap.set("n", keymap.peek_stack_trace_from_buffer.lhs, function()
       coroutine.wrap(function() open_stack_trace_from_buffer() end)()
     end, { silent = true, buffer = bufnr, desc = keymap.peek_stack_trace_from_buffer.desc })
+
+    vim.keymap.set("n", keymap.peek_output_from_buffer.lhs, function()
+      coroutine.wrap(function() open_output_from_buffer() end)()
+    end, { silent = true, buffer = bufnr, desc = keymap.peek_output_from_buffer.desc })
   end
 end
 

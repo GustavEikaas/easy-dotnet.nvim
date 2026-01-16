@@ -29,6 +29,7 @@ end
 
 local function parse_status(result, test_line, options)
   if result.duration then test_line.duration = result.duration end
+  if result.stdOut then test_line.output = result.stdOut end
   --TODO: handle more cases like cancelled etc...
   if result.outcome == "passed" then
     test_line.icon = options.icons.passed
@@ -189,6 +190,12 @@ local function open_stack_trace(line)
   if path ~= nil and path.line ~= nil then vim.api.nvim_win_set_cursor(file_float.win, { path.line, 0 }) end
 end
 
+local function open_test_output(node)
+  if node.output == nil then return end
+
+  window:new_float():write_buf(node.output):create()
+end
+
 M.keymaps = function()
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   return {
@@ -289,6 +296,7 @@ M.keymaps = function()
       desc = keymap.expand.desc,
     },
     [keymap.peek_stacktrace.lhs] = { handle = function(node) open_stack_trace(node) end, desc = keymap.peek_stacktrace.desc },
+    [keymap.peek_output.lhs] = { handle = function(node) open_test_output(node) end, desc = keymap.peek_output.desc },
     [keymap.run_all.lhs] = {
       handle = function(_, win)
         win.traverse(win.tree, function(node)
