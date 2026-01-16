@@ -15,6 +15,7 @@
 ---@class easy-dotnet.LspOpts
 ---@field enabled boolean                -- Whether the LSP is enabled
 ---@field analyzer_assemblies string[]|nil -- Optional list of analyzer DLLs
+---@field easy_dotnet_analyzer_enabled boolean -- Whether built-in easy-dotnet roslyn analyzer is enabled
 ---@field roslynator_enabled boolean     -- Whether Roslynator is enabled
 ---@field config vim.lsp.config?          -- LSP configuration table
 
@@ -194,6 +195,7 @@ local M = {
       enabled = true,
       analyzer_assemblies = {},
       roslynator_enabled = true,
+      easy_dotnet_analyzer_enabled = true,
       config = {},
     },
     diagnostics = {
