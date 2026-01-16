@@ -334,7 +334,12 @@ M.ef = {
       handle = nil,
       subcommands = {
         update = {
-          handle = function() require("easy-dotnet.ef-core.database").database_update() end,
+          handle = function()
+            local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+            client:ef()
+
+            -- require("easy-dotnet.ef-core.database").database_update()
+          end,
           subcommands = {
             pick = {
               handle = function() require("easy-dotnet.ef-core.database").database_update("pick") end,

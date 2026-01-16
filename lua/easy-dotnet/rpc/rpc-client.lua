@@ -179,6 +179,7 @@ local function handle_response(decoded)
     cancellation_callbacks[decoded.id] = nil
     vim.schedule(function() cb(decoded) end)
   elseif handler then
+    vim.print(decoded)
     vim.schedule(function() handle_server_request(decoded, make_response(decoded), handler) end)
   end
 end

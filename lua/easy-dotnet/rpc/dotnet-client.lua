@@ -130,6 +130,7 @@ end
 -- luacheck: no max line length
 ---@field solution_list_projects fun(self: easy-dotnet.RPC.Client.Dotnet, solution_file_path: string, cb?: fun(res: easy-dotnet.Server.SolutionFileProjectResponse[]), include_non_existing?: boolean, opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field outdated_packages fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.Nuget.OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
+---@field ef fun(self: easy-dotnet.RPC.Client.Dotnet): integer | false
 ---@field get_state fun(self: easy-dotnet.RPC.Client.Dotnet): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
 ---@field _initializing boolean? # True while initialization is in progress
 ---@field _initialized boolean? # True once initialization is complete
@@ -354,6 +355,16 @@ function M:outdated_packages(target_path, cb)
     on_job_finished(false)
   end)
   return id
+end
+
+function M:ef()
+  return M.create_rpc_call({
+    client = self._client,
+    job = nil,
+    cb = function() end,
+    method = "ef/database-update",
+    params = {},
+  })()
 end
 
 return M

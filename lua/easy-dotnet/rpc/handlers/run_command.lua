@@ -10,6 +10,7 @@
 
 ---@param params easy-dotnet.Job.TrackedJob
 return function(params, response, throw, validate)
+  vim.print("command recieved")
   local job_id_ok, job_id_err = validate({ jobId = "string" }, params)
   if not job_id_ok then
     throw({ code = -32602, message = job_id_err })
