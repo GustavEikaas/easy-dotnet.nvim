@@ -360,14 +360,4 @@ function M:outdated_packages(target_path, cb)
   return id
 end
 
-function M:ef()
-  return M.create_rpc_call({
-    client = self._client,
-    job = nil,
-    cb = function() end,
-    method = "ef/database-update",
-    params = {},
-  })()
-end
-
 return M
