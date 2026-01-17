@@ -336,13 +336,15 @@ M.ef = {
         update = {
           handle = function()
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-            client.entity_framework:database_update()
+            client:initialize(function()
+              client.entity_framework:database_update()
+            end)
           end,
           subcommands = {
             pick = {
               handle = function()
                 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-                client.entity_framework:migration_apply()
+                client:initialize(function() client.entity_framework:migration_apply() end)
               end,
             },
           },
@@ -350,7 +352,7 @@ M.ef = {
         drop = {
           handle = function()
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-            client.entity_framework:database_drop()
+            client:initialize(function() client.entity_framework:database_drop() end)
           end,
         },
       },
@@ -363,13 +365,14 @@ M.ef = {
           handle = function(args)
             local migration_name = type(args) == "string" and args or args[1]
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-            client.entity_framework:migration_add(migration_name)
+            client:initialize(function() client.entity_framework:migration_add(migration_name) end)
           end,
         },
         remove = {
           handle = function()
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-            client.entity_framework:migration_remove()
+
+            client:initialize(function() client.entity_framework:migration_remove() end)
           end,
         },
         list = {
