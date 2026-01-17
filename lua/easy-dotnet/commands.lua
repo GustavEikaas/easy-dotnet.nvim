@@ -336,9 +336,7 @@ M.ef = {
         update = {
           handle = function()
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-            client:initialize(function()
-              client.entity_framework:database_update()
-            end)
+            client:initialize(function() client.entity_framework:database_update() end)
           end,
           subcommands = {
             pick = {
@@ -371,7 +369,6 @@ M.ef = {
         remove = {
           handle = function()
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-
             client:initialize(function() client.entity_framework:migration_remove() end)
           end,
         },
