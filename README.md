@@ -74,7 +74,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 ## Features
 
 - Roslyn LSP support out of the box — powered by the official .NET Roslyn language server (see [LSP details](./docs/lsp.md))
-- Debugger configured out of the box- powered by [netcoredbg](https://github.com/samsung/netcoredbg) ([nvim-dap required](https://github.com/mfussenegger/nvim-dap))
+- Debugger configured out of the box- powered by [netcoredbg](https://github.com/samsung/netcoredbg)
 - Solution, slnx, csproj and fsproj support: Whether its a single project or a solution containing multiple projects easy-dotnet has you covered.
 - Action Commands: Execute common tasks like building, running, testing, cleaning and restoring with ease.
 - User Secrets Management: Edit, create, and preview .NET user secrets directly within Neovim.
