@@ -32,6 +32,7 @@ local function parse_status(result, test_line, options)
   --TODO: handle more cases like cancelled etc...
   if result.outcome == "passed" then
     test_line.icon = options.icons.passed
+    if result.stdOut then test_line.expand = result.stdOut end
     --TODO: figure this shit out
   elseif result.outcome == "failed" or result.outcome == "error" then
     test_line.icon = options.icons.failed
