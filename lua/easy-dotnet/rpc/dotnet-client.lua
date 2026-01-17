@@ -120,6 +120,7 @@ end
 ---@field msbuild easy-dotnet.RPC.Client.MsBuild
 ---@field debugger easy-dotnet.RPC.Client.Debugger
 ---@field lsp easy-dotnet.RPC.Client.Lsp
+---@field entity_framework easy-dotnet.RPC.Client.EntityFramework
 ---@field template_engine easy-dotnet.RPC.Client.TemplateEngine
 ---@field launch_profiles easy-dotnet.RPC.Client.LaunchProfiles
 ---@field nuget easy-dotnet.RPC.Client.Nuget
@@ -130,6 +131,7 @@ end
 -- luacheck: no max line length
 ---@field solution_list_projects fun(self: easy-dotnet.RPC.Client.Dotnet, solution_file_path: string, cb?: fun(res: easy-dotnet.Server.SolutionFileProjectResponse[]), include_non_existing?: boolean, opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field outdated_packages fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.Nuget.OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
+---@field ef fun(self: easy-dotnet.RPC.Client.Dotnet): integer | false
 ---@field get_state fun(self: easy-dotnet.RPC.Client.Dotnet): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
 ---@field _initializing boolean? # True while initialization is in progress
 ---@field _initialized boolean? # True once initialization is complete
@@ -150,6 +152,7 @@ function M:new()
   instance.msbuild = require("easy-dotnet.rpc.controllers.msbuild").new(client)
   instance.template_engine = require("easy-dotnet.rpc.controllers.template").new(client)
   instance.launch_profiles = require("easy-dotnet.rpc.controllers.launch-profiles").new(client)
+  instance.entity_framework = require("easy-dotnet.rpc.controllers.entity-framework").new(client)
   instance.nuget = require("easy-dotnet.rpc.controllers.nuget").new(client)
   instance.roslyn = require("easy-dotnet.rpc.controllers.roslyn").new(client)
   instance.debugger = require("easy-dotnet.rpc.controllers.debugger").new(client)
@@ -308,7 +311,8 @@ function M:solution_list_projects(solution_file_path, cb, include_non_existing, 
         if not ok then logger.warn(string.format("%s references non existent project %s", basename_solution, vim.fs.basename(project.absolutePath))) end
       end)
 
-      local filtered_projects = include_non_existing and res or vim.iter(res):filter(function(project) return vim.fn.filereadable(project.absolutePath) == 1 end):totable()
+      local filtered_projects = include_non_existing and res
+        or vim.iter(res):filter(function(project) return vim.fn.filereadable(project.absolutePath) == 1 and vim.fn.fnamemodify(project.absolutePath, ":e") ~= "dcproj" end):totable()
 
       cb(filtered_projects)
     end,
