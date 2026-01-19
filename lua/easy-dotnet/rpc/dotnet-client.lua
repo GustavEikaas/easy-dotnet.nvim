@@ -297,6 +297,12 @@ end
 ---@field projectName string
 ---@field absolutePath string
 
+local function is_loadable_project(path)
+  local e = vim.fn.fnamemodify(path, ":e")
+  local known = { "csproj", "fsproj" }
+  return vim.tbl_contains(known, e)
+end
+
 function M:solution_list_projects(solution_file_path, cb, include_non_existing, opts)
   include_non_existing = include_non_existing or false
   opts = opts or {}
@@ -312,7 +318,7 @@ function M:solution_list_projects(solution_file_path, cb, include_non_existing, 
       end)
 
       local filtered_projects = include_non_existing and res
-        or vim.iter(res):filter(function(project) return vim.fn.filereadable(project.absolutePath) == 1 and vim.fn.fnamemodify(project.absolutePath, ":e") ~= "dcproj" end):totable()
+        or vim.iter(res):filter(function(project) return vim.fn.filereadable(project.absolutePath) == 1 and is_loadable_project(project.absolutePath) end):totable()
 
       cb(filtered_projects)
     end,
