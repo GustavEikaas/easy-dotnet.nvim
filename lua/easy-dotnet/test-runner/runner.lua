@@ -84,10 +84,11 @@ local function count_segments(path)
   return count
 end
 
-local function update_indent_recursively(node, base_indent)
-  node.indent = base_indent
+local function update_indent_and_parent_recursively(node, indent, parent)
+  node.indent = indent
+  node.parent = parent
   for _, child in pairs(node.children or {}) do
-    update_indent_recursively(child, base_indent + 2)
+    update_indent_and_parent_recursively(child, indent + 2, node)
   end
 end
 
@@ -107,7 +108,8 @@ local function flatten_namespaces(node)
         local merged = vim.deepcopy(child)
         merged.name = node.name .. "." .. child.name
         merged.namespace = child.namespace
-        update_indent_recursively(merged, node.indent)
+
+        update_indent_and_parent_recursively(merged, node.indent, node.parent)
 
         for k in pairs(node) do
           node[k] = nil
@@ -137,11 +139,13 @@ local function ensure_path(root, path, has_arguments, test, options, offset_inde
   end
 
   local current = root.children
+  local parent = root
+
   for i, part in ipairs(parts) do
     if not current[part] then
       local is_full_path = i == #parts
-      current[part] = {
-        id = test.id,
+      local node = {
+        id = not is_full_path and table.concat(parts, ".", 1, i) or test.id,
         name = part,
         displayName = test.display_name,
         namespace = table.concat(parts, ".", 1, i),
@@ -159,9 +163,13 @@ local function ensure_path(root, path, has_arguments, test, options, offset_inde
         children = {},
         framework = root.framework,
         is_MTP = root.is_MTP,
+        parent = parent, -- <-- Set parent reference
       }
+
+      current[part] = node
     end
-    current = current[part].children
+    parent = current[part]
+    current = parent.children
   end
 end
 
@@ -178,12 +186,15 @@ local function generate_tree(tests, options, project)
     local base_name = test.namespace:match("([^%(]+)") or test.namespace
     ensure_path(project, base_name, has_arguments, test, options, offset_indent)
 
-    -- If the test has arguments, add it as a subcase
-    if test.namespace:find("%(") then
+    if has_arguments then
       local parent = project.children
+      local parent_node = project
+
       for part in base_name:gmatch("[^.]+") do
-        parent = parent[part].children
+        parent_node = parent[part]
+        parent = parent_node.children
       end
+
       parent[test.namespace] = {
         name = test.namespace:match("([^.]+%b())$"),
         displayName = test.display_name,
@@ -202,6 +213,7 @@ local function generate_tree(tests, options, project)
         preIcon = options.icons.test,
         framework = project.framework,
         is_MTP = project.is_MTP,
+        parent = parent_node, -- <-- Set parent reference for subcase
       }
     end
   end
