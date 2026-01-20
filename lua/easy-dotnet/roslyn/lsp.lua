@@ -252,7 +252,7 @@ function M.enable(opts)
       M.pending_watchers[client_id] = nil
       M.solution_loaded[client_id] = nil
       M.solution_state[client_id] = nil
-      M.checked_buffers = nil
+      M.checked_buffers = {}
       vim.schedule(function()
         if code == 0 or code == 143 then
           logger.info("[easy-dotnet] Roslyn stopped")
