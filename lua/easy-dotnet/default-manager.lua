@@ -1,26 +1,26 @@
 local polyfills = require("easy-dotnet.polyfills")
----@class DefaultProfile
+---@class easy-dotnet.DefaultProfile
 ---@field project string
 ---@field profile string
 
----@class SolutionContent
+---@class easy-dotnet.SolutionContent
 ---@field default_build_project string
 ---@field default_test_project string
 ---@field default_run_project string
 ---@field default_debug_project string
----@field default_profile DefaultProfile
+---@field default_profile easy-dotnet.DefaultProfile
 
----@class PersistedDefinition
+---@class easy-dotnet.PersistedDefinition
 ---@field type 'solution' | 'project'
 ---@field project string
 ---@field target_framework string | nil
 
 local M = {}
 
----@alias TaskType "build" | "test" | "run" | "launch-profile" | "view" | "watch" | "debug"
+---@alias easy-dotnet.TaskType "build" | "test" | "run" | "launch-profile" | "view" | "watch" | "debug"
 
 ---Gets the property name for the given type.
----@param type TaskType
+---@param type easy-dotnet.TaskType
 ---@return string
 local function get_property(type)
   if not (type == "build" or type == "test" or type == "run" or type == "launch-profile" or type == "view" or type == "watch" or type == "debug") then
@@ -59,31 +59,17 @@ local function get_or_create_cache_file(solution_file_path)
   local _, decoded = pcall(vim.fn.json_decode, vim.fn.readfile(file))
   return {
     file = file,
-    ---@type SolutionContent|nil
+    ---@type easy-dotnet.SolutionContent|nil
     decoded = decoded,
   }
 end
 
-M.set_default_solution = function(old_solution_file, solution_file_path)
-  if old_solution_file then
-    local sln_name = vim.fs.basename(old_solution_file)
-    local dir = get_or_create_cache_dir()
-    local file = polyfills.fs.joinpath(dir, sln_name .. ".json")
-    if file_exists(file) then
-      local success, err = pcall(vim.loop.fs_unlink, file)
-      if not success then print("Failed to delete file: " .. err) end
-    end
-  end
-
-  get_or_create_cache_file(solution_file_path)
-end
-
----@param project string | PersistedDefinition | nil
----@return PersistedDefinition | nil
+---@param project string | easy-dotnet.PersistedDefinition | nil
+---@return easy-dotnet.PersistedDefinition | nil
 local function backwards_compatible(project)
   if not project then return nil end
   if type(project) == "string" then
-    ---@type PersistedDefinition
+    ---@type easy-dotnet.PersistedDefinition
     return {
       type = project == "Solution" and "solution" or "project",
       project = project,
@@ -92,15 +78,15 @@ local function backwards_compatible(project)
   return project
 end
 
----@class DefaultProject
+---@class easy-dotnet.DefaultProject
 ---@field type '"solution"' | '"project"'
 ---@field path string
 ---@field project? DotnetProject
 
 ---Checks for the default project in the solution file.
 ---@param solution_file_path string Path to the solution file.
----@param type TaskType
----@return DefaultProject|nil
+---@param type easy-dotnet.TaskType
+---@return easy-dotnet.DefaultProject|nil
 M.check_default_project = function(solution_file_path, type)
   local file = get_or_create_cache_file(solution_file_path)
   local sln_parse = require("easy-dotnet.parsers.sln-parse")
@@ -108,7 +94,7 @@ M.check_default_project = function(solution_file_path, type)
   local default = backwards_compatible(file.decoded[get_property(type)])
   if default ~= nil then
     if default.type == "solution" then
-      ---@type DefaultProject
+      ---@type easy-dotnet.DefaultProject
       return {
         type = "solution",
         path = solution_file_path,
@@ -123,7 +109,7 @@ M.check_default_project = function(solution_file_path, type)
     for _, value in ipairs(matches) do
       if value.msbuild_props.isMultiTarget then
         if value.msbuild_props.targetFramework == default.target_framework then
-          ---@type DefaultProject
+          ---@type easy-dotnet.DefaultProject
           return {
             type = "project",
             path = value.path,
@@ -131,7 +117,7 @@ M.check_default_project = function(solution_file_path, type)
           }
         end
       else
-        ---@type DefaultProject
+        ---@type easy-dotnet.DefaultProject
         return {
           type = "project",
           path = value.path,
@@ -144,7 +130,7 @@ M.check_default_project = function(solution_file_path, type)
     local fallback = matches[1]
     if not fallback then return nil end
     M.set_default_project(fallback, solution_file_path, type)
-    ---@type DefaultProject
+    ---@type easy-dotnet.DefaultProject
     return {
       type = "project",
       path = fallback.path,
@@ -153,17 +139,17 @@ M.check_default_project = function(solution_file_path, type)
   end
 end
 
----@param project DotnetProject The project to set as default.
----@return PersistedDefinition
+---@param project easy-dotnet.Project.Project The project to set as default.
+---@return easy-dotnet.PersistedDefinition
 local function project_to_persist(project)
   if project.name:lower() == "solution" then
-    ---@type PersistedDefinition
+    ---@type easy-dotnet.PersistedDefinition
     return {
       project = project.name,
       type = "solution",
     }
   end
-  ---@type PersistedDefinition
+  ---@type easy-dotnet.PersistedDefinition
   return {
     project = project.name,
     target_framework = project.msbuild_props.isMultiTarget and project.msbuild_props.targetFramework or nil,
@@ -172,9 +158,9 @@ local function project_to_persist(project)
 end
 
 ---Sets the default project in the solution file.
----@param project DotnetProject The project to set as default.
+---@param project easy-dotnet.Project.Project The project to set as default.
 ---@param solution_file_path string Path to the solution file.
----@param type TaskType
+---@param type easy-dotnet.TaskType
 M.set_default_project = function(project, solution_file_path, type)
   local file = get_or_create_cache_file(solution_file_path)
 
@@ -185,7 +171,7 @@ M.set_default_project = function(project, solution_file_path, type)
   file_utils.overwrite_file(file.file, vim.fn.json_encode(file.decoded))
 end
 
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 ---@param solution_file_path string
 ---@param profile string
 M.set_default_launch_profile = function(project, solution_file_path, profile)
@@ -193,7 +179,7 @@ M.set_default_launch_profile = function(project, solution_file_path, profile)
 
   if file.decoded == nil then file.decoded = {} end
 
-  ---@type DefaultProfile
+  ---@type easy-dotnet.DefaultProfile
   local default_profile = {
     project = project.name,
     profile = profile,
@@ -205,8 +191,8 @@ M.set_default_launch_profile = function(project, solution_file_path, profile)
 end
 
 ---@param solution_file_path string
----@param project DotnetProject
----@return DefaultProfile | nil
+---@param project easy-dotnet.Project.Project
+---@return easy-dotnet.DefaultProfile | nil
 M.get_default_launch_profile = function(solution_file_path, project)
   local file = get_or_create_cache_file(solution_file_path)
   local default_profile = file.decoded.default_profile

@@ -1,4 +1,4 @@
----@class Spinner
+---@class easy-dotnet.Spinner
 local M = {}
 M.__index = M
 
@@ -11,7 +11,7 @@ M.spinner_presets = {
 }
 
 ---Creates a new spinner instance.
----@return Spinner
+---@return easy-dotnet.Spinner
 function M.new()
   ---@class Spinner
   local self = setmetatable({}, M)
@@ -23,10 +23,12 @@ function M.new()
 end
 
 ---Updates the spinner notification.
----@param pending_text string The text to display while the spinner is running.
-function M:update_spinner(pending_text)
+---@param text_provider function | string A function that returns the current text or a static string.
+function M:update_spinner(text_provider)
   if self.spinner_timer then
-    self.notify_id = vim.notify(pending_text .. " " .. self.spinner_symbols[self.spinner_index], vim.log.levels.INFO, {
+    local current_text = type(text_provider) == "function" and text_provider() or text_provider
+
+    self.notify_id = vim.notify(current_text .. " " .. self.spinner_symbols[self.spinner_index], vim.log.levels.INFO, {
       title = "Progress",
       id = "progress",
       replace = self.notify_id,
@@ -35,19 +37,15 @@ function M:update_spinner(pending_text)
   end
 end
 
----Starts the spinner with a given pending message and optional symbol preset.
----@param pending_text string The message to display while the spinner is running.
----@param preset "dots"|"arrows"|nil Optional spinner symbol preset to use.
-function M:start_spinner(pending_text, preset)
-  if preset and M.spinner_presets[preset] then
-    self.spinner_symbols = M.spinner_presets[preset]
-  else
-    self.spinner_symbols = M.spinner_presets.default
-  end
+---Starts the spinner
+---@param text_provider function | string
+---@param preset "dots"|"arrows"|nil
+function M:start_spinner(text_provider, preset)
+  self.spinner_symbols = M.spinner_presets[preset] or M.spinner_presets.default
 
   if not self.spinner_timer then
     self.spinner_timer = vim.loop.new_timer()
-    self.spinner_timer:start(0, 300, vim.schedule_wrap(function() self:update_spinner(pending_text) end))
+    self.spinner_timer:start(0, 300, vim.schedule_wrap(function() self:update_spinner(text_provider) end))
   end
 end
 

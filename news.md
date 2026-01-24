@@ -2,6 +2,116 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## Automatic .NET Variable Conversion ([#666](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/666))
+
+Debugging in C# and F# just got significantly more readable. With this release, **common .NET types are automatically unwrapped and displayed in a concise, human-friendly format** across any DAP-compliant UI in Neovim, including `nvim-dap-ui`, `nvim-dap-view`, and others.
+
+Previously, inspecting variables often required navigating internal fields such as `_items`, `_size`, or thread-local queues. Now, with **value converters enabled by default**, variables like `List<T>`, `Dictionary<K,V>`, and `CancellationTokenSource` are displayed cleanly without drilling into private fields.
+
+### What this means for you
+
+* **Immediate readability:** See the contents of collections and other common types directly.
+* **DAP-compliant:** Works with any DAP UI plugin — no custom UI required.
+* **Optional:** Can be disabled globally by setting:
+
+```lua
+require("easy-dotnet").setup({    
+  debugger = {
+    apply_value_converters = false,
+  }
+})
+```
+
+
+### Example: `List<string>`
+
+**Converted (new):**
+
+```
+x System.Collections.Generic.List<string> = {System.Collections.Generic.List<string>}
+  [0] string = "hello"
+  [1] string = "world"
+```
+
+**Previous view (old):**
+
+```
+x System.Collections.Generic.List<string> = {System.Collections.Generic.List<string>}
+  _items string[] = {string[4]}
+    [0] string = "hello"
+    [1] string = "world"
+    [2] string = null
+    [3] string = null
+  _size int = 2
+  _version int = 2
+  Capacity int = 4
+  Count int = 2
+  System.Collections.IList.IsFixedSize bool = false
+  System.Collections.Generic.ICollection<T>.IsReadOnly bool = false
+  System.Collections.IList.IsReadOnly bool = false
+  System.Collections.ICollection.IsSynchronized bool = false
+  System.Collections.ICollection.SyncRoot System.Collections.Generic.List<string> = {…}
+  Item System.Reflection.TargetParameterCountException = {…}
+  System.Collections.IList.Item System.Reflection.TargetParameterCountException = {…}
+  Static members
+```
+
+## Supported Types
+
+The converters currently handle most basic types, lists, hashsets, queues, read-only collections, time types, and threading primitives like `CancellationToken`.
+
+If you encounter a type that isn’t yet handled, or want a specific value converter, please file an issue
+
+Community contributions are always welcome.
+
+
+## Bundled NetCoreDbg - Zero Installation Debugging ([#204](https://github.com/GustavEikaas/easy-dotnet-server/pull/204))
+
+Debugging just got even easier.  NetCoreDbg is now bundled directly with easy-dotnet-server for all platforms. 
+
+Previously, users had to manually install NetCoreDbg (typically via Mason) and configure the `bin_path` option to point to the debugger executable. This added unnecessary friction to the setup process and could lead to version mismatches or platform-specific issues.
+
+With this release, easy-dotnet-server automatically includes NetCoreDbg binaries for Linux (x64/ARM64), macOS (x64), and Windows (x64). The plugin intelligently selects the correct binary for your platform at runtime.
+
+### What this means for you
+
+- **No manual installation**: NetCoreDbg comes bundled — just install easy-dotnet-server and start debugging
+- **No bin_path configuration**: The `debugger.bin_path` option is now completely optional
+- **Always compatible**: NetCoreDbg version is guaranteed to work with your server version
+- **Automatic updates**: When you run `dotnet tool update -g EasyDotnet`, you get the latest debugger too
+- **Cross-platform by default**: Works seamlessly on Linux, macOS, and Windows without platform-specific setup
+
+### Migration guide
+
+If you previously configured NetCoreDbg manually, you can now simplify your setup:
+
+**Before:**
+```lua
+dotnet.setup {
+  debugger = {
+    bin_path = vim.fn.stdpath("data") .. "/mason/bin/netcoredbg", -- Required
+    auto_register_dap = true,
+  }
+}
+```
+
+**After:**
+```lua
+dotnet.setup {
+  debugger = {
+    -- bin_path is now optional - falls back to bundled NetCoreDbg
+    auto_register_dap = true,
+  }
+}
+```
+**Note**: If you still prefer to use your own NetCoreDbg installation (e.g., via Mason) or another CoreCLR DAP adapter, the `bin_path` option continues to work as before.
+
+### Technical details
+
+The bundled NetCoreDbg is extracted from official [Samsung/netcoredbg](https://github.com/Samsung/netcoredbg) releases during the CI build process and packaged with the . NET tool. At runtime, easy-dotnet-server automatically detects your platform and uses the appropriate binary.
+
+This approach ensures you always have a working, tested debugger without any manual intervention. 
+
 ## Roslyn native lsp setup
 Read more [here](./docs/lsp.md) or in the PR #632
 

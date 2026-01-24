@@ -1,3 +1,5 @@
+local picker = require("easy-dotnet.picker")
+local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
@@ -26,41 +28,8 @@ local function compare_paths(path1, path2)
   return vim.fs.normalize(path1):lower() == vim.fs.normalize(path2):lower()
 end
 
-local function debug_test_from_buffer()
-  local success, dap = pcall(function() return require("dap") end)
-  if not success then
-    logger.error("nvim-dap not installed")
-    return
-  end
-
-  local curr_file = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
-  local current_line = vim.api.nvim_win_get_cursor(0)[1]
-  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
-    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and node.line_number - 1 == current_line then
-      --TODO: Investigate why netcoredbg wont work without reopening the buffer????
-      vim.cmd("bdelete")
-      vim.cmd("edit " .. node.file_path)
-      vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
-      dap.toggle_breakpoint()
-
-      local dap_configuration = {
-        type = "coreclr",
-        name = node.name,
-        request = "attach",
-        processId = function()
-          local project_path = node.cs_project_path
-          local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
-          return res.process_id
-        end,
-      }
-      dap.run(dap_configuration)
-      --return to avoid running multiple times in case of InlineData|ClassData
-      return
-    end
-  end)
-end
-
-local function get_nearest_method_line()
+---@return integer? start_row, integer? end_row
+local function get_nearest_method_range()
   local bufnr = vim.api.nvim_get_current_buf()
   local cursor = vim.api.nvim_win_get_cursor(0)
   local row, col = cursor[1] - 1, cursor[2]
@@ -74,62 +43,140 @@ local function get_nearest_method_line()
 
   while node do
     if node:type() == "method_declaration" then
-      local name_node = node:field("name")[1]
-      if name_node then
-        local start_row = name_node:start()
-        return start_row + 1
-      end
+      local start_row, _, end_row, _ = node:range()
+      return start_row + 1, end_row + 1
     end
     node = node:parent()
   end
 end
 
-local function run_test_from_buffer()
+local function debug_test_from_buffer()
+  local success, dap = pcall(function() return require("dap") end)
+  if not success then
+    logger.error("nvim-dap not installed")
+    return
+  end
+
+  local curr_file = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
+  local start_row, end_row = get_nearest_method_range()
+  if not start_row or not end_row then
+    logger.warn("Didn't find nearest method range")
+    return
+  end
+
+  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and (node.line_number >= start_row and node.line_number <= end_row) then
+      vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - (node.is_MTP and 0 or 1)) or 0, 0 })
+      dap.set_breakpoint()
+      local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+      local project_path = node.cs_project_path
+      local sln_file = sln_parse.try_get_selected_solution_file()
+      assert(sln_file, "Failed to find a solution file")
+      local get_projects = coroutine.wrap(sln_parse.get_projects_and_frameworks_flattened_from_sln)
+      local test_projects = get_projects(sln_file, function(i) return i.isTestProject end)
+      local test_project = project_path or picker.pick_sync(nil, test_projects, "Pick test project").path
+      assert(test_project, "No project selected")
+      client:initialize(function()
+        client.debugger:debugger_start({ targetPath = test_project }, function(res)
+          local debug_conf = {
+            type = constants.debug_adapter_name,
+            name = constants.debug_adapter_name,
+            request = "attach",
+            port = res.port,
+          }
+          dap.run(debug_conf)
+        end)
+      end)
+      return
+    end
+  end)
+end
+
+---@param predicate (fun(node: easy-dotnet.TestRunner.Node): boolean)|nil
+local function run_tests_from_buffer(predicate)
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
   local requires_rebuild = get_buf_mtime() ~= get_mtime(curr_file)
 
-  local handlers = {}
+  ---@type easy-dotnet.TestRunner.Node
+  local first_node
+  ---@type easy-dotnet.TestRunner.Node
+  local project_node
 
-  ---@param node TestNode
+  ---@param node easy-dotnet.TestRunner.Node
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
-    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then table.insert(handlers, node) end
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then
+      first_node = node
+      return
+    end
   end)
-  ---@type TestNode
-  local first_node = handlers[1]
 
-  if requires_rebuild and first_node then
+  ---@param node easy-dotnet.TestRunner.Node
+  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+    if node.type == "csproject" and node.cs_project_path == first_node.cs_project_path then
+      project_node = node
+      return
+    end
+  end)
+
+  if requires_rebuild and project_node then
     local on_finished = job.register_job({ name = "Building...", on_error_text = "Build failed", on_success_text = "Built successfully" })
 
-    local res = runner.request_build(first_node.cs_project_path)
-    if res then reset_buf_mtime(curr_file) end
+    local res = runner.request_build(project_node.cs_project_path)
+    if res then
+      reset_buf_mtime(curr_file)
+      project_node.refresh()
+    end
+
     on_finished(res)
   end
 
+  ---@type easy-dotnet.TestRunner.Node[]
+  local handlers = {}
+
+  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then table.insert(handlers, node) end
+  end)
+
   for _, node in ipairs(handlers) do
-    if node.is_MTP and node.line_number == vim.api.nvim_win_get_cursor(0)[1] then
-      keymaps.test_run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
-      M.add_gutter_test_signs()
-    elseif not node.is_MTP and (node.line_number - 1 == vim.api.nvim_win_get_cursor(0)[1] or node.line_number - 1 == get_nearest_method_line()) then
+    if not predicate or predicate(node) then
       keymaps.test_run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
       M.add_gutter_test_signs()
     end
   end
+end
+
+local function run_test_from_buffer()
+  local start_row, end_row = get_nearest_method_range()
+  if not start_row or not end_row then
+    logger.warn("Didn't find nearest method range")
+    return
+  end
+
+  run_tests_from_buffer(function(node) return node.line_number >= start_row and node.line_number <= end_row end)
 end
 
 local function open_stack_trace_from_buffer()
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
+  local start_row, end_row = get_nearest_method_range()
+  if not start_row or not end_row then
+    logger.warn("Didn't find nearest method range")
+    return
+  end
+
   local handlers = {}
 
-  ---@param node TestNode
+  ---@param node easy-dotnet.TestRunner.Node
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
-    if (node.type == "test" or node.type == "subcase") and compare_paths(node.file_path, curr_file) then table.insert(handlers, node) end
+    if (node.type == "test" or node.type == "subcase") and compare_paths(node.file_path, curr_file) and node.line_number >= start_row and node.line_number <= end_row then
+      table.insert(handlers, node)
+    end
   end)
 
   -- In case of multiple tests on the same line (e.g. [TheoryData]), show the first one with a stack trace
-  ---@type TestNode
+  ---@type easy-dotnet.TestRunner.Node
   for _, node in ipairs(handlers) do
     if node.expand then
       local window = require("easy-dotnet.test-runner.window")
@@ -209,7 +256,7 @@ function M.add_gutter_test_signs()
   -- end
 end
 
----@class EasyDotnetTestResult
+---@class easy-dotnet.TestResult
 ---@field passed integer Number of passed tests
 ---@field failed integer Number of failed tests
 ---@field skipped integer Number of skipped tests
@@ -223,12 +270,12 @@ end
 ---
 ---@param file_path string Absolute path to the file containing the test(s)
 ---@param line_number integer The line number of the test or test group
----@return EasyDotnetTestResult | nil res Aggregated results or `nil` if not found
+---@return easy-dotnet.TestResult | nil res Aggregated results or `nil` if not found
 M.get_test_results = function(file_path, line_number)
   local options = require("easy-dotnet.test-runner.render").options
   local res = { passed = 0, failed = 0, skipped = 0, running = 0 }
 
-  ---@param node TestNode
+  ---@param node easy-dotnet.TestRunner.Node
   require("easy-dotnet.test-runner.render").traverse(nil, function(node)
     if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, file_path) and line_number == node.line_number then
       if node.icon then

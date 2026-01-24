@@ -18,7 +18,7 @@ function M.add_project_reference(curr_project_path, cb)
   local this_project = csproj.get_project_from_project_file(curr_project_path)
   local references = csproj.get_project_references_from_projects(curr_project_path)
 
-  local solutionFilePath = sln_parse.find_solution_file()
+  local solutionFilePath = sln_parse.try_get_selected_solution_file()
   if solutionFilePath == nil then
     logger.error(error_messages.no_project_definition_found)
     return false
@@ -83,12 +83,10 @@ M.package_completion_cmp = {
         M.include_pending_cancel_cb = nil
       end
       client:initialize(function()
-        M.include_pending_cancel_cb = client.nuget
-          :nuget_search(search_term, nil, function(res)
-            local items = polyfills.tbl_map(function(value) return { label = value.id, kind = 18 } end, res)
-            callback({ items = items, isIncomplete = true })
-          end)
-          .cancel()
+        M.include_pending_cancel_cb = client.nuget:nuget_search(search_term, nil, function(res)
+          local items = polyfills.tbl_map(function(value) return { label = value.id, kind = 18 } end, res)
+          callback({ items = items, isIncomplete = true })
+        end).cancel
       end)
     elseif inside_version then
       local package_name = current_line:match('Include="([^"]+)"')

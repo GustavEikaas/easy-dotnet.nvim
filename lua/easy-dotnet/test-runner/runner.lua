@@ -2,10 +2,10 @@ local win = require("easy-dotnet.test-runner.render")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local logger = require("easy-dotnet.logger")
 
----@class TestRunnerModule
----@field client DotnetClient
+---@class easy-dotnet.TestRunner.Module
+---@field client easy-dotnet.RPC.Client.Dotnet
 
----@type TestRunnerModule
+---@type easy-dotnet.TestRunner.Module
 local M = {
   client = require("easy-dotnet.rpc.rpc").global_rpc_client,
 }
@@ -31,7 +31,7 @@ local function open_runner(options, solution_file_path)
   win.filetype = "easy-dotnet"
   win.set_options(options).set_keymaps(require("easy-dotnet.test-runner.keymaps").keymaps).render(options.viewmode)
 
-  if is_reused then return end
+    if is_reused then return end
 
   refresh_runner(options, solution_file_path)
 end

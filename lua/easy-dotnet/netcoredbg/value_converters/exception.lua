@@ -1,6 +1,6 @@
 local constants = require("easy-dotnet.constants")
 
----@type ValueConverter
+---@type easy-dotnet.Debugger.ValueConverter
 return {
   satisfies_type = function(_, vars)
     return vim.iter(vars):any(function(r) return r.name == "HasBeenThrown" and r.value == "true" end)

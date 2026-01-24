@@ -1,6 +1,6 @@
 local index_to_number = function(r) return tonumber(r:match("%[(%d+)%]")) or 0 end
 
----@type ValueConverter
+---@type easy-dotnet.Debugger.ValueConverter
 return {
   satisfies_type = function(class_name)
     class_name = vim.trim(class_name)
@@ -25,7 +25,7 @@ return {
     if keys_ref and values_ref then
       local result = {}
 
-      ---@param r Variable[]
+      ---@param r easy-dotnet.Debugger.Variable[]
       require("easy-dotnet.netcoredbg").fetch_variables(keys_ref, 0, function(r)
         table.sort(r, function(a, b)
           local a_index = index_to_number(a.name)

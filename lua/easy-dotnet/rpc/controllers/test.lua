@@ -9,15 +9,15 @@ local M = {}
 M.__index = M
 
 --- Constructor
----@param client StreamJsonRpc
----@return TestClient
+---@param client easy-dotnet.RPC.StreamJsonRpc
+---@return easy-dotnet.RPC.Client.Test
 function M.new(client)
   local self = setmetatable({}, M)
   self._client = client
   return self
 end
 
----@class RPC_DiscoveredTest
+---@class easy-dotnet.RPC.DiscoveredTest
 ---@field id string
 ---@field namespace? string
 ---@field name string
@@ -25,7 +25,7 @@ end
 ---@field filePath string
 ---@field lineNumber? integer
 
----@class RPC_TestDiscoverRequest
+---@class easy-dotnet.RPC.TestDiscoverRequest
 ---@field projectPath string
 ---@field targetFrameworkMoniker string
 ---@field configuration string
@@ -44,15 +44,15 @@ function M:test_discover(request, cb, opts)
   })()
 end
 
----@class RunRequestNode
+---@class easy-dotnet.RunRequestNode
 ---@field uid string Unique test run identifier
 ---@field displayName string Human-readable name for the run
 
----@class RPC_TestRunRequest
+---@class easy-dotnet.RPC.TestRunRequest
 ---@field projectPath string
 ---@field targetFrameworkMoniker string
 ---@field configuration string
----@field filter? table<RunRequestNode>
+---@field filter? table<easy-dotnet.RunRequestNode>
 
 --- @class RPC_TestRunResult
 --- @field id string
@@ -137,5 +137,6 @@ function M:test_runner_discover(cb, opts)
     params = {},
   })()
 end
+function M:set_run_settings() self._client.notify("test/set-project-run-settings", {}) end
 
 return M

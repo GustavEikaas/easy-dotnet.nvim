@@ -8,15 +8,15 @@ local ns_id = require("easy-dotnet.constants").ns_id
 ---@field modifiable boolean
 ---@field buf_name string
 ---@field filetype string
----@field filter TestResult
+---@field filter easy-dotnet.TestRunner.Result
 ---@field keymap table
 ---@field options table
 
----@class Highlight
+---@class easy-dotnet.Highlight
 ---@field index number
 ---@field highlight string
 
----@alias TestResult '"Failed"' | '"NotExecuted"' | '"Passed"'
+---@alias easy-dotnet.TestRunner.Result '"Failed"' | '"NotExecuted"' | '"Passed"'
 
 local M = {
   tree_mod = require("easy-dotnet.test-runnerv2.v2"),
@@ -58,14 +58,14 @@ local function translate_index(line_num)
   return result
 end
 
----@param highlights Highlight[]
+---@param highlights easy-dotnet.Highlight[]
 local function apply_highlights(highlights)
   for _, value in ipairs(highlights) do
     if value.highlight ~= nil then vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, value.index - 1, 0, -1) end
   end
 end
 
----@param node TestNode
+---@param node easy-dotnet.TestRunner.Node
 ---@return string | nil
 local function calculate_highlight(node)
   local status = M.tree_mod.status_by_id[node.id]
@@ -261,6 +261,7 @@ function M.open(mode)
     if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
     local win_opts = get_default_win_opts()
     M.win = vim.api.nvim_open_win(M.buf, true, win_opts)
+    vim.wo[M.win].winfixbuf = true
     vim.api.nvim_buf_set_option(M.buf, "bufhidden", "hide")
     return true
   elseif mode == "split" or mode == "vsplit" then

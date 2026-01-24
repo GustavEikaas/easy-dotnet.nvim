@@ -5,6 +5,7 @@ local commands = require("easy-dotnet.commands")
 local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
 local job = require("easy-dotnet.ui-modules.jobs")
+local current_solution = require("easy-dotnet.current_solution")
 
 local M = {}
 local function wrap(callback)
@@ -104,7 +105,7 @@ local register_legacy_functions = function()
 end
 
 local function auto_register_dap(merged_opts)
-  if merged_opts.debugger.auto_register_dap == true and merged_opts.debugger.bin_path ~= nil then
+  if merged_opts.debugger.auto_register_dap == true then
     local success, dap = pcall(require, "dap")
     if not success then return end
     local dotnet = require("easy-dotnet")
@@ -120,7 +121,13 @@ local function auto_register_dap(merged_opts)
 
     dap.configurations["cs"] = debugger_conf
 
-    dap.adapters[constants.debug_adapter_name] = function(callback, config) callback({ type = "server", host = "127.0.0.1", port = config.port or 8086 }) end
+    dap.adapters[constants.debug_adapter_name] = function(callback, config)
+      if not config.port then
+        error("Debugger failed to start")
+        return
+      end
+      callback({ type = "server", host = "127.0.0.1", port = config.port })
+    end
   end
 end
 
@@ -160,13 +167,12 @@ local function complete_command(arg_lead, cmdline)
   local all_commands = collect_commands(commands)
   local args = cmdline:match(".*Dotnet[!]*%s+(.*)")
   if not args then return all_commands end
-  -- Everything before arg_lead
   local pre_arg_lead = args:match("^(.*)" .. arg_lead .. "$")
 
   local matches = polyfills
     .iter(all_commands)
     :map(function(command)
-      if pre_arg_lead ~= "" then
+      if pre_arg_lead ~= "" and pre_arg_lead ~= nil then
         local truncated_command = command:match("^" .. pre_arg_lead .. "(.*)")
         if truncated_command == nil then return nil end
         command = truncated_command
@@ -183,7 +189,7 @@ local function get_solutions_async(cb)
   scan.scan_dir_async(".", {
     respect_gitignore = true,
     search_pattern = "%.slnx?$",
-    depth = 5,
+    depth = 2,
     silent = true,
     on_exit = function(output)
       vim.schedule(function() wrap(cb)(output) end)
@@ -194,7 +200,7 @@ end
 local function background_scanning(merged_opts)
   if merged_opts.background_scanning then
     --prewarm msbuild properties
-    local selected_solution = require("easy-dotnet.parsers.sln-parse").try_get_selected_solution_file()
+    local selected_solution = current_solution.try_get_selected_solution()
     if selected_solution then
       require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(selected_solution)
     else
@@ -269,7 +275,7 @@ M.setup = function(opts)
     job.register_listener(merged_opts.notifications.handler)
   else
     job.register_listener(function()
-      ---@param e JobEvent
+      ---@param e easy-dotnet.Job.Event
       return function(e)
         if not e.success then logger.error(e.result.msg) end
       end
@@ -288,6 +294,7 @@ M.setup = function(opts)
   register_legacy_functions()
 
   if merged_opts.lsp.enabled == true then require("easy-dotnet.roslyn.lsp").enable(merged_opts.lsp) end
+  if merged_opts.projx_lsp.enabled == true then require("easy-dotnet.projx.lsp").enable() end
   wrap(auto_register_dap)(merged_opts)
   wrap(background_scanning)(merged_opts)
   wrap(auto_install_easy_dotnet)()
@@ -316,6 +323,7 @@ M.entity_framework = {
   migration = require("easy-dotnet.ef-core.migration"),
 }
 
+---@deprecated very poorly optimized, please do not use
 M.is_dotnet_project = function()
   local project_files = require("easy-dotnet.parsers.sln-parse").get_solutions() or require("easy-dotnet.parsers.csproj-parse").find_project_file()
   return project_files ~= nil

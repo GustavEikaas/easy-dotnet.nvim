@@ -1,10 +1,11 @@
 local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
----@type table<string,Command>
+local current_solution = require("easy-dotnet.current_solution")
+---@type table<string,easy-dotnet.Command>
 local M = {}
 
----@class Command
----@field subcommands table<string,Command> | nil
+---@class easy-dotnet.Command
+---@field subcommands table<string,easy-dotnet.Command> | nil
 ---@field handle nil | fun(args: table<string>|string, options: table): nil
 ---@field passthrough boolean | nil
 
@@ -37,7 +38,7 @@ end
 local actions = require("easy-dotnet.actions")
 
 ---This entire object is exposed, any change to this will possibly be a breaking change, tread carefully
----@type Command
+---@type easy-dotnet.Command
 M.run = {
   handle = function(args, options) actions.run(options.terminal, false, passthrough_dotnet_cli_args_handler(args)) end,
   passthrough = true,
@@ -52,6 +53,27 @@ M.run = {
       subcommands = {
         default = {
           handle = function(args, options) actions.run_with_profile(options.terminal, true, passthrough_dotnet_cli_args_handler(args)) end,
+          passthrough = true,
+        },
+      },
+    },
+  },
+}
+
+M.debug = {
+  handle = function(args, options) actions.run(options.terminal, false, passthrough_dotnet_cli_args_handler(args), true) end,
+  passthrough = true,
+  subcommands = {
+    default = {
+      handle = function(args, options) actions.run(options.terminal, true, passthrough_dotnet_cli_args_handler(args), true) end,
+      passthrough = true,
+    },
+    profile = {
+      handle = function(args, options) actions.run_with_profile(options.terminal, false, passthrough_dotnet_cli_args_handler(args), true) end,
+      passthrough = true,
+      subcommands = {
+        default = {
+          handle = function(args, options) actions.run_with_profile(options.terminal, true, passthrough_dotnet_cli_args_handler(args), true) end,
           passthrough = true,
         },
       },
@@ -158,6 +180,16 @@ M.test = {
       handle = function(args, options) actions.test_solution(options.terminal, passthrough_dotnet_cli_args_handler(args)) end,
       passthrough = true,
     },
+    ["run-settings"] = {
+      subcommands = {
+        set = {
+          handle = function()
+            local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+            client:initialize(function() client.test:set_run_settings() end)
+          end,
+        },
+      },
+    },
   },
 }
 
@@ -208,7 +240,10 @@ M.build = {
 
 M.createfile = {
   passthrough = true,
-  handle = function(args) require("easy-dotnet.actions.new").create_new_item(args[1]) end,
+  handle = function(args)
+    local path = type(args) == "string" and args or args[1]
+    require("easy-dotnet.actions.new").create_new_item(path)
+  end,
 }
 
 M.testrunner = {
@@ -251,8 +286,7 @@ M.new = {
 M.reset = {
   handle = function()
     local dir = require("easy-dotnet.constants").get_data_directory()
-    --TODO: error handling?
-    require("plenary.path"):new(dir):rm({ recursive = true })
+    vim.fs.rm(dir, { recursive = true, force = true })
     logger.info("Cached files deleted")
   end,
 }
@@ -261,31 +295,33 @@ M.solution = {
   handle = nil,
   subcommands = {
     select = {
-      handle = function()
-        local files = require("easy-dotnet.parsers.sln-parse").get_solutions()
-        local old = nil
-        for _, value in ipairs(files) do
-          local file = require("easy-dotnet.default-manager").try_get_cache_file(value)
-          if file then old = value end
-        end
-
-        local sln = require("easy-dotnet.parsers.sln-parse").find_solution_file(true)
-        if sln == nil then print("No solutions found") end
-        require("easy-dotnet.default-manager").set_default_solution(old, sln)
+      handle = function(args)
+        local path = type(args) == "string" and args or args[1]
+        current_solution.set_solution(path)
+        logger.info(string.format("Selected solution: %s", vim.fs.basename(path)))
       end,
+      passthrough = true,
     },
     add = {
       handle = function()
-        local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
-        assert(type(sln_file) == "string")
-        require("easy-dotnet.parsers.sln-parse").add_project_to_solution(sln_file)
+        current_solution.get_or_pick_solution(function(solution_path)
+          if not solution_path then
+            logger.info("No solutions found")
+            return
+          end
+          require("easy-dotnet.parsers.sln-parse").add_project_to_solution(solution_path)
+        end)
       end,
     },
     remove = {
       handle = function()
-        local sln_file = require("easy-dotnet.parsers.sln-parse").find_solution_file()
-        assert(type(sln_file) == "string")
-        require("easy-dotnet.parsers.sln-parse").remove_project_from_solution(sln_file)
+        current_solution.get_or_pick_solution(function(solution_path)
+          if not solution_path then
+            logger.info("No solutions found")
+            return
+          end
+          require("easy-dotnet.parsers.sln-parse").remove_project_from_solution(solution_path)
+        end)
       end,
     },
   },
@@ -298,15 +334,24 @@ M.ef = {
       handle = nil,
       subcommands = {
         update = {
-          handle = function() require("easy-dotnet.ef-core.database").database_update() end,
+          handle = function()
+            local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+            client:initialize(function() client.entity_framework:database_update() end)
+          end,
           subcommands = {
             pick = {
-              handle = function() require("easy-dotnet.ef-core.database").database_update("pick") end,
+              handle = function()
+                local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+                client:initialize(function() client.entity_framework:migration_apply() end)
+              end,
             },
           },
         },
         drop = {
-          handle = function() require("easy-dotnet.ef-core.database").database_drop() end,
+          handle = function()
+            local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+            client:initialize(function() client.entity_framework:database_drop() end)
+          end,
         },
       },
     },
@@ -315,10 +360,17 @@ M.ef = {
       subcommands = {
         add = {
           passthrough = true,
-          handle = function(args) require("easy-dotnet.ef-core.migration").add_migration(args[1]) end,
+          handle = function(args)
+            local migration_name = type(args) == "string" and args or args[1]
+            local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+            client:initialize(function() client.entity_framework:migration_add(migration_name) end)
+          end,
         },
         remove = {
-          handle = function() require("easy-dotnet.ef-core.migration").remove_migration() end,
+          handle = function()
+            local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+            client:initialize(function() client.entity_framework:migration_remove() end)
+          end,
         },
         list = {
           handle = function() require("easy-dotnet.ef-core.migration").list_migrations() end,

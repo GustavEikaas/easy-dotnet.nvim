@@ -6,6 +6,7 @@ local picker = require("easy-dotnet.picker")
 local async = require("easy-dotnet.async-utils")
 local job = require("easy-dotnet.ui-modules.jobs")
 local nuget = require("easy-dotnet.nuget")
+local current_solution = require("easy-dotnet.current_solution")
 
 local function file_exists(path)
   local stat = vim.loop.fs_stat(path)
@@ -45,7 +46,7 @@ local function pack_project(project, configuration)
   pack_job(pack_res.success, format_command_failure(cmd, pack_res))
 end
 
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 ---@param configuration string
 local function push_nuget_package(project, configuration, source)
   local res = async.await(async.job_run_async)({
@@ -85,7 +86,7 @@ local function push_nuget_package(project, configuration, source)
   push_job(push_res.success, format_command_failure(cmd, push_res))
 end
 
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 ---@param configuration string
 local function build_and_pack_project(project, configuration)
   local res = build_project(project, configuration)
@@ -93,7 +94,7 @@ local function build_and_pack_project(project, configuration)
   pack_project(project, configuration)
 end
 
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 ---@param configuration string
 local function select_source_and_push(project, configuration)
   local sources = nuget.get_nuget_sources_async()
@@ -118,41 +119,45 @@ end
 --TODO: add passthrough args
 M.pack = function()
   local configuration = "release"
-  local solution_file_path = sln_parse.find_solution_file()
-  if solution_file_path == nil then
-    csproj_fallback(false)
-    return
-  end
-  local nuget_packages = sln_parse.get_projects_from_sln(solution_file_path, function(project) return project.isNugetPackage end)
-  if #nuget_packages == 0 then
-    logger.warn("No nuget packages found in solution")
-    return
-  end
 
-  local project = picker.pick_sync(nil, nuget_packages, "Pack projects", false, true)
+  current_solution.get_or_pick_solution(function(solution_path)
+    if solution_path == nil then
+      csproj_fallback(false)
+      return
+    end
+    local nuget_packages = sln_parse.get_projects_from_sln(solution_path, function(project) return project.isNugetPackage end)
+    if #nuget_packages == 0 then
+      logger.warn("No nuget packages found in solution")
+      return
+    end
 
-  build_and_pack_project(project, configuration)
+    local project = picker.pick_sync(nil, nuget_packages, "Pack projects", false, true)
+
+    build_and_pack_project(project, configuration)
+  end)
 end
 
 --TODO: add passthrough args
 M.push = function()
   local configuration = "release"
-  local solution_file_path = sln_parse.find_solution_file()
-  if solution_file_path == nil then
-    csproj_fallback(true)
-    return
-  end
-  local nuget_packages = sln_parse.get_projects_from_sln(solution_file_path, function(project) return project.isNugetPackage end)
 
-  if #nuget_packages == 0 then
-    logger.warn("No nuget packages found in solution")
-    return
-  end
+  current_solution.get_or_pick_solution(function(solution_path)
+    if solution_path == nil then
+      csproj_fallback(true)
+      return
+    end
+    local nuget_packages = sln_parse.get_projects_from_sln(solution_path, function(project) return project.isNugetPackage end)
 
-  local project = picker.pick_sync(nil, nuget_packages, "Pack projects", false, true)
+    if #nuget_packages == 0 then
+      logger.warn("No nuget packages found in solution")
+      return
+    end
 
-  build_and_pack_project(project, configuration)
-  select_source_and_push(project, configuration)
+    local project = picker.pick_sync(nil, nuget_packages, "Pack projects", false, true)
+
+    build_and_pack_project(project, configuration)
+    select_source_and_push(project, configuration)
+  end)
 end
 
 return M

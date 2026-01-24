@@ -1,9 +1,10 @@
 local M = {}
 local window = require("easy-dotnet.test-runner.window")
+local constants = require("easy-dotnet.constants")
 local runner = require("easy-dotnet.test-runner.runner")
 local logger = require("easy-dotnet.logger")
 
----@param node TestNode
+---@param node easy-dotnet.TestRunner.Node
 ---@param options table
 local function aggregate_status(node, options)
   if not node.children or next(node.children) == nil then return node.icon end
@@ -31,6 +32,7 @@ local function parse_status(result, test_line, options)
   --TODO: handle more cases like cancelled etc...
   if result.outcome == "passed" then
     test_line.icon = options.icons.passed
+    if result.stdOut then test_line.expand = result.stdOut end
     --TODO: figure this shit out
   elseif result.outcome == "failed" or result.outcome == "error" then
     test_line.icon = options.icons.failed
@@ -53,7 +55,7 @@ end
 
 ---@param unit_test_results RPC_TestRunResult[]
 ---@param win table
----@param node TestNode
+---@param node easy-dotnet.TestRunner.Node
 local test_status_updater = function(unit_test_results, win, node)
   if #unit_test_results == 0 then
     win.traverse(node, function(child)
@@ -81,13 +83,13 @@ local function get_test_result_handler(win, node, on_job_finished)
   end
 end
 
----@param node TestNode
+---@param node easy-dotnet.TestRunner.Node
 ---@param win table
 ---@param cb function | nil
 function M.test_run(node, win, cb)
-  ---@type TestNode[]
+  ---@type easy-dotnet.TestRunner.Node[]
   local tests = {}
-  ---@param child TestNode
+  ---@param child easy-dotnet.TestRunner.Node
   win.traverse_filtered(node, function(child)
     child.icon = "<Running>"
     if child.type == "test" or child.type == "subcase" then table.insert(tests, child) end
@@ -100,7 +102,7 @@ function M.test_run(node, win, cb)
   end
 
   local filter = vim.tbl_map(function(test)
-    ---@type RunRequestNode
+    ---@type easy-dotnet.RunRequestNode
     return {
       uid = test.id,
       displayName = test.displayName or "",
@@ -119,7 +121,7 @@ function M.test_run(node, win, cb)
   end)()
 end
 
----@param node TestNode
+---@param node easy-dotnet.TestRunner.Node
 local function run_tests(node, win)
   if not win.options.noBuild then
     local build_success = runner.request_build(node.cs_project_path)
@@ -193,10 +195,13 @@ M.keymaps = function()
   return {
     [keymap.filter_failed_tests.lhs] = { handle = function(_, win) filter_failed_tests(win) end, desc = keymap.filter_failed_tests.desc },
     [keymap.refresh_testrunner.lhs] = {
-      ---@param node TestNode
+      ---@param node easy-dotnet.TestRunner.Node
       handle = function(node)
         if node.type == "csproject" then
-          coroutine.wrap(function() node.refresh() end)()
+          coroutine.wrap(function()
+            local res = runner.request_build(node.cs_project_path)
+            if res == true then node.refresh() end
+          end)()
         else
           vim.cmd("Dotnet testrunner refresh build")
         end
@@ -217,25 +222,25 @@ M.keymaps = function()
         win.hide()
         vim.cmd("edit " .. node.file_path)
         vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
-        dap.toggle_breakpoint()
+        dap.set_breakpoint()
 
-        local dap_configuration = {
-          type = "coreclr",
-          name = node.name,
-          request = "attach",
-          processId = function()
-            local project_path = node.cs_project_path
-            local res = require("easy-dotnet.debugger").start_debugging_test_project(project_path)
-            return res.process_id
-          end,
-        }
-
-        dap.run(dap_configuration)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function()
+          client.debugger:debugger_start({ targetPath = node.cs_project_path }, function(res)
+            local debug_conf = {
+              type = constants.debug_adapter_name,
+              name = constants.debug_adapter_name,
+              request = "attach",
+              port = res.port,
+            }
+            dap.run(debug_conf)
+          end)
+        end)
       end,
       desc = keymap.debug_test.desc,
     },
     [keymap.go_to_file.lhs] = {
-      ---@param node TestNode
+      ---@param node easy-dotnet.TestRunner.Node
       handle = function(node, win)
         if node.type == "test" or node.type == "subcase" or node.type == "test_group" then
           if node.file_path ~= nil then
@@ -251,7 +256,7 @@ M.keymaps = function()
     },
     [keymap.expand_all.lhs] = {
       handle = function(_, win)
-        ---@param node TestNode
+        ---@param node easy-dotnet.TestRunner.Node
         win.traverse(win.tree, function(node) node.expanded = true end)
 
         win.refreshTree()
@@ -260,7 +265,7 @@ M.keymaps = function()
     },
     [keymap.expand_node.lhs] = {
       handle = function(target_node, win)
-        ---@param node TestNode
+        ---@param node easy-dotnet.TestRunner.Node
         win.traverse(target_node, function(node) node.expanded = true end)
 
         win.refreshTree()
@@ -270,14 +275,14 @@ M.keymaps = function()
 
     [keymap.collapse_all.lhs] = {
       handle = function(_, win)
-        ---@param node TestNode
+        ---@param node easy-dotnet.TestRunner.Node
         win.traverse(win.tree, function(node) node.expanded = false end)
         win.refreshTree()
       end,
       desc = keymap.collapse_all.desc,
     },
     [keymap.expand.lhs] = {
-      ---@param node TestNode
+      ---@param node easy-dotnet.TestRunner.Node
       handle = function(node, win)
         node.expanded = node.expanded == false
         win.refreshTree()
@@ -294,7 +299,7 @@ M.keymaps = function()
       desc = keymap.run_all.desc,
     },
     [keymap.run.lhs] = {
-      ---@param node TestNode
+      ---@param node easy-dotnet.TestRunner.Node
       handle = function(node, win)
         if node.type == "sln" then
           for _, value in pairs(node.children) do

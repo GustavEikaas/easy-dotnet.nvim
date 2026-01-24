@@ -27,10 +27,10 @@ local function select_launch_profile_name(project_path)
 end
 
 ---@param use_default boolean
----@return DotnetProject, string | nil
+---@return easy-dotnet.Project.Project, string | nil
 local function pick_project(use_default)
   local default_manager = require("easy-dotnet.default-manager")
-  local solution_file_path = sln_parse.find_solution_file()
+  local solution_file_path = sln_parse.try_get_selected_solution_file()
   if solution_file_path == nil then
     local csproject_path = csproj_parse.find_project_file()
     if not csproject_path then logger.error(error_messages.no_runnable_projects_found) end
@@ -57,8 +57,9 @@ local function pick_project(use_default)
   return project, solution_file_path
 end
 
+---@deprecated remove later
 M.get_debug_dll = function(default)
-  local sln_file = sln_parse.find_solution_file()
+  local sln_file = sln_parse.try_get_selected_solution_file()
   local result = sln_file ~= nil and M.get_dll_for_solution_project(default) or M.get_dll_for_project()
   local target_path = result.dll
   local absolute_project_path = result.project
@@ -75,7 +76,7 @@ M.get_debug_dll = function(default)
   }
 end
 
----@class PrepareDebuggerResult
+---@class easy-dotnet.Debugger.PrepareResult
 ---@field path string
 ---@field target_framework_moniker string | nil
 ---@field configuration string | nil
@@ -86,13 +87,16 @@ M.prepare_debugger = function(use_default)
   local project = pick_project(use_default)
   --TODO: pick configuration?
   local co = coroutine.running()
-  client.msbuild:msbuild_build({ targetPath = project.path, targetFramework = project.msbuild_props.targetFramework }, function() coroutine.resume(co) end, {
-    on_crash = function()
-      logger.error("Debugger failed to start")
-      coroutine.resume(co)
-    end,
+  client.msbuild:msbuild_build({ targetPath = project.path, targetFramework = project.msbuild_props.targetFramework }, function(res) coroutine.resume(co, res.success) end, {
+    on_crash = function() coroutine.resume(co, false) end,
   })
-  coroutine.yield()
+  local build_res = coroutine.yield()
+
+  if build_res == false then
+    --TODO: add build errors to qf list
+    error("Aborting debug session due to build failure")
+    return nil
+  end
 
   local launch_profile_name = select_launch_profile_name(vim.fs.dirname(project.path))
 
@@ -111,6 +115,7 @@ M.prepare_debugger = function(use_default)
   return curr_debugger_port
 end
 
+---@deprecated remove later
 local function run_job_sync(cmd)
   local result = {}
   local co = coroutine.running()
@@ -134,6 +139,7 @@ local function run_job_sync(cmd)
   return result
 end
 
+---@deprecated remove later
 ---@param path string
 local function start_test_process(path)
   local command = string.format("dotnet test %s --environment=VSTEST_HOST_DEBUG=1", path)
@@ -142,8 +148,9 @@ local function start_test_process(path)
   return res.process_id
 end
 
+---@deprecated remove later
 M.start_debugging_test_project = function(project_path)
-  local sln_file = sln_parse.find_solution_file()
+  local sln_file = sln_parse.try_get_selected_solution_file()
   assert(sln_file, "Failed to find a solution file")
   local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(sln_file, function(i) return i.isTestProject end)
   local test_project = project_path and project_path or picker.pick_sync(nil, test_projects, "Pick test project").path
@@ -173,6 +180,7 @@ M.get_launch_profiles = function(relative_project_path)
   return dictionary
 end
 
+---@deprecated remove later
 M.get_environment_variables = function(project_name, relative_project_path, autoselect)
   if autoselect == nil then autoselect = true end
 
@@ -191,6 +199,7 @@ M.get_environment_variables = function(project_name, relative_project_path, auto
   return launch_profile.environmentVariables
 end
 
+---@deprecated remove later
 M.get_dll_for_solution_project = function(default)
   if default == nil then default = false end
   local project = pick_project(default)
@@ -202,6 +211,7 @@ M.get_dll_for_solution_project = function(default)
   }
 end
 
+---@deprecated remove later
 M.get_dll_for_project = function()
   local project_file_path = csproj_parse.find_project_file()
   if project_file_path == nil then error("No project or solution file found") end

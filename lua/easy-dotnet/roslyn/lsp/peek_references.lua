@@ -1,15 +1,15 @@
----@class ReferenceRange
+---@class easy-dotnet.Roslyn.ReferenceRange
 ---@field start { line: number, character: number }
 ---@field end { line: number, character: number }
 
----@class ReferenceItem
+---@class easy-dotnet.Roslyn.ReferenceItem
 ---@field filename string The full path to the file
 ---@field line number The 1-indexed line number
 ---@field preview string The text preview of the line
----@field range ReferenceRange The start and end positions of the reference
+---@field range easy-dotnet.Roslyn.ReferenceRange The start and end positions of the reference
 
 ---@param client vim.lsp.Client
----@param cb fun(res: ReferenceItem[]): nil
+---@param cb fun(res: easy-dotnet.Roslyn.ReferenceItem[]): nil
 local function get_preview_references(client, file_uri, position, bufnr, cb)
   local params = {
     textDocument = { uri = file_uri },
@@ -28,7 +28,7 @@ local function get_preview_references(client, file_uri, position, bufnr, cb)
       return
     end
 
-    ---@type ReferenceItem[]
+    ---@type easy-dotnet.Roslyn.ReferenceItem[]
     local items = vim
       .iter(result)
       :map(function(ref)
@@ -55,7 +55,7 @@ local function get_preview_references(client, file_uri, position, bufnr, cb)
   end, bufnr)
 end
 
----@param references ReferenceItem[]
+---@param references easy-dotnet.Roslyn.ReferenceItem[]
 local function open_references_float(references)
   local _ = references
   --TODO: render some beatiful UI

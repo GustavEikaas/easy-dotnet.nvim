@@ -1,26 +1,37 @@
 local jobs = require("easy-dotnet.ui-modules.jobs")
 
----@class MsBuildClient
----@field _client StreamJsonRpc
----@field msbuild_query_properties fun(self: MsBuildClient, request: QueryProjectPropertiesRequest, cb?: fun(res: DotnetProjectProperties), opts?: RPC_CallOpts): RPC_CallHandle # Request msbuild
----@field msbuild_list_project_reference fun(self: MsBuildClient, targetPath: string, cb?: fun(res: string[]), opts?: RPC_CallOpts): RPC_CallHandle # Request project references
----@field msbuild_add_project_reference fun(self: MsBuildClient, projectPath: string, targetPath: string, cb?: fun(success: boolean), opts?: RPC_CallOpts): RPC_CallHandle # Request project references
----@field msbuild_remove_project_reference fun(self: MsBuildClient, projectPath: string, targetPath: string, cb?: fun(success: boolean), opts?: RPC_CallOpts): RPC_CallHandle # Request project references
----@field msbuild_build fun(self: MsBuildClient, request: BuildRequest, cb?: fun(res: BuildResult), opts?: RPC_CallOpts): RPC_CallHandle # Request msbuild
+---@class easy-dotnet.RPC.Client.MsBuild
+---@field _client easy-dotnet.RPC.StreamJsonRpc
+-- luacheck: no max line length
+---@field msbuild_query_properties fun(self: easy-dotnet.RPC.Client.MsBuild, request: easy-dotnet.MSBuild.QueryPropertiesRequest, cb?: fun(res: easy-dotnet.Project.Properties), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request msbuild
+-- luacheck: no max line length
+---@field msbuild_list_project_reference fun(self: easy-dotnet.RPC.Client.MsBuild, targetPath: string, cb?: fun(res: string[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request project references
+-- luacheck: no max line length
+---@field msbuild_list_package_reference fun(self: easy-dotnet.RPC.Client.MsBuild, targetPath: string, target_framework: string, cb?: fun(res: easy-dotnet.MSBuild.PackageReference[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request package references
+-- luacheck: no max line length
+---@field msbuild_add_project_reference fun(self: easy-dotnet.RPC.Client.MsBuild, projectPath: string, targetPath: string, cb?: fun(success: boolean), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request project references
+-- luacheck: no max line length
+---@field msbuild_remove_project_reference fun(self: easy-dotnet.RPC.Client.MsBuild, projectPath: string, targetPath: string, cb?: fun(success: boolean), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request project references
+---@field msbuild_build fun(self: easy-dotnet.RPC.Client.MsBuild, request: easy-dotnet.MSBuild.BuildRequest, cb?: fun(res: easy-dotnet.MSBuild.BuildResult), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request msbuild
 
 local M = {}
 M.__index = M
 
 --- Constructor
----@param client StreamJsonRpc
----@return MsBuildClient
+---@param client easy-dotnet.RPC.StreamJsonRpc
+---@return easy-dotnet.RPC.Client.MsBuild
 function M.new(client)
   local self = setmetatable({}, M)
   self._client = client
   return self
 end
 
----@class DotnetProjectProperties
+---@class easy-dotnet.MSBuild.PackageReference
+---@field id string
+---@field requestedVersion string
+---@field resolvedVersion string
+
+---@class easy-dotnet.Project.Properties
 ---@field projectName string
 ---@field language string
 ---@field outputPath? string
@@ -50,7 +61,7 @@ end
 ---@field buildCommand string
 ---@field testCommand string
 
----@class QueryProjectPropertiesRequest
+---@class easy-dotnet.MSBuild.QueryPropertiesRequest
 ---@field targetPath string
 ---@field configuration? string
 ---@field targetFramework? string
@@ -95,17 +106,16 @@ function M:msbuild_add_project_reference(projectPath, targetPath, cb, opts)
   })()
 end
 
----@param client StreamJsonRpc
 ---@param projectPath string
 ---@param targetPath string
 ---@param cb? fun(success: boolean)
 ---@param opts? RPC_CallOpts
----@return RPC_CallHandle
-function M:msbuild_remove_project_reference(client, projectPath, targetPath, cb, opts)
+---@return easy-dotnet.RPC.CallHandle
+function M:msbuild_remove_project_reference(projectPath, targetPath, cb, opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
   return helper.create_rpc_call({
-    client = client,
+    client = self._client,
     job = nil,
     cb = cb,
     on_crash = opts.on_crash,
@@ -114,13 +124,13 @@ function M:msbuild_remove_project_reference(client, projectPath, targetPath, cb,
   })()
 end
 
----@class BuildRequest
+---@class easy-dotnet.MSBuild.BuildRequest
 ---@field targetPath string
 ---@field targetFramework? string
 ---@field configuration? string
 ---@field buildArgs? string
 
----@class Diagnostic
+---@class easy-dotnet.MSBuild.Diagnostic
 ---@field code string
 ---@field columnNumber integer
 ---@field filePath string
@@ -129,9 +139,9 @@ end
 ---@field type "error" | "warning"
 ---@field project string | nil
 
----@class BuildResult
----@field errors Diagnostic[]
----@field warnings Diagnostic[]
+---@class easy-dotnet.MSBuild.BuildResult
+---@field errors easy-dotnet.MSBuild.Diagnostic[]
+---@field warnings easy-dotnet.MSBuild.Diagnostic[]
 ---@field success boolean
 
 function M:msbuild_build(request, cb, opts)
@@ -170,6 +180,20 @@ function M:msbuild_build(request, cb, opts)
     on_crash = opts.on_crash,
     method = "msbuild/build",
     params = { request = request },
+  })()
+end
+
+function M:msbuild_list_package_reference(target_path, target_framework, cb, opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+  return helper.create_enumerate_rpc_call({
+    client = self._client,
+    job = nil,
+    method = "msbuild/list-package-reference",
+    params = { projectPath = target_path, targetFramework = target_framework },
+    cb = cb,
+    on_yield = nil,
+    on_crash = opts.on_crash,
   })()
 end
 

@@ -1,5 +1,6 @@
 local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
+local current_solution = require("easy-dotnet.current_solution")
 local M = {}
 
 local function sln_add_project(sln_path, project, cb)
@@ -22,8 +23,7 @@ local make_project_name = function(name, sln_name)
 end
 
 local function get_dotnet_new_args(name)
-  local sln_parse = require("easy-dotnet.parsers.sln-parse")
-  local sln_path = sln_parse.find_solution_file()
+  local sln_path = current_solution.try_get_selected_solution()
   if sln_path == nil then return nil end
 
   local folder_path = vim.fs.dirname(sln_path)
@@ -134,7 +134,7 @@ function M.new()
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   client:initialize(function()
     client.template_engine:template_list(function(templates)
-      ---@param value DotnetNewTemplate
+      ---@param value easy-dotnet.Template.Template
       local choices = vim.tbl_map(function(value)
         return {
           value = value,
@@ -142,7 +142,7 @@ function M.new()
         }
       end, templates)
       require("easy-dotnet.picker").picker(nil, choices, function(selection)
-        ---@type DotnetNewTemplate
+        ---@type easy-dotnet.Template.Template
         local val = selection.value
 
         local default_name = no_name_templates[val.identity]

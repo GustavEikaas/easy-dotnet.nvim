@@ -3,7 +3,7 @@ local polyfills = require("easy-dotnet.polyfills")
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local logger = require("easy-dotnet.logger")
 
----@class ProjectWindow
+---@class easy-dotnet.ProjectWindow
 ---@field jobs table
 ---@field appendJob table
 ---@field buf integer | nil
@@ -38,7 +38,7 @@ M.keymap = {
   ["q"] = function() M.hide() end,
 }
 
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 local function discover_project_references(project)
   local finished = M.append_job("Discovering project references")
 
@@ -67,36 +67,24 @@ local function dotnet_restore(project, cb)
   end)
 end
 
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 local function discover_package_references(project)
   local finished = M.append_job("Discovering package references")
-  --Incase of out of mem, do some jq tricks to read line by line
-  --TODO: research the frameworks[]
-  --TODO: is it possible to resolve transitive dependencies?
-  local command = string.format('dotnet list %s package --format json | jq "[.projects[].frameworks[].topLevelPackages[] | {name: .id, version: .resolvedVersion}]"', project.path)
-  vim.fn.jobstart(command, {
-    stdout_buffered = true,
-    on_exit = function(_, code)
+
+  client:initialize(function()
+    client.msbuild:msbuild_list_package_reference(project.path, project.msbuild_props.targetFramework, function(res)
+      if #res == 0 then
+        M.package_refs = nil
+      else
+        ---@param value easy-dotnet.MSBuild.PackageReference
+        local package_refs = vim.tbl_map(function(value) return string.format("%s@%s", value.id, value.resolvedVersion) end, res)
+        M.package_refs = package_refs
+      end
       finished()
       M.refresh()
       M.refresh_mappings()
-      if code ~= 0 then return end
-    end,
-    on_stdout = function(_, data, _)
-      if data[1] == "" then
-        M.package_refs = nil
-        return
-      end
-      local package_refs = {}
-      local packages = vim.fn.json_decode(data)
-      for _, v in ipairs(packages) do
-        table.insert(package_refs, string.format("%s@%s", v.name, v.version))
-      end
-      M.package_refs = package_refs
-      M.refresh()
-      M.refresh_mappings()
-    end,
-  })
+    end)
+  end)
 end
 
 ---@param id string
@@ -135,7 +123,7 @@ local function set_buffer_options()
   -- vim.api.nvim_buf_set_option(M.buf, "cursorline", true)
 end
 
----@param highlights Highlight[]
+---@param highlights easy-dotnet.Highlight[]
 local function apply_highlights(highlights)
   for _, value in ipairs(highlights) do
     if value.highlight ~= nil then vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, value.index - 1, 0, -1) end
@@ -350,7 +338,7 @@ M.set_keymaps = function(mappings)
   return M
 end
 
----@param options TestRunnerOptions
+---@param options easy-dotnet.TestRunner.Options
 M.set_options = function(options)
   if options then M.options = options end
   return M
@@ -433,7 +421,7 @@ local function window_destroy()
   M.win = nil
 end
 
----@param project DotnetProject
+---@param project easy-dotnet.Project.Project
 ---@param sln_path string | nil
 M.render = function(project, sln_path)
   window_destroy()

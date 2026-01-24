@@ -17,12 +17,13 @@ return function(params, response, throw, validate)
     return
   end
 
-  local session = dap.attach({ type = "server", host = host, port = port }, { type = constants.debug_adapter_name, name = constants.debug_adapter_name, request = "attach" }, {})
+  dap.run({ type = constants.debug_adapter_name, name = constants.debug_adapter_name, request = "attach", host = host, port = port }, { new = true })
 
+  local session = dap.session()
   if not session then
-    local msg = "failed to start debug session"
-    throw({ code = -32001, message = msg })
+    throw({ code = -32001, message = "failed to start debug session" })
     return
   end
+
   response(session.id)
 end

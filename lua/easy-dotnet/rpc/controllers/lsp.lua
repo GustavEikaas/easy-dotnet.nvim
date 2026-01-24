@@ -1,20 +1,20 @@
----@class LspClient
----@field _client StreamJsonRpc
----@field lsp_start fun(self: LspClient, cb?: fun(res: LspStartResponse), opts?: RPC_CallOpts): RPC_CallHandle
+---@class easy-dotnet.RPC.Client.Lsp
+---@field _client easy-dotnet.RPC.StreamJsonRpc
+---@field lsp_start fun(self: easy-dotnet.RPC.Client.Lsp, cb?: fun(res: easy-dotnet.Roslyn.LspStartResponse), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 
 local M = {}
 M.__index = M
 
 --- Constructor
----@param client StreamJsonRpc
----@return LspClient
+---@param client easy-dotnet.RPC.StreamJsonRpc
+---@return easy-dotnet.RPC.Client.Lsp
 function M.new(client)
   local self = setmetatable({}, M)
   self._client = client
   return self
 end
 
----@class LspStartResponse
+---@class easy-dotnet.Roslyn.LspStartResponse
 ---@field pipe string
 
 function M:lsp_start(cb, opts)

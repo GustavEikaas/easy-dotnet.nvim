@@ -1,4 +1,5 @@
 local constants = require("easy-dotnet.constants")
+local current_solution = require("easy-dotnet.current_solution")
 local M = {
   pending = false,
 }
@@ -29,32 +30,35 @@ function M.rpc_build_quickfix(target_path, configuration, args, cb)
     logger.error("Build already pending...")
     return
   end
-  local solution_file_path = sln_parse.find_solution_file() or csproj_parse.find_project_file()
-  if solution_file_path == nil then
-    logger.error(error_messages.no_project_definition_found)
-    return
-  end
 
-  client:initialize(function()
-    M.pending = true
-    client.msbuild:msbuild_build({ targetPath = target_path, configuration = configuration, buildArgs = args }, function(res)
-      local ext = vim.fn.fnamemodify(target_path, ":e")
-      M.pending = false
-      if cb then cb(res.success) end
-      if res.success then
-        if ext == "sln" then
-          qf_list.clear_all()
-        else
-          qf_list.clear_project(target_path)
+  current_solution.get_or_pick_solution(function(solution_path)
+    solution_path = solution_path or csproj_parse.find_project_file()
+    if solution_path == nil then
+      logger.error(error_messages.no_project_definition_found)
+      return
+    end
+
+    client:initialize(function()
+      M.pending = true
+      client.msbuild:msbuild_build({ targetPath = target_path, configuration = configuration, buildArgs = args }, function(res)
+        local ext = vim.fn.fnamemodify(target_path, ":e")
+        M.pending = false
+        if cb then cb(res.success) end
+        if res.success then
+          if ext == "sln" then
+            qf_list.clear_all()
+          else
+            qf_list.clear_project(target_path)
+          end
+          return
         end
-        return
-      end
 
-      if ext == "sln" then qf_list.clear_all() end
-      local project_map = group_by_project(res.errors)
-      for project, diagnostics in pairs(project_map) do
-        qf_list.set_project_diagnostics(project, diagnostics)
-      end
+        if ext == "sln" then qf_list.clear_all() end
+        local project_map = group_by_project(res.errors)
+        for project, diagnostics in pairs(project_map) do
+          qf_list.set_project_diagnostics(project, diagnostics)
+        end
+      end)
     end)
   end)
 end
@@ -108,16 +112,17 @@ M.build_project_picker = function(term, use_default, args)
   use_default = use_default or false
   args = args or ""
 
-  local solutionFilePath = sln_parse.find_solution_file()
-  if solutionFilePath == nil then
-    csproj_fallback(term)
-    return
-  end
+  current_solution.get_or_pick_solution(function(solution_path)
+    if solution_path == nil then
+      csproj_fallback(term)
+      return
+    end
 
-  select_project(solutionFilePath, function(project)
-    local cmd = project.msbuild_props.buildCommand
-    term(project.path, "build", args, { cmd = cmd })
-  end, use_default)
+    select_project(solution_path, function(project)
+      local cmd = project.msbuild_props.buildCommand
+      term(project.path, "build", args, { cmd = cmd })
+    end, use_default)
+  end)
 end
 
 ---@param use_default boolean
@@ -125,48 +130,56 @@ M.build_project_quickfix = function(use_default, dotnet_args)
   use_default = use_default or false
   dotnet_args = dotnet_args or ""
 
-  local solutionFilePath = sln_parse.find_solution_file()
-  if solutionFilePath == nil then
-    local csproj = csproj_parse.find_project_file()
-    if csproj == nil then
-      logger.error(messages.no_project_definition_found)
+  current_solution.get_or_pick_solution(function(solution_path)
+    if solution_path == nil then
+      local csproj = csproj_parse.find_project_file()
+      if csproj == nil then
+        logger.error(messages.no_project_definition_found)
+        return
+      end
+      M.rpc_build_quickfix(csproj, nil, dotnet_args)
       return
     end
-    M.rpc_build_quickfix(csproj, nil, dotnet_args)
-    return
-  end
 
-  select_project(solutionFilePath, function(project)
-    if project == nil then return end
-    M.rpc_build_quickfix(project.path, nil, dotnet_args)
-  end, use_default)
+    select_project(solution_path, function(project)
+      if project == nil then return end
+      M.rpc_build_quickfix(project.path, nil, dotnet_args)
+    end, use_default)
+  end)
 end
 
 M.build_solution = function(term, args)
   term = term or require("easy-dotnet.options").options.terminal
   args = args or ""
 
-  local solution_file_path = sln_parse.find_solution_file() or csproj_parse.find_project_file()
-  if solution_file_path == nil then
-    logger.error(error_messages.no_project_definition_found)
-    return
-  end
-  local cmd = require("easy-dotnet.options").get_option("server").use_visual_studio
-      and string.format('%s build "%s" --msbuild "%s"', constants.compat_command, solution_file_path, require("easy-dotnet.rpc.rpc").global_rpc_client.initialized_msbuild_path)
-    or string.format("dotnet build %s %s", solution_file_path, args)
-  term(solution_file_path, "build", args or "", { cmd = cmd })
+  current_solution.get_or_pick_solution(function(solution_path)
+    solution_path = solution_path or csproj_parse.find_project_file()
+
+    if solution_path == nil then
+      logger.error(error_messages.no_project_definition_found)
+      return
+    end
+
+    local cmd = require("easy-dotnet.options").get_option("server").use_visual_studio
+        and string.format('%s build "%s" --msbuild "%s"', constants.compat_command, solution_path, require("easy-dotnet.rpc.rpc").global_rpc_client.initialized_msbuild_path)
+      or string.format("dotnet build %s %s", solution_path, args)
+    term(solution_path, "build", args or "", { cmd = cmd })
+  end)
 end
 
 M.build_solution_quickfix = function(dotnet_args)
   dotnet_args = dotnet_args or ""
 
-  local solution_file_path = sln_parse.find_solution_file() or csproj_parse.find_project_file()
-  if solution_file_path == nil then
-    logger.error(error_messages.no_project_definition_found)
-    return
-  end
+  current_solution.get_or_pick_solution(function(solution_path)
+    solution_path = solution_path or csproj_parse.find_project_file()
 
-  M.rpc_build_quickfix(solution_file_path, nil, dotnet_args)
+    if solution_path == nil then
+      logger.error(error_messages.no_project_definition_found)
+      return
+    end
+
+    M.rpc_build_quickfix(solution_path, nil, dotnet_args)
+  end)
 end
 
 return M

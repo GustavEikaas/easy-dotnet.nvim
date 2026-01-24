@@ -68,20 +68,21 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
     - [Support matrix](#support-matrix)
 18. [Nvim-dap configuration](#nvim-dap-configuration)
 19. [Troubleshooting](#troubleshooting)
+20. [Highlight groups](#highlight-groups)
+21. [Local Development](#local-development)
 
 ## Features
 
 - Roslyn LSP support out of the box — powered by the official .NET Roslyn language server (see [LSP details](./docs/lsp.md))
+- Debugger configured out of the box- powered by [netcoredbg](https://github.com/samsung/netcoredbg)
 - Solution, slnx, csproj and fsproj support: Whether its a single project or a solution containing multiple projects easy-dotnet has you covered.
 - Action Commands: Execute common tasks like building, running, testing, cleaning and restoring with ease.
 - User Secrets Management: Edit, create, and preview .NET user secrets directly within Neovim.
-- Debugging Helpers: While easy-dotnet.nvim doesn't set up DAP (Debugger Adapter Protocol) for you, it provides useful helper functions for debugging. These include resolving the DLL you are debugging and rebuilding before launching DAP, ensuring a smooth debugging experience.
 - Test runner: Test runner similiar to the one you find in Rider.
 - Workspace diagnostics: Get diagnostic errors and warnings from your entire solution or individual projects
 - Outdated command: Makes checking outdated packages a breeze using virtual text
 - (csproj/fsproj) mappings: Keymappings for .csproj and .fsproj files are automatically available
 - Auto bootstrap namespace: Automatically inserts namespace and class/interface when opening a newly created `.cs` file. (also checks clipboard for json to create class from)
-- Debugger works out of the box with nvim-dap (if configured)
 - Create dotnet templates like with `dotnet new`, automatically adding them to the current solution
 - Package autocomplete inside .csproj and .fsproj files [Check it out](#package-autocomplete)
 - [Rider-like](https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments)
@@ -91,7 +92,6 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 
 - Neovim needs to be built with **LuaJIT**
 - [EasyDotnet](https://www.nuget.org/packages/EasyDotnet) `dotnet tool install -g EasyDotnet`
-- `jq`
 
 Although not *required* by the plugin, it is highly recommended to install one of:
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
@@ -123,7 +123,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
   "GustavEikaas/easy-dotnet.nvim",
   -- 'nvim-telescope/telescope.nvim' or 'ibhagwan/fzf-lua' or 'folke/snacks.nvim'
   -- are highly recommended for a better experience
-  dependencies = { "nvim-lua/plenary.nvim", 'nvim-telescope/telescope.nvim', },
+  dependencies = { "nvim-lua/plenary.nvim", 'mfussenegger/nvim-dap', 'nvim-telescope/telescope.nvim', },
   config = function()
     local dotnet = require("easy-dotnet")
     -- Options are not required
@@ -131,13 +131,15 @@ Although not *required* by the plugin, it is highly recommended to install one o
       lsp = {
         enabled = true, -- Enable builtin roslyn lsp
         roslynator_enabled = true, -- Automatically enable roslynator analyzer
+        easy_dotnet_analyzer_enabled = true, -- Enable roslyn analyzer from easy-dotnet-server
         analyzer_assemblies = {}, -- Any additional roslyn analyzers you might use like SonarAnalyzer.CSharp
         config = {},
       },
       debugger = {
-        -- The path to netcoredbg executable
-        --example mason path: vim.fs.joinpath(vim.fn.stdpath("data"), "mason/bin/netcoredbg.cmd"),
+        -- Path to custom coreclr DAP adapter
+        -- easy-dotnet-server falls back to its own netcoredbg binary if bin_path is nil
         bin_path = nil,
+        apply_value_converters = true,
         auto_register_dap = true,
         mappings = {
           open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
@@ -167,6 +169,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
           },
         mappings = {
           run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
+          run_all_tests_from_buffer = { lhs = "<leader>t", desc = "run all tests from buffer" },
           peek_stack_trace_from_buffer = { lhs = "<leader>p", desc = "peek stack trace from buffer" },
           filter_failed_tests = { lhs = "<leader>fe", desc = "filter failed tests" },
           debug_test = { lhs = "<leader>d", desc = "debug test" },
@@ -286,6 +289,11 @@ require("lualine").setup {
 | `dotnet.run_default()` | `dotnet run --project <TS Default> <DArgs>` |
 | `dotnet.run_profile_default()` | `dotnet run --project <TS Default> --launch-profile <TS> <DArgs>` |
 ||  
+| `dotnet.debug_profile()`                        | ``                                                                                                       |
+| `dotnet.debug()` | ``                                                                                                             |
+| `dotnet.debug_default()` | `` |
+| `dotnet.debug_profile_default()` | `` |
+||  
 | `dotnet.build()` | `dotnet build <TS> <DArgs>` |
 | `dotnet.build_solution()` | `dotnet build <sln> <DArgs>` |
 | `dotnet.build_solution_quickfix()` | `dotnet build <sln> <DArgs>` and opens build errors in the quickfix list |
@@ -321,7 +329,7 @@ require("lualine").setup {
 | `dotnet.new()`                                | Picker for creating a new template based on `Dotnet new`                                                                                                            |
 | `dotnet.outdated()`                           | Runs `Dotnet outdated` in supported file types (`.csproj`, `.fsproj`, `Directory.Packages.props`, `Packages.props`, `Directory.Build.props`) and displays virtual text with the latest package versions. |
 ||
-| `dotnet.solution_select()`                    | Select the solution file for easy-dotnet.nvim to use, useful when multiple .sln files are present in the project.     |
+| `dotnet.solution_select(path: string)`        | Manually set a solution file for the current working directory. Useful for non-standard layouts where the solution file is outside the normal search depth or in a different location. |
 | `dotnet.solution_add()`                       | `dotnet sln <sln> add <TS>`.                                                                                                            |
 | `dotnet.solution_remove()`                    | `dotnet sln <sln> remove <TS>`.                                                                                                            |
 ||
@@ -362,7 +370,7 @@ dotnet.new()
 dotnet.outdated()
 dotnet.add_package()
 dotnet.remove_package()
-dotnet.solution_select()
+dotnet.solution_select(path: string)
 dotnet.ef_migrations_remove()
 dotnet.ef_migrations_add(name: string)
 dotnet.ef_migrations_list()
@@ -410,6 +418,10 @@ Dotnet run
 Dotnet run default
 Dotnet run profile
 Dotnet run profile default
+Dotnet debug
+Dotnet debug default
+Dotnet debug profile
+Dotnet debug profile default
 Dotnet watch
 Dotnet watch default
 Dotnet test
@@ -439,7 +451,7 @@ Dotnet restore
 Dotnet clean
 Dotnet new
 Dotnet createfile
-Dotnet solution select
+Dotnet solution select <path>
 Dotnet solution add
 Dotnet solution remove
 Dotnet outdated
@@ -611,10 +623,6 @@ Adding nuget packages are available using the `:Dotnet add package` command. Thi
 
 ![image](https://github.com/user-attachments/assets/00a9d38a-6afe-42ec-b971-04191fee1d59)
 
-### Requirements
-
-This functionality relies on `jq` so ensure that is installed on your system.
-
 ## Project mappings
 
 Key mappings are available automatically within `.csproj` and `.fsproj` files
@@ -629,7 +637,6 @@ Key mappings are available automatically within `.csproj` and `.fsproj` files
 
 When editing package references inside a .csproject file it is possible to enable autocomplete.
 This will trigger autocomplete for `<PackageReference Include="<cmp-trigger>" Version="<cmp-trigger>" />`
-This functionality relies on `jq` so ensure that is installed on your system.
 
 #### Using nvim-cmp
 
@@ -904,4 +911,6 @@ Check out [debugging-setup](./docs/debugging.md) for a full walkthrough of debug
 </details>
 
 
+## Local Development
 
+Check out [setup guid](./docs/server-development.md)

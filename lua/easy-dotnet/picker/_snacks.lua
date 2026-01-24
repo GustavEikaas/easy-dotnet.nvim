@@ -28,7 +28,7 @@ local function find_nuget_packages(_, ctx)
         end
 
         for _, pkg in ipairs(res) do
-          ---@type NugetPackageMetadata
+          ---@type easy-dotnet.Nuget.PackageMetadata
           cb({ text = pkg.id or "(unknown id)" })
         end
 

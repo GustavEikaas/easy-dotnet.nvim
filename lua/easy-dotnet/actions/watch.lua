@@ -2,6 +2,7 @@ local M = {}
 local picker = require("easy-dotnet.picker")
 local parsers = require("easy-dotnet.parsers")
 local logger = require("easy-dotnet.logger")
+local current_solution = require("easy-dotnet.current_solution")
 local csproj_parse = parsers.csproj_parser
 local sln_parse = parsers.sln_parser
 local error_messages = require("easy-dotnet.error-messages")
@@ -42,29 +43,31 @@ M.run_project_picker = function(term, use_default, args)
   use_default = use_default or false
   args = args or ""
   local default_manager = require("easy-dotnet.default-manager")
-  local solution_file_path = sln_parse.find_solution_file()
-  if solution_file_path == nil then
-    csproj_fallback(term, args)
-    return
-  end
 
-  local default = default_manager.check_default_project(solution_file_path, "watch")
-  if default ~= nil and use_default == true then
-    if default.type == "solution" then error("Type solution is not supported for dotnet watch") end
-    watch_project(default.project, args, term)
-    return
-  end
+  current_solution.get_or_pick_solution(function(solution_file_path)
+    if solution_file_path == nil then
+      csproj_fallback(term, args)
+      return
+    end
 
-  local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(i) return i.runnable == true end)
+    local default = default_manager.check_default_project(solution_file_path, "watch")
+    if default ~= nil and use_default == true then
+      if default.type == "solution" then error("Type solution is not supported for dotnet watch") end
+      watch_project(default.project, args, term)
+      return
+    end
 
-  if #projects == 0 then
-    logger.error(error_messages.no_runnable_projects_found)
-    return
-  end
-  picker.picker(nil, projects, function(i)
-    watch_project(i, args, term)
-    default_manager.set_default_project(i, solution_file_path, "watch")
-  end, "Run project")
+    local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(i) return i.runnable == true end)
+
+    if #projects == 0 then
+      logger.error(error_messages.no_runnable_projects_found)
+      return
+    end
+    picker.picker(nil, projects, function(i)
+      watch_project(i, args, term)
+      default_manager.set_default_project(i, solution_file_path, "watch")
+    end, "Run project")
+  end)
 end
 
 return M
