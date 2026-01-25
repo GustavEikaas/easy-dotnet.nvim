@@ -31,7 +31,7 @@ local function open_runner(options, solution_file_path)
   win.filetype = "easy-dotnet"
   win.set_options(options).set_keymaps(require("easy-dotnet.test-runner.keymaps").keymaps).render(options.viewmode)
 
-    if is_reused then return end
+  if is_reused then return end
 
   refresh_runner(options, solution_file_path)
 end
