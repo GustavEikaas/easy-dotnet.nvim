@@ -1,16 +1,20 @@
----@class TestClient
----@field _client StreamJsonRpc
----@field test_run fun(self: TestClient, request: RPC_TestRunRequest, cb?: fun(res: RPC_TestRunResult), opts?: RPCCallOpts): RPC_CallHandle # Request running multiple tests for MTP
----@field test_discover fun(self: TestClient, request: RPC_TestDiscoverRequest, cb?: fun(res: RPC_DiscoveredTest[]), opts?: RPCCallOpts): RPC_CallHandle # Request test discovery for MTP
----@field test_runner_initialize fun(self: TestClient, solution_file_path: string, cb?: fun(), opts?: RPCCallOpts): RPC_CallHandle
----@field test_runner_discover fun(self: TestClient, cb?: fun(), opts?: RPCCallOpts): RPC_CallHandle
+---@class easy-dotnet.RPC.Client.TestRunner
+---@field _client easy-dotnet.RPC.StreamJsonRpc
+---@field test_run fun(self: easy-dotnet.RPC.Client.TestRunner, request: easy-dotnet.RPC.TestRunRequest, cb?: fun(res: RPC_TestRunResult), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Legacy Request running multiple tests for MTP
+---@field test_discover fun(self: easy-dotnet.RPC.Client.TestRunner, request: easy-dotnet.RPC.TestDiscoverRequest, cb?: fun(res: easy-dotnet.RPC.DiscoveredTest[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Legacy Request test discovery for MTP
+---@field test_runner_initialize fun(self: easy-dotnet.RPC.Client.TestRunner, solution_file_path: string, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+---@field test_runner_discover fun(self: easy-dotnet.RPC.Client.TestRunner, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+---@field run_tests fun(self: easy-dotnet.RPC.Client.TestRunner, test_ids: string[]) # Fire-and-forget run request
+---@field debug_test fun(self: easy-dotnet.RPC.Client.TestRunner, test_id: string, cb: fun(dap_config: table)) # Request debug config
+---@field get_source_location fun(self: easy-dotnet.RPC.Client.TestRunner, test_id: string, cb: fun(location: { file: string, line: number })) # Request navigation info
+---@field get_failure_info fun(self: easy-dotnet.RPC.Client.TestRunner, test_id: string, cb: fun(info: { stackTrace: string, message: string, stdOut: string })) # Request detailed failure info
 
 local M = {}
 M.__index = M
 
 --- Constructor
 ---@param client easy-dotnet.RPC.StreamJsonRpc
----@return easy-dotnet.RPC.Client.Test
+---@return easy-dotnet.RPC.Client.TestRunner
 function M.new(client)
   local self = setmetatable({}, M)
   self._client = client
@@ -138,5 +142,27 @@ function M:test_runner_discover(cb, opts)
   })()
 end
 function M:set_run_settings() self._client.notify("test/set-project-run-settings", {}) end
+
+---Fire-and-forget run request. Server handles build, discovery, and execution.
+---@param test_ids string[] List of Node IDs to run
+function M:run_tests(test_ids) self._client.notify("test/run", { testIds = test_ids }) end
+
+---Request debug configuration.
+---@param test_id string
+---@param cb fun(dap_config: table)
+function M:debug_test(test_id, cb)
+  -- Server builds project, finds output dll, and returns a DAP configuration object
+  self._client.request("test/debug", { testId = test_id }, cb)
+end
+
+---Request navigation info.
+---@param test_id string
+---@param cb fun(location: { file: string, line: number })
+function M:get_source_location(test_id, cb) self._client.request("test/goto", { testId = test_id }, cb) end
+
+---Request detailed failure info (Stack trace, StdOut)
+---@param test_id string
+---@param cb fun(info: { stackTrace: string, message: string, stdOut: string })
+function M:get_failure_info(test_id, cb) self._client.request("test/get-failure-info", { testId = test_id }, cb) end
 
 return M

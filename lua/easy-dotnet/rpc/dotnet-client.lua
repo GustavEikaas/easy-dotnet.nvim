@@ -125,7 +125,7 @@ end
 ---@field launch_profiles easy-dotnet.RPC.Client.LaunchProfiles
 ---@field nuget easy-dotnet.RPC.Client.Nuget
 ---@field roslyn easy-dotnet.RPC.Client.Roslyn
----@field test easy-dotnet.RPC.Client.Test
+---@field test easy-dotnet.RPC.Client.TestRunner
 -- luacheck: no max line length
 ---@field secrets_init fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.RPC.ProjectUserSecretsInitResponse), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request adding package
 -- luacheck: no max line length
