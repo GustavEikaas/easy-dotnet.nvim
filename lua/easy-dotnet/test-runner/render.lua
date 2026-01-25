@@ -12,8 +12,7 @@ local State = {
   buf = nil,
   win = nil,
   options = {},
-  -- Separate map for status to avoid mutating the Tree nodes directly
-  status_map = {},
+  active_node_id = nil,
   header_status = nil,
   filter_failed_only = false,
 }
@@ -99,6 +98,43 @@ local Actions = {
   end,
 }
 
+local function on_cursor_moved()
+  if not State.win or not vim.api.nvim_win_is_valid(State.win) then return end
+
+  local line = vim.api.nvim_win_get_cursor(State.win)[1]
+  local node = View.get_node_at_line(Tree, line)
+
+  -- Optimization: Update if node changed OR if status changed (handled by status update event)
+  if node and node.id ~= State.active_node_id then
+    State.active_node_id = node.id
+    local node_status = Tree.get_status(node.id)
+
+    -- PASS NODE HERE
+    Header.render(State.header_status, node, node_status)
+  end
+end
+
+-- Also update the status handler to trigger a redraw with the node
+M.handle_status_update = function(node_id, status_payload)
+  if State.active_node_id == node_id then
+    local node = Tree.nodes_by_id[node_id]
+    Header.render(State.header_status, node, status_payload)
+  end
+
+  vim.schedule(M.refresh)
+end
+
+local function register_autocmds()
+  if not State.buf then return end
+
+  local group = vim.api.nvim_create_augroup("EasyDotnetTestRunner", { clear = true })
+
+  vim.api.nvim_create_autocmd("CursorMoved", {
+    buffer = State.buf,
+    callback = on_cursor_moved,
+    group = group,
+  })
+end
 -- --- RENDERING ---
 
 local function render_buffer()
@@ -106,7 +142,7 @@ local function render_buffer()
 
   -- 1. Pure Functional Build
   -- We pass the filter state to the View builder
-  local lines, highlights = View.build(Tree, State.status_map, {
+  local lines, highlights = View.build(Tree, Tree.status_by_id, {
     options = State.options,
     filter_failed = State.filter_failed_only,
   })
@@ -176,14 +212,6 @@ end
 
 M.setup = function(opts) State.options = opts or {} end
 
--- Called by Server Handler: 'test/statusUpdate'
-M.handle_status_update = function(node_id, status_payload)
-  State.status_map[node_id] = status_payload
-  -- Debounce this in production if high volume
-  vim.schedule(M.refresh)
-end
-
--- Called by Server Handler: 'test/summaryUpdate'
 M.handle_summary_update = function(summary)
   State.header_status = summary
   Header.render(summary)
@@ -251,19 +279,26 @@ M.open = function(mode)
     State.win = vim.api.nvim_get_current_win()
     vim.api.nvim_set_current_buf(State.buf)
   end
+  register_autocmds()
 
-  -- 4. Final Setup
+  vim.schedule(on_cursor_moved)
   register_keymaps()
   M.refresh()
 end
 
 M.toggle = function(mode)
   if State.win and vim.api.nvim_win_is_valid(State.win) then
+    M.close()
+  else
+    M.open(mode)
+  end
+end
+
+M.close = function()
+  if State.win and vim.api.nvim_win_is_valid(State.win) then
     vim.api.nvim_win_close(State.win, true)
     State.win = nil
     Header.close()
-  else
-    M.open(mode)
   end
 end
 

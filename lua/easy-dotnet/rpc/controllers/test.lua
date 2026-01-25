@@ -158,7 +158,7 @@ end
 ---Request navigation info.
 ---@param test_id string
 ---@param cb fun(location: { file: string, line: number })
-function M:get_source_location(test_id, cb) self._client.request("test/goto", { testId = test_id }, cb) end
+function M:get_source_location(test_id, cb) self._client.request("testrunner/go-to-test-source", { nodeId = test_id }, cb) end
 
 ---Request detailed failure info (Stack trace, StdOut)
 ---@param test_id string

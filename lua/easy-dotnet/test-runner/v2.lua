@@ -8,6 +8,12 @@
 ---@field expanded boolean
 ---@field indent number
 
+---@class TestNodeStatusUpdate
+---@field type TestNodeStatus
+---@field actions TestNodeAction[]
+
+---@alias TestNodeAction  "Run" | "Debug"| "PeekOutput" | "GoToSource"| "Refresh"
+
 ---@alias TestNodeStatus
 ---| "Idle" | "Queued" | "Building" | "Discovering" | "Running" | "Debugging"
 ---| "Cancelling" | "Passed" | "Failed" | "Skipped" | "Cancelled"
@@ -57,7 +63,7 @@ function M.register_node(node_dto)
   if existing then
     -- Update existing: Merge fields but PRESERVE state (expanded, children)
     existing.displayName = node_dto.displayName
-    existing.type = node_dto.type or existing.type
+    existing.type = node_dto.type.type or existing.type
     existing.filePath = node_dto.filePath or existing.filePath
     existing.parentId = node_dto.parentId or existing.parentId
     -- Do NOT touch existing.expanded or existing.children here
@@ -68,11 +74,10 @@ function M.register_node(node_dto)
       displayName = node_dto.displayName,
       parentId = node_dto.parentId,
       filePath = node_dto.filePath,
-      type = node_dto.type,
+      type = node_dto.type.type,
       children = {},
       indent = 0,
-      -- BUG FIX: Default expanded to FALSE unless it is a Solution/Root
-      expanded = (node_dto.type == "Solution"),
+      expanded = (node_dto.type.type == "Solution"),
     }
 
     M.nodes_by_id[id] = new_node
@@ -155,9 +160,10 @@ end
 
 ---Update ephemeral status
 ---@param nodeId string
----@param status TestNodeStatus
+---@param status TestNodeStatusUpdate
 function M.update_status(nodeId, status)
   if M.nodes_by_id[nodeId] then M.status_by_id[nodeId] = status end
+  require("easy-dotnet.test-runner.render").handle_status_update(nodeId, status)
 end
 
 function M.set_expanded(nodeId, isExpanded)
@@ -199,7 +205,6 @@ function M.traverse_expanded(start_node, cb)
   end
 end
 
----Get status map
-function M.get_status_map() return M.status_by_id end
+M.get_status = function(node_id) return M.status_by_id[node_id] end
 
 return M
