@@ -187,76 +187,73 @@ local function open_stack_trace_from_buffer()
 end
 
 function M.add_gutter_test_signs()
-  local options = require("easy-dotnet.test-runner.render").options
-  local is_test_file = false
-  local bufnr = vim.api.nvim_get_current_buf()
-  local curr_file = vim.api.nvim_buf_get_name(bufnr)
-
-  ---@param node easy-dotnet.TestRunner.Node
-  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
-    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then
-      is_test_file = true
-      --INFO: line number for MTP is on the [Test] attribute. VSTest is on the method_declaration
-      local line_offset = node.line_number - 1 - (node.is_MTP and 0 or 1)
-
-      vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
-        id = node.line_number,
-        sign_text = options.icons.test,
-        priority = 20,
-        sign_hl_group = constants.highlights.EasyDotnetTestRunnerProject,
-      })
-
-      if node.icon then
-        if node.icon == options.icons.failed then
-          vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
-            id = node.line_number,
-            sign_text = options.icons.failed,
-            priority = 20,
-            sign_hl_group = constants.highlights.EasyDotnetTestRunnerFailed,
-          })
-        elseif node.icon == options.icons.skipped then
-          vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
-            id = node.line_number,
-            sign_text = options.icons.skipped,
-            priority = 20,
-            sign_hl_group = constants.highlights.EasyDotnetTestRunnerTest,
-          })
-        elseif node.icon == "<Running>" then
-          vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
-            id = node.line_number,
-            sign_text = options.icons.reload,
-            priority = 20,
-            sign_hl_group = constants.highlights.EasyDotnetTestRunnerRunning,
-          })
-        elseif node.icon == options.icons.passed then
-          vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
-            id = node.line_number,
-            sign_text = options.icons.passed,
-            priority = 20,
-            sign_hl_group = constants.highlights.EasyDotnetTestRunnerPassed,
-          })
-        end
-      end
-    end
-  end)
-
-  local keymap = require("easy-dotnet.test-runner.render").options.mappings
-  if is_test_file == true then
-    if not get_buf_mtime() then reset_buf_mtime(curr_file) end
-    vim.keymap.set("n", keymap.debug_test_from_buffer.lhs, function() debug_test_from_buffer() end, { silent = true, buffer = bufnr, desc = keymap.debug_test_from_buffer.desc })
-
-    vim.keymap.set("n", keymap.run_test_from_buffer.lhs, function()
-      coroutine.wrap(function() run_test_from_buffer() end)()
-    end, { silent = true, buffer = bufnr, desc = keymap.run_test_from_buffer.desc })
-
-    vim.keymap.set("n", keymap.run_all_tests_from_buffer.lhs, function()
-      coroutine.wrap(function() run_tests_from_buffer(nil) end)()
-    end, { silent = true, buffer = bufnr, desc = keymap.run_all_tests_from_buffer.desc })
-
-    vim.keymap.set("n", keymap.peek_stack_trace_from_buffer.lhs, function()
-      coroutine.wrap(function() open_stack_trace_from_buffer() end)()
-    end, { silent = true, buffer = bufnr, desc = keymap.peek_stack_trace_from_buffer.desc })
-  end
+  return
+  -- local options = require("easy-dotnet.test-runner.render").options
+  -- local is_test_file = false
+  -- local bufnr = vim.api.nvim_get_current_buf()
+  -- local curr_file = vim.api.nvim_buf_get_name(bufnr)
+  --
+  -- ---@param node TestNode
+  -- require("easy-dotnet.test-runner.render").traverse(nil, function(node)
+  --   if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) then
+  --     is_test_file = true
+  --     --INFO: line number for MTP is on the [Test] attribute. VSTest is on the method_declaration
+  --     local line_offset = node.line_number - 1 - (node.is_MTP and 0 or 1)
+  --
+  --     vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
+  --       id = node.line_number,
+  --       sign_text = options.icons.test,
+  --       priority = 20,
+  --       sign_hl_group = constants.highlights.EasyDotnetTestRunnerProject,
+  --     })
+  --
+  --     if node.icon then
+  --       if node.icon == options.icons.failed then
+  --         vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
+  --           id = node.line_number,
+  --           sign_text = options.icons.failed,
+  --           priority = 20,
+  --           sign_hl_group = constants.highlights.EasyDotnetTestRunnerFailed,
+  --         })
+  --       elseif node.icon == options.icons.skipped then
+  --         vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
+  --           id = node.line_number,
+  --           sign_text = options.icons.skipped,
+  --           priority = 20,
+  --           sign_hl_group = constants.highlights.EasyDotnetTestRunnerTest,
+  --         })
+  --       elseif node.icon == "<Running>" then
+  --         vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
+  --           id = node.line_number,
+  --           sign_text = options.icons.reload,
+  --           priority = 20,
+  --           sign_hl_group = constants.highlights.EasyDotnetTestRunnerRunning,
+  --         })
+  --       elseif node.icon == options.icons.passed then
+  --         vim.api.nvim_buf_set_extmark(bufnr, constants.ns_id, line_offset, 0, {
+  --           id = node.line_number,
+  --           sign_text = options.icons.passed,
+  --           priority = 20,
+  --           sign_hl_group = constants.highlights.EasyDotnetTestRunnerPassed,
+  --         })
+  --       end
+  --     end
+  --   end
+  -- end)
+  --
+  -- local keymap = require("easy-dotnet.test-runner.render").options.mappings
+  -- if is_test_file == true then
+  --   if not get_buf_mtime() then reset_buf_mtime(curr_file) end
+  --   vim.keymap.set("n", keymap.debug_test_from_buffer.lhs, function() debug_test_from_buffer() end, { silent = true, buffer = bufnr, desc = keymap.debug_test_from_buffer.desc })
+  --
+  --   vim.keymap.set("n", keymap.run_test_from_buffer.lhs, function()
+  --     coroutine.wrap(function() run_test_from_buffer() end)()
+  --   end, { silent = true, buffer = bufnr, desc = keymap.run_test_from_buffer.desc })
+  --
+  --   vim.keymap.set("n", keymap.peek_stack_trace_from_buffer.lhs, function()
+  --     coroutine.wrap(function() open_stack_trace_from_buffer() end)()
+  --   end, { silent = true, buffer = bufnr, desc = keymap.peek_stack_trace_from_buffer.desc })
+  -- end
 end
 
 ---@class easy-dotnet.TestResult

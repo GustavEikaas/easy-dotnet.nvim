@@ -1,443 +1,301 @@
-local ns_id = require("easy-dotnet.constants").ns_id
-local polyfills = require("easy-dotnet.polyfills")
+local View = require("easy-dotnet.test-runner.view")
+local Header = require("easy-dotnet.test-runner.header")
+local Tree = require("easy-dotnet.test-runner.v2")
+local Constants = require("easy-dotnet.constants")
+local WindowModule = require("easy-dotnet.test-runner.window")
+local Client = require("easy-dotnet.rpc.rpc").global_rpc_client
 
----@class easy-dotnet.Window
----@field tree table<string,easy-dotnet.TestRunner.Node>
----@field jobs table
----@field appendJob table
----@field buf integer | nil
----@field win integer | nil
----@field height integer
----@field modifiable boolean
----@field buf_name string
----@field filetype string
----@field filter easy-dotnet.TestRunner.Result
----@field keymap table
----@field options table
+local M = {}
 
----@class easy-dotnet.Highlight
----@field index number
----@field highlight string
-
----@alias easy-dotnet.TestRunner.Result '"Failed"' | '"NotExecuted"' | '"Passed"'
-
-local M = {
-  tree = {},
-  jobs = {},
-  appendJob = nil,
+-- --- STATE ---
+local State = {
   buf = nil,
   win = nil,
-  height = 10,
-  modifiable = false,
-  buf_name = "",
-  filetype = "",
-  filter = nil,
-  keymap = {},
   options = {},
+  active_node_id = nil,
+  header_status = nil,
+  filter_failed_only = false,
 }
 
----Traverses a tree from the given node, giving a callback for every item
----@param node easy-dotnet.TestRunner.Node | nil
----@param cb function
-M.traverse = function(node, cb)
-  if not node then node = M.tree end
-  --HACK: handle no tree set
-  if not node.name then return end
+-- --- ACTIONS (RPC Wrappers) ---
+local Actions = {
+  run_node = function(node)
+    Client:initialize(function() Client.test:run_tests(node.id) end)
+  end,
 
-  cb(node)
-  local keys = vim.tbl_keys(node.children or {})
-  table.sort(keys)
-  for _, key in ipairs(keys) do
-    M.traverse(node.children[key], cb)
+  debug_node = function(node)
+    Client:initialize(function()
+      Client.test:debug_test(node.id, function(dap_config)
+        if dap_config then
+          local ok, dap = pcall(require, "dap")
+          if ok then
+            dap.run(dap_config)
+            -- Optional: Close runner window when debugging starts
+            -- M.toggle()
+          else
+            vim.notify("nvim-dap is not installed.", vim.log.levels.ERROR)
+          end
+        else
+          vim.notify("Server could not generate debug config.", vim.log.levels.WARN)
+        end
+      end)
+    end)
+  end,
+
+  go_to_file = function(node)
+    Client:initialize(function()
+      Client.test:get_source_location(node.id, function(loc)
+        if loc and loc.file then
+          -- Switch to the file buffer
+          vim.cmd("edit " .. loc.file)
+          if loc.line then
+            vim.api.nvim_win_set_cursor(0, { loc.line, 0 })
+            -- Flash the line
+            local ns = Constants.ns_id
+            vim.api.nvim_buf_add_highlight(0, ns, "Visual", loc.line - 1, 0, -1)
+            vim.defer_fn(function() vim.api.nvim_buf_clear_namespace(0, ns, 0, -1) end, 300)
+          end
+        end
+      end)
+    end)
+  end,
+
+  peek_stacktrace = function(node)
+    Client:initialize(function()
+      Client.test:get_failure_info(node.id, function(info)
+        if not info then return end
+
+        local content = {}
+        if info.message then table.insert(content, info.message) end
+        if info.stackTrace then
+          local trace_lines = vim.split(info.stackTrace, "\n")
+          vim.list_extend(content, trace_lines)
+        end
+        if #content == 0 then table.insert(content, "No failure details available.") end
+
+        -- Create a floating window for the stacktrace
+        local win = WindowModule.new_float()
+        win:write_buf(content):pos_center():create()
+
+        -- Set filetype for syntax highlighting if possible
+        vim.api.nvim_buf_set_option(win.buf, "filetype", "cs")
+      end)
+    end)
+  end,
+
+  expand_node = function(node)
+    Tree.set_expanded(node.id, not node.expanded)
+    M.refresh()
+  end,
+
+  toggle_filter = function()
+    State.filter_failed_only = not State.filter_failed_only
+    M.refresh()
+  end,
+}
+
+local function on_cursor_moved()
+  if not State.win or not vim.api.nvim_win_is_valid(State.win) then return end
+
+  local line = vim.api.nvim_win_get_cursor(State.win)[1]
+  local node = View.get_node_at_line(Tree, line)
+
+  -- Optimization: Update if node changed OR if status changed (handled by status update event)
+  if node and node.id ~= State.active_node_id then
+    State.active_node_id = node.id
+    local node_status = Tree.get_status(node.id)
+
+    -- PASS NODE HERE
+    Header.render(State.header_status, node, node_status)
   end
 end
 
-M.traverse_expanded = function(node, cb)
-  if not node then node = M.tree end
-  --HACK: handle no tree set
-  if not node.name then return end
-  cb(node)
-  local keys = vim.tbl_keys(node.children or {})
-  table.sort(keys)
-  for _, key in ipairs(keys) do
-    local child_node = node.children[key]
-    local filterpass = M.filter == nil or (M.filter == child_node.icon or child_node.icon == "<Running>")
-    if node.expanded and filterpass then M.traverse_expanded(child_node, cb) end
-  end
-end
-
-M.traverse_filtered = function(node, cb)
-  if not node then node = M.tree end
-  --HACK: handle no tree set
-  if not node.name then return end
-  cb(node)
-  local keys = vim.tbl_keys(node.children or {})
-  table.sort(keys)
-  for _, key in ipairs(keys) do
-    local child_node = node.children[key]
-    local filterpass = M.filter == nil or (M.filter == child_node.icon)
-    if filterpass then M.traverse_filtered(child_node, cb) end
-  end
-end
-
----@param id string
----@param type "Run" | "Server"
----@param subtask_count number | nil
-function M.appendJob(id, type, subtask_count)
-  local job = {
-    type = type,
-    id = id,
-    subtask_count = (subtask_count and subtask_count > 0) and subtask_count or 1,
-  }
-  table.insert(M.jobs, job)
-  M.refreshTree()
-
-  local on_job_finished_callback = function()
-    job.completed = true
-    local is_all_finished = polyfills.iter(M.jobs):all(function(s) return s.completed end)
-    if is_all_finished == true then M.jobs = {} end
-    M.refreshTree()
+-- Also update the status handler to trigger a redraw with the node
+M.handle_status_update = function(node_id, status_payload)
+  if State.active_node_id == node_id then
+    local node = Tree.nodes_by_id[node_id]
+    Header.render(State.header_status, node, status_payload)
   end
 
-  return on_job_finished_callback
+  vim.schedule(M.refresh)
 end
 
-function M.redraw_virtual_text()
-  if #M.jobs > 0 then
-    local total_subtask_count = 0
-    local completed_count = 0
-    for _, value in ipairs(M.jobs) do
-      total_subtask_count = total_subtask_count + value.subtask_count
-      if value.completed == true then completed_count = completed_count + value.subtask_count end
-    end
+local function register_autocmds()
+  if not State.buf then return end
 
-    local job_type = M.jobs[1].type
+  local group = vim.api.nvim_create_augroup("EasyDotnetTestRunner", { clear = true })
 
-    vim.api.nvim_buf_set_extmark(M.buf, ns_id, 0, 0, {
-      virt_text = {
-        {
-          string.format(
-            "%s %s/%s",
-            job_type == "Run" and "Running" or job_type == "Discovery" and "Discovering" or job_type == "Build" and "Building" or "Starting server",
-            completed_count,
-            total_subtask_count
-          ),
-          "Character",
-        },
-      },
-      virt_text_pos = "right_align",
-      priority = 200,
-    })
+  vim.api.nvim_create_autocmd("CursorMoved", {
+    buffer = State.buf,
+    callback = on_cursor_moved,
+    group = group,
+  })
+end
+-- --- RENDERING ---
+
+local function render_buffer()
+  if not State.buf or not vim.api.nvim_buf_is_valid(State.buf) then return end
+
+  -- 1. Pure Functional Build
+  -- We pass the filter state to the View builder
+  local lines, highlights = View.build(Tree, Tree.status_by_id, {
+    options = State.options,
+    filter_failed = State.filter_failed_only,
+  })
+
+  -- 2. Imperative DOM Update
+  vim.api.nvim_buf_set_option(State.buf, "modifiable", true)
+  vim.api.nvim_buf_clear_namespace(State.buf, Constants.ns_id, 0, -1)
+  vim.api.nvim_buf_set_lines(State.buf, 0, -1, true, lines)
+
+  for _, hl in ipairs(highlights) do
+    vim.api.nvim_buf_add_highlight(State.buf, Constants.ns_id, hl.group, hl.index - 1, 0, -1)
   end
+
+  vim.api.nvim_buf_set_option(State.buf, "modifiable", false)
 end
 
-local function setBufferOptions()
-  if M.options.viewmode ~= "buf" and M.options.viewmode ~= "vsplit" then vim.api.nvim_win_set_height(M.win, M.height) end
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
-  vim.api.nvim_buf_set_name(M.buf, M.buf_name)
-  vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
-  --Crashes on nvim 0.9.5??
-  -- vim.api.nvim_buf_set_option(M.buf, "cursorline", true)
-end
+local function register_keymaps()
+  if not State.buf then return end
+  local maps = State.options.mappings or {}
 
----Translates a line number to the corresponding node in the tree structure, considering the `expanded` flag of nodes.
----Only expanded nodes contribute to the line number count, while collapsed nodes and their children are ignored.
----
----@param line_num number The line number in the buffer to be translated to a node in the tree structure.
----@param tree easy-dotnet.TestRunner.Node The root node of the tree structure to traverse.
----@return easy-dotnet.TestRunner.Node | nil
-local function translateIndex(line_num, tree)
-  local current_line = 1
-  local result = nil
+  local function map(config_key, action_fn)
+    local def = maps[config_key]
+    if not def then return end
 
-  M.traverse_expanded(tree, function(node)
-    if result ~= nil then return end
-    if current_line == line_num then result = node end
-    current_line = current_line + 1
+    vim.keymap.set("n", def.lhs, function()
+      local line = vim.api.nvim_win_get_cursor(0)[1]
+      local node = View.get_node_at_line(Tree, line)
+
+      -- Some actions (like global refresh) don't need a specific node
+      -- Wrapper logic to handle nil nodes inside the action if necessary,
+      -- or check here.
+      action_fn(node)
+    end, { buffer = State.buf, desc = def.desc, noremap = true, silent = true })
+  end
+
+  -- Wire up actions to configuration keys
+  map("run", function(node)
+    if node then Actions.run_node(node) end
+  end)
+  map("debug_test", function(node)
+    if node then Actions.debug_node(node) end
+  end)
+  map("go_to_file", function(node)
+    if node then Actions.go_to_file(node) end
+  end)
+  map("peek_stacktrace", function(node)
+    if node then Actions.peek_stacktrace(node) end
   end)
 
-  return result
-end
-
----@param highlights easy-dotnet.Highlight[]
-local function apply_highlights(highlights)
-  for _, value in ipairs(highlights) do
-    if value.highlight ~= nil then vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, value.index - 1, 0, -1) end
-  end
-end
-
----@param node easy-dotnet.TestRunner.Node
----@return string | nil
-local function calculate_highlight(node)
-  if node.job then
-    if node.job.state == "pending" then
-      return "EasyDotnetTestRunnerRunning"
-    elseif node.job.state == "error" then
-      return "EasyDotnetTestRunnerFailed"
-    end
-  end
-  if node.icon == M.options.icons.failed then
-    return "EasyDotnetTestRunnerFailed"
-  elseif node.icon == "<Running>" then
-    return "EasyDotnetTestRunnerRunning"
-  elseif node.icon == M.options.icons.passed then
-    return "EasyDotnetTestRunnerPassed"
-  elseif node.highlight ~= nil and type(node.highlight) == "string" then
-    return node.highlight
-  end
-  return nil
-end
-
-local function convert_time(time_str)
-  local hours, minutes, seconds, microseconds = time_str:match("(%d+):(%d+):(%d+)%.(%d+)")
-  hours = tonumber(hours)
-  minutes = tonumber(minutes)
-  seconds = tonumber(seconds)
-  microseconds = tonumber(microseconds)
-
-  local totalSeconds = hours * 3600 + minutes * 60 + seconds + microseconds / 1000000
-
-  if totalSeconds >= 3600 then
-    return string.format("%.1f h", totalSeconds / 3600)
-  elseif totalSeconds >= 60 then
-    return string.format("%.1f m", totalSeconds / 60)
-  elseif totalSeconds >= 1 then
-    return string.format("%.1f s", totalSeconds)
-  elseif totalSeconds > 0 then
-    return string.format("< 1 ms")
-  else
-    return "< 1 ms"
-  end
-end
-
----@param a easy-dotnet.MSBuild.BuildJob | easy-dotnet.Job.DiscoverJob
-local function stringify_job(a)
-  if a.name == "build" then return a.state == "pending" and "Building" or a.state == "error" and "build failed" or "" end
-
-  if a.name == "discover" then return a.state == "pending" and "Discovering" or a.state == "error" and "discovery failed" or "" end
-end
-
----@param node easy-dotnet.TestRunner.Node
-local function node_to_string(node)
-  local total_tests = 0
-  ---@param i easy-dotnet.TestRunner.Node
-  M.traverse(node, function(i)
-    if i.type == "subcase" or i.type == "test" then total_tests = total_tests + 1 end
+  -- Tree/View Actions
+  map("expand_node", function(node)
+    if node then Actions.expand_node(node) end
   end)
+  map("expand", function(node)
+    if node then Actions.expand_node(node) end
+  end) -- Alias
+  map("filter_failed_tests", function() Actions.toggle_filter() end)
 
-  if node.job then
-    local formatted = string.format(
-      "%s%s%s%s  <%s>",
-      string.rep(" ", node.indent or 0),
-      node.preIcon and (node.preIcon .. " ") or "",
-      node.name,
-      node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
-      stringify_job(node.job)
-    )
-    return formatted
-  end
-
-  local formatted = string.format(
-    "%s%s%s%s %s %s",
-    string.rep(" ", node.indent or 0),
-    node.preIcon and (node.preIcon .. " ") or "",
-    node.name,
-    node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
-    node.type ~= "subcase" and node.type ~= "test" and string.format("(%s)", total_tests) or "",
-    type(node.duration) == "string" and convert_time(node.duration) or ""
-  )
-
-  return formatted
-end
-
----@param tree easy-dotnet.TestRunner.Node
----@return string[], table[]
-local function tree_to_string(tree)
-  local result = {}
-  local highlights = {}
-  local index = 0
-  ---@param node easy-dotnet.TestRunner.Node
-  M.traverse_expanded(tree, function(node)
-    index = index + 1
-
-    local formatted = node_to_string(node)
-    local highlight = calculate_highlight(node)
-    table.insert(highlights, { index = index, highlight = highlight })
-    table.insert(result, formatted)
+  -- Global Actions
+  map("refresh_testrunner", function()
+    Client:initialize(function() Client.test:test_runner_discover() end)
   end)
-  return result, highlights
+  map("close", function() M.toggle() end)
 end
 
-local function printNodes()
-  vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
-  local stringLines, highlights = tree_to_string(M.tree)
-  vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, stringLines)
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
+-- --- PUBLIC API ---
 
-  M.redraw_virtual_text()
-  apply_highlights(highlights)
+M.setup = function(opts) State.options = opts or {} end
+
+M.handle_summary_update = function(summary)
+  State.header_status = summary
+  Header.render(summary)
 end
 
-local function setMappings()
-  if M.keymap == nil then return end
-  if M.buf == nil or not vim.api.nvim_buf_is_valid(M.buf) then return end
-  for key, value in pairs(M.keymap()) do
-    vim.keymap.set("n", key, function()
-      local line_num = vim.api.nvim_win_get_cursor(0)[1]
-      local node = translateIndex(line_num, M.tree)
-      if not node then error("Current line is not a node") end
-      value.handle(node, M)
-    end, { buffer = M.buf, desc = value.desc, noremap = true, silent = true })
-  end
-end
+M.refresh = function() render_buffer() end
 
-M.setKeymaps = function(mappings)
-  M.keymap = mappings
-  setMappings()
-  return M
-end
+M.open = function(mode)
+  -- Default to float if not specified
+  mode = mode or State.options.viewmode or "float"
 
----@param options easy-dotnet.TestRunner.Options
-M.setOptions = function(options)
-  if options then M.options = options end
-  return M
-end
-
-local function get_default_win_opts()
-  local width = math.floor(vim.o.columns * 0.8)
-  local height = math.floor(vim.o.lines * 0.8)
-  M.height = height
-
-  return {
-    relative = "editor",
-    width = width,
-    height = height,
-    col = math.floor((vim.o.columns - width) / 2),
-    row = math.floor((vim.o.lines - height) / 2),
-    style = "minimal",
-    border = "rounded",
-  }
-end
-
-local function has_multiple_listed_buffers()
-  local listed_buffers = 0
-
-  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_get_option(buf, "buflisted") then listed_buffers = listed_buffers + 1 end
+  -- 1. Ensure Buffer Exists
+  if not State.buf or not vim.api.nvim_buf_is_valid(State.buf) then
+    State.buf = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_buf_set_name(State.buf, "Test Manager")
+    vim.api.nvim_buf_set_option(State.buf, "filetype", "easy-dotnet")
   end
 
-  return listed_buffers > 0
-end
-
--- Toggle function to handle different window modes
----@param mode "float" | "split" | "buf" | "vsplit"
--- Function to hide the window or buffer based on the mode
-function M.hide(mode)
-  if not mode then mode = M.options.viewmode end
-  if mode == "float" or mode == "split" or mode == "vsplit" then
-    if M.win and vim.api.nvim_win_is_valid(M.win) then
-      vim.api.nvim_win_close(M.win, false)
-      M.win = nil
-      return true
-    end
-  elseif mode == "buf" then
-    if M.buf and vim.api.nvim_buf_is_valid(M.buf) and has_multiple_listed_buffers() then
-      vim.cmd("bprev")
-      return true
-    end
-  end
-  return false
-end
-
-function M.close()
-  if M.buf then
-    vim.api.nvim_buf_delete(M.buf, { force = true })
-    M.buf = nil
-  end
-end
-
----@param mode "float" | "split" | "buf" | "vsplit"
-function M.open(mode)
-  if not mode then mode = M.options.viewmode end
-
+  -- 2. Create Window based on Mode
   if mode == "float" then
-    if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
-    local win_opts = get_default_win_opts()
-    M.win = vim.api.nvim_open_win(M.buf, true, win_opts)
-    vim.wo[M.win].winfixbuf = true
-    vim.api.nvim_buf_set_option(M.buf, "bufhidden", "hide")
-    return true
+    if State.win and vim.api.nvim_win_is_valid(State.win) then
+      -- Already open, just focus
+      vim.api.nvim_set_current_win(State.win)
+    else
+      local width = math.floor(vim.o.columns * 0.8)
+      local height = math.floor(vim.o.lines * 0.8)
+
+      local win_opts = {
+        relative = "editor",
+        width = width,
+        height = height,
+        col = math.floor((vim.o.columns - width) / 2),
+        row = math.floor((vim.o.lines - height) / 2),
+        style = "minimal",
+        border = "rounded",
+      }
+
+      State.win = vim.api.nvim_open_win(State.buf, true, win_opts)
+      vim.wo[State.win].winfixbuf = true
+
+      -- 3. Create/Attach Header
+      -- Header.create returns the wrapped window object
+      local header_win = Header.create(win_opts)
+
+      -- Link closing: If main window closes, header should close
+      -- We assume Header.create handles its own autocmds or we can add one here
+      vim.api.nvim_create_autocmd("WinClosed", {
+        pattern = tostring(State.win),
+        callback = function()
+          Header.close()
+          State.win = nil
+        end,
+        once = true,
+      })
+
+      -- Initial Render of Header
+      Header.render(State.header_status)
+      vim.api.nvim_set_current_win(State.win)
+    end
   elseif mode == "split" or mode == "vsplit" then
-    if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
-    if mode == "vsplit" and type(M.options.vsplit_width) == "number" and M.options.vsplit_width < vim.o.columns then
-      mode = (M.options.vsplit_pos or "") .. tostring(M.options.vsplit_width) .. mode
-    else
-      mode = (M.options.vsplit_pos or "") .. tostring(math.floor(vim.o.columns * 0.5)) .. mode
-    end
     vim.cmd(mode)
-    M.win = vim.api.nvim_get_current_win()
-    vim.api.nvim_win_set_buf(M.win, M.buf)
-    return true
+    State.win = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(State.win, State.buf)
   elseif mode == "buf" then
-    if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
-    M.win = vim.api.nvim_get_current_win()
-    vim.api.nvim_set_current_buf(M.buf)
-    return true
+    State.win = vim.api.nvim_get_current_win()
+    vim.api.nvim_set_current_buf(State.buf)
   end
-  return false
+  register_autocmds()
+
+  vim.schedule(on_cursor_moved)
+  register_keymaps()
+  M.refresh()
 end
 
----@param mode "float" | "split" | "buf" | "vsplit"
-function M.toggle(mode)
-  if not mode then mode = M.options.viewmode end
-
-  if mode == "float" or mode == "split" or mode == "vsplit" then
-    if M.win and vim.api.nvim_win_is_valid(M.win) then
-      return not M.hide(mode)
-    else
-      return M.open(mode)
-    end
-  elseif mode == "buf" then
-    if M.buf and vim.api.nvim_buf_is_valid(M.buf) and vim.api.nvim_get_current_buf() == M.buf then
-      return not M.hide(mode)
-    else
-      return M.open(mode)
-    end
+M.toggle = function(mode)
+  if State.win and vim.api.nvim_win_is_valid(State.win) then
+    M.close()
+  else
+    M.open(mode)
   end
-  return false
 end
 
---- Renders the buffer
----@param mode "float" | "split" | "buf" | "vsplit"
-M.render = function(mode)
-  local isVisible = M.toggle(mode)
-  if not isVisible then return end
-
-  printNodes()
-  setBufferOptions()
-  setMappings()
-  return M
-end
-
-M.refreshMappings = function()
-  if M.buf == nil then error("Can not refresh buffer before render() has been called") end
-  setMappings()
-  return M
-end
-
-M.refreshTree = function()
-  if M.buf == nil then error("Can not refresh buffer before render() has been called") end
-  printNodes()
-  return M
-end
-
---- Refreshes the buffer if lines have changed
-M.refresh = function()
-  if M.buf == nil then error("Can not refresh buffer before render() has been called") end
-  printNodes()
-  setBufferOptions()
-  return M
+M.close = function()
+  if State.win and vim.api.nvim_win_is_valid(State.win) then
+    vim.api.nvim_win_close(State.win, true)
+    State.win = nil
+    Header.close()
+  end
 end
 
 return M
