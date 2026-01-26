@@ -20,11 +20,7 @@ local State = {
 -- --- ACTIONS (RPC Wrappers) ---
 local Actions = {
   run_node = function(node)
-    Client:initialize(function()
-      -- If the node is a container (Folder/Project), the server should handle recursion
-      -- based on the ID passed.
-      Client.test:run_tests({ node.id })
-    end)
+    Client:initialize(function() Client.test:run_tests(node.id) end)
   end,
 
   debug_node = function(node)
