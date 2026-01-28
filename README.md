@@ -70,6 +70,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 19. [Troubleshooting](#troubleshooting)
 20. [Highlight groups](#highlight-groups)
 21. [Local Development](#local-development)
+22. [Star History](#star-history)
 
 ## Features
 
@@ -913,4 +914,14 @@ Check out [debugging-setup](./docs/debugging.md) for a full walkthrough of debug
 
 ## Local Development
 
-Check out [setup guid](./docs/server-development.md)
+Check out [setup guide](./docs/server-development.md)
+
+
+
+## Star History
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=GustavEikaas/easy-dotnet.nvim&type=date&theme=dark&legend=top-left" />
+  <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=GustavEikaas/easy-dotnet.nvim&type=date&legend=top-left" />
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=GustavEikaas/easy-dotnet.nvim&type=date&legend=top-left" />
+</picture>
