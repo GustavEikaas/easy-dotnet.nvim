@@ -914,7 +914,8 @@ Check out [debugging-setup](./docs/debugging.md) for a full walkthrough of debug
 
 ## Local Development
 
-Check out [setup guid](./docs/server-development.md)
+Check out [setup guide](./docs/server-development.md)
+
 
 
 ## Star History
