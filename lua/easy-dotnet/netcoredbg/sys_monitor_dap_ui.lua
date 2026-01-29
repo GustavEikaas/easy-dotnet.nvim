@@ -1,3 +1,4 @@
+-- sys_monitor_dap_ui.lua
 local M = {}
 
 local monitor_core = require("easy-dotnet.netcoredbg.sys_monitor")
@@ -12,6 +13,7 @@ function MonitorElement.new(graph_type)
   }
 
   function self.render()
+    -- Create buffer if it doesn't exist
     if not self._buf or not vim.api.nvim_buf_is_valid(self._buf) then
       self._buf = vim.api.nvim_create_buf(false, true)
       vim.api.nvim_buf_set_option(self._buf, "bufhidden", "wipe")
@@ -19,16 +21,18 @@ function MonitorElement.new(graph_type)
     end
 
     local graphs = monitor_core.get_graphs()
-    if not graphs then return end
-
+    if not graphs or not graphs[graph_type] then return end
     local graph = graphs[graph_type]
-    if not graph then return end
 
+    -- Track this buffer for updates
+    graph:track_buffer(self._buf)
+
+    -- Set highlights
     local hi_name = "GraphHi_" .. tostring(self._buf)
     vim.cmd(string.format("hi %s guifg=%s gui=bold", hi_name, graph.color))
+    pcall(vim.fn.matchadd, "Comment", "[0-9.]\\+[KMGTB%s]\\+\\|│\\|─\\|┤\\|┼")
 
-    vim.fn.matchadd("Comment", "[0-9.]\\+[KMGTB%s]\\+\\|│\\|─\\|┤\\|┼")
-
+    -- Initial render (will use defaults if window not found yet, or update immediately)
     graph:render_to_buffer(self._buf)
   end
 
@@ -37,33 +41,16 @@ function MonitorElement.new(graph_type)
     return self._buf
   end
 
-  self.float_defaults = function()
-    local graphs = monitor_core.get_graphs()
-    if not graphs then return { width = 75, height = 17, enter = false } end
-
-    local graph = graphs[graph_type]
-    if not graph then return { width = 75, height = 17, enter = false } end
-
-    local AXIS_COL_WIDTH = 12
-    local width = graph.width + AXIS_COL_WIDTH + 1
-    local height = graph.height + 3
-
-    return {
-      width = width,
-      height = height,
-      enter = false,
-    }
-  end
+  -- These defaults are for when DAP-UI first creates the floating window
+  -- Once created, our Responsive Core takes over the actual size inside.
+  self.float_defaults = function() return { width = 60, height = 15, enter = false } end
 
   self.allow_without_session = false
 
   return self
 end
 
-function M.setup(opts)
-  opts = opts or {}
-  monitor_core.setup(opts)
-
+function M.setup()
   local ok, dapui = pcall(require, "dapui")
   if not ok then
     vim.notify("nvim-dap-ui not found", vim.log.levels.WARN)
@@ -73,7 +60,7 @@ function M.setup(opts)
   dapui.register_element("netcoredbg_cpu", MonitorElement.new("cpu"))
   dapui.register_element("netcoredbg_mem", MonitorElement.new("mem"))
 
-  vim.notify("Registered netcoredbg monitor elements. Add to dapui layouts config.", vim.log.levels.INFO)
+  vim.notify("Registered netcoredbg monitor elements.", vim.log.levels.INFO)
 end
 
 return M
