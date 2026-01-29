@@ -128,6 +128,15 @@ local function auto_register_dap(merged_opts)
       end
       callback({ type = "server", host = "127.0.0.1", port = config.port })
     end
+    require("easy-dotnet.netcoredbg.sys_monitor_dap_ui").setup()
+
+    dap.listeners.after["event_telemetry/cpu"] = {
+      [constants.debug_adapter_name] = function(session, body) require("easy-dotnet.netcoredbg.sys_monitor").route_message("telemetry/cpu", { value = body.Value, timestamp = body.Timestamp }) end,
+    }
+
+    dap.listeners.after["event_telemetry/mem"] = {
+      [constants.debug_adapter_name] = function(session, body) require("easy-dotnet.netcoredbg.sys_monitor").route_message("telemetry/mem", { value = body.Value, timestamp = body.Timestamp }) end,
+    }
   end
 end
 

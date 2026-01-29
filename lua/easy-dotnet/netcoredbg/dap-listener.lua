@@ -119,6 +119,7 @@ end
 function M.register_listener()
   local keymap_backup = {}
 
+
   require("dap").listeners.after.event_stopped["easy-dotnet-scopes"] = function(session, body)
     ---@diagnostic disable-next-line: undefined-field
     if not (try_get_command(session):lower():find("netcoredbg") or session.config.type == "coreclr" or session.config.type == "easy-dotnet") then return end
