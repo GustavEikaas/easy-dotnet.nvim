@@ -74,7 +74,7 @@ function M:template_instantiate(identity, name, output_path, params, cb, opts)
     job = nil,
     cb = cb,
     on_crash = opts.on_crash,
-    method = "template/instantiate",
+    method = "template/instantiate/v2",
     params = { identity = identity, name = name, outputPath = output_path, parameters = params },
   })()
 end

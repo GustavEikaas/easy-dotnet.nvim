@@ -2,34 +2,6 @@ local logger = require("easy-dotnet.logger")
 local current_solution = require("easy-dotnet.current_solution")
 local M = {}
 
-local function sln_add_project(sln_path, project_path, cb)
-  local cmd = { "dotnet", "sln", sln_path, "add", project_path }
-
-  vim.fn.jobstart(cmd, {
-    stdout_buffered = true,
-    on_exit = function(_, code)
-      if code ~= 0 then
-        logger.error("Failed to add project to solution.")
-      else
-        logger.info("Project added to solution successfully.")
-        if cb then cb() end
-      end
-    end,
-  })
-end
-
-local no_name_templates = {
-  ["Microsoft.Standard.QuickStarts.DirectoryProps"] = "Directory.Build.props",
-  ["Microsoft.Standard.QuickStarts.DirectoryTargets"] = "Directory.Build.targets",
-  ["Microsoft.Standard.QuickStarts.DirectoryPackages"] = "NuGet.Config",
-  ["Microsoft.Standard.QuickStarts.EditorConfigFile"] = ".editorconfig",
-  ["Microsoft.Standard.QuickStarts.GitignoreFile"] = ".gitignore",
-  ["Microsoft.Standard.QuickStarts.GlobalJsonFile"] = "global.json",
-  ["Microsoft.Standard.QuickStarts.Nuget.Config"] = "NuGet.Config",
-  ["Microsoft.Standard.QuickStarts.Web.Config"] = "web.config",
-  ["Microsoft.Standard.QuickStarts.ToolManifestFile"] = "dotnet-tools.json",
-}
-
 local function get_active_solution_info()
   local sln_path = current_solution.try_get_selected_solution()
   if sln_path == nil then return nil, nil, nil end
@@ -273,11 +245,11 @@ function M.new()
 
   client:initialize(function()
     client.template_engine:template_list(function(templates)
-      local choices = vim.tbl_map(function(value) return { value = value, display = value.displayName } end, templates)
+      local choices = vim.tbl_map(function(value) return { value = value, display = value.title or value.displayName } end, templates)
 
       require("easy-dotnet.picker").picker(nil, choices, function(selection)
         local tmpl = selection.value
-        local sln_name, sln_folder, sln_fullpath = get_active_solution_info()
+        local sln_name, sln_folder = get_active_solution_info()
 
         local base_path = vim.fn.getcwd()
         if sln_folder then base_path = sln_folder end
@@ -311,11 +283,7 @@ function M.new()
                   end
 
                   show_confirmation_ui(name, output_path, params, collected, function(final_name, final_path, final_params)
-                    client.template_engine:template_instantiate(tmpl.identity, final_name, final_path, final_params, function()
-                      print(string.format("Created %s in %s", final_name, final_path))
-
-                      if tmpl.type == "project" and sln_fullpath then sln_add_project(sln_fullpath, final_path) end
-                    end)
+                    client.template_engine:template_instantiate(tmpl.identity, final_name, final_path, final_params, function() print(string.format("Created %s in %s", final_name, final_path)) end)
                   end)
                   return
                 end
@@ -332,9 +300,8 @@ function M.new()
           end)
         end
 
-        local auto_name = no_name_templates[tmpl.identity]
-        if auto_name then
-          continue_with_name(auto_name)
+        if tmpl.isNameRequired == false then
+          continue_with_name("")
         else
           vim.ui.input({ prompt = "Project Name:", default = "MyItem" }, function(input_name)
             if not input_name then return end
