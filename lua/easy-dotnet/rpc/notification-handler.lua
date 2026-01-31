@@ -51,6 +51,19 @@ M.handler = function(client, method, params)
       logger.warn(params.message)
     elseif method == "displayMessage" then
       logger.info(params.message)
+    elseif method == "updateStatus" then
+      require("easy-dotnet.test-runner.v2").update_status(params.nodeId, params.status)
+    elseif method == "registerTest" then
+      require("easy-dotnet.test-runner.v2").register_node(params)
+    elseif method == "statusChanged" then
+      require("easy-dotnet.test-runner.render").handle_summary_update(params)
+    elseif method == "changeParent" then
+      local nodeId = params.targetId
+      local newParentId = params.newParentId
+      require("easy-dotnet.test-runner.v2").change_parent(nodeId, newParentId)
+    elseif method == "removeNode" then
+      local nodeId = params.nodeId
+      require("easy-dotnet.test-runner.v2").remove_node(nodeId)
     elseif method == "quickfix/set" then
       local items = vim.tbl_map(
         function(value)
