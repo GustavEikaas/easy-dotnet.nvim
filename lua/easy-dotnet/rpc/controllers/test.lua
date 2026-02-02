@@ -2,6 +2,7 @@
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
 -- luacheck: no max line length
 ---@field test_run fun(self: easy-dotnet.RPC.Client.Test, request: easy-dotnet.RPC.TestRunRequest, cb?: fun(res: RPC_TestRunResult), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request running multiple tests for MTP
+---@field test_debug fun(self: easy-dotnet.RPC.Client.Test, request: easy-dotnet.RPC.TestRunRequest, cb?: fun(res: RPC_TestRunResult), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request running multiple tests for MTP
 -- luacheck: no max line length
 ---@field test_discover fun(self: easy-dotnet.RPC.Client.Test, request: easy-dotnet.RPC.TestDiscoverRequest, cb?: fun(res: easy-dotnet.RPC.DiscoveredTest[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request test discovery for MTP
 ---@field set_run_settings fun(self: easy-dotnet.RPC.Client.Test)
@@ -69,6 +70,53 @@ function M:test_run(request, cb, opts)
     client = self._client,
     job = nil,
     method = "test/run",
+    params = request,
+    ---@param res RPC_TestRunResult[]
+    cb = function(res)
+      local stackTrace_pending = #res
+      local stdOut_pending = #res
+
+      local function done()
+        if stackTrace_pending == 0 and stdOut_pending == 0 then
+          if cb then cb(res) end
+        end
+      end
+      done()
+
+      for _, value in ipairs(res) do
+        ---@diagnostic disable-next-line: undefined-field
+        if value.stackTrace and value.stackTrace.token then
+          ---@diagnostic disable-next-line: undefined-field
+          self._client:request_property_enumerate(value.stackTrace.token, nil, function(trace)
+            value.stackTrace = trace
+            stackTrace_pending = stackTrace_pending - 1
+            done()
+          end)
+        end
+
+        ---@diagnostic disable-next-line: undefined-field
+        if value.stdOut and value.stdOut.token then
+          ---@diagnostic disable-next-line: undefined-field
+          self._client:request_property_enumerate(value.stdOut.token, nil, function(output)
+            value.stdOut = output
+            stdOut_pending = stdOut_pending - 1
+            done()
+          end)
+        end
+      end
+    end,
+    on_yield = nil,
+    on_crash = opts.on_crash,
+  })()
+end
+
+function M:test_debug(request, cb, opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+  return helper.create_enumerate_rpc_call({
+    client = self._client,
+    job = nil,
+    method = "test/debug",
     params = request,
     ---@param res RPC_TestRunResult[]
     cb = function(res)
