@@ -1,6 +1,5 @@
 local M = {}
 local window = require("easy-dotnet.test-runner.window")
-local constants = require("easy-dotnet.constants")
 local runner = require("easy-dotnet.test-runner.runner")
 local logger = require("easy-dotnet.logger")
 
@@ -116,7 +115,7 @@ function M.test_run(node, win, cb, attach_debugger)
 
   coroutine.wrap(function()
     local client = require("easy-dotnet.test-runner.runner").client
-    if node.is_MTP or not attach_debugger then
+    if not attach_debugger then
       client.test:test_run(
         { projectPath = project_framework.path, targetFrameworkMoniker = node.framework, configuration = "Debug", filter = filter },
         get_test_result_handler(win, node, on_job_finished)
@@ -242,25 +241,9 @@ M.keymaps = function()
         end
         win.hide()
         vim.cmd("edit " .. node.file_path)
-        vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
+        vim.api.nvim_win_set_cursor(0, { node.line_number and (node.is_MTP and node.line_number + 1 or (node.line_number - 1)) or 0, 0 })
         dap.set_breakpoint()
-
-        if node.is_MTP then
-          local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-          client:initialize(function()
-            client.debugger:debugger_start({ targetPath = node.cs_project_path }, function(res)
-              local debug_conf = {
-                type = constants.debug_adapter_name,
-                name = constants.debug_adapter_name,
-                request = "attach",
-                port = res.port,
-              }
-              dap.run(debug_conf)
-            end)
-          end)
-        else
-          debug_tests(node, win)
-        end
+        debug_tests(node, win)
       end,
       desc = keymap.debug_test.desc,
     },
