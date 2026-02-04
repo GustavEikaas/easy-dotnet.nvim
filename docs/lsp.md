@@ -56,7 +56,39 @@ return {
 }
 ```
 
+## CodeLens & Peek References
 
+### 1. Enable CodeLens
+To see the reference counts, you must enable them in your setup:
+
+```lua
+require("easy-dotnet").setup({
+  lsp = {
+    auto_refresh_codelens = true,
+  },
+})
+```
+![image](https://github.com/user-attachments/assets/93bb557c-c97a-44a0-a51b-229cb65bddab)
+
+### 2. Configure the Keymap
+CodeLens actions (like "Go to References") are triggered via vim.lsp.codelens.run(). You can map this to a key for quick access:
+
+```lua
+-- Example: Trigger CodeLens action under cursor
+vim.keymap.set("n", "<leader>cl", vim.lsp.codelens.run, { desc = "Run CodeLens" })
+```
+### 3. VS Code Visuals (Tip)
+To make your CodeLens look more subtle and professional (like VS Code), add this highlight to your configuration:
+
+```lua
+-- Add this to your init.lua or colorscheme config
+vim.api.nvim_set_hl(0, "LspCodeLens", { fg = "#717171", italic = true })
+```
+
+### 4. Peek Preview UI
+When you run a "Find References" CodeLens action, easy-dotnet provides a custom floating UI.
+
+![image](https://github.com/user-attachments/assets/165ab152-7afe-436b-9717-eacdbe63a690)
 
 ## Solution & Project Detection (How Roslyn LSP Decides What to Load)
 
