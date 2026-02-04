@@ -268,14 +268,20 @@ function M.enable(opts)
     end,
     on_attach = function(client, buf)
       vim.b[buf].roslyn_buf_opened_at = now()
-
+      if require("easy-dotnet.options").get_option("lsp").auto_refresh_codelens then
+        vim.lsp.codelens.refresh()
+        vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
+          buffer = buf,
+          callback = vim.lsp.codelens.refresh,
+        })
+      end
       check_project_context(client, buf)
     end,
     commands = {
       ["roslyn.client.fixAllCodeAction"] = require("easy-dotnet.roslyn.lsp.fix_all_code_action"),
       ["roslyn.client.nestedCodeAction"] = require("easy-dotnet.roslyn.lsp.nested_code_action"),
       ["roslyn.client.completionComplexEdit"] = require("easy-dotnet.roslyn.lsp.complex_edit"),
-      -- ["roslyn.client.peekReferences"] = require("easy-dotnet.roslyn.lsp.peek_references"),
+      ["roslyn.client.peekReferences"] = require("easy-dotnet.roslyn.lsp.peek_references"),
       -- ["dotnet.test.run"] = require("easy-dotnet.roslyn.lsp.test_run"),
     },
     handlers = {

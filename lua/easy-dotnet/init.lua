@@ -87,6 +87,24 @@ local function define_highlights()
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerFloatVariable, { link = "Question" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerVirtualVariable, { link = "Question" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerVirtualException, { link = "DiagnosticError" })
+
+  local bg_color = "#1e1e1e"
+  local active_bg = "#252526"
+  local accent = "#007acc"
+
+  local peek_hls = {
+    [constants.highlights.EasyDotnetPeekWinBar] = { bg = bg_color, fg = "#ffffff", bold = true },
+    [constants.highlights.EasyDotnetPeekSideBar] = { bg = bg_color, fg = "#cccccc" },
+    [constants.highlights.EasyDotnetPeekMain] = { bg = active_bg },
+    [constants.highlights.EasyDotnetPeekBorder] = { fg = accent, bg = "NONE" },
+    [constants.highlights.EasyDotnetPeekTitle] = { fg = "#ffffff", bg = accent, bold = true },
+    [constants.highlights.EasyDotnetPeekHint] = { fg = "#858585", bg = bg_color, italic = true },
+    [constants.highlights.EasyDotnetPeekListActive] = { bg = "#094771", fg = "#ffffff" },
+  }
+
+  for group, opts in pairs(peek_hls) do
+    vim.api.nvim_set_hl(0, group, opts)
+  end
 end
 
 local register_legacy_functions = function()

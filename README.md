@@ -134,6 +134,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
         enabled = true, -- Enable builtin roslyn lsp
         roslynator_enabled = true, -- Automatically enable roslynator analyzer
         easy_dotnet_analyzer_enabled = true, -- Enable roslyn analyzer from easy-dotnet-server
+        auto_refresh_codelens = false,
         analyzer_assemblies = {}, -- Any additional roslyn analyzers you might use like SonarAnalyzer.CSharp
         config = {},
       },
@@ -894,24 +895,30 @@ Check out [debugging-setup](./docs/debugging.md) for a full walkthrough of debug
 
 <!--hl start-->
 
-| Highlight group                         | Default            |
-| --------------------------------------- | ------------------ |
-| **EasyDotnetTestRunnerSolution**        | *Question*         |
-| **EasyDotnetTestRunnerProject**         | *Character*        |
-| **EasyDotnetTestRunnerTest**            | *Normal*           |
-| **EasyDotnetTestRunnerSubcase**         | *Conceal*           |
-| **EasyDotnetTestRunnerDir**             | *Directory*        |
-| **EasyDotnetTestRunnerPackage**         | *Include*          |
-| **EasyDotnetTestRunnerPassed**          | *DiagnosticOk*     |
-| **EasyDotnetTestRunnerFailed**          | *DiagnosticError*  |
-| **EasyDotnetTestRunnerRunning**         | *DiagnosticWarn*   |
-| **EasyDotnetDebuggerFloatVariable**     | *Question*         |
-| **EasyDotnetDebuggerVirtualVariable**   | *Question*         |
-| **EasyDotnetDebuggerVirtualException**  | *DiagnosticError*         |
+| Highlight group | Default |
+| --- | --- |
+| **EasyDotnetTestRunnerSolution** | *Question* |
+| **EasyDotnetTestRunnerProject** | *Character* |
+| **EasyDotnetTestRunnerTest** | *Normal* |
+| **EasyDotnetTestRunnerSubcase** | *Conceal* |
+| **EasyDotnetTestRunnerDir** | *Directory* |
+| **EasyDotnetTestRunnerPackage** | *Include* |
+| **EasyDotnetTestRunnerPassed** | *DiagnosticOk* |
+| **EasyDotnetTestRunnerFailed** | *DiagnosticError* |
+| **EasyDotnetTestRunnerRunning** | *DiagnosticWarn* |
+| **EasyDotnetDebuggerFloatVariable** | *Question* |
+| **EasyDotnetDebuggerVirtualVariable** | *Question* |
+| **EasyDotnetDebuggerVirtualException** | *DiagnosticError* |
+| **EasyDotnetPeekTitle** | *Custom (Accent)* |
+| **EasyDotnetPeekBorder** | *Custom (Accent)* |
+| **EasyDotnetPeekMain** | *Custom (Dark)* |
+| **EasyDotnetPeekSideBar** | *Custom (Darker)* |
+| **EasyDotnetPeekWinBar** | *Custom (Dark)* |
+| **EasyDotnetPeekHint** | *Custom (Italic Gray)* |
+| **EasyDotnetPeekListActive** | *Custom (Blue)* |
 <!-- hl-end -->
 
 </details>
-
 
 ## Local Development
 

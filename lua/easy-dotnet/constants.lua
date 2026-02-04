@@ -30,6 +30,14 @@ M.highlights = {
   EasyDotnetDebuggerFloatVariable = "EasyDotnetDebuggerFloatVariable",
   EasyDotnetDebuggerVirtualException = "EasyDotnetDebuggerVirtualException",
   EasyDotnetDebuggerVirtualVariable = "EasyDotnetDebuggerVirtualVariable",
+
+  EasyDotnetPeekTitle = "EasyDotnetPeekTitle",
+  EasyDotnetPeekBorder = "EasyDotnetPeekBorder",
+  EasyDotnetPeekMain = "EasyDotnetPeekMain",
+  EasyDotnetPeekSideBar = "EasyDotnetPeekSideBar",
+  EasyDotnetPeekWinBar = "EasyDotnetPeekWinBar",
+  EasyDotnetPeekHint = "EasyDotnetPeekHint",
+  EasyDotnetPeekListActive = "EasyDotnetPeekListActive",
 }
 
 M.signs = {
