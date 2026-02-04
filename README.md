@@ -895,24 +895,30 @@ Check out [debugging-setup](./docs/debugging.md) for a full walkthrough of debug
 
 <!--hl start-->
 
-| Highlight group                         | Default            |
-| --------------------------------------- | ------------------ |
-| **EasyDotnetTestRunnerSolution**        | *Question*         |
-| **EasyDotnetTestRunnerProject**         | *Character*        |
-| **EasyDotnetTestRunnerTest**            | *Normal*           |
-| **EasyDotnetTestRunnerSubcase**         | *Conceal*           |
-| **EasyDotnetTestRunnerDir**             | *Directory*        |
-| **EasyDotnetTestRunnerPackage**         | *Include*          |
-| **EasyDotnetTestRunnerPassed**          | *DiagnosticOk*     |
-| **EasyDotnetTestRunnerFailed**          | *DiagnosticError*  |
-| **EasyDotnetTestRunnerRunning**         | *DiagnosticWarn*   |
-| **EasyDotnetDebuggerFloatVariable**     | *Question*         |
-| **EasyDotnetDebuggerVirtualVariable**   | *Question*         |
-| **EasyDotnetDebuggerVirtualException**  | *DiagnosticError*         |
+| Highlight group | Default |
+| --- | --- |
+| **EasyDotnetTestRunnerSolution** | *Question* |
+| **EasyDotnetTestRunnerProject** | *Character* |
+| **EasyDotnetTestRunnerTest** | *Normal* |
+| **EasyDotnetTestRunnerSubcase** | *Conceal* |
+| **EasyDotnetTestRunnerDir** | *Directory* |
+| **EasyDotnetTestRunnerPackage** | *Include* |
+| **EasyDotnetTestRunnerPassed** | *DiagnosticOk* |
+| **EasyDotnetTestRunnerFailed** | *DiagnosticError* |
+| **EasyDotnetTestRunnerRunning** | *DiagnosticWarn* |
+| **EasyDotnetDebuggerFloatVariable** | *Question* |
+| **EasyDotnetDebuggerVirtualVariable** | *Question* |
+| **EasyDotnetDebuggerVirtualException** | *DiagnosticError* |
+| **EasyDotnetPeekTitle** | *Custom (Accent)* |
+| **EasyDotnetPeekBorder** | *Custom (Accent)* |
+| **EasyDotnetPeekMain** | *Custom (Dark)* |
+| **EasyDotnetPeekSideBar** | *Custom (Darker)* |
+| **EasyDotnetPeekWinBar** | *Custom (Dark)* |
+| **EasyDotnetPeekHint** | *Custom (Italic Gray)* |
+| **EasyDotnetPeekListActive** | *Custom (Blue)* |
 <!-- hl-end -->
 
 </details>
-
 
 ## Local Development
 

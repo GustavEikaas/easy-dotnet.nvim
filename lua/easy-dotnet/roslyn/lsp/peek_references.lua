@@ -1,3 +1,4 @@
+local constants = require("easy-dotnet.constants")
 ---@class easy-dotnet.Roslyn.ReferenceRange
 ---@field start { line: number, character: number }
 ---@field end { line: number, character: number }
@@ -57,18 +58,6 @@ end
 
 ---@param references easy-dotnet.Roslyn.ReferenceItem[]
 local function open_references_float(references)
-  local bg_color = "#1e1e1e"
-  local active_bg = "#252526"
-  local accent = "#007acc"
-
-  vim.api.nvim_set_hl(0, "PeekWinBar", { bg = bg_color, fg = "#ffffff", bold = true })
-  vim.api.nvim_set_hl(0, "PeekSideBar", { bg = bg_color, fg = "#cccccc" })
-  vim.api.nvim_set_hl(0, "PeekMain", { bg = active_bg })
-  vim.api.nvim_set_hl(0, "PeekBorder", { fg = accent, bg = "NONE" })
-  vim.api.nvim_set_hl(0, "PeekTitle", { fg = "#ffffff", bg = accent, bold = true })
-  vim.api.nvim_set_hl(0, "PeekHint", { fg = "#858585", bg = bg_color, italic = true })
-  vim.api.nvim_set_hl(0, "PeekListActive", { bg = "#094771", fg = "#ffffff" })
-
   if #references == 0 then return end
 
   local total_width = math.floor(vim.o.columns * 0.85)
@@ -104,9 +93,10 @@ local function open_references_float(references)
     height = total_height,
     border = { "─", "─", "╮", "│", "╯", "─", "─", "" },
   })
+  local hls = constants.highlights
+  vim.wo[preview_win].winhighlight = string.format("Normal:%s,FloatBorder:%s,WinBar:%s", hls.EasyDotnetPeekMain, hls.EasyDotnetPeekBorder, hls.EasyDotnetPeekWinBar)
 
-  vim.wo[preview_win].winhighlight = "Normal:PeekMain,FloatBorder:PeekBorder,WinBar:PeekWinBar"
-  vim.wo[list_win].winhighlight = "Normal:PeekSideBar,FloatBorder:PeekBorder,CursorLine:PeekListActive"
+  vim.wo[list_win].winhighlight = string.format("Normal:%s,FloatBorder:%s,CursorLine:%s", hls.EasyDotnetPeekSideBar, hls.EasyDotnetPeekBorder, hls.EasyDotnetPeekListActive)
   vim.wo[list_win].cursorline = true
 
   local current_idx = 1
@@ -126,7 +116,11 @@ local function open_references_float(references)
     vim.api.nvim_win_set_cursor(list_win, { current_idx, 0 })
 
     local filename = vim.fn.fnamemodify(item.filename, ":~:.")
-    vim.wo[preview_win].winbar = string.format("%%#PeekWinBar#  󰈙 %s  %%#PeekHint#  󰮫 Tab/S-Tab  <CR> Open  q Close", filename)
+    vim.api.nvim_win_set_config(preview_win, {
+      title = { { string.format(" 󰈙 %s ", filename), hls.EasyDotnetPeekTitle } },
+    })
+
+    vim.wo[preview_win].winbar = string.format("%%#%s#  󰮫 Tab/S-Tab  <CR> Open  q Close", hls.EasyDotnetPeekHint)
 
     local ns = vim.api.nvim_create_namespace("peek_hl")
     vim.api.nvim_buf_clear_namespace(preview_buf, ns, 0, -1)
