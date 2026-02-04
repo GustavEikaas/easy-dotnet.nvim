@@ -268,10 +268,15 @@ function M.enable(opts)
     end,
     on_attach = function(client, buf)
       vim.b[buf].roslyn_buf_opened_at = now()
-      -- vim.api.nvim_set_hl(0, "LspCodeLens", { fg = "#717171", italic = true })
-      -- vim.api.nvim_set_hl(0, "LspCodeLensSeparator", { fg = "#444444" })
-      -- vim.lsp.codelens.refresh()
-      --TODO: auto refresh
+      --TODO: auto refresh option in lsp opts
+      vim.lsp.codelens.refresh()
+      vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
+        buffer = buf,
+        callback = vim.lsp.codelens.refresh,
+      })
+      --TODO: add in docs somewhere
+      vim.api.nvim_set_hl(0, "LspCodeLens", { fg = "#717171", italic = true })
+      vim.api.nvim_set_hl(0, "LspCodeLensSeparator", { fg = "#444444" })
 
       check_project_context(client, buf)
     end,
