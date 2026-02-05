@@ -191,6 +191,12 @@ local function refresh_diag(client)
   client:notify("textDocument/didChange", params)
 end
 
+local default_roslyn_settings = {
+  ["csharp|code_lens"] = {
+    dotnet_enable_tests_code_lens = false,
+  },
+}
+
 ---@param opts easy-dotnet.LspOpts
 function M.enable(opts)
   if vim.fn.has("nvim-0.11") == 0 then
@@ -208,8 +214,10 @@ function M.enable(opts)
       table.insert(cmd, dll)
     end
   end
-
   local existing_config = vim.lsp.config[constants.lsp_client_name]
+
+  local settings = vim.tbl_deep_extend("force", default_roslyn_settings, opts.config.settings or {}, existing_config and existing_config.settings or {})
+
   local cap = vim.tbl_deep_extend(
     "keep",
     existing_config and existing_config.capabilities or {},
@@ -352,7 +360,7 @@ function M.enable(opts)
         return {}
       end,
     },
-    settings = opts.config.settings,
+    settings = settings,
   }
 
   vim.lsp.enable(constants.lsp_client_name)
