@@ -134,7 +134,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
         enabled = true, -- Enable builtin roslyn lsp
         roslynator_enabled = true, -- Automatically enable roslynator analyzer
         easy_dotnet_analyzer_enabled = true, -- Enable roslyn analyzer from easy-dotnet-server
-        auto_refresh_codelens = false,
+        auto_refresh_codelens = true,
         analyzer_assemblies = {}, -- Any additional roslyn analyzers you might use like SonarAnalyzer.CSharp
         config = {},
       },
