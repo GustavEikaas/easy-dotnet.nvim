@@ -75,7 +75,7 @@ return function(params, response, throw, validate)
       if vim.api.nvim_win_is_valid(header_win) then vim.api.nvim_win_close(header_win, true) end
       if timer then
         timer:stop()
-        timer:close()
+        if not timer:is_closing() then timer:close() end
       end
       return
     end
@@ -133,8 +133,6 @@ return function(params, response, throw, validate)
     once = true,
   })
 
-  timer:start(0, 100, vim.schedule_wrap(function() update_header("running") end))
-
   local cmd = vim.list_extend({ command.executable }, command.arguments or {})
 
   local job_id = vim.fn.jobstart(cmd, {
@@ -154,16 +152,29 @@ return function(params, response, throw, validate)
   })
 
   if job_id <= 0 then
-    if timer then
-      timer:stop()
-      timer:close()
-    end
     throw({ code = -32000, message = "Failed to start terminal job" })
     return
   end
 
   vim.b[buf].terminal_job_id = job_id
   vim.cmd("startinsert")
+
+  timer:start(
+    0,
+    100,
+    vim.schedule_wrap(function()
+      local codes = vim.fn.jobwait({ job_id }, 0)
+      local status_code = codes[1]
+
+      if status_code == -1 then
+        update_header("running")
+      else
+        timer:stop()
+        if not timer:is_closing() then timer:close() end
+        update_header("finished", status_code)
+      end
+    end)
+  )
 
   local pid_ok, pid = pcall(vim.fn.jobpid, job_id)
   response({ processId = pid_ok and pid or -1 })
