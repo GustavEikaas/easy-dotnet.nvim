@@ -72,7 +72,8 @@ local function discover_package_references(project)
   local finished = M.append_job("Discovering package references")
 
   client:initialize(function()
-    client.msbuild:msbuild_list_package_reference(project.path, project.msbuild_props.targetFramework, function(res)
+    local tfm = project.msbuild_props and project.msbuild_props.targetFramework or vim.NIL
+    client.msbuild:msbuild_list_package_reference(project.path, tfm, function(res)
       if #res == 0 then
         M.package_refs = nil
       else
@@ -199,6 +200,7 @@ local function add_package_keymap()
     key = "a",
     handler = function()
       require("easy-dotnet.nuget").search_nuget(M.project.path)
+      vim.api.nvim_set_current_win(M.win)
       discover_package_references(M.project)
     end,
   }
@@ -213,6 +215,7 @@ local function add_project_keymap()
       local add = M.project.language == "csharp" and require("easy-dotnet.csproj-mappings").add_project_reference or require("easy-dotnet.fsproj-mappings").add_project_reference
       local res = add(M.project.path, function()
         if cleanup then cleanup() end
+        vim.api.nvim_set_current_win(M.win)
         discover_project_references(M.project)
       end)
       if res ~= false then cleanup = M.append_job("Adding project reference") end
