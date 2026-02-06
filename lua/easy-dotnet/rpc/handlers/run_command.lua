@@ -31,8 +31,8 @@ return function(params, response, throw, validate)
     throw({ code = -32602, message = "Missing nested 'command' object" })
     return
   end
-
   local win, buf = find_reusable_terminal_window()
+
   if win and buf then
     local old_job = vim.b[buf].terminal_job_id
     if old_job then pcall(vim.fn.jobstop, old_job) end
@@ -44,7 +44,9 @@ return function(params, response, throw, validate)
     win = vim.api.nvim_get_current_win()
     buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_win_set_buf(win, buf)
+
     vim.w[win].easy_dotnet_terminal = true
+
     vim.api.nvim_buf_set_option(buf, "bufhidden", "hide")
     vim.api.nvim_buf_set_option(buf, "buflisted", false)
   end
