@@ -61,7 +61,8 @@ end
 
 function Window:write_buf(lines)
   vim.api.nvim_set_option_value("modifiable", true, { buf = self.buf })
-  vim.api.nvim_buf_set_lines(self.buf, 0, -1, false, lines)
+  local ok, err = pcall(vim.api.nvim_buf_set_lines, self.buf, 0, -1, false, lines)
+  if not ok then error(vim.inspect({ error = err, lines = lines })) end
   set_buf_opts(self.buf, self.buf_opts)
   return self
 end
