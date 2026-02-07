@@ -1,6 +1,5 @@
 local M = {}
 local window = require("easy-dotnet.test-runner.window")
-local constants = require("easy-dotnet.constants")
 local runner = require("easy-dotnet.test-runner.runner")
 local logger = require("easy-dotnet.logger")
 
@@ -86,7 +85,9 @@ end
 ---@param node easy-dotnet.TestRunner.Node
 ---@param win table
 ---@param cb function | nil
-function M.test_run(node, win, cb)
+---@param attach_debugger boolean
+function M.test_run(node, win, cb, attach_debugger)
+  attach_debugger = attach_debugger == nil and false or attach_debugger
   ---@type easy-dotnet.TestRunner.Node[]
   local tests = {}
   ---@param child easy-dotnet.TestRunner.Node
@@ -114,10 +115,17 @@ function M.test_run(node, win, cb)
 
   coroutine.wrap(function()
     local client = require("easy-dotnet.test-runner.runner").client
-    client.test:test_run(
-      { projectPath = project_framework.path, targetFrameworkMoniker = node.framework, configuration = "Debug", filter = filter },
-      get_test_result_handler(win, node, on_job_finished)
-    )
+    if not attach_debugger then
+      client.test:test_run(
+        { projectPath = project_framework.path, targetFrameworkMoniker = node.framework, configuration = "Debug", filter = filter },
+        get_test_result_handler(win, node, on_job_finished)
+      )
+    else
+      client.test:test_debug(
+        { projectPath = project_framework.path, targetFrameworkMoniker = node.framework, configuration = "Debug", filter = filter },
+        get_test_result_handler(win, node, on_job_finished)
+      )
+    end
   end)()
 end
 
@@ -130,7 +138,19 @@ local function run_tests(node, win)
       return
     end
   end
-  M.test_run(node, win)
+  M.test_run(node, win, function() end, false)
+end
+
+---@param node easy-dotnet.TestRunner.Node
+local function debug_tests(node, win)
+  if not win.options.noBuild then
+    local build_success = runner.request_build(node.cs_project_path)
+    if not build_success then
+      logger.error("Failed to build project")
+      return
+    end
+  end
+  M.test_run(node, win, function() end, true)
 end
 
 local function filter_failed_tests(win)
@@ -226,21 +246,9 @@ M.keymaps = function()
         end
         win.hide()
         vim.cmd("edit " .. node.file_path)
-        vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - 1) or 0, 0 })
+        vim.api.nvim_win_set_cursor(0, { node.line_number and (node.is_MTP and node.line_number + 1 or (node.line_number - 1)) or 0, 0 })
         dap.set_breakpoint()
-
-        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-        client:initialize(function()
-          client.debugger:debugger_start({ targetPath = node.cs_project_path }, function(res)
-            local debug_conf = {
-              type = constants.debug_adapter_name,
-              name = constants.debug_adapter_name,
-              request = "attach",
-              port = res.port,
-            }
-            dap.run(debug_conf)
-          end)
-        end)
+        debug_tests(node, win)
       end,
       desc = keymap.debug_test.desc,
     },
