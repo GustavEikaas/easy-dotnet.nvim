@@ -190,10 +190,15 @@ local function open_stack_trace(line)
   end
   local contents = vim.fn.readfile(line.file_path)
 
-  --TODO: handle fsharp
-  local file_float = window.new_float():pos_left():write_buf(contents):buf_set_filetype("csharp"):create()
+  local refocus_runner = function()
+    local win_id = require("easy-dotnet.test-runner.render").win
+    if not win_id then return end
+    vim.api.nvim_set_current_win(win_id)
+  end
 
-  local stack_trace = window:new_float():link_close(file_float):pos_right():write_buf(line.expand):create()
+  --TODO: handle fsharp
+  local file_float = window.new_float():pos_left():write_buf(contents):buf_set_filetype("csharp"):on_win_close(refocus_runner):create()
+  local stack_trace = window:new_float():link_close(file_float):pos_right():write_buf(line.expand):on_win_close(refocus_runner):create()
 
   local function go_to_file()
     vim.api.nvim_win_close(file_float.win, true)
