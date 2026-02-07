@@ -220,7 +220,7 @@ function M.add_gutter_test_signs()
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   if is_test_file == true then
     if not get_buf_mtime() then reset_buf_mtime(curr_file) end
-    vim.keymap.set("n", keymap.debug_test_from_buffer.lhs, function() debug_test_from_buffer() end, { silent = true, buffer = bufnr, desc = keymap.debug_test_from_buffer.desc })
+    vim.keymap.set("n", keymap.debug_test_from_buffer.lhs, function() coroutine.wrap(debug_test_from_buffer)() end, { silent = true, buffer = bufnr, desc = keymap.debug_test_from_buffer.desc })
 
     vim.keymap.set("n", keymap.run_test_from_buffer.lhs, function()
       coroutine.wrap(function() run_test_from_buffer() end)()
