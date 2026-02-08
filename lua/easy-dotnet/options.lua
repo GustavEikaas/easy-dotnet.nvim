@@ -194,6 +194,7 @@ local M = {
     lsp = {
       enabled = true,
       analyzer_assemblies = {},
+      auto_refresh_codelens = true,
       roslynator_enabled = true,
       easy_dotnet_analyzer_enabled = true,
       config = {},

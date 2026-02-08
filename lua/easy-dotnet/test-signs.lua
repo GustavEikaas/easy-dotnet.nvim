@@ -1,5 +1,3 @@
-local picker = require("easy-dotnet.picker")
-local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
@@ -50,50 +48,9 @@ local function get_nearest_method_range()
   end
 end
 
-local function debug_test_from_buffer()
-  local success, dap = pcall(function() return require("dap") end)
-  if not success then
-    logger.error("nvim-dap not installed")
-    return
-  end
-
-  local curr_file = vim.api.nvim_buf_get_name(vim.api.nvim_get_current_buf())
-  local start_row, end_row = get_nearest_method_range()
-  if not start_row or not end_row then
-    logger.warn("Didn't find nearest method range")
-    return
-  end
-
-  require("easy-dotnet.test-runner.render").traverse(nil, function(node)
-    if (node.type == "test" or node.type == "test_group") and compare_paths(node.file_path, curr_file) and (node.line_number >= start_row and node.line_number <= end_row) then
-      vim.api.nvim_win_set_cursor(0, { node.line_number and (node.line_number - (node.is_MTP and 0 or 1)) or 0, 0 })
-      dap.set_breakpoint()
-      local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-      local project_path = node.cs_project_path
-      local sln_file = sln_parse.try_get_selected_solution_file()
-      assert(sln_file, "Failed to find a solution file")
-      local get_projects = coroutine.wrap(sln_parse.get_projects_and_frameworks_flattened_from_sln)
-      local test_projects = get_projects(sln_file, function(i) return i.isTestProject end)
-      local test_project = project_path or picker.pick_sync(nil, test_projects, "Pick test project").path
-      assert(test_project, "No project selected")
-      client:initialize(function()
-        client.debugger:debugger_start({ targetPath = test_project }, function(res)
-          local debug_conf = {
-            type = constants.debug_adapter_name,
-            name = constants.debug_adapter_name,
-            request = "attach",
-            port = res.port,
-          }
-          dap.run(debug_conf)
-        end)
-      end)
-      return
-    end
-  end)
-end
-
 ---@param predicate (fun(node: easy-dotnet.TestRunner.Node): boolean)|nil
-local function run_tests_from_buffer(predicate)
+---@param attach_debugger boolean
+local function run_tests_from_buffer(predicate, attach_debugger)
   local bufnr = vim.api.nvim_get_current_buf()
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
   local requires_rebuild = get_buf_mtime() ~= get_mtime(curr_file)
@@ -140,10 +97,28 @@ local function run_tests_from_buffer(predicate)
 
   for _, node in ipairs(handlers) do
     if not predicate or predicate(node) then
-      keymaps.test_run(node, win, function() vim.schedule(M.add_gutter_test_signs) end)
+      keymaps.test_run(node, win, function() vim.schedule(M.add_gutter_test_signs) end, attach_debugger)
       M.add_gutter_test_signs()
     end
   end
+end
+
+local function debug_test_from_buffer()
+  local success, dap = pcall(function() return require("dap") end)
+  if not success then
+    logger.error("nvim-dap not installed")
+    return
+  end
+
+  local start_row, end_row = get_nearest_method_range()
+  if not start_row or not end_row then
+    logger.warn("Didn't find nearest method range")
+    return
+  end
+
+  dap.set_breakpoint()
+
+  run_tests_from_buffer(function(node) return node.line_number >= start_row and node.line_number <= end_row end, true)
 end
 
 local function run_test_from_buffer()
@@ -153,7 +128,7 @@ local function run_test_from_buffer()
     return
   end
 
-  run_tests_from_buffer(function(node) return node.line_number >= start_row and node.line_number <= end_row end)
+  run_tests_from_buffer(function(node) return node.line_number >= start_row and node.line_number <= end_row end, false)
 end
 
 local function open_stack_trace_from_buffer()
@@ -243,14 +218,14 @@ function M.add_gutter_test_signs()
   local keymap = require("easy-dotnet.test-runner.render").options.mappings
   if is_test_file == true then
     if not get_buf_mtime() then reset_buf_mtime(curr_file) end
-    vim.keymap.set("n", keymap.debug_test_from_buffer.lhs, function() debug_test_from_buffer() end, { silent = true, buffer = bufnr, desc = keymap.debug_test_from_buffer.desc })
+    vim.keymap.set("n", keymap.debug_test_from_buffer.lhs, function() coroutine.wrap(debug_test_from_buffer)() end, { silent = true, buffer = bufnr, desc = keymap.debug_test_from_buffer.desc })
 
     vim.keymap.set("n", keymap.run_test_from_buffer.lhs, function()
       coroutine.wrap(function() run_test_from_buffer() end)()
     end, { silent = true, buffer = bufnr, desc = keymap.run_test_from_buffer.desc })
 
     vim.keymap.set("n", keymap.run_all_tests_from_buffer.lhs, function()
-      coroutine.wrap(function() run_tests_from_buffer(nil) end)()
+      coroutine.wrap(function() run_tests_from_buffer(nil, false) end)()
     end, { silent = true, buffer = bufnr, desc = keymap.run_all_tests_from_buffer.desc })
 
     vim.keymap.set("n", keymap.peek_stack_trace_from_buffer.lhs, function()
