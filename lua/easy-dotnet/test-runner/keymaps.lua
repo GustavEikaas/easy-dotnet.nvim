@@ -200,6 +200,12 @@ local function open_stack_trace(line)
   local file_float = window.new_float():pos_left():write_buf(contents):buf_set_filetype("csharp"):on_win_close(refocus_runner):create()
   local stack_trace = window:new_float():link_close(file_float):pos_right():write_buf(line.expand):on_win_close(refocus_runner):create()
 
+  local function get_valid_line(line_num, buf)
+    if not line_num then return nil end
+    local max_line = vim.api.nvim_buf_line_count(buf)
+    return math.max(1, math.min(line_num, max_line))
+  end
+
   local function go_to_file()
     vim.api.nvim_win_close(file_float.win, true)
     vim.cmd(string.format("edit %s", line.file_path))
@@ -212,7 +218,11 @@ local function open_stack_trace(line)
 
   vim.keymap.set("n", "<leader>gf", function() go_to_file() end, { silent = true, noremap = true, buffer = stack_trace.buf })
 
-  if path ~= nil and path.line ~= nil then vim.api.nvim_win_set_cursor(file_float.win, { path.line, 0 }) end
+  if line.line_number then vim.api.nvim_win_set_cursor(file_float.win, { line.line_number, 0 }) end
+  if path ~= nil and path.line ~= nil then
+    local valid_line = get_valid_line(path.line, file_float.buf)
+    if valid_line then vim.api.nvim_win_set_cursor(file_float.win, { valid_line, 0 }) end
+  end
 end
 
 M.keymaps = function()
