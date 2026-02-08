@@ -50,8 +50,8 @@ function M.setup()
     return
   end
 
-  dapui.register_element("netcoredbg_cpu", MonitorElement.new("cpu"))
-  dapui.register_element("netcoredbg_mem", MonitorElement.new("mem"))
+  dapui.register_element("easy-dotnet_cpu", MonitorElement.new("cpu"))
+  dapui.register_element("easy-dotnet_mem", MonitorElement.new("mem"))
 end
 
 return M
