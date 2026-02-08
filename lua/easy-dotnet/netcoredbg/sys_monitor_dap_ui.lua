@@ -1,4 +1,3 @@
--- sys_monitor_dap_ui.lua
 local M = {}
 
 local monitor_core = require("easy-dotnet.netcoredbg.sys_monitor")
@@ -13,7 +12,6 @@ function MonitorElement.new(graph_type)
   }
 
   function self.render()
-    -- Create buffer if it doesn't exist
     if not self._buf or not vim.api.nvim_buf_is_valid(self._buf) then
       self._buf = vim.api.nvim_create_buf(false, true)
       vim.api.nvim_buf_set_option(self._buf, "bufhidden", "wipe")
@@ -24,15 +22,12 @@ function MonitorElement.new(graph_type)
     if not graphs or not graphs[graph_type] then return end
     local graph = graphs[graph_type]
 
-    -- Track this buffer for updates
     graph:track_buffer(self._buf)
 
-    -- Set highlights
     local hi_name = "GraphHi_" .. tostring(self._buf)
     vim.cmd(string.format("hi %s guifg=%s gui=bold", hi_name, graph.color))
     pcall(vim.fn.matchadd, "Comment", "[0-9.]\\+[KMGTB%s]\\+\\|│\\|─\\|┤\\|┼")
 
-    -- Initial render (will use defaults if window not found yet, or update immediately)
     graph:render_to_buffer(self._buf)
   end
 
@@ -41,8 +36,6 @@ function MonitorElement.new(graph_type)
     return self._buf
   end
 
-  -- These defaults are for when DAP-UI first creates the floating window
-  -- Once created, our Responsive Core takes over the actual size inside.
   self.float_defaults = function() return { width = 60, height = 15, enter = false } end
 
   self.allow_without_session = false
