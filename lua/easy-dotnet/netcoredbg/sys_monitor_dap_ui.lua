@@ -52,8 +52,6 @@ function M.setup()
 
   dapui.register_element("netcoredbg_cpu", MonitorElement.new("cpu"))
   dapui.register_element("netcoredbg_mem", MonitorElement.new("mem"))
-
-  vim.notify("Registered netcoredbg monitor elements.", vim.log.levels.INFO)
 end
 
 return M
