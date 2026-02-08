@@ -62,3 +62,38 @@ vim.keymap.set("n", "<C-p>", function()
 end, { nowait = true, desc = "Start debugging" })
 ```
 
+
+## CPU/MEM Performance Widgets
+
+easy-dotnet.nvim provides real-time performance monitoring during debug sessions through two custom dapui widgets: `easy-dotnet_cpu` and `easy-dotnet_mem`. These widgets display live CPU usage (percentage) and memory consumption (bytes) of your debugged application.
+
+### Features
+- **CPU Widget**: Shows real-time CPU percentage utilization
+- **Memory Widget**: Displays current memory usage in bytes
+- **Live Updates**: Automatically refreshes during active debug sessions
+
+### Configuration Example
+
+Add the widgets to your dapui layout configuration:
+```lua
+local dapui = require("dapui")
+
+dapui.setup {
+  layouts = {
+    {
+      elements = {
+        { id = "easy-dotnet_cpu", size = 0.5 },  -- CPU usage panel (50% of layout)
+        { id = "easy-dotnet_mem", size = 0.5 },  -- Memory usage panel (50% of layout)
+      },
+      size = 35,      -- Width of the sidebar
+      position = "right",
+    },
+  },
+}
+```
+
+### Preview
+
+The widgets integrate seamlessly into your debug UI, providing at-a-glance performance metrics:
+
+<img width="1152" height="810" alt="image" src="https://github.com/user-attachments/assets/70ebc04d-921e-4ed2-aa98-c642885b56ff" />
