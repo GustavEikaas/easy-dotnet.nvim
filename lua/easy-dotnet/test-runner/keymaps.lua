@@ -218,6 +218,7 @@ local function open_stack_trace(line)
 
   vim.keymap.set("n", "<leader>gf", function() go_to_file() end, { silent = true, noremap = true, buffer = stack_trace.buf })
 
+  if line.line_number then vim.api.nvim_win_set_cursor(file_float.win, { line.line_number, 0 }) end
   if path ~= nil and path.line ~= nil then
     local valid_line = get_valid_line(path.line, file_float.buf)
     if valid_line then vim.api.nvim_win_set_cursor(file_float.win, { valid_line, 0 }) end
