@@ -101,10 +101,51 @@ local function is_file_in_cwd(filepath)
   return abs_file:sub(1, #abs_cwd) == abs_cwd
 end
 
+local function detect_line_endings(path)
+  local f = io.open(path, "rb")
+  if not f then return nil end
+  local content = f:read("*a")
+  f:close()
+
+  local crlf = 0
+  local lf = 0
+
+  for _ in content:gmatch("\r\n") do
+    crlf = crlf + 1
+  end
+  for _ in content:gmatch("[^\r]\n") do
+    lf = lf + 1
+  end
+
+  return { crlf = crlf, lf = lf }
+end
+
+local function handle_mixed_line_endings(buf)
+  local path = vim.api.nvim_buf_get_name(buf)
+  if path == "" then return end
+
+  local counts = detect_line_endings(path)
+  if not counts then return end
+
+  local target = "unix"
+  if counts.crlf > 0 and counts.crlf >= counts.lf then target = "dos" end
+
+  if vim.bo[buf].fileformat == target and counts.crlf == 0 then return end
+
+  vim.api.nvim_buf_call(buf, function()
+    local view = vim.fn.winsaveview()
+    vim.cmd("silent! keepj %s/\\r$//ge")
+    vim.bo[buf].fileformat = target
+    vim.fn.winrestview(view)
+    vim.cmd("noautocmd w")
+  end)
+end
+
 function M.find_project_or_solution(bufnr, cb)
   local buf_path = vim.api.nvim_buf_get_name(bufnr)
   if buf_path:match("^%a+://") then return nil end
   if vim.fn.filereadable(buf_path) == 0 then return nil end
+  handle_mixed_line_endings(bufnr)
 
   local sln_by_root_dir = current_solution.try_get_selected_solution()
   if sln_by_root_dir and is_file_in_cwd(buf_path) then
