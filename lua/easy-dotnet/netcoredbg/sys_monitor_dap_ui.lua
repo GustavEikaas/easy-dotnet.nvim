@@ -16,6 +16,7 @@ function MonitorElement.new(graph_type)
       self._buf = vim.api.nvim_create_buf(false, true)
       vim.api.nvim_buf_set_option(self._buf, "bufhidden", "wipe")
       vim.api.nvim_buf_set_option(self._buf, "filetype", "monitorgraph")
+      vim.api.nvim_buf_call(self._buf, function() vim.cmd([[syntax match Comment "[0-9.]\+[KMGTB%s]\+\|│\|─\|┤\|┼"]]) end)
     end
 
     local graphs = monitor_core.get_graphs()
@@ -26,7 +27,6 @@ function MonitorElement.new(graph_type)
 
     local hi_name = "GraphHi_" .. tostring(self._buf)
     vim.cmd(string.format("hi %s guifg=%s gui=bold", hi_name, graph.color))
-    pcall(vim.fn.matchadd, "Comment", "[0-9.]\\+[KMGTB%s]\\+\\|│\\|─\\|┤\\|┼")
 
     graph:render_to_buffer(self._buf)
   end
