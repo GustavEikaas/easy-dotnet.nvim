@@ -45,10 +45,7 @@ end
 
 function M.setup()
   local ok, dapui = pcall(require, "dapui")
-  if not ok then
-    vim.notify("nvim-dap-ui not found", vim.log.levels.WARN)
-    return
-  end
+  if not ok then return end
 
   dapui.register_element("easy-dotnet_cpu", MonitorElement.new("cpu"))
   dapui.register_element("easy-dotnet_mem", MonitorElement.new("mem"))
