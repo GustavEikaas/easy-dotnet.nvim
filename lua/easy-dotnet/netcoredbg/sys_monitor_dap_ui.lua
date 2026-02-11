@@ -46,7 +46,6 @@ end
 function M.setup()
   local ok, dapui = pcall(require, "dapui")
   if not ok then
-    vim.notify("nvim-dap-ui not found", vim.log.levels.WARN)
     return
   end
 
