@@ -218,19 +218,21 @@ function M.enable(opts)
 
   local settings = vim.tbl_deep_extend("force", default_roslyn_settings, opts.config.settings or {}, existing_config and existing_config.settings or {})
 
-  local cap = vim.tbl_deep_extend(
-    "keep",
-    existing_config and existing_config.capabilities or {},
-    { textDocument = {
+  local cap = vim.tbl_deep_extend("keep", existing_config and existing_config.capabilities or {}, {
+    textDocument = {
+      codeLens = {
+        dynamicRegistration = true,
+      },
       diagnostic = {
         dynamicRegistration = true,
       },
-    }, workspace = {
+    },
+    workspace = {
       didChangeWatchedFiles = {
         dynamicRegistration = true,
       },
-    } }
-  )
+    },
+  })
 
   ---@type vim.lsp.Config
   vim.lsp.config[constants.lsp_client_name] = {
