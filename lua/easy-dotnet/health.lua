@@ -35,6 +35,24 @@ local function ensure_nvim_dep_installed(pkg, advice, required)
   end
 end
 
+local function check_lsp_configured()
+  local is_enabled = vim.lsp.is_enabled(constants.lsp_client_name)
+  if is_enabled then
+    vim.health.ok("Roslyn LSP enabled")
+  else
+    vim.health.warn("Roslyn LSP not enabled")
+  end
+end
+
+local function check_projx_lsp_configured()
+  local is_enabled = vim.lsp.is_enabled(constants.lsp_projx_client_name)
+  if is_enabled then
+    vim.health.ok("ProjX LSP enabled")
+  else
+    vim.health.warn("ProjX LSP not enabled")
+  end
+end
+
 local function check_debugger_configured()
   local auto_register = options.get_option("debugger").auto_register_dap
   if auto_register == false then
@@ -147,6 +165,10 @@ M.check = function()
 
   vim.health.start("easy-dotnet dap configuration (optional)")
   check_debugger_configured()
+
+  vim.health.start("easy-dotnet LSP configuration (optional)")
+  check_lsp_configured()
+  check_projx_lsp_configured()
 
   vim.health.start("easy-dotnet configuration")
   local selected_picker = require("easy-dotnet.options").get_option("picker")
