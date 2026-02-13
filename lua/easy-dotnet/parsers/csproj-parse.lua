@@ -259,28 +259,6 @@ M.get_project_from_project_file = function(project_file_path)
   return result
 end
 
----@param project_file_lines string[]
----@return boolean
-M.is_directly_referencing_test_packages = function(project_file_lines)
-  local test_packages = {
-    "Microsoft%.NET%.Test%.Sdk",
-    "MSTest%.TestFramework",
-    "Microsoft.Testing.Platform.MSBuild",
-    "NUnit",
-    "xunit",
-    "xunit.v3",
-    "TUnit.Assertions",
-    "TUnit",
-  }
-
-  for _, package in ipairs(test_packages) do
-    local pattern = string.format('<PackageReference Include="%s"%%s*', package)
-    if extract_from_lines(project_file_lines, pattern) then return true end
-  end
-
-  return false
-end
-
 M.find_csproj_file = function()
   local file = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.csproj$", depth = 3 })
   return file[1]
