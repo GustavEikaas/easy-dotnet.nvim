@@ -344,7 +344,7 @@ local function refresh_runner(options, solution_file_path)
   }
   win.refreshTree()
 
-  local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(project) return project.isTestProject end)
+  local test_projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(project) return project.isTestProject or project.isTestPlatformProject end)
 
   local success = M.request_build(solution_file_path)
   if not success then return end
