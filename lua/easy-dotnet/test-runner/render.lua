@@ -136,8 +136,7 @@ local function setBufferOptions()
   vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
   vim.api.nvim_buf_set_name(M.buf, M.buf_name)
   vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
-  --Crashes on nvim 0.9.5??
-  -- vim.api.nvim_buf_set_option(M.buf, "cursorline", true)
+  if M.win and vim.api.nvim_win_is_valid(M.win) then vim.api.nvim_set_option_value("cursorline", true, { win = M.win }) end
 end
 
 ---Translates a line number to the corresponding node in the tree structure, considering the `expanded` flag of nodes.
