@@ -169,7 +169,6 @@ end
 M.get_project_from_project_file = function(project_file_path)
   local result = file_cache.get(project_file_path, function()
     local msbuild_props = M.get_or_wait_or_set_cached_value(project_file_path)
-    vim.print(msbuild_props)
     local display = msbuild_props.projectName
     local name = display
     local language = msbuild_props.language
