@@ -167,16 +167,17 @@ end
 ---@param project_file_path string
 ---@return easy-dotnet.Project.Project
 M.get_project_from_project_file = function(project_file_path)
-  local result = file_cache.get(project_file_path, function(lines)
+  local result = file_cache.get(project_file_path, function()
     local msbuild_props = M.get_or_wait_or_set_cached_value(project_file_path)
+    vim.print(msbuild_props)
     local display = msbuild_props.projectName
     local name = display
     local language = msbuild_props.language
     local is_web_project = msbuild_props.isWebProject
     local is_worker_project = msbuild_props.isWorkerProject
     local is_console_project = string.lower(msbuild_props.outputType) == "exe"
-    local is_test_project = msbuild_props.isTestProject or M.is_directly_referencing_test_packages(lines)
-    local is_test_platform_project = msbuild_props.isTestingPlatformApplication or msbuild_props.testingPlatformDotnetTestSupport
+    local is_test_project = msbuild_props.isTestProject and not msbuild_props.isTestingPlatformApplication
+    local is_test_platform_project = msbuild_props.isTestingPlatformApplication
     local is_win_project = string.lower(msbuild_props.outputType) == "winexe"
     local is_nuget_package = msbuild_props.generatePackageOnBuild or msbuild_props.isPackable
     local maybe_secret_guid = msbuild_props.userSecretsId
