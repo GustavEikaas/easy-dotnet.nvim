@@ -59,21 +59,6 @@ local M = {}
 ---@field msbuild_props easy-dotnet.MSBuild.Properties
 ---@field get_dll_path function
 
---- Extracts a pattern from an array of lines
----@param lines string[] Array of lines from a file
----@param pattern string Lua pattern to extract
----@return boolean
-local function extract_from_lines(lines, pattern)
-  if not lines or type(lines) ~= "table" then return false end
-
-  for _, line in ipairs(lines) do
-    local match = line:match(pattern)
-    if match then return true end
-  end
-
-  return false
-end
-
 M.get_project_references_from_projects = function(project_path)
   local co = coroutine.running()
   client:initialize(function()
