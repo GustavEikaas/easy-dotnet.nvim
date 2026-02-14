@@ -82,9 +82,14 @@ local function test_solution(args, term)
       return
     end
 
-    local cmd = string.format("dotnet test %s", solution_path)
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 
-    term(solution_path, "test", args or "", { cmd = cmd })
+    client:initialize(function()
+      client.test:test_solution(function(res)
+        local cmd = string.format("%s %s %s", res.executable, table.concat(res.arguments, " "), args or "")
+        term(solution_path, "test", args or "", { cmd = cmd })
+      end)
+    end)
   end)
 end
 
