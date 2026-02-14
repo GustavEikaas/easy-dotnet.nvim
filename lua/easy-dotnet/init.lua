@@ -329,9 +329,7 @@ end
 
 M.create_new_item = wrap(function(...) require("easy-dotnet.actions.new").create_new_item(...) end)
 
-M.get_debug_dll = debug.get_debug_dll
 M.prepare_debugger = debug.prepare_debugger
-M.get_environment_variables = debug.get_environment_variables
 
 M.try_get_selected_solution = function()
   local file = require("easy-dotnet.parsers.sln-parse").try_get_selected_solution_file()
@@ -339,21 +337,6 @@ M.try_get_selected_solution = function()
     basename = vim.fs.basename(file),
     path = file,
   }
-end
-
-M.experimental = {
-  start_debugging_test_project = debug.start_debugging_test_project,
-}
-
-M.entity_framework = {
-  database = require("easy-dotnet.ef-core.database"),
-  migration = require("easy-dotnet.ef-core.migration"),
-}
-
----@deprecated very poorly optimized, please do not use
-M.is_dotnet_project = function()
-  local project_files = require("easy-dotnet.parsers.sln-parse").get_solutions() or require("easy-dotnet.parsers.csproj-parse").find_project_file()
-  return project_files ~= nil
 end
 
 M.package_completion_source = require("easy-dotnet.csproj-mappings").package_completion_cmp
