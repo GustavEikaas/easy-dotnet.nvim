@@ -145,8 +145,15 @@ function M.find_project_or_solution(bufnr, cb)
   end
 
   require("easy-dotnet.picker").picker(nil, vim.tbl_map(function(value) return { display = value } end, sln), function(r)
-    current_solution.set_solution(r.display)
     cb(vim.fs.dirname(r.display))
+
+    local existing_sln = sln_parse.try_get_selected_solution_file()
+    -- GH#771
+    if existing_sln then
+      local possible_client = vim.lsp.get_clients({ root_dir = vim.fs.dirname(existing_sln) })
+      if possible_client then return end
+    end
+    current_solution.set_solution(r.display)
   end, "Pick solution file to start Roslyn from", true, true)
 end
 
