@@ -14,6 +14,7 @@
 
 ---@class easy-dotnet.LspOpts
 ---@field enabled boolean                -- Whether the LSP is enabled
+---@field preload_roslyn boolean
 ---@field analyzer_assemblies string[]|nil -- Optional list of analyzer DLLs
 ---@field easy_dotnet_analyzer_enabled boolean -- Whether built-in easy-dotnet roslyn analyzer is enabled
 ---@field roslynator_enabled boolean     -- Whether Roslynator is enabled
@@ -193,6 +194,7 @@ local M = {
     },
     lsp = {
       enabled = true,
+      preload_roslyn = true,
       analyzer_assemblies = {},
       auto_refresh_codelens = true,
       roslynator_enabled = true,
