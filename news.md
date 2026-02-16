@@ -2,9 +2,9 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
-## Preloading Roslyn
+## Preloading Roslyn ([#794](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/794))
 
-Neovim traditionally waits to start LSP servers until you open a buffer of the relevant filetype. This creates a noticeable delay when opening your first C# file of the day.
+Neovim traditionally waits to start LSP servers until you open a buffer of the relevant filetype. This creates a noticeable delay when opening your first C# file.
 
 With this feature, `easy-dotnet` starts loading Roslyn immediately when your plugin setup is called, rather than waiting for you to navigate to a file. This background loading ensures the server is often "warm" and ready by the time you start typing, making the IDE experience significantly smoother.
 
