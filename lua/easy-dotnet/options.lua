@@ -194,7 +194,7 @@ local M = {
     },
     lsp = {
       enabled = true,
-      preload_roslyn = false,
+      preload_roslyn = true,
       analyzer_assemblies = {},
       auto_refresh_codelens = true,
       roslynator_enabled = true,
