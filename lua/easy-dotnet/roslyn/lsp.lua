@@ -47,7 +47,6 @@ local function does_file_outside_of_cwd_belong_to_active_client(client, bufnr)
   }
   local co = coroutine.running()
   client:request("textDocument/_vs_getProjectContexts", params, function(err, result)
-    vim.print(result)
     if err then
       logger.error(vim.inspect(err))
       return coroutine.resume(co, false)
@@ -56,7 +55,6 @@ local function does_file_outside_of_cwd_belong_to_active_client(client, bufnr)
 
     local default_idx = result._vs_defaultIndex or 1
     local context = result._vs_projectContexts[default_idx + 1]
-    vim.print(context)
 
     if not context then return coroutine.resume(co, false) end
 
@@ -139,15 +137,12 @@ function M.find_project_or_solution(bufnr, cb)
 
     local sln_by_root_dir = current_solution.try_get_selected_solution()
     if sln_by_root_dir then
-      vim.print("sln by root_dir")
       if is_file_in_cwd(buf_path) then
         cb(vim.fs.dirname(sln_by_root_dir))
         return
       else
         local existing_client = has_client_for_root_dir(vim.fs.dirname(sln_by_root_dir))
-        vim.print("existing client")
         if existing_client and does_file_outside_of_cwd_belong_to_active_client(existing_client, bufnr) then
-          vim.print("file outside of cwd belongs to this project")
           cb(vim.fs.dirname(sln_by_root_dir))
           return
         end
