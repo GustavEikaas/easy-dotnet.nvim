@@ -320,7 +320,17 @@ M.setup = function(opts)
 
   register_legacy_functions()
 
-  if merged_opts.lsp.enabled == true then require("easy-dotnet.roslyn.lsp").enable(merged_opts.lsp) end
+  if merged_opts.lsp.enabled == true then
+    require("easy-dotnet.roslyn.lsp").enable(merged_opts.lsp)
+    local sln = current_solution.try_get_selected_solution()
+    if sln and merged_opts.lsp.preload_roslyn == true then
+      local dirname = vim.fs.dirname(sln)
+      local cap = vim.tbl_deep_extend("force", vim.lsp.config[constants.lsp_client_name], {
+        root_dir = dirname,
+      })
+      vim.lsp.start(cap)
+    end
+  end
   if merged_opts.projx_lsp.enabled == true then require("easy-dotnet.projx.lsp").enable() end
   wrap(auto_register_dap)(merged_opts)
   wrap(background_scanning)(merged_opts)
