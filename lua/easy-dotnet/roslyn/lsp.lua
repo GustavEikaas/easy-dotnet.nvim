@@ -198,6 +198,18 @@ local default_roslyn_settings = {
 }
 
 ---@param opts easy-dotnet.LspOpts
+function M.preload_roslyn(opts)
+  local sln = current_solution.try_get_selected_solution()
+  if sln and opts.preload_roslyn == true then
+    local dirname = vim.fs.dirname(sln)
+    local cap = vim.tbl_deep_extend("force", vim.lsp.config[constants.lsp_client_name], {
+      root_dir = dirname,
+    })
+    vim.lsp.start(cap)
+  end
+end
+
+---@param opts easy-dotnet.LspOpts
 function M.enable(opts)
   if vim.fn.has("nvim-0.11") == 0 then
     logger.warn("easy-dotnet LSP requires neovim 0.11 or higher ")

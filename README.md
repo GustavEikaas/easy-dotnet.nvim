@@ -132,6 +132,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
     dotnet.setup({
       lsp = {
         enabled = true, -- Enable builtin roslyn lsp
+        preload_roslyn = true, -- Start loading roslyn before any buffer is opened
         roslynator_enabled = true, -- Automatically enable roslynator analyzer
         easy_dotnet_analyzer_enabled = true, -- Enable roslyn analyzer from easy-dotnet-server
         auto_refresh_codelens = true,

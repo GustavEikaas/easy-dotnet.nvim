@@ -2,6 +2,32 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## Preloading Roslyn
+
+Neovim traditionally waits to start LSP servers until you open a buffer of the relevant filetype. This creates a noticeable delay when opening your first C# file of the day.
+
+With this feature, `easy-dotnet` starts loading Roslyn immediately when your plugin setup is called, rather than waiting for you to navigate to a file. This background loading ensures the server is often "warm" and ready by the time you start typing, making the IDE experience significantly smoother.
+
+### How it works
+
+The LSP will preload automatically if:
+
+* The `preload_roslyn` option is enabled (it is `true` by default).
+* A solution file is successfully selected or detected during startup.
+
+### Configuration
+
+This feature is enabled by default, but you can configure it specifically in your `lsp` table:
+
+```lua
+dotnet.setup({
+  lsp = {
+    enabled = true, -- Enable builtin roslyn lsp
+    preload_roslyn = true, -- Start loading roslyn before any buffer is opened
+  },
+})
+```
+
 ## Automatic .NET Variable Conversion ([#666](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/666))
 
 Debugging in C# and F# just got significantly more readable. With this release, **common .NET types are automatically unwrapped and displayed in a concise, human-friendly format** across any DAP-compliant UI in Neovim, including `nvim-dap-ui`, `nvim-dap-view`, and others.
