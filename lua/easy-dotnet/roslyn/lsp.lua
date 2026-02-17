@@ -196,7 +196,7 @@ function M.find_project_or_solution(bufnr, cb)
 end
 
 function M.find_sln_or_csproj(dir)
-  local slns = vim.fs.find(function(name) return name:match("%.slnx?$") end, { path = dir, upward = false, limit = 1 })
+  local slns = vim.fs.find(function(name) return name:match("%.slnx?$") end, { path = dir, upward = false, limit = 100 })
   for _, value in ipairs(slns) do
     value = vim.fs.normalize(value)
   end
@@ -206,8 +206,7 @@ function M.find_sln_or_csproj(dir)
     if possible_sln and vim.tbl_contains(slns, vim.fs.normalize(possible_sln)) then
       return possible_sln, "sln"
     else
-      local vvv = picker.pick_sync(nil, vim.tbl_map(function(value) return { value = value, display = value } end, slns), "pick solution", false, true)
-      return vvv.value, "sln"
+      return slns[1], "sln"
     end
   end
 
