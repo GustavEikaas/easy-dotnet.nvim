@@ -38,6 +38,32 @@ function M.restart()
   M.start()
 end
 
+---@param client vim.lsp.Client
+---@param bufnr number
+local function does_file_outside_of_cwd_belong_to_active_client(client, bufnr)
+  local params = {
+    _vs_textDocument = { uri = vim.uri_from_bufnr(bufnr) },
+  }
+  local co = coroutine.running()
+  client:request("textDocument/_vs_getProjectContexts", params, function(err, result)
+    if err then
+      logger.error(vim.inspect(err))
+      return coroutine.resume(co, false)
+    end
+    if not result or not result._vs_projectContexts then return coroutine.resume(co, false) end
+
+    local default_idx = result._vs_defaultIndex or 1
+    local context = result._vs_projectContexts[default_idx + 1]
+
+    if not context then return coroutine.resume(co, false) end
+
+    local is_misc = context._vs_is_miscellaneous
+
+    return coroutine.resume(co, not is_misc)
+  end, bufnr)
+  return coroutine.yield()
+end
+
 local function check_project_context(client, bufnr)
   local solution_ts = M.solution_state[client.id] and M.solution_state[client.id].loaded_at
   if not solution_ts then return end
@@ -89,6 +115,8 @@ local function check_project_context(client, bufnr)
   query_server(false)
 end
 
+local function has_client_for_root_dir(root_dir) return vim.lsp.get_clients({ root_dir = root_dir })[1] end
+
 local function is_file_in_cwd(filepath)
   local cwd = vim.fn.getcwd()
 
@@ -101,52 +129,69 @@ local function is_file_in_cwd(filepath)
 end
 
 function M.find_project_or_solution(bufnr, cb)
-  local buf_path = vim.api.nvim_buf_get_name(bufnr)
-  if buf_path:match("^%a+://") then return nil end
-  if vim.fn.filereadable(buf_path) == 0 then return nil end
+  coroutine.wrap(function()
+    local buf_path = vim.api.nvim_buf_get_name(bufnr)
+    if buf_path:match("^%a+://") then return nil end
+    if vim.fn.filereadable(buf_path) == 0 then return nil end
 
-  local sln_by_root_dir = current_solution.try_get_selected_solution()
-  if sln_by_root_dir and is_file_in_cwd(buf_path) then
-    cb(vim.fs.dirname(sln_by_root_dir))
-    return
-  end
-
-  local project = root_finder.find_csproj_from_file(buf_path)
-
-  if not project then
-    cb(vim.fs.dirname(buf_path))
-    return
-  end
-
-  local sln = root_finder.find_solutions_from_file(project)
-
-  if vim.tbl_isempty(sln) then
-    cb(vim.fs.dirname(project))
-    return
-  end
-
-  local sln_default = sln_parse.try_get_selected_solution_file()
-  local selected_sln
-
-  if sln_default then
-    local sln_basename = vim.fs.basename(sln_default)
-    for _, s in ipairs(sln) do
-      if vim.fs.basename(s) == sln_basename then
-        selected_sln = s
-        break
+    local sln_by_root_dir = current_solution.try_get_selected_solution()
+    if sln_by_root_dir then
+      if is_file_in_cwd(buf_path) then
+        cb(vim.fs.dirname(sln_by_root_dir))
+        return
+      else
+        local existing_client = has_client_for_root_dir(vim.fs.dirname(sln_by_root_dir))
+        if existing_client and does_file_outside_of_cwd_belong_to_active_client(existing_client, bufnr) then
+          cb(vim.fs.dirname(sln_by_root_dir))
+          return
+        end
       end
     end
-  end
 
-  if selected_sln then
-    cb(vim.fs.dirname(selected_sln))
-    return
-  end
+    local project = root_finder.find_csproj_from_file(buf_path)
 
-  require("easy-dotnet.picker").picker(nil, vim.tbl_map(function(value) return { display = value } end, sln), function(r)
-    current_solution.set_solution(r.display)
-    cb(vim.fs.dirname(r.display))
-  end, "Pick solution file to start Roslyn from", true, true)
+    if not project then
+      cb(vim.fs.dirname(buf_path))
+      return
+    end
+
+    local sln = root_finder.find_solutions_from_file(project)
+
+    if vim.tbl_isempty(sln) then
+      cb(vim.fs.dirname(project))
+      return
+    end
+
+    local sln_default = sln_parse.try_get_selected_solution_file()
+    local selected_sln
+
+    if sln_default then
+      local sln_basename = vim.fs.basename(sln_default)
+      for _, s in ipairs(sln) do
+        if vim.fs.basename(s) == sln_basename then
+          selected_sln = s
+          break
+        end
+      end
+    end
+
+    if selected_sln then
+      cb(vim.fs.dirname(selected_sln))
+      return
+    end
+
+    require("easy-dotnet.picker").picker(nil, vim.tbl_map(function(value) return { display = value } end, sln), function(r)
+      cb(vim.fs.dirname(r.display))
+
+      local existing_sln = sln_parse.try_get_selected_solution_file()
+      -- GH#771
+      if existing_sln then
+        local possible_client = vim.lsp.get_clients({ root_dir = vim.fs.dirname(existing_sln) })
+        if possible_client then return end
+      end
+      current_solution.set_solution(r.display)
+    end, "Pick solution file to start Roslyn from", true, true)
+  end)()
 end
 
 function M.find_sln_or_csproj(dir)
