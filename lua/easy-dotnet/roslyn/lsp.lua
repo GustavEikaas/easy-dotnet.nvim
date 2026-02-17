@@ -1,7 +1,6 @@
 local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
 local root_finder = require("easy-dotnet.roslyn.root_finder")
-local dotnet_client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local current_solution = require("easy-dotnet.current_solution")
