@@ -196,7 +196,14 @@ end
 
 function M.find_sln_or_csproj(dir)
   local sln = vim.fs.find(function(name) return name:match("%.slnx?$") end, { path = dir, upward = false, limit = 1 })
-  if sln[1] then return sln[1], "sln" end
+  if #sln > 0 then
+    local possible_sln = sln_parse.try_get_selected_solution_file() or ""
+    if vim.tbl_contains(sln, possible_sln) then
+      return possible_sln, "sln"
+    else
+      return sln[1], "sln"
+    end
+  end
 
   local csproj = vim.fs.find(function(name) return name:match("%.csproj$") end, { path = dir, upward = false, limit = 1 })
   if csproj[1] then return csproj[1], "csproj" end
