@@ -195,13 +195,17 @@ function M.find_project_or_solution(bufnr, cb)
 end
 
 function M.find_sln_or_csproj(dir)
-  local sln = vim.fs.find(function(name) return name:match("%.slnx?$") end, { path = dir, upward = false, limit = 1 })
-  if #sln > 0 then
-    local possible_sln = sln_parse.try_get_selected_solution_file() or ""
-    if vim.tbl_contains(sln, possible_sln) then
+  local slns = vim.fs.find(function(name) return name:match("%.slnx?$") end, { path = dir, upward = false, limit = 1 })
+  for _, value in ipairs(slns) do
+    value = vim.fs.normalize(value)
+  end
+
+  if #slns > 0 then
+    local possible_sln = sln_parse.try_get_selected_solution_file()
+    if possible_sln and vim.tbl_contains(slns, vim.fs.normalize(possible_sln)) then
       return possible_sln, "sln"
     else
-      return sln[1], "sln"
+      return slns[1], "sln"
     end
   end
 
