@@ -200,10 +200,9 @@ function M.find_sln_or_csproj(dir)
     local possible_sln = sln_parse.try_get_selected_solution_file() or ""
     local has_curr = vim.tbl_contains(sln, possible_sln)
     if has_curr then
-      vim.print("we have curr")
-      return possible_sln
+      return possible_sln, "sln"
     else
-      return sln[1]
+      return sln[1], "sln"
     end
   end
 
@@ -310,7 +309,6 @@ function M.enable(opts)
       local file, type = M.find_sln_or_csproj(client.root_dir)
       if not file then return end
 
-      vim.print("fname from " .. file)
       local uri = vim.uri_from_fname(file)
       if type == "sln" then
         M.state[client.id] = job.register_job({ name = "Opening solution", on_error_text = "Failed to open solution", on_success_text = "Workspace ready", timeout = 150000 })
