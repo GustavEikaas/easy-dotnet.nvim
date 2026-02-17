@@ -1,7 +1,6 @@
 local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
 local root_finder = require("easy-dotnet.roslyn.root_finder")
-local dotnet_client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local current_solution = require("easy-dotnet.current_solution")
@@ -395,28 +394,6 @@ function M.enable(opts)
           end, 2000)
         end
         vim.defer_fn(function() refresh_diag(client) end, 500)
-      end,
-      ["workspace/_roslyn_projectNeedsRestore"] = function(_, params, ctx, _)
-        local paths = params.projectFilePaths or {}
-        local csproj_files = vim.tbl_filter(function(path) return path:match("%.csproj$") end, paths)
-
-        if vim.tbl_isempty(csproj_files) then return {} end
-
-        local restore = #csproj_files == 1 and csproj_files[1] or sln_parse.try_get_selected_solution_file()
-
-        if restore then
-          dotnet_client:initialize(function()
-            dotnet_client.nuget:nuget_restore(restore, function()
-              local client = vim.lsp.get_client_by_id(ctx.client_id)
-              if not client then return end
-              vim.defer_fn(function() refresh_diag(client) end, 500)
-              --TODO: any events we can listen to?
-              vim.defer_fn(function() refresh_diag(client) end, 15000)
-            end)
-          end)
-        end
-
-        return {}
       end,
     },
     settings = settings,
