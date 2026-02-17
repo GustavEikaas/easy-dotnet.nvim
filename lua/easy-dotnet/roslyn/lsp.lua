@@ -4,6 +4,7 @@ local root_finder = require("easy-dotnet.roslyn.root_finder")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local current_solution = require("easy-dotnet.current_solution")
+local picker = require("easy-dotnet.picker")
 
 local M = {
   state = {},
@@ -205,7 +206,8 @@ function M.find_sln_or_csproj(dir)
     if possible_sln and vim.tbl_contains(slns, vim.fs.normalize(possible_sln)) then
       return possible_sln, "sln"
     else
-      return slns[1], "sln"
+      local vvv = picker.pick_sync(nil, vim.tbl_map(function(value) return { value = value, display = value } end, slns), "pick solution", false, true)
+      return vvv.value, "sln"
     end
   end
 
