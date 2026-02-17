@@ -4,7 +4,6 @@ local root_finder = require("easy-dotnet.roslyn.root_finder")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local current_solution = require("easy-dotnet.current_solution")
-local picker = require("easy-dotnet.picker")
 
 local M = {
   state = {},
