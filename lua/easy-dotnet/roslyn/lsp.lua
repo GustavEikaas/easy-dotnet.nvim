@@ -40,7 +40,8 @@ end
 
 ---@param client vim.lsp.Client
 ---@param bufnr number
-local function does_file_outside_of_cwd_belong_to_active_client(client, bufnr)
+---@return boolean
+local function does_file_belong_to_active_client(client, bufnr)
   local params = {
     _vs_textDocument = { uri = vim.uri_from_bufnr(bufnr) },
   }
@@ -141,7 +142,7 @@ function M.find_project_or_solution(bufnr, cb)
         return
       else
         local existing_client = has_client_for_root_dir(vim.fs.dirname(sln_by_root_dir))
-        if existing_client and does_file_outside_of_cwd_belong_to_active_client(existing_client, bufnr) then
+        if existing_client and does_file_belong_to_active_client(existing_client, bufnr) then
           cb(vim.fs.dirname(sln_by_root_dir))
           return
         end
@@ -253,12 +254,53 @@ function M.preload_roslyn(opts)
   end
 end
 
+local function populate_source_generated_buffer(client, buf, file)
+  local params = {
+    resultId = vim.b[buf].resultId,
+    textDocument = {
+      uri = file,
+    },
+  }
+
+  local function handler(err, result)
+    if result.resultId == vim.b[buf].resultId then return end
+    assert(not err, vim.inspect(err))
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(result.text or "", "\r?\n"))
+    vim.b[buf].resultId = result.resultId
+    vim.lsp.buf_attach_client(buf, client.id)
+    vim.bo[buf].filetype = "cs"
+    vim.bo[buf].modifiable = false
+    vim.bo[buf].modified = false
+  end
+
+  client:request("sourceGeneratedDocument/_roslyn_getText", params, handler, buf)
+end
+
+local function source_generated_autocmd()
+  vim.api.nvim_create_autocmd("BufReadCmd", {
+    pattern = "roslyn-source-generated://*",
+    callback = function(args)
+      coroutine.wrap(function()
+        vim.bo[args.buf].modifiable = true
+        vim.bo[args.buf].swapfile = false
+
+        local clients = vim.lsp.get_clients({ name = constants.lsp_client_name })
+
+        for _, client in ipairs(clients) do
+          if does_file_belong_to_active_client(client, args.buf) then populate_source_generated_buffer(client, args.buf, args.file) end
+        end
+      end)()
+    end,
+  })
+end
+
 ---@param opts easy-dotnet.LspOpts
 function M.enable(opts)
   if vim.fn.has("nvim-0.11") == 0 then
     logger.warn("easy-dotnet LSP requires neovim 0.11 or higher ")
     return
   end
+  source_generated_autocmd()
   local cmd = { "dotnet", "easydotnet", "roslyn", "start" }
 
   if opts.roslynator_enabled then table.insert(cmd, "--roslynator") end
@@ -394,6 +436,14 @@ function M.enable(opts)
           end, 2000)
         end
         vim.defer_fn(function() refresh_diag(client) end, 500)
+      end,
+      ["workspace/refreshSourceGeneratedDocument"] = function(_, _, ctx)
+        local client = assert(vim.lsp.get_client_by_id(ctx.client_id))
+
+        for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+          local uri = vim.api.nvim_buf_get_name(buf)
+          if vim.api.nvim_buf_get_name(buf):match("^roslyn%-source%-generated://") then populate_source_generated_buffer(client, buf, uri) end
+        end
       end,
     },
     settings = settings,
