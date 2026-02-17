@@ -292,6 +292,14 @@ local function source_generated_autocmd()
       end)()
     end,
   })
+
+  vim.api.nvim_create_autocmd("BufWinEnter", {
+    pattern = "roslyn-source-generated://*",
+    callback = function(args)
+      local name = args.file:match("/([^/]+)%?") or ""
+      vim.api.nvim_set_option_value("winbar", "󰑕 " .. name .. "  [source generated]", { win = 0 })
+    end,
+  })
 end
 
 ---@param opts easy-dotnet.LspOpts
