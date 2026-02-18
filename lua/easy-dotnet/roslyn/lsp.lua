@@ -45,24 +45,23 @@ local function does_file_belong_to_active_client(client, bufnr)
   local params = {
     _vs_textDocument = { uri = vim.uri_from_bufnr(bufnr) },
   }
-  local co = coroutine.running()
-  client:request("textDocument/_vs_getProjectContexts", params, function(err, result)
-    if err then
-      logger.error(vim.inspect(err))
-      return coroutine.resume(co, false)
-    end
-    if not result or not result._vs_projectContexts then return coroutine.resume(co, false) end
+  local response = client:request_sync("textDocument/_vs_getProjectContexts", params, 1000, bufnr)
+  if not response or response.err then
+    local err_msg = response and response.err and response.err.message or "Timeout or No Response"
+    logger.warn("Roslyn failed to resolve project context: " .. err_msg)
+    return false
+  end
 
-    local default_idx = result._vs_defaultIndex or 1
-    local context = result._vs_projectContexts[default_idx + 1]
+  if not response.result._vs_projectContexts then return false end
 
-    if not context then return coroutine.resume(co, false) end
+  local default_idx = response.result._vs_defaultIndex or 1
+  local context = response.result._vs_projectContexts[default_idx + 1]
 
-    local is_misc = context._vs_is_miscellaneous
+  if not context then return false end
 
-    return coroutine.resume(co, not is_misc)
-  end, bufnr)
-  return coroutine.yield()
+  local is_misc = context._vs_is_miscellaneous
+
+  return not is_misc
 end
 
 local function check_project_context(client, bufnr)
@@ -262,6 +261,7 @@ function M.preload_roslyn(opts)
   end
 end
 
+---@param client vim.lsp.Client
 local function populate_source_generated_buffer(client, buf, file)
   local params = {
     resultId = vim.b[buf].resultId,
@@ -281,23 +281,27 @@ local function populate_source_generated_buffer(client, buf, file)
     vim.bo[buf].modified = false
   end
 
-  client:request("sourceGeneratedDocument/_roslyn_getText", params, handler, buf)
+  local response = client:request_sync("sourceGeneratedDocument/_roslyn_getText", params, 2000, buf)
+  if not response or response.err then
+    local err_msg = response and response.err and response.err.message or "Timeout or No Response"
+    logger.warn("Roslyn generation failed: " .. err_msg)
+    return
+  end
+  handler(response.err, response.result)
 end
 
 local function source_generated_autocmd()
   vim.api.nvim_create_autocmd("BufReadCmd", {
     pattern = "roslyn-source-generated://*",
     callback = function(args)
-      coroutine.wrap(function()
-        vim.bo[args.buf].modifiable = true
-        vim.bo[args.buf].swapfile = false
+      vim.bo[args.buf].modifiable = true
+      vim.bo[args.buf].swapfile = false
 
-        local clients = vim.lsp.get_clients({ name = constants.lsp_client_name })
+      local clients = vim.lsp.get_clients({ name = constants.lsp_client_name })
 
-        for _, client in ipairs(clients) do
-          if does_file_belong_to_active_client(client, args.buf) then populate_source_generated_buffer(client, args.buf, args.file) end
-        end
-      end)()
+      for _, client in ipairs(clients) do
+        if does_file_belong_to_active_client(client, args.buf) then populate_source_generated_buffer(client, args.buf, args.file) end
+      end
     end,
   })
 
