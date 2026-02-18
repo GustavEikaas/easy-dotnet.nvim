@@ -143,14 +143,16 @@ end
 
 ---@param node easy-dotnet.TestRunner.Node
 local function debug_tests(node, win)
-  if not win.options.noBuild then
-    local build_success = runner.request_build(node.cs_project_path)
-    if not build_success then
-      logger.error("Failed to build project")
-      return
+  coroutine.wrap(function()
+    if not win.options.noBuild then
+      local build_success = runner.request_build(node.cs_project_path)
+      if not build_success then
+        logger.error("Failed to build project")
+        return
+      end
     end
-  end
-  M.test_run(node, win, function() end, true)
+    M.test_run(node, win, function() end, true)
+  end)()
 end
 
 local function filter_failed_tests(win)
