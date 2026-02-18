@@ -200,8 +200,10 @@ M.restore = {
 
 M.build = {
   handle = function(args, options)
-    local terminal = options and options.terminal or nil
-    actions.build(terminal, false, passthrough_dotnet_cli_args_handler(args))
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+    client:initialize(function() client.workspace:workspace_build(true, false) end)
+    -- local terminal = options and options.terminal or nil
+    -- actions.build(terminal, false, passthrough_dotnet_cli_args_handler(args))
   end,
   passthrough = true,
   subcommands = {
