@@ -22,9 +22,7 @@ local M = {}
 ---@param type easy-dotnet.TaskType
 ---@return string
 local function get_property(type)
-  if not (type == "build" or type == "test" or type == "run" or type == "launch-profile" or type == "view" or type == "watch") then
-    error("Expected build, test or run received " .. type)
-  end
+  if not (type == "build" or type == "test" or type == "run" or type == "launch-profile" or type == "view" or type == "watch") then error("Expected build, test or run received " .. type) end
   if type == "launch-profile" then return "default_profile" end
   return string.format("default_%s_project", type)
 end
