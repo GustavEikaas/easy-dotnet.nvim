@@ -1,3 +1,4 @@
+local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local polyfills = require("easy-dotnet.polyfills")
 ---@class easy-dotnet.DefaultProfile
 ---@field project string
@@ -176,7 +177,7 @@ end
 M.set_default_launch_profile = function(project, solution_file_path, profile)
   local file = get_or_create_cache_file(solution_file_path)
 
-  --TODO: send project.path and profile name to server
+  if client._initialized then client.default:set_default_launch_profile(project.path, profile) end
   if file.decoded == nil then file.decoded = {} end
 
   ---@type easy-dotnet.DefaultProfile
