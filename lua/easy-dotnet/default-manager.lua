@@ -7,7 +7,6 @@ local polyfills = require("easy-dotnet.polyfills")
 ---@field default_build_project string
 ---@field default_test_project string
 ---@field default_run_project string
----@field default_debug_project string
 ---@field default_profile easy-dotnet.DefaultProfile
 
 ---@class easy-dotnet.PersistedDefinition
@@ -17,13 +16,13 @@ local polyfills = require("easy-dotnet.polyfills")
 
 local M = {}
 
----@alias easy-dotnet.TaskType "build" | "test" | "run" | "launch-profile" | "view" | "watch" | "debug"
+---@alias easy-dotnet.TaskType "build" | "test" | "run" | "launch-profile" | "view" | "watch"
 
 ---Gets the property name for the given type.
 ---@param type easy-dotnet.TaskType
 ---@return string
 local function get_property(type)
-  if not (type == "build" or type == "test" or type == "run" or type == "launch-profile" or type == "view" or type == "watch" or type == "debug") then
+  if not (type == "build" or type == "test" or type == "run" or type == "launch-profile" or type == "view" or type == "watch") then
     error("Expected build, test or run received " .. type)
   end
   if type == "launch-profile" then return "default_profile" end
@@ -81,7 +80,7 @@ end
 ---@class easy-dotnet.DefaultProject
 ---@field type '"solution"' | '"project"'
 ---@field path string
----@field project? DotnetProject
+---@field project? easy-dotnet.Project.Project
 
 ---Checks for the default project in the solution file.
 ---@param solution_file_path string Path to the solution file.
@@ -164,6 +163,8 @@ end
 M.set_default_project = function(project, solution_file_path, type)
   local file = get_or_create_cache_file(solution_file_path)
 
+  --TODO: send project.path to server
+
   if file.decoded == nil then file.decoded = {} end
 
   file.decoded[get_property(type)] = project_to_persist(project)
@@ -177,6 +178,7 @@ end
 M.set_default_launch_profile = function(project, solution_file_path, profile)
   local file = get_or_create_cache_file(solution_file_path)
 
+  --TODO: send project.path and profile name to server
   if file.decoded == nil then file.decoded = {} end
 
   ---@type easy-dotnet.DefaultProfile

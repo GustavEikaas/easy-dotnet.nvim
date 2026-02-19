@@ -34,7 +34,7 @@ local function pick_project(use_default)
     return selected, nil
   end
 
-  local default = default_manager.check_default_project(solution_file_path, "debug")
+  local default = default_manager.check_default_project(solution_file_path, "run")
   if default ~= nil and use_default == true then return default.project, solution_file_path end
 
   local projects = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(project) return project.runnable end)
@@ -48,7 +48,7 @@ local function pick_project(use_default)
     logger.error("No project selected")
     return
   end
-  default_manager.set_default_project(project, solution_file_path, "debug")
+  default_manager.set_default_project(project, solution_file_path, "run")
   return project, solution_file_path
 end
 
