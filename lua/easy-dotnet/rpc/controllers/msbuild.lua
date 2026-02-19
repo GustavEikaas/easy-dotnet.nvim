@@ -13,6 +13,7 @@ local jobs = require("easy-dotnet.ui-modules.jobs")
 -- luacheck: no max line length
 ---@field msbuild_remove_project_reference fun(self: easy-dotnet.RPC.Client.MsBuild, projectPath: string, targetPath: string, cb?: fun(success: boolean), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request project references
 ---@field msbuild_build fun(self: easy-dotnet.RPC.Client.MsBuild, request: easy-dotnet.MSBuild.BuildRequest, cb?: fun(res: easy-dotnet.MSBuild.BuildResult), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request msbuild
+---@field msbuild_watch fun(self: easy-dotnet.RPC.Client.MsBuild, request: easy-dotnet.MSBuild.BuildRequest, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request msbuild
 
 local M = {}
 M.__index = M
@@ -179,6 +180,19 @@ function M:msbuild_build(request, cb, opts)
     end,
     on_crash = opts.on_crash,
     method = "msbuild/build",
+    params = { request = request },
+  })()
+end
+
+function M:msbuild_watch(request, cb, opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+  return helper.create_rpc_call({
+    client = self._client,
+    job = nil,
+    cb = cb,
+    on_crash = opts.on_crash,
+    method = "msbuild/watch",
     params = { request = request },
   })()
 end
