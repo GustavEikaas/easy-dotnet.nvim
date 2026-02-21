@@ -130,12 +130,15 @@ local function auto_register_dap(merged_opts)
 
     local debugger_conf = dap.configurations["cs"] or {}
 
-    vim.list_extend(debugger_conf, { {
-      type = constants.debug_adapter_name,
-      name = constants.debug_adapter_name,
-      request = "attach",
-      port = dotnet.prepare_debugger,
-    } })
+    vim.list_extend(debugger_conf, {
+      {
+        type = constants.debug_adapter_name,
+        name = constants.debug_adapter_name,
+        request = "attach",
+        port = dotnet.prepare_debugger,
+        console = merged_opts.debugger.console,
+      },
+    })
 
     dap.configurations["cs"] = debugger_conf
 
