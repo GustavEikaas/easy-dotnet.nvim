@@ -185,7 +185,7 @@ local M = {
       mappings = {
         open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
       },
-      console = "externalTerminal", --externalTerminal
+      console = "integratedTerminal", --externalTerminal
       bin_path = nil,
       apply_value_converters = true,
       auto_register_dap = true,
