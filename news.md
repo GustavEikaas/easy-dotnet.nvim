@@ -2,6 +2,49 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## Interactive debugger console ([#813](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/813))
+
+As many of you know, `easy-dotnet` automatically configures DAP for you with netcoredbg, some of you probably noticed that `Console.ReadLine()` would throw an exception due to netcoredbg not running in an actual console. To make matters worse, all of your application's output was dumped directly into the DAP REPL, creating a messy debugging experience.
+
+This is now fixed in the latest release! We completely overhauled how the debugger handles process execution, bringing the Neovim debugging experience much closer to Visual Studio.
+
+### What this means for you
+
+* **Full Interactivity:** You can now type input directly into your running C# application! CLI tools and interactive prompts work flawlessly.
+* **A Clean REPL:** Your application's standard output is now properly routed to the console widget (or an external terminal). Your REPL is finally clean!
+* **Native External Terminals:** Want your app to pop open in a dedicated, detached OS window (like Windows Terminal or Kitty) just like hitting F5 in Visual Studio? The `externalTerminal` option is now supported!
+
+### Configuration
+
+The `integratedTerminal` option is used by default. You can configure this preference in your options. 
+
+If you choose to use an `externalTerminal`, you will need to tell `nvim-dap` which terminal emulator to use on your machine:
+
+```lua
+local dotnet = require("easy-dotnet")
+
+dotnet.setup({
+  debugger = {
+    console = "externalTerminal", 
+  }
+})
+
+-- Instructions on how dap creates an external terminal window:
+local dap = require("dap")
+
+-- Windows (Windows Terminal)
+dap.defaults.fallback.external_terminal = {
+  command = "wt",
+  args = { "-w", "0", "nt", "--" },
+}
+
+-- Linux (Kitty)
+dap.defaults.fallback.external_terminal = {
+  command = "/usr/bin/kitty",
+  args = { "--hold" } 
+}
+```
+
 ## Preloading Roslyn ([#794](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/794))
 
 Neovim traditionally waits to start LSP servers until you open a buffer of the relevant filetype. This creates a noticeable delay when opening your first C# file.

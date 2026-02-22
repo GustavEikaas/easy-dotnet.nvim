@@ -23,7 +23,14 @@ local function run_project(project, args, term, attach_debugger, profile)
         client.debugger:debugger_start(
           { targetPath = project.path, launchProfileName = profile, targetFramework = nil, configuration = nil },
           function(debugger_config)
-            require("dap").run({ type = constants.debug_adapter_name, name = constants.debug_adapter_name, request = "attach", host = "127.0.0.1", port = debugger_config.port }, { new = true })
+            require("dap").run({
+              type = constants.debug_adapter_name,
+              name = constants.debug_adapter_name,
+              console = require("easy-dotnet.options").get_option("debugger").console,
+              request = "attach",
+              host = "127.0.0.1",
+              port = debugger_config.port,
+            }, { new = true })
           end
         )
       end

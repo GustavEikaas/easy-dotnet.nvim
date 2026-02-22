@@ -143,6 +143,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
         -- Path to custom coreclr DAP adapter
         -- easy-dotnet-server falls back to its own netcoredbg binary if bin_path is nil
         bin_path = nil,
+        console = "integratedTerminal", -- Controls where the target app runs: "integratedTerminal" (Neovim buffer) or "externalTerminal" (OS window)
         apply_value_converters = true,
         auto_register_dap = true,
         mappings = {
