@@ -108,7 +108,7 @@ function M.test_run(node, win, cb, attach_debugger)
     if child.type == "test" or child.type == "subcase" then table.insert(tests, child) end
   end)
 
-  local _on_job_finished = win.appendJob(node.cs_project_path, "Run", #tests)
+  local _on_job_finished, partial = win.appendJob(node.cs_project_path, "Run", #tests)
   local on_job_finished = function()
     _on_job_finished()
     if cb then cb() end
@@ -131,13 +131,19 @@ function M.test_run(node, win, cb, attach_debugger)
       client.test:test_run(
         { projectPath = project_framework.path, targetFrameworkMoniker = node.framework, configuration = "Debug", filter = filter },
         get_test_result_handler(win, node, on_job_finished),
-        function(res) partial_test_status_updater(res, win, node) end
+        function(res)
+          partial(#res)
+          partial_test_status_updater(res, win, node)
+        end
       )
     else
       client.test:test_debug(
         { projectPath = project_framework.path, targetFrameworkMoniker = node.framework, configuration = "Debug", filter = filter },
         get_test_result_handler(win, node, on_job_finished),
-        function(res) partial_test_status_updater(res, win, node) end
+        function(res)
+          partial(#res)
+          partial_test_status_updater(res, win, node)
+        end
       )
     end
   end)()

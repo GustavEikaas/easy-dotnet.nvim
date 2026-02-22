@@ -99,7 +99,12 @@ function M.appendJob(id, type, subtask_count)
     M.refreshTree()
   end
 
-  return on_job_finished_callback
+  local partial_finished = function(count)
+    if job.subtask_count then job.subtask_count = job.subtask_count - count end
+    M.refreshTree()
+  end
+
+  return on_job_finished_callback, partial_finished
 end
 
 function M.redraw_virtual_text()
