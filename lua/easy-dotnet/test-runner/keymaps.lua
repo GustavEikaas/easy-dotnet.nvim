@@ -74,6 +74,18 @@ local test_status_updater = function(unit_test_results, win, node)
   win.refreshTree()
 end
 
+local partial_test_status_updater = function(unit_test_results, win, node)
+  if not unit_test_results or #unit_test_results == 0 then return end
+
+  for _, value in ipairs(unit_test_results) do
+    win.traverse(node, function(child_node)
+      if (child_node.type == "test" or child_node.type == "subcase") and child_node.id == value.id then parse_status(value, child_node, win.options) end
+    end)
+  end
+
+  win.refreshTree()
+end
+
 local function get_test_result_handler(win, node, on_job_finished)
   ---@param rpc_res RPC_TestRunResult[]
   return function(rpc_res)
@@ -118,12 +130,14 @@ function M.test_run(node, win, cb, attach_debugger)
     if not attach_debugger then
       client.test:test_run(
         { projectPath = project_framework.path, targetFrameworkMoniker = node.framework, configuration = "Debug", filter = filter },
-        get_test_result_handler(win, node, on_job_finished)
+        get_test_result_handler(win, node, on_job_finished),
+        function(res) partial_test_status_updater(res, win, node) end
       )
     else
       client.test:test_debug(
         { projectPath = project_framework.path, targetFrameworkMoniker = node.framework, configuration = "Debug", filter = filter },
-        get_test_result_handler(win, node, on_job_finished)
+        get_test_result_handler(win, node, on_job_finished),
+        function(res) partial_test_status_updater(res, win, node) end
       )
     end
   end)()

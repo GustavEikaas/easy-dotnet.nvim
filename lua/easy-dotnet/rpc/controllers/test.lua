@@ -1,8 +1,8 @@
 ---@class easy-dotnet.RPC.Client.Test
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
 -- luacheck: no max line length
----@field test_run fun(self: easy-dotnet.RPC.Client.Test, request: easy-dotnet.RPC.TestRunRequest, cb?: fun(res: RPC_TestRunResult), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request running multiple tests for MTP
----@field test_debug fun(self: easy-dotnet.RPC.Client.Test, request: easy-dotnet.RPC.TestRunRequest, cb?: fun(res: RPC_TestRunResult), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request running multiple tests for MTP
+---@field test_run fun(self: easy-dotnet.RPC.Client.Test, request: easy-dotnet.RPC.TestRunRequest, cb?: fun(res: RPC_TestRunResult[]), on_yield?: fun(res: RPC_TestRunResult[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request running multiple tests for MTP
+---@field test_debug fun(self: easy-dotnet.RPC.Client.Test, request: easy-dotnet.RPC.TestRunRequest, cb?: fun(res: RPC_TestRunResult[]), on_yield?: fun(res: RPC_TestRunResult[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request running multiple tests for MTP
 -- luacheck: no max line length
 ---@field test_discover fun(self: easy-dotnet.RPC.Client.Test, request: easy-dotnet.RPC.TestDiscoverRequest, cb?: fun(res: easy-dotnet.RPC.DiscoveredTest[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request test discovery for MTP
 ---@field test_solution fun(self: easy-dotnet.RPC.Client.Test, cb?: fun(res: easy-dotnet.Server.RunCommand), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
@@ -64,7 +64,7 @@ end
 --- @field outcome TestResult
 --- @field stdOut string[] | nil
 
-function M:test_run(request, cb, opts)
+function M:test_run(request, cb, on_yield, opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
   return helper.create_enumerate_rpc_call({
@@ -106,12 +106,12 @@ function M:test_run(request, cb, opts)
         end
       end
     end,
-    on_yield = nil,
+    on_yield = on_yield,
     on_crash = opts.on_crash,
   })()
 end
 
-function M:test_debug(request, cb, opts)
+function M:test_debug(request, cb, on_yield, opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
   return helper.create_enumerate_rpc_call({
@@ -153,7 +153,7 @@ function M:test_debug(request, cb, opts)
         end
       end
     end,
-    on_yield = nil,
+    on_yield = on_yield,
     on_crash = opts.on_crash,
   })()
 end
