@@ -1,5 +1,6 @@
 local M = {}
 local window = require("easy-dotnet.test-runner.window")
+local stack_trace = require("easy-dotnet.test-runner.stacktrace")
 local runner = require("easy-dotnet.test-runner.runner")
 local logger = require("easy-dotnet.logger")
 
@@ -26,6 +27,7 @@ local function aggregate_status(node, options)
   return worstStatus
 end
 
+---@param result RPC_TestRunResult
 local function parse_status(result, test_line, options)
   if result.duration then test_line.duration = result.duration end
   --TODO: handle more cases like cancelled etc...
@@ -36,11 +38,22 @@ local function parse_status(result, test_line, options)
   elseif result.outcome == "failed" or result.outcome == "error" then
     test_line.icon = options.icons.failed
 
-    if result.errorMessage or result.stackTrace then test_line.expand = vim.list_extend(result.errorMessage or {}, result.stackTrace or {}) end
-    if result.stdOut then
-      local output = vim.list_extend({ "" }, result.stdOut or {})
-      vim.list_extend(test_line.expand or {}, output)
+    if result.prettyStackTrace then
+      test_line.pretty_stack_trace = result.prettyStackTrace
+      test_line.error_message = result.errorMessage
+      test_line.std_out = result.stdOut
+      test_line.failing_frame = result.failingFrame
     end
+
+    local old_expand = {}
+    if result.errorMessage then vim.list_extend(old_expand, result.errorMessage) end
+    if result.stackTrace then vim.list_extend(old_expand, result.stackTrace) end
+    if result.stdOut then
+      table.insert(old_expand, "")
+      vim.list_extend(old_expand, result.stdOut)
+    end
+
+    test_line.expand = old_expand
   elseif result.outcome == "skipped" then
     test_line.icon = options.icons.skipped
   else
@@ -220,7 +233,7 @@ local function open_stack_trace(line)
 
   --TODO: handle fsharp
   local file_float = window.new_float():pos_left():write_buf(contents):buf_set_filetype("csharp"):on_win_close(refocus_runner):create()
-  local stack_trace = window:new_float():link_close(file_float):pos_right():write_buf(line.expand):on_win_close(refocus_runner):create()
+  local stack_trace_float = window:new_float():link_close(file_float):pos_right():write_buf(line.expand):on_win_close(refocus_runner):create()
 
   local function get_valid_line(line_num, buf)
     if not line_num then return nil end
@@ -229,6 +242,7 @@ local function open_stack_trace(line)
   end
 
   local function go_to_file()
+    require("easy-dotnet.test-runner.render").hide()
     vim.api.nvim_win_close(file_float.win, true)
     vim.cmd(string.format("edit %s", line.file_path))
     if path == nil or path.line == nil then return end
@@ -238,7 +252,7 @@ local function open_stack_trace(line)
 
   vim.keymap.set("n", "<leader>gf", function() go_to_file() end, { silent = true, noremap = true, buffer = file_float.buf })
 
-  vim.keymap.set("n", "<leader>gf", function() go_to_file() end, { silent = true, noremap = true, buffer = stack_trace.buf })
+  vim.keymap.set("n", "<leader>gf", function() go_to_file() end, { silent = true, noremap = true, buffer = stack_trace_float.buf })
 
   if line.line_number then vim.api.nvim_win_set_cursor(file_float.win, { line.line_number, 0 }) end
   if path ~= nil and path.line ~= nil then
@@ -334,7 +348,16 @@ M.keymaps = function()
       end,
       desc = keymap.expand.desc,
     },
-    [keymap.peek_stacktrace.lhs] = { handle = function(node) open_stack_trace(node) end, desc = keymap.peek_stacktrace.desc },
+    [keymap.peek_stacktrace.lhs] = {
+      handle = function(node)
+        if node.pretty_stack_trace then
+          stack_trace.open_enhanced_stack_trace(node)
+        else
+          open_stack_trace(node)
+        end
+      end,
+      desc = keymap.peek_stacktrace.desc,
+    },
     [keymap.run_all.lhs] = {
       handle = function(_, win)
         win.traverse(win.tree, function(node)
