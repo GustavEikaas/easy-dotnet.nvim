@@ -8,7 +8,9 @@ This guide describes how to integrate .NET Core debugging in Neovim using nvim-d
   * [Setting up .NET Debugging with nvim-dap and netcoredbg](#setting-up-.net-debugging-with-nvim-dap-and-netcoredbg)
     * [Debugging](#debugging)
     * [Configuration](#configuration)
+    * [Interactive Console & External Terminal](#interactive-console--external-terminal)
     * [Programmatic Debugging](#programmatic-debugging)
+    * [CPU/MEM Performance Widgets](#cpumem-performance-widgets)
 
 ## Debugging
 To start debugging do the following. Ensure you have configured the code below
@@ -53,6 +55,40 @@ return {
 }
 ```
 
+## Interactive Console & External Terminal
+
+`easy-dotnet` fully supports interactive console debugging (e.g., `Console.ReadLine()`). You can control where your target application runs using the `debugger.console` option in your `easy-dotnet` setup:
+
+1. **`integratedTerminal` (Default):** Runs the application inside a Neovim buffer or the `nvim-dap-ui` console widget. This keeps everything inside your editor and prevents your application's standard output from cluttering the DAP REPL.
+2. **`externalTerminal`:** Spawns a completely detached OS terminal window (similar to hitting F5 in Visual Studio).
+
+### External Terminal Configuration Examples
+
+If you choose to use an `externalTerminal`, you must tell `nvim-dap` which terminal emulator to use on your machine. You can configure this globally in your Neovim configuration:
+
+```lua
+local dap = require("dap")
+
+-- Windows Terminal (Windows)
+dap.defaults.fallback.external_terminal = {
+  command = "wt",
+  args = { "-w", "0", "nt", "--" },
+}
+
+-- Kitty (Linux/macOS)
+dap.defaults.fallback.external_terminal = {
+  command = "kitty",
+  args = { "--hold" }, 
+}
+
+-- Alacritty (Linux/macOS)
+dap.defaults.fallback.external_terminal = {
+  command = "alacritty",
+  args = { "-e" }, 
+}
+
+```
+
 ## Programmatic Debugging
 
 You can bind a key just like `<F5>` / Run in Visual Studio that triggers debugging for the default project or a selected profile.
@@ -61,7 +97,6 @@ vim.keymap.set("n", "<C-p>", function()
   vim.cmd "Dotnet debug default profile"
 end, { nowait = true, desc = "Start debugging" })
 ```
-
 
 ## CPU/MEM Performance Widgets
 
