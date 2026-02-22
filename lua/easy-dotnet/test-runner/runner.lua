@@ -40,6 +40,10 @@ local M = {
 ---@field duration string | nil
 ---@field icon string
 ---@field expand table | nil
+---@field pretty_stack_trace RPC_PrettyStackTrace[] \ nil
+---@field failing_frame RPC_PrettyStackTrace \ nil
+---@field error_message string[] \ nil
+---@field std_out string[] \ nil
 ---@field framework string
 ---@field is_MTP boolean
 ---@field refresh function | nil

@@ -60,9 +60,19 @@ end
 --- @class RPC_TestRunResult
 --- @field id string
 --- @field stackTrace string[] | nil
+--- @field prettyStackTrace RPC_PrettyStackTrace[] | nil
 --- @field message string[] | nil
 --- @field outcome TestResult
 --- @field stdOut string[] | nil
+--- @field duration number \ nil
+--- @field errorMessage string[]
+--- @field failingFrame RPC_PrettyStackTrace \ nil
+
+--- @class RPC_PrettyStackTrace
+--- @field originalText string
+--- @field file string | nil
+--- @field line number | nil
+--- @field isUserCode boolean
 
 function M:test_run(request, cb, on_yield, opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
@@ -76,15 +86,28 @@ function M:test_run(request, cb, on_yield, opts)
     cb = function(res)
       local stackTrace_pending = #res
       local stdOut_pending = #res
+      local prettyStackTrace_pending = #res
 
       local function done()
-        if stackTrace_pending == 0 and stdOut_pending == 0 then
+        if prettyStackTrace_pending == 0 and stackTrace_pending == 0 and stdOut_pending == 0 then
           if cb then cb(res) end
         end
       end
       done()
 
       for _, value in ipairs(res) do
+        ---@diagnostic disable-next-line: undefined-field
+        if value.prettyStackTrace and value.prettyStackTrace.token then
+          ---@diagnostic disable-next-line: undefined-field
+          self._client:request_property_enumerate(value.prettyStackTrace.token, nil, function(trace)
+            value.prettyStackTrace = trace
+            prettyStackTrace_pending = prettyStackTrace_pending - 1
+            done()
+          end)
+        else
+          prettyStackTrace_pending = prettyStackTrace_pending - 1
+        end
+
         ---@diagnostic disable-next-line: undefined-field
         if value.stackTrace and value.stackTrace.token then
           ---@diagnostic disable-next-line: undefined-field
@@ -122,16 +145,29 @@ function M:test_debug(request, cb, on_yield, opts)
     ---@param res RPC_TestRunResult[]
     cb = function(res)
       local stackTrace_pending = #res
+      local prettyStackTrace_pending = #res
       local stdOut_pending = #res
 
       local function done()
-        if stackTrace_pending == 0 and stdOut_pending == 0 then
+        if prettyStackTrace_pending == 0 and stackTrace_pending == 0 and stdOut_pending == 0 then
           if cb then cb(res) end
         end
       end
       done()
 
       for _, value in ipairs(res) do
+        ---@diagnostic disable-next-line: undefined-field
+        if value.prettyStackTrace and value.prettyStackTrace.token then
+          ---@diagnostic disable-next-line: undefined-field
+          self._client:request_property_enumerate(value.prettyStackTrace.token, nil, function(trace)
+            value.prettyStackTrace = trace
+            prettyStackTrace_pending = prettyStackTrace_pending - 1
+            done()
+          end)
+        else
+          prettyStackTrace_pending = prettyStackTrace_pending - 1
+        end
+
         ---@diagnostic disable-next-line: undefined-field
         if value.stackTrace and value.stackTrace.token then
           ---@diagnostic disable-next-line: undefined-field
