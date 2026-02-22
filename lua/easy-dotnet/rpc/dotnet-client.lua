@@ -269,6 +269,7 @@ function M:_initialize(cb, opts)
   coroutine.wrap(function()
     local use_visual_studio = require("easy-dotnet.options").options.server.use_visual_studio == true
     local debugger_path = require("easy-dotnet.options").options.debugger.bin_path
+    local ext_terminal = require("easy-dotnet.options").options.external_terminal
     local apply_value_converters = require("easy-dotnet.options").options.debugger.apply_value_converters
 
     local debuggerOptions = { applyValueConverters = apply_value_converters, binaryPath = debugger_path }
@@ -284,7 +285,11 @@ function M:_initialize(cb, opts)
             request = {
               clientInfo = { name = "EasyDotnet", version = "2.0.0", pid = vim.fn.getpid() },
               projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
-              options = { useVisualStudio = use_visual_studio, debuggerOptions = debuggerOptions },
+              options = {
+                useVisualStudio = use_visual_studio,
+                debuggerOptions = debuggerOptions,
+                externalTerminal = ext_terminal,
+              },
             },
           },
         })()

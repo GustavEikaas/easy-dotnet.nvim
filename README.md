@@ -130,6 +130,8 @@ Although not *required* by the plugin, it is highly recommended to install one o
     local dotnet = require("easy-dotnet")
     -- Options are not required
     dotnet.setup({
+      -- Optional configuration for external terminals (matches nvim-dap structure)
+      external_terminal = nil,
       lsp = {
         enabled = true, -- Enable builtin roslyn lsp
         preload_roslyn = true, -- Start loading roslyn before any buffer is opened

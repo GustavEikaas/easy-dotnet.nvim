@@ -1,4 +1,5 @@
 ---@class easy-dotnet.Options
+---@field external_terminal easy-dotnet.ExternalTerminal|nil
 ---@field test_runner easy-dotnet.TestRunner.Options
 ---@field lsp easy-dotnet.LspOpts
 ---@field csproj_mappings boolean
@@ -8,6 +9,10 @@
 ---@field picker easy-dotnet.PickerType
 ---@field notifications easy-dotnet.Notifications
 ---@field diagnostics easy-dotnet.DiagnosticsOptions
+
+---@class easy-dotnet.ExternalTerminal
+---@field command string
+---@field args string[]
 
 ---@class easy-dotnet.Notifications
 ---@field handler fun(start_event: easy-dotnet.Job.Event): fun(finished_event: easy-dotnet.Job.Event)
@@ -85,6 +90,8 @@ end
 local M = {
   ---@type easy-dotnet.Options
   options = {
+    -- Optional configuration for external terminals (matches nvim-dap structure)
+    external_terminal = nil,
     ---@param path string
     ---@param action "test"|"restore"|"build"|"run"|"watch"
     ---@param args string
