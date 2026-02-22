@@ -197,13 +197,13 @@ local function filter_failed_tests(win)
   win.refreshTree()
 end
 
-local function get_path_from_stack_trace(stack_trace)
-  stack_trace = table.concat(stack_trace, " \n")
+local function get_path_from_stack_trace(trace)
+  trace = table.concat(trace, " \n")
   -- Pattern to match the file path and line number
   local pattern = "in%s+(.-):line%s+(%d+)"
 
   -- Search for the first match
-  local path, line = stack_trace:match(pattern)
+  local path, line = trace:match(pattern)
 
   -- Return the result as a table
   if path and line then
