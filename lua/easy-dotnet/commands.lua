@@ -426,6 +426,9 @@ M._server = {
         require("easy-dotnet.rpc.rpc").global_rpc_client:restart(function() on_finished(true) end)
       end,
     },
+    logdump = {
+      handle = function() require("easy-dotnet.rpc.server").dump_logs() end,
+    },
   },
 }
 
