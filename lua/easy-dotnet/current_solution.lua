@@ -166,7 +166,6 @@ function M.get_or_pick_solution(cb)
   pick_solution(function(path)
     if path then M.set_solution(path) end
     coroutine.wrap(cb)(path)
-    cb(path)
   end)
 end
 
