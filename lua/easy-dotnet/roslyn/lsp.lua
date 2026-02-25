@@ -355,6 +355,10 @@ function M.enable(opts)
   ---@type vim.lsp.Config
   vim.lsp.config[constants.lsp_client_name] = {
     cmd = cmd,
+    cmd_env = {
+      --TODO: use this for when server allows changing configuration
+      -- Configuration = "Release",
+    },
     filetypes = { "cs" },
     root_dir = M.find_project_or_solution,
     capabilities = cap,
