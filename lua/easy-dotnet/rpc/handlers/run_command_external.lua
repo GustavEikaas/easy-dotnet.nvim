@@ -42,7 +42,7 @@ return function(params, response, throw, validate)
 
   local handle
 
-  handle, _ = vim.uv.spawn(opts.command, {
+  handle = vim.uv.spawn(opts.command, {
     args = full_args,
     detached = true,
     cwd = (command.workingDirectory and command.workingDirectory ~= "") and command.workingDirectory or nil,
