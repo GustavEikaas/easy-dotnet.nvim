@@ -8,7 +8,6 @@ local function get_state() return require("easy-dotnet.terminal").state end
 
 ---@class easy-dotnet.Server.RunCommand
 ---@field executable string The executable to run (e.g., "dotnet")
----@field external boolean Whether to run in external terminal
 ---@field arguments string[] List of command-line arguments
 ---@field workingDirectory string Working directory for the command
 ---@field environmentVariables table<string, string> Environment variables to set
