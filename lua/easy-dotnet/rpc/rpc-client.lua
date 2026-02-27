@@ -129,7 +129,6 @@ local handlers = {
   runCommand = require("easy-dotnet.rpc.handlers.run_command_managed"),
   runCommandManaged = require("easy-dotnet.rpc.handlers.run_command_managed"),
   runCommandExternal = require("easy-dotnet.rpc.handlers.run_command_external"),
-  notifyExternalTerminalExited = require("easy-dotnet.rpc.handlers.notify_external_terminal_exited"),
 }
 
 ---Handles a server-initiated RPC request using a registered handler.
