@@ -90,6 +90,10 @@ end
 local M = {
   ---@type easy-dotnet.Options
   options = {
+    managed_terminal = {
+      auto_hide = true,
+      auto_hide_delay = 1000,
+    },
     -- Optional configuration for external terminals (matches nvim-dap structure)
     external_terminal = nil,
     ---@param path string

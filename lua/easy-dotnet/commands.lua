@@ -444,6 +444,20 @@ M.diagnostic = {
   },
 }
 
+M.terminal = {
+  subcommands = {
+    toggle = {
+      handle = function() require("easy-dotnet.terminal").toggle() end,
+    },
+    show = {
+      handle = function() require("easy-dotnet.terminal").show() end,
+    },
+    hide = {
+      handle = function() require("easy-dotnet.terminal").hide() end,
+    },
+  },
+}
+
 M.lsp = {
   subcommands = {
     start = {

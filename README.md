@@ -130,6 +130,10 @@ Although not *required* by the plugin, it is highly recommended to install one o
     local dotnet = require("easy-dotnet")
     -- Options are not required
     dotnet.setup({
+     managed_terminal = {
+       auto_hide = true, -- auto hides terminal if exit code is 0
+       auto_hide_delay = 1000, -- delay before auto hiding, 0 = instant
+     },
       -- Optional configuration for external terminals (matches nvim-dap structure)
       external_terminal = nil,
       lsp = {
