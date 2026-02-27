@@ -125,7 +125,11 @@ local handlers = {
   promptMultiSelection = require("easy-dotnet.rpc.handlers.prompt_selections"),
   startDebugSession = require("easy-dotnet.rpc.handlers.start_debug_session"),
   terminateDebugSession = require("easy-dotnet.rpc.handlers.terminate_debug_session"),
-  runCommand = require("easy-dotnet.rpc.handlers.run_command"),
+  ---@deprecated we can remove this later when server is updated and we stopped using runCommand
+  runCommand = require("easy-dotnet.rpc.handlers.run_command_managed"),
+  runCommandManaged = require("easy-dotnet.rpc.handlers.run_command_managed"),
+  runCommandExternal = require("easy-dotnet.rpc.handlers.run_command_external"),
+  notifyExternalTerminalExited = require("easy-dotnet.rpc.handlers.notify_external_terminal_exited"),
 }
 
 ---Handles a server-initiated RPC request using a registered handler.
@@ -255,7 +259,10 @@ end
 ---Connects to the RPC pipe and starts listening for messages.
 ---@param cb fun() Called when connection is established (or fail
 function M.connect(cb)
-  if is_connected and connection then cb() end
+  if is_connected and connection then
+    cb()
+    return
+  end
   if not pipe_path then error("StreamJsonRpc client: setup() must be called before connect()") end
 
   local pipe = vim.loop.new_pipe(false)
@@ -434,6 +441,8 @@ function M.disconnect()
 
   is_connected = false
   callbacks = {}
+  cancellation_callbacks = {}
+  notification_callbacks = {}
   request_id = 0
 
   return true
