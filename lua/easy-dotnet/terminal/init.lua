@@ -5,7 +5,6 @@
 ---@field header_win integer|nil
 ---@field job_id integer|nil
 ---@field timer any|nil
----@field is_running boolean
 ---@field last_status string|nil  "running"|"finished"
 ---@field last_exit_code integer|nil
 ---@field exec_name string|nil
@@ -19,7 +18,6 @@ local state = {
   header_win = nil,
   job_id = nil,
   timer = nil,
-  is_running = false,
   last_status = nil,
   last_exit_code = nil,
   exec_name = nil,
@@ -59,7 +57,7 @@ function M.show()
 
   if state.last_status then header.update_header(state.last_status, state.last_exit_code) end
 
-  if state.is_running and state.job_id then
+  if state.job_id then
     if state.timer then
       state.timer:stop()
       if not state.timer:is_closing() then state.timer:close() end

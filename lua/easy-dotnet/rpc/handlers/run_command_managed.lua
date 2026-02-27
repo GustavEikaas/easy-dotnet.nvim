@@ -1,7 +1,3 @@
-local header = require("easy-dotnet.terminal.header")
-
-local function get_state() return require("easy-dotnet.terminal").state end
-
 ---@class easy-dotnet.Job.TrackedJob
 ---@field jobId string
 ---@field command easy-dotnet.Server.RunCommand
@@ -14,7 +10,8 @@ local function get_state() return require("easy-dotnet.terminal").state end
 
 ---@param params easy-dotnet.Job.TrackedJob
 return function(params, response, throw, validate)
-  local state = get_state()
+  local header = require("easy-dotnet.terminal.header")
+  local state = require("easy-dotnet.terminal").state
   local job_id_ok, job_id_err = validate({ jobId = "string" }, params)
   if not job_id_ok then
     throw({ code = -32602, message = job_id_err })
@@ -24,11 +21,6 @@ return function(params, response, throw, validate)
   local command = params.command
   if not command then
     throw({ code = -32602, message = "Missing nested 'command' object" })
-    return
-  end
-
-  if state.is_running then
-    throw({ code = -32000, message = "A job is already running in the terminal" })
     return
   end
 
@@ -79,9 +71,9 @@ return function(params, response, throw, validate)
     on_exit = function(_, exit_code, _)
       local managed_terminal_opts = require("easy-dotnet.options").get_option("managed_terminal")
       local terminal = require("easy-dotnet.terminal")
-      state.is_running = false
       state.last_status = "finished"
       state.last_exit_code = exit_code
+      state.job_id = nil
 
       vim.schedule(function()
         header.cleanup_header()
@@ -100,7 +92,7 @@ return function(params, response, throw, validate)
               vim.schedule_wrap(function()
                 hide_timer:stop()
                 if not hide_timer:is_closing() then hide_timer:close() end
-                if not state.is_running then terminal.hide() end
+                terminal.hide()
               end)
             )
           else
@@ -120,7 +112,6 @@ return function(params, response, throw, validate)
   end
 
   state.job_id = job_id
-  state.is_running = true
   state.last_status = "running"
   state.last_exit_code = nil
 
