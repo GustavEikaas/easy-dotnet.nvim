@@ -47,12 +47,12 @@ local function does_file_belong_to_active_client(client, bufnr)
   }
   local response = client:request_sync("textDocument/_vs_getProjectContexts", params, 1000, bufnr)
   if not response or response.err then
-    local err_msg = response and response.err and response.err.message or "Timeout or No Response"
+    local err_msg = response and response.err and (response.err.message or "Timeout or No Response")
     logger.warn("Roslyn failed to resolve project context: " .. err_msg)
     return false
   end
 
-  if not response.result._vs_projectContexts then return false end
+  if not response.result or not response.result._vs_projectContexts then return false end
 
   local default_idx = response.result._vs_defaultIndex or 1
   local context = response.result._vs_projectContexts[default_idx + 1]
