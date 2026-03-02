@@ -281,8 +281,8 @@ M.keymaps = function()
     },
     [keymap.debug_test.lhs] = {
       handle = function(node, win)
-        if node.type ~= "test" and node.type ~= "test_group" then
-          logger.error("Debugging is only supported for tests and test_groups")
+        if node.type == "sln" then
+          logger.error("Debugging is not supported for solutions")
           return
         end
         local success, dap = pcall(function() return require("dap") end)
@@ -291,9 +291,11 @@ M.keymaps = function()
           return
         end
         win.hide()
-        vim.cmd("edit " .. node.file_path)
-        vim.api.nvim_win_set_cursor(0, { node.line_number and (node.is_MTP and node.line_number + 1 or (node.line_number - 1)) or 0, 0 })
-        dap.set_breakpoint()
+        if node.type == "test" or node.type == "test_group" then
+          vim.cmd("edit " .. node.file_path)
+          vim.api.nvim_win_set_cursor(0, { node.line_number and (node.is_MTP and node.line_number + 1 or (node.line_number - 1)) or 0, 0 })
+          dap.set_breakpoint()
+        end
         debug_tests(node, win)
       end,
       desc = keymap.debug_test.desc,
