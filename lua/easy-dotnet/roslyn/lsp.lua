@@ -321,7 +321,7 @@ function M.enable(opts)
     return
   end
   source_generated_autocmd()
-  local cmd = { "dotnet", "easydotnet", "roslyn", "start" }
+  local cmd = { "dotnet-easydotnet", "roslyn", "start" }
 
   if opts.roslynator_enabled then table.insert(cmd, "--roslynator") end
   if opts.easy_dotnet_analyzer_enabled then table.insert(cmd, "--easy-dotnet-analyzer") end

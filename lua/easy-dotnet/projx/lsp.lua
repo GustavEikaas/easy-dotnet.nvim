@@ -12,7 +12,7 @@ function M.enable()
   end
   ---@type vim.lsp.Config
   vim.lsp.config[constants.lsp_projx_client_name] = {
-    cmd = { "dotnet", "easydotnet", "projx-language-server" },
+    cmd = { "dotnet-easydotnet", "projx-language-server" },
     filetypes = { "xml" },
     root_dir = function(buf_nr, cb)
       local buf_path = vim.fs.normalize(vim.api.nvim_buf_get_name(buf_nr))

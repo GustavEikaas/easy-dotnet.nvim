@@ -70,7 +70,7 @@ function M.start(cb)
   local server_ready_prefix = "Named pipe server started: "
   local log_level = require("easy-dotnet.options").get_option("server").log_level
 
-  local args = { "dotnet", "easydotnet" }
+  local args = { "dotnet-easydotnet" }
   if type(log_level) == "string" then
     table.insert(args, "--logLevel")
     table.insert(args, log_level)
