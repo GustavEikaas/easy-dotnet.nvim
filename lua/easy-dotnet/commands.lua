@@ -247,27 +247,7 @@ M.createfile = {
 }
 
 M.testrunner = {
-  handle = function(_, options)
-    local test_runner = options and options.test_runner or nil
-    require("easy-dotnet.test-runner.runner").runner(test_runner)
-  end,
-  subcommands = {
-    refresh = {
-      handle = function(_, options)
-        local test_runner = options and options.test_runner or nil
-        require("easy-dotnet.test-runner.runner").refresh(test_runner)
-      end,
-      subcommands = {
-        ---@deprecated building happens automatically now
-        build = {
-          handle = function(_, options)
-            local test_runner = options and options.test_runner or nil
-            require("easy-dotnet.test-runner.runner").refresh(test_runner)
-          end,
-        },
-      },
-    },
-  },
+  handle = function(_, options) require("easy-dotnet.test-runner").open(options.test_runner) end,
 }
 
 M.outdated = {

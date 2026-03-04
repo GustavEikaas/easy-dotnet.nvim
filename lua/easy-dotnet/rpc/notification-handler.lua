@@ -77,6 +77,30 @@ M.handler = function(client, method, params)
         vim.fn.setqflist({})
         vim.cmd("cclose")
       end
+    elseif method == "registerTest" then
+      local state = require("easy-dotnet.test-runner.state")
+      local render = require("easy-dotnet.test-runner.render")
+      if not params or not params.test then return end
+      vim.schedule(function()
+        state.register(params.test)
+        render.refresh()
+      end)
+    elseif method == "updateStatus" then
+      local state = require("easy-dotnet.test-runner.state")
+      local render = require("easy-dotnet.test-runner.render")
+      if not params or not params.id then return end
+      vim.schedule(function()
+        state.update_status(params.id, params.status, params.availableActions)
+        render.refresh()
+      end)
+    elseif method == "testrunner/statusUpdate" then
+      local state = require("easy-dotnet.test-runner.state")
+      local render = require("easy-dotnet.test-runner.render")
+      if not params then return end
+      vim.schedule(function()
+        state.update_runner_status(params)
+        render.refresh()
+      end)
     else
       vim.print("Unknown server notification " .. method)
     end
