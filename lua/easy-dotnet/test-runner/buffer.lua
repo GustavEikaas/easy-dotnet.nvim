@@ -4,8 +4,8 @@ local state = require("easy-dotnet.test-runner.state")
 local logger = require("easy-dotnet.logger")
 
 local ns_signs = vim.api.nvim_create_namespace("easy_dotnet_test_signs")
-local extmark_ids = {} -- filepath → { nodeId → extmark_id }
-local registered_bufs = {} -- bufnr/filepath → true
+local extmark_ids = {}
+local registered_bufs = {}
 
 local function norm(path)
   if not path then return nil end
@@ -97,10 +97,6 @@ local function node_at_line(filepath, line)
   return class_match
 end
 
--- ---------------------------------------------------------------------------
--- Extmarks
--- ---------------------------------------------------------------------------
-
 function M.apply_signs(filepath)
   local bufnr = vim.fn.bufnr(filepath)
   if bufnr == -1 or not vim.api.nvim_buf_is_valid(bufnr) then return end
@@ -140,10 +136,6 @@ function M.update_sign(node)
   end
 end
 
--- ---------------------------------------------------------------------------
--- Keymaps
--- ---------------------------------------------------------------------------
-
 function M.register_buf_keymaps(bufnr, client)
   local km = require("easy-dotnet.options").get_option("test_runner").mappings
 
@@ -151,7 +143,7 @@ function M.register_buf_keymaps(bufnr, client)
 
   local function current_node()
     local filepath = norm(vim.api.nvim_buf_get_name(bufnr))
-    local line = vim.api.nvim_win_get_cursor(0)[1] - 1 -- 0-based
+    local line = vim.api.nvim_win_get_cursor(0)[1] - 1
     local node = node_at_line(filepath, line)
     if not node then logger.warn(string.format("No test at line %d", line + 1)) end
     return node
@@ -211,10 +203,6 @@ function M.register_buf_keymaps(bufnr, client)
   end)
 end
 
--- ---------------------------------------------------------------------------
--- Public
--- ---------------------------------------------------------------------------
-
 function M.attach(filepath, client)
   if not filepath then return end
 
@@ -243,22 +231,19 @@ function M.attach(filepath, client)
       end,
     })
 
-    -- Per-file monotonic version counter — echoed back by the server so we
-    -- can discard responses that arrive out of order (save twice quickly).
     local version = 0
 
     vim.api.nvim_create_autocmd("BufWritePost", {
       pattern = filepath,
       callback = function(ev)
         version = version + 1
-        local v = version -- capture for closure
+        local v = version
 
         local lines = vim.api.nvim_buf_get_lines(ev.buf, 0, -1, false)
         local content = table.concat(lines, "\n")
 
         client.testrunner:sync_file(filepath, content, v, function(result)
           if not result then return end
-          -- Discard if a newer save has been sent since this one
           if result.version < version then return end
 
           local any_changed = false
@@ -278,7 +263,6 @@ function M.on_status_update(node)
   vim.schedule(function()
     M.update_sign(node)
 
-    -- Flash the method group when a terminal result arrives
     local stype = node.status and node.status.type or nil
     if not stype then return end
     local stype_norm = stype:sub(1, 1):upper() .. stype:sub(2)
@@ -289,7 +273,7 @@ function M.on_status_update(node)
       Skipped = "EasyDotnetTestRunnerSkipped",
     })[stype_norm]
 
-    if not hl then return end -- Running/Debugging — no result flash
+    if not hl then return end
 
     local bufnr = vim.fn.bufnr(node.filePath or "")
     if bufnr == -1 or not vim.api.nvim_buf_is_valid(bufnr) then return end
