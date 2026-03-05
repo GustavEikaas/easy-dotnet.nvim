@@ -101,6 +101,16 @@ M.handler = function(client, method, params)
         state.update_runner_status(params)
         render.refresh()
       end)
+    elseif method == "updateStatusBatch" then
+      local state = require("easy-dotnet.test-runner.state")
+      local render = require("easy-dotnet.test-runner.render")
+      if not params or not params.updates then return end
+      vim.schedule(function()
+        for _, update in ipairs(params.updates) do
+          state.update_status(update.id, update.status, update.availableActions)
+        end
+        render.refresh()
+      end)
     else
       vim.print("Unknown server notification " .. method)
     end

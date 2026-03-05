@@ -54,7 +54,7 @@ end
 local function render_node(node, depth)
   local icons = M.options.icons or {}
   local indent = string.rep(" ", depth * 2)
-  local pre = node_pre_icon(node.type and node.type.Type or "", M.options)
+  local pre = node_pre_icon(node.type and node.type.type or "", M.options)
   local expand_icon = ""
 
   -- Show expand/collapse indicator for nodes that have children
@@ -81,7 +81,7 @@ local function render_node(node, depth)
       TestMethod = "EasyDotnetTestRunnerTest",
       Subcase = "EasyDotnetTestRunnerSubcase",
     }
-    hl = type_hls[node.type.Type]
+    hl = type_hls[node.type.type]
   end
 
   local line = string.format("%s%s%s %s%s", indent, expand_icon, pre, node.displayName, status_suffix)
