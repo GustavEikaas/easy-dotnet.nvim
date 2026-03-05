@@ -152,6 +152,7 @@ local M = {
         collapse_all = { lhs = "W", desc = "collapse all" },
         close = { lhs = "q", desc = "close testrunner" },
         refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" },
+        cancel = { lhs = "<C-c>", desc = "cancel in-flight operation" },
       },
       additional_args = {},
     },

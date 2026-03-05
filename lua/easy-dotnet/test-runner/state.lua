@@ -31,6 +31,8 @@ local M = {}
 ---@type table<string, easy-dotnet.TestRunner.Node>
 M.nodes = {}
 
+M.current_handle = nil
+
 -- Top-level runner status from testrunner/statusUpdate
 ---@type easy-dotnet.TestRunner.RunnerStatus
 M.runner_status = {

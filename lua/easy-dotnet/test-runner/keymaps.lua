@@ -31,6 +31,11 @@ function M.register(buf, client, options)
     end)
   )
 
+  map(km.cancel and km.cancel.lhs or "<C-c>", "Cancel operation", function()
+    local handle = require("easy-dotnet.test-runner.state").current_handle
+    if handle then handle.cancel() end
+  end)
+
   -- O: expand all children recursively from cursor
   map(
     km.expand_node and km.expand_node.lhs or "O",
@@ -80,7 +85,7 @@ function M.register(buf, client, options)
         logger.warn("Run not available for this node")
         return
       end
-      client.testrunner:run(node.id)
+      state.current_handle = client.testrunner:run(node.id)
     end)
   )
 
@@ -94,7 +99,7 @@ function M.register(buf, client, options)
         return
       end
       render.hide()
-      client.testrunner:debug(node.id)
+      state.current_handle = client.testrunner:debug(node.id)
     end)
   )
 
