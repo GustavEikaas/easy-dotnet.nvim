@@ -88,9 +88,25 @@ local function render_node(node, depth)
   return line, hl
 end
 
---- Rebuild the buffer from current state.
+local function build_winbar(rs)
+  if not rs then return "" end
+
+  local counts =
+    string.format("%%#EasyDotnetTestRunnerPassed#  %d%%*" .. " %%#EasyDotnetTestRunnerFailed#  %d%%*" .. " %%#EasyDotnetTestRunnerSkipped# ⊘ %d%%*", rs.totalPassed, rs.totalFailed, rs.totalSkipped)
+
+  local total = string.format("  %d tests", rs.totalTests or 0)
+
+  if rs.isLoading then
+    local op = rs.currentOperation or "Loading"
+    return string.format(" ⟳ %s  %s%s", op, counts, total)
+  end
+
+  return string.format(" %s%s   %s", counts, total, rs.overallStatus or "")
+end
+
 function M.refresh()
   if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then return end
+  if not M.win or not vim.api.nvim_win_is_valid(M.win) then return end
 
   vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
   vim.api.nvim_set_option_value("modifiable", true, { buf = M.buf })
@@ -104,30 +120,13 @@ function M.refresh()
     if hl then table.insert(highlights, { row = #lines - 1, hl = hl }) end
   end)
 
-  -- Status bar at top (virtual text on line 0)
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, lines)
   vim.api.nvim_set_option_value("modifiable", false, { buf = M.buf })
 
   for _, h in ipairs(highlights) do
     vim.api.nvim_buf_add_highlight(M.buf, ns_id, h.hl, h.row, 0, -1)
   end
-
-  -- Status bar virtual text
-  local rs = state.runner_status
-  if rs.isLoading and rs.currentOperation then
-    vim.api.nvim_buf_set_extmark(M.buf, ns_id, 0, 0, {
-      virt_text = { { rs.currentOperation .. " …", "Character" } },
-      virt_text_pos = "right_align",
-      priority = 200,
-    })
-  elseif not rs.isLoading then
-    local summary = string.format(" %d  %d  %d", rs.totalPassed, rs.totalFailed, rs.totalSkipped)
-    vim.api.nvim_buf_set_extmark(M.buf, ns_id, 0, 0, {
-      virt_text = { { summary, "Comment" } },
-      virt_text_pos = "right_align",
-      priority = 200,
-    })
-  end
+  vim.wo[M.win].winbar = build_winbar(state.runner_status)
 end
 
 --- Translate cursor line → node
@@ -157,7 +156,7 @@ function M.open(mode, options)
 
   if mode == "float" then
     local width = math.floor(vim.o.columns * 0.8)
-    local height = math.floor(vim.o.lines * 0.8)
+    local height = math.floor(vim.o.lines * 0.8) + 1
     M.win = vim.api.nvim_open_win(M.buf, true, {
       relative = "editor",
       width = width,
@@ -170,13 +169,30 @@ function M.open(mode, options)
     vim.wo[M.win].winfixbuf = true
   elseif mode == "split" then
     vim.cmd("split")
+
     M.win = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_buf(M.win, M.buf)
+    local win = M.win
+    vim.api.nvim_create_autocmd("WinClosed", {
+      once = true,
+      win = M.win,
+      callback = function()
+        if M.win == win then M.win = nil end
+      end,
+    })
   elseif mode == "vsplit" then
     local w = options and options.vsplit_width or math.floor(vim.o.columns * 0.4)
     vim.cmd((options and options.vsplit_pos or "") .. tostring(w) .. "vsplit")
     M.win = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_buf(M.win, M.buf)
+    local win = M.win
+    vim.api.nvim_create_autocmd("WinClosed", {
+      once = true,
+      win = M.win,
+      callback = function()
+        if M.win == win then M.win = nil end
+      end,
+    })
   end
 
   if M.win and vim.api.nvim_win_is_valid(M.win) then vim.api.nvim_set_option_value("cursorline", true, { win = M.win }) end
