@@ -6,6 +6,7 @@
 ---@field invalidate fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult)): easy-dotnet.RPC.CallHandle
 ---@field get_results fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb: fun(result: easy-dotnet.TestRunner.Results)): easy-dotnet.RPC.CallHandle
 ---@field get_build_errors fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb: fun(result: easy-dotnet.TestRunner.BuildErrorsResult)): easy-dotnet.RPC.CallHandle
+---@field sync_file fun(self: easy-dotnet.RPC.Client.TestRunner, path: string, content: string, version: integer, cb: fun(result: easy-dotnet.TestRunner.SyncFileResult)): easy-dotnet.RPC.CallHandle
 
 ---@class easy-dotnet.TestRunner.OperationResult
 ---@field success boolean
@@ -32,6 +33,16 @@
 ---@field lineNumber integer|nil
 ---@field columnNumber integer|nil
 ---@field message string|nil
+
+---@class easy-dotnet.TestRunner.SyncFileResult
+---@field updates easy-dotnet.TestRunner.LineNumberUpdate[]
+---@field version integer
+
+---@class easy-dotnet.TestRunner.LineNumberUpdate
+---@field id string
+---@field signatureLine integer
+---@field bodyStartLine integer
+---@field endLine integer
 
 local M = {}
 M.__index = M
@@ -111,6 +122,23 @@ function M:get_build_errors(node_id, cb)
     client = self._client,
     method = "testrunner/getBuildErrors",
     params = { id = node_id },
+    cb = cb,
+  })()
+end
+
+--- testrunner/syncFile — parse in-memory buffer content and update line numbers.
+--- Called on BufWritePost for known test files. Version is a monotonic counter
+--- per file — stale responses (version < latest sent) are discarded by the caller.
+---@param path string absolute file path
+---@param content string full buffer content joined with "\n"
+---@param version integer monotonically increasing per-file counter
+---@param cb fun(result: easy-dotnet.TestRunner.SyncFileResult)
+function M:sync_file(path, content, version, cb)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  return helper.create_rpc_call({
+    client = self._client,
+    method = "testrunner/syncFile",
+    params = { path = path, content = content, version = version },
     cb = cb,
   })()
 end

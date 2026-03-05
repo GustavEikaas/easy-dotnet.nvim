@@ -8,7 +8,9 @@
 ---@field displayName string
 ---@field parentId string|nil
 ---@field filePath string|nil
----@field lineNumber integer|nil
+---@field signatureLine integer|nil
+---@field bodyStartLine integer|nil
+---@field endLine integer|nil
 ---@field type table  e.g. { Type = "TestMethod" }
 ---@field projectId string|nil
 ---@field availableActions string[]
@@ -45,7 +47,6 @@ M.runner_status = {
   totalCancelled = 0,
 }
 
--- The single root solution node id (set on first registerTest with parentId=nil)
 M.root_id = nil
 
 --- Upsert a node. Preserves local UI state (expanded) if the node already exists.
@@ -54,9 +55,6 @@ function M.register(node)
   local existing = M.nodes[node.id]
   local node_type = node.type and node.type.type or ""
 
-  -- Preserve existing expanded state, otherwise default:
-  -- Solution and Project nodes start expanded so the tree is visible immediately.
-  -- Everything else starts collapsed.
   if existing then
     node.expanded = existing.expanded
   else
@@ -144,6 +142,14 @@ function M.traverse_all(cb)
   end
 
   walk(M.root_id, 0)
+end
+
+function M.update_line_numbers(update)
+  local node = M.nodes[update.id]
+  if not node then return end
+  node.signatureLine = update.signatureLine
+  node.bodyStartLine = update.bodyStartLine
+  node.endLine = update.endLine
 end
 
 --- Returns true if the node has the given action available.

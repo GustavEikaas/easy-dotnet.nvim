@@ -135,9 +135,9 @@ function M.register(buf, client, options)
       if not node.filePath then return end
       render.hide()
       vim.cmd("edit " .. vim.fn.fnameescape(node.filePath))
-      if node.lineNumber then
+      if node.bodyStartLine then
         -- lineNumber is 0-based (LSP); nvim cursor is 1-based
-        vim.api.nvim_win_set_cursor(0, { node.lineNumber + 1, 0 })
+        vim.api.nvim_win_set_cursor(0, { node.bodyStartLine + 1, 0 })
       end
     end)
   )

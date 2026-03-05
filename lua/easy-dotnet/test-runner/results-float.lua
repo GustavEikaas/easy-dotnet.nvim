@@ -13,7 +13,6 @@ function M.open(node, result)
     if win and vim.api.nvim_win_is_valid(win) then vim.api.nvim_set_current_win(win) end
   end
 
-  -- Left pane: source file if available
   local file_float = nil
   if node.filePath and vim.fn.filereadable(node.filePath) == 1 then
     local contents = vim.fn.readfile(node.filePath)
@@ -21,9 +20,8 @@ function M.open(node, result)
     vim.wo[file_float.win].number = true
   end
 
-  -- Right pane: error message + stack frames + stdout
   local detail_lines = {}
-  local highlights = {} -- { row, hl_group }
+  local highlights = {}
 
   if result.errorMessage and #result.errorMessage > 0 then
     for _, line in ipairs(result.errorMessage) do
@@ -33,7 +31,6 @@ function M.open(node, result)
     table.insert(detail_lines, "")
   end
 
-  -- frame_map: row (0-based) → frame, for jump-to-frame on <CR>
   local frame_map = {}
   if result.frames and #result.frames > 0 then
     for _, frame in ipairs(result.frames) do
@@ -68,23 +65,21 @@ function M.open(node, result)
     vim.api.nvim_buf_add_highlight(detail_float.buf, ns_id, hl[2], hl[1], 0, -1)
   end
 
-  -- Scroll source file to failing frame
   if file_float and result.failingFrame and result.failingFrame.line then
-    local line = result.failingFrame.line -- 1-based from server
+    local line = result.failingFrame.line
     local max = vim.api.nvim_buf_line_count(file_float.buf)
     line = math.max(1, math.min(line, max))
     vim.api.nvim_win_set_cursor(file_float.win, { line, 0 })
     vim.api.nvim_win_call(file_float.win, function() vim.cmd("normal! zz") end)
     vim.api.nvim_buf_add_highlight(file_float.buf, ns_id, "EasyDotnetTestRunnerFailed", line - 1, 0, -1)
-  elseif file_float and node.lineNumber then
-    local line = node.lineNumber + 1 -- convert 0-based to 1-based
+  elseif file_float and node.bodyStartLine then
+    local line = node.bodyStartLine + 1
     local max = vim.api.nvim_buf_line_count(file_float.buf)
     line = math.max(1, math.min(line, max))
     vim.api.nvim_win_set_cursor(file_float.win, { line, 0 })
     vim.api.nvim_win_call(file_float.win, function() vim.cmd("normal! zz") end)
   end
 
-  -- <CR> / gf in detail pane: jump to that stack frame
   local function jump_to_frame()
     local cursor = vim.api.nvim_win_get_cursor(detail_float.win)
     local frame = frame_map[cursor[1] - 1]
@@ -105,7 +100,7 @@ function M.open(node, result)
     render.hide()
     if file_float then vim.api.nvim_win_close(file_float.win, true) end
     vim.cmd("edit " .. vim.fn.fnameescape(node.filePath))
-    local target = (result.failingFrame and result.failingFrame.line) or (node.lineNumber and node.lineNumber + 1)
+    local target = (result.failingFrame and result.failingFrame.line) or (node.bodyStartLine and node.bodyStartLine + 1)
     if target then
       pcall(vim.api.nvim_win_set_cursor, 0, { target, 0 })
       vim.cmd("normal! zz")

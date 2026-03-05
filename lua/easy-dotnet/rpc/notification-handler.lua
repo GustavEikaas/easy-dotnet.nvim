@@ -80,17 +80,22 @@ M.handler = function(client, method, params)
     elseif method == "registerTest" then
       local state = require("easy-dotnet.test-runner.state")
       local render = require("easy-dotnet.test-runner.render")
+      local buffer = require("easy-dotnet.test-runner.buffer")
       if not params or not params.test then return end
       vim.schedule(function()
         state.register(params.test)
+        if params.test.filePath then buffer.attach(params.test.filePath, client) end
         render.refresh()
       end)
     elseif method == "updateStatus" then
       local state = require("easy-dotnet.test-runner.state")
       local render = require("easy-dotnet.test-runner.render")
+      local buffer = require("easy-dotnet.test-runner.buffer")
       if not params or not params.id then return end
       vim.schedule(function()
         state.update_status(params.id, params.status, params.availableActions)
+        local node = state.nodes[params.id]
+        if node then buffer.on_status_update(node) end
         render.refresh()
       end)
     elseif method == "testrunner/statusUpdate" then
@@ -104,10 +109,13 @@ M.handler = function(client, method, params)
     elseif method == "updateStatusBatch" then
       local state = require("easy-dotnet.test-runner.state")
       local render = require("easy-dotnet.test-runner.render")
+      local buffer = require("easy-dotnet.test-runner.buffer")
       if not params or not params.updates then return end
       vim.schedule(function()
         for _, update in ipairs(params.updates) do
           state.update_status(update.id, update.status, update.availableActions)
+          local node = state.nodes[update.id]
+          if node then buffer.on_status_update(node) end
         end
         render.refresh()
       end)
