@@ -80,14 +80,6 @@ function M.request_build(project_path)
   return success
 end
 
-local function count_segments(path)
-  local count = 0
-  for _ in path:gmatch("[^.]+") do
-    count = count + 1
-  end
-  return count
-end
-
 local function update_indent_recursively(node, base_indent)
   node.indent = base_indent
   for _, child in pairs(node.children or {}) do
@@ -129,17 +121,12 @@ local function flatten_namespaces(node)
 end
 
 ---@param root easy-dotnet.TestRunner.Node Treenode
----@param path string E.X neovimdebugproject.test.helpers
----@param has_arguments boolean does the test class use classdata,inlinedata etc. Add_ShouldReturnSum(a: -1, b: 1, expected: 0) == true
----@param test easy-dotnet.TestRunner.Test The test the path was referenced from, used for getting stuff like csproject path and sln path
+---@param parts string[]
+---@param has_arguments boolean does the test method use classdata,inlinedata etc.
+---@param test easy-dotnet.TestRunner.Test
 ---@param options easy-dotnet.TestRunner.Options
 ---@param offset_indent integer
-local function ensure_path(root, path, has_arguments, test, options, offset_indent)
-  local parts = {}
-  for part in path:gmatch("[^.]+") do
-    table.insert(parts, part)
-  end
-
+local function ensure_path(root, parts, has_arguments, test, options, offset_indent)
   local current = root.children
   for i, part in ipairs(parts) do
     if not current[part] then
@@ -173,23 +160,51 @@ end
 ---@param options easy-dotnet.TestRunner.Options
 ---@param project easy-dotnet.TestRunner.Node
 ---@return easy-dotnet.TestRunner.Node
+---@param tests easy-dotnet.TestRunner.Test[]
+---@param options easy-dotnet.TestRunner.Options
+---@param project easy-dotnet.TestRunner.Node
+---@return easy-dotnet.TestRunner.Node
 local function generate_tree(tests, options, project)
   local offset_indent = 2
   project.children = project.children or {}
 
   for _, test in ipairs(tests) do
-    local has_arguments = test.namespace:find("%(") ~= nil
-    local base_name = test.namespace:match("([^%(]+)") or test.namespace
-    ensure_path(project, base_name, has_arguments, test, options, offset_indent)
+    local parts = {}
+    local current_part = ""
+    local depth = 0
+    for i = 1, #test.namespace do
+      local c = test.namespace:sub(i, i)
+      if c == "(" then depth = depth + 1 end
+      if c == ")" then depth = depth - 1 end
+      if c == "." and depth == 0 then
+        table.insert(parts, current_part)
+        current_part = ""
+      else
+        current_part = current_part .. c
+      end
+    end
+    table.insert(parts, current_part)
 
-    -- If the test has arguments, add it as a subcase
-    if test.namespace:find("%(") then
+    local leaf = parts[#parts]
+    local has_arguments = leaf:find("%(") ~= nil
+    local base_leaf = leaf:match("([^%(]+)") or leaf
+
+    local base_parts = {}
+    for i = 1, #parts - 1 do
+      table.insert(base_parts, parts[i])
+    end
+    table.insert(base_parts, base_leaf)
+
+    ensure_path(project, base_parts, has_arguments, test, options, offset_indent)
+
+    if has_arguments then
       local parent = project.children
-      for part in base_name:gmatch("[^.]+") do
+      for _, part in ipairs(base_parts) do
         parent = parent[part].children
       end
+
       parent[test.namespace] = {
-        name = test.namespace:match("([^.]+%b())$"),
+        name = leaf, -- e.g., "HaveFun(arg: 1)"
         displayName = test.display_name,
         namespace = test.namespace,
         children = {},
@@ -200,7 +215,7 @@ local function generate_tree(tests, options, project)
         id = test.id,
         line_number = test.line_number,
         file_path = test.file_path,
-        indent = count_segments(base_name) * 2 + offset_indent,
+        indent = #base_parts * 2 + offset_indent,
         type = "subcase",
         highlight = "EasyDotnetTestRunnerSubcase",
         preIcon = options.icons.test,
