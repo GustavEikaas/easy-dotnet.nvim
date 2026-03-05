@@ -69,24 +69,30 @@ local function build_legend_line(node, opts)
 
   local km = opts and opts.mappings or {}
   local parts = {}
-  local hls = {} -- { col_start, col_end, hl_group }
-  local col = 1 -- 1-based for building, will shift to 0-based for nvim_buf_add_highlight
+  local hls = {}
+  local col = 1 -- starts at 1 to account for the leading " " prepended at the end
 
   for i, action in ipairs(node.availableActions) do
     local def = action_labels[action]
     if def then
       local key = (km[action:lower()] and km[action:lower()].lhs) or def.key
-      local segment = string.format("[%s] %s", key, def.label)
+      local bracket = "[" .. key .. "]"
+      local label = " " .. def.label
+
       if i > 1 then
         table.insert(parts, "  ")
         col = col + 2
       end
-      -- highlight the [key] part
-      table.insert(hls, { col - 1, col - 1 + #key + 2, "Special" })
-      -- highlight the label part
-      table.insert(hls, { col - 1 + #key + 2, col - 1 + #segment, "Comment" })
-      table.insert(parts, segment)
-      col = col + #segment
+
+      -- [key] highlighted as Special
+      table.insert(hls, { col, col + #bracket, "Special" })
+      col = col + #bracket
+
+      -- label highlighted as Comment
+      table.insert(hls, { col, col + #label, "Comment" })
+      col = col + #label
+
+      table.insert(parts, bracket .. label)
     end
   end
 
@@ -134,10 +140,11 @@ local function open_header_float(main_cfg)
     width = main_cfg.width,
     height = 2,
     col = main_cfg.col,
-    row = main_cfg.row, -- sits at the top, main window is row+2
+    row = main_cfg.row,
     style = "minimal",
     border = "rounded",
     focusable = false,
+    zindex = 51, -- above the main float (default is 50)
   })
   vim.wo[M.header_win].cursorline = false
   vim.wo[M.header_win].winhighlight = "Normal:NormalFloat"
@@ -177,14 +184,14 @@ function M.open(mode, options)
     local col = math.floor((vim.o.columns - width) / 2)
     local row = math.floor((vim.o.lines - height) / 2)
 
-    -- Header sits above the main float (no border, flush width)
-    open_header_float({ width = width, height = height, col = col, row = row - 2 })
+    -- Header sits above the main float
+    open_header_float({ width = width, height = height, col = col, row = row - 3 })
 
-    -- Main float: full 80% size with border
+    -- Main float: shifted down to give header room (header=2 lines + 1 gap)
     M.win = vim.api.nvim_open_win(M.buf, true, {
       relative = "editor",
       width = width,
-      height = height,
+      height = height - 3,
       col = col,
       row = row,
       style = "minimal",
@@ -294,7 +301,8 @@ end
 
 local function render_node(node, depth)
   local indent = string.rep(" ", depth * 2)
-  local pre = node_pre_icon(node.type and node.type.type or "", M.options)
+  local ntype = node.type and node.type.type or ""
+  local pre = node_pre_icon(ntype, M.options)
   local expand_icon = ""
   local children = state.children(node.id)
   if #children > 0 then
@@ -311,7 +319,7 @@ local function render_node(node, depth)
     if stype == "Passed" and node.status.durationDisplay then status_suffix = "  " .. node.status.durationDisplay end
   end
 
-  if not hl and node.type then
+  if not hl then
     hl = ({
       Solution = "EasyDotnetTestRunnerSolution",
       Project = "EasyDotnetTestRunnerProject",
@@ -319,7 +327,7 @@ local function render_node(node, depth)
       TestClass = "EasyDotnetTestRunnerDir",
       TestMethod = "EasyDotnetTestRunnerTest",
       Subcase = "EasyDotnetTestRunnerSubcase",
-    })[node.type.type]
+    })[ntype]
   end
 
   return string.format("%s%s%s %s%s", indent, expand_icon, pre, node.displayName, status_suffix), hl
@@ -347,7 +355,7 @@ function M.refresh()
     vim.api.nvim_buf_add_highlight(M.buf, ns_id, h.hl, h.row, 0, -1)
   end
 
-  -- Update header with current cursor node
+  -- Update header: status always, legend based on node under cursor
   refresh_header(M.node_at_cursor())
 end
 

@@ -52,7 +52,7 @@ M.root_id = nil
 ---@param node easy-dotnet.TestRunner.Node
 function M.register(node)
   local existing = M.nodes[node.id]
-  local node_type = node.type and node.type.Type or ""
+  local node_type = node.type and node.type.type or ""
 
   -- Preserve existing expanded state, otherwise default:
   -- Solution and Project nodes start expanded so the tree is visible immediately.

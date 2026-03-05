@@ -313,8 +313,8 @@ M.setup = function(opts)
   end
 
   if merged_opts.test_runner.enable_buffer_test_execution then
-    require("easy-dotnet.cs-mappings").add_test_signs()
-    require("easy-dotnet.fs-mappings").add_test_signs()
+    -- require("easy-dotnet.cs-mappings").add_test_signs()
+    -- require("easy-dotnet.fs-mappings").add_test_signs()
   end
 
   polyfills.iter(collect_commands_with_handles(commands)):each(function(name, handle)
