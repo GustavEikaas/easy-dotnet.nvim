@@ -1,7 +1,3 @@
---- Test runner render module.
---- Pure renderer — reads from state.lua, writes to a buffer.
---- No test logic, no tree building, no status aggregation.
-
 local ns_id = require("easy-dotnet.constants").ns_id
 local state = require("easy-dotnet.test-runner.state")
 
@@ -16,13 +12,9 @@ local M = {
 local ns_header = vim.api.nvim_create_namespace("easy_dotnet_testrunner_header")
 local ns_loader = vim.api.nvim_create_namespace("easy_dotnet_testrunner_loader")
 
--- ---------------------------------------------------------------------------
--- Sliding loader
--- ---------------------------------------------------------------------------
-
 local loader = {
   timer = nil,
-  pos = -180, -- start off left edge so segment grows in
+  pos = -180,
   width = 180,
   step = 3,
   interval = 60,
@@ -34,7 +26,6 @@ local function loader_tick()
 
   local win_width = vim.api.nvim_win_get_width(M.header_win)
 
-  -- Uniform ▁ track across the full width — color does all the work
   local line = string.rep("▂", win_width)
 
   vim.api.nvim_buf_clear_namespace(M.header_buf, ns_loader, 0, -1)
@@ -165,20 +156,15 @@ local function refresh_header(node)
   local rs = state.runner_status
   local status_line, status_hls = build_status_line(rs)
 
-  -- When loading, the legend row is owned by the sliding bar — don't overwrite it
   if rs and rs.isLoading then
     local win_width = vim.api.nvim_win_get_width(M.header_win)
     local pad = win_width - vim.fn.strdisplaywidth(status_line)
     if pad > 0 then status_line = status_line .. string.rep(" ", pad) end
-
     vim.api.nvim_buf_set_lines(M.header_buf, 0, 1, false, { status_line })
     vim.api.nvim_set_option_value("modifiable", false, { buf = M.header_buf })
-
     for _, hl in ipairs(status_hls) do
       vim.api.nvim_buf_add_highlight(M.header_buf, ns_header, hl[3], 0, hl[1], hl[2])
     end
-
-    loader_start()
     return
   end
 
@@ -192,8 +178,6 @@ local function refresh_header(node)
   for _, hl in ipairs(legend_hls) do
     vim.api.nvim_buf_add_highlight(M.header_buf, ns_header, hl[3], 1, hl[1], hl[2])
   end
-
-  loader_stop()
 end
 
 -- ---------------------------------------------------------------------------
@@ -414,6 +398,14 @@ end
 
 function M.refresh()
   if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then return end
+
+  local rs = state.runner_status
+  if rs and rs.isLoading then
+    loader_start()
+  else
+    loader_stop()
+  end
+
   if not M.win or not vim.api.nvim_win_is_valid(M.win) then return end
 
   vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
@@ -434,7 +426,6 @@ function M.refresh()
     vim.api.nvim_buf_add_highlight(M.buf, ns_id, h.hl, h.row, 0, -1)
   end
 
-  -- Update header: status always, legend based on node under cursor
   refresh_header(M.node_at_cursor())
 end
 
