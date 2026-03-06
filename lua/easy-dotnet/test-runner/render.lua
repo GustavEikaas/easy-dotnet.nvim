@@ -14,6 +14,66 @@ local M = {
 }
 
 local ns_header = vim.api.nvim_create_namespace("easy_dotnet_testrunner_header")
+local ns_loader = vim.api.nvim_create_namespace("easy_dotnet_testrunner_loader")
+
+-- ---------------------------------------------------------------------------
+-- Sliding loader
+-- ---------------------------------------------------------------------------
+
+local loader = {
+  timer = nil,
+  pos = -180, -- start off left edge so segment grows in
+  width = 180,
+  step = 3,
+  interval = 60,
+}
+
+local function loader_tick()
+  if not M.header_buf or not vim.api.nvim_buf_is_valid(M.header_buf) then return end
+  if not M.header_win or not vim.api.nvim_win_is_valid(M.header_win) then return end
+
+  local win_width = vim.api.nvim_win_get_width(M.header_win)
+
+  -- Uniform ▁ track across the full width — color does all the work
+  local line = string.rep("▂", win_width)
+
+  vim.api.nvim_buf_clear_namespace(M.header_buf, ns_loader, 0, -1)
+  vim.api.nvim_set_option_value("modifiable", true, { buf = M.header_buf })
+  vim.api.nvim_buf_set_lines(M.header_buf, 1, 2, false, { line })
+  vim.api.nvim_set_option_value("modifiable", false, { buf = M.header_buf })
+
+  local seg_start = math.max(loader.pos, 0)
+  local seg_end = math.min(loader.pos + loader.width, win_width)
+  if seg_start < seg_end then vim.api.nvim_buf_set_extmark(M.header_buf, ns_loader, 1, seg_start, {
+    end_col = seg_end,
+    hl_group = "EasyDotnetTestRunnerRunning",
+    priority = 150,
+  }) end
+
+  loader.pos = loader.pos + loader.step
+  if loader.pos >= win_width then loader.pos = -loader.width end
+end
+
+local function loader_start()
+  if loader.timer then return end -- already running
+  loader.pos = -loader.width
+  loader.timer = vim.uv.new_timer()
+  loader.timer:start(0, loader.interval, vim.schedule_wrap(loader_tick))
+end
+
+local function loader_stop()
+  if not loader.timer then return end
+  loader.timer:stop()
+  loader.timer:close()
+  loader.timer = nil
+  if M.header_buf and vim.api.nvim_buf_is_valid(M.header_buf) then
+    vim.api.nvim_buf_clear_namespace(M.header_buf, ns_loader, 0, -1)
+    -- Restore the legend row — refresh_header will rewrite it on next render
+    vim.api.nvim_set_option_value("modifiable", true, { buf = M.header_buf })
+    vim.api.nvim_buf_set_lines(M.header_buf, 1, 2, false, { "" })
+    vim.api.nvim_set_option_value("modifiable", false, { buf = M.header_buf })
+  end
+end
 
 -- Maps action → { key fallback, display label }
 local action_labels = {
@@ -33,7 +93,7 @@ local action_labels = {
 local function build_status_line(rs)
   if not rs then return "", {} end
 
-  local hls = {} -- { col_start, col_end, hl_group }
+  local hls = {}
   local parts = {}
   local col = 0
 
@@ -48,12 +108,8 @@ local function build_status_line(rs)
   local skipped_str = string.format("  ⊘ %d", rs.totalSkipped)
   local total_str = string.format("  %d tests", rs.totalTests or 0)
 
-  if rs.isLoading then
-    push(string.format(" ⟳ %s  ", rs.currentOperation or "Loading"), nil)
-  else
-    push(" ", nil)
-  end
-
+  -- No loading text — the sliding bar in ns_loader communicates activity
+  push(" ", nil)
   push(passed_str, "EasyDotnetTestRunnerPassed")
   push(failed_str, "EasyDotnetTestRunnerFailed")
   push(skipped_str, "EasyDotnetTestRunnerSkipped")
@@ -108,18 +164,36 @@ local function refresh_header(node)
 
   local rs = state.runner_status
   local status_line, status_hls = build_status_line(rs)
-  local legend_line, legend_hls = build_legend_line(node, M.options)
 
+  -- When loading, the legend row is owned by the sliding bar — don't overwrite it
+  if rs and rs.isLoading then
+    local win_width = vim.api.nvim_win_get_width(M.header_win)
+    local pad = win_width - vim.fn.strdisplaywidth(status_line)
+    if pad > 0 then status_line = status_line .. string.rep(" ", pad) end
+
+    vim.api.nvim_buf_set_lines(M.header_buf, 0, 1, false, { status_line })
+    vim.api.nvim_set_option_value("modifiable", false, { buf = M.header_buf })
+
+    for _, hl in ipairs(status_hls) do
+      vim.api.nvim_buf_add_highlight(M.header_buf, ns_header, hl[3], 0, hl[1], hl[2])
+    end
+
+    loader_start()
+    return
+  end
+
+  local legend_line, legend_hls = build_legend_line(node, M.options)
   vim.api.nvim_buf_set_lines(M.header_buf, 0, -1, false, { status_line, legend_line })
   vim.api.nvim_set_option_value("modifiable", false, { buf = M.header_buf })
 
   for _, hl in ipairs(status_hls) do
     vim.api.nvim_buf_add_highlight(M.header_buf, ns_header, hl[3], 0, hl[1], hl[2])
   end
-
   for _, hl in ipairs(legend_hls) do
     vim.api.nvim_buf_add_highlight(M.header_buf, ns_header, hl[3], 1, hl[1], hl[2])
   end
+
+  loader_stop()
 end
 
 -- ---------------------------------------------------------------------------
@@ -204,6 +278,7 @@ function M.open(mode, options)
       pattern = tostring(M.win),
       once = true,
       callback = function()
+        loader_stop()
         if M.header_win and vim.api.nvim_win_is_valid(M.header_win) then vim.api.nvim_win_close(M.header_win, true) end
         M.win = nil
         M.header_win = nil
@@ -294,6 +369,7 @@ local function node_pre_icon(node_type, opts)
     Project = icons.project or "",
     Namespace = icons.dir or "",
     TestClass = icons.dir or "",
+    TheoryGroup = icons.package or "",
     TestMethod = icons.test or "󰙨",
     Subcase = icons.test or "󰙨",
   })[node_type] or "?"
@@ -303,11 +379,13 @@ local function render_node(node, depth)
   local indent = string.rep(" ", depth * 2)
   local ntype = node.type and node.type.type or ""
   local pre = node_pre_icon(ntype, M.options)
-  local expand_icon = ""
+  local icons = M.options.icons or {}
   local children = state.children(node.id)
+  local expand_icon
   if #children > 0 then
-    local icons = M.options.icons or {}
     expand_icon = node.expanded and (icons.expanded or " ") or (icons.collapsed or " ")
+  else
+    expand_icon = " "
   end
 
   local status_suffix = ""
@@ -325,6 +403,7 @@ local function render_node(node, depth)
       Project = "EasyDotnetTestRunnerProject",
       Namespace = "EasyDotnetTestRunnerDir",
       TestClass = "EasyDotnetTestRunnerDir",
+      TheoryGroup = "EasyDotnetTestRunnerTest",
       TestMethod = "EasyDotnetTestRunnerTest",
       Subcase = "EasyDotnetTestRunnerSubcase",
     })[ntype]

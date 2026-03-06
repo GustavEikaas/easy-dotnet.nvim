@@ -17,10 +17,107 @@ local function get_icons()
   return ok and opts or {}
 end
 
-local function get_sign(node)
+local ns_flash = vim.api.nvim_create_namespace("easy_dotnet_test_flash")
+
+local function flash_method(bufnr, sig_line, end_line, hl_group, duration)
+  if sig_line == nil then return end
+  local fin = end_line or sig_line
+
+  vim.api.nvim_buf_clear_namespace(bufnr, ns_flash, 0, -1)
+
+  for line = sig_line, fin do
+    vim.api.nvim_buf_set_extmark(bufnr, ns_flash, line, 0, {
+      line_hl_group = hl_group or "CursorLine",
+      priority = 200,
+    })
+  end
+
+  vim.defer_fn(function()
+    if vim.api.nvim_buf_is_valid(bufnr) then vim.api.nvim_buf_clear_namespace(bufnr, ns_flash, 0, -1) end
+  end, duration or 300)
+end
+
+local function nodes_for_file(filepath)
+  local result = {}
+  local npath = norm(filepath)
+  state.traverse_all(function(node)
+    if norm(node.filePath) == npath and node.type and (node.type.type == "TestMethod" or node.type.type == "Subcase" or node.type.type == "TheoryGroup") and node.signatureLine ~= nil then
+      table.insert(result, node)
+    end
+  end)
+  return result
+end
+
+local function group_nodes_by_line(filepath)
+  local groups = {}
+  for _, node in ipairs(nodes_for_file(filepath)) do
+    local sig = node.signatureLine
+    if not groups[sig] then groups[sig] = { nodes = {}, endLine = node.endLine or sig } end
+    table.insert(groups[sig].nodes, node)
+    if node.endLine and node.endLine > groups[sig].endLine then groups[sig].endLine = node.endLine end
+  end
+
+  for sig, group in pairs(groups) do
+    for _, node in ipairs(group.nodes) do
+      if node.type and node.type.type == "TheoryGroup" then
+        groups[sig].nodes = { node }
+        break
+      end
+    end
+  end
+
+  return groups
+end
+
+local function aggregate_status(nodes)
+  local order = { Running = 4, Debugging = 4, Failed = 3, Skipped = 2, Passed = 1 }
+  local best = nil
+  local best_rank = 0
+  for _, node in ipairs(nodes) do
+    local stype = node.status and node.status.type or nil
+    local norm_type = stype and (stype:sub(1, 1):upper() .. stype:sub(2)) or nil
+    local rank = (norm_type and order[norm_type]) or 0
+    if rank > best_rank then
+      best_rank = rank
+      best = norm_type
+    end
+  end
+  return best
+end
+
+local function node_at_line(filepath, line)
+  local npath = norm(filepath)
+  local groups = group_nodes_by_line(filepath)
+
+  for sig_line, group in pairs(groups) do
+    local fin = group.endLine or sig_line
+    if line >= sig_line and line <= fin then return group.nodes, sig_line, fin end
+  end
+
+  local class_match, class_sig, class_fin = nil, nil, nil
+  state.traverse_all(function(node)
+    if class_match then return end
+    if norm(node.filePath) == npath and node.type and node.type.type == "TestClass" then
+      local children = state.children(node.id)
+      if #children == 0 then return end
+      local first_line, last_line = math.huge, 0
+      for _, child in ipairs(children) do
+        if child.signatureLine then first_line = math.min(first_line, child.signatureLine) end
+        if child.endLine then last_line = math.max(last_line, child.endLine) end
+      end
+      if line >= first_line and line <= last_line then
+        class_match = node
+        class_sig = first_line
+        class_fin = last_line
+      end
+    end
+  end)
+  return class_match and { class_match } or nil, class_sig, class_fin
+end
+
+local function apply_sign_for_group(bufnr, sig_line, group, filepath)
   local icons = get_icons()
-  local raw = node.status and node.status.type or nil
-  local stype = raw and (raw:sub(1, 1):upper() .. raw:sub(2)) or nil
+  local stype = aggregate_status(group.nodes)
 
   local text = ({
     Passed = (icons.passed or "") .. " ",
@@ -38,63 +135,17 @@ local function get_sign(node)
     Debugging = "EasyDotnetTestRunnerRunning",
   })[stype] or "EasyDotnetTestRunnerTest"
 
-  return text, hl
-end
+  local ok, id = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_signs, sig_line, 0, {
+    sign_text = text,
+    sign_hl_group = hl,
+    priority = 100,
+  })
 
-local ns_flash = vim.api.nvim_create_namespace("easy_dotnet_test_flash")
+  if ok then
+    if not extmark_ids[filepath] then extmark_ids[filepath] = {} end
 
-local function flash_method(bufnr, node, hl_group, duration)
-  if not node.signatureLine then return end
-  local fin = node.endLine or node.signatureLine
-
-  vim.api.nvim_buf_clear_namespace(bufnr, ns_flash, 0, -1)
-
-  for line = node.signatureLine, fin do
-    vim.api.nvim_buf_set_extmark(bufnr, ns_flash, line, 0, {
-      line_hl_group = hl_group or "CursorLine",
-      priority = 200,
-    })
+    extmark_ids[filepath]["line:" .. sig_line] = id
   end
-
-  vim.defer_fn(function()
-    if vim.api.nvim_buf_is_valid(bufnr) then vim.api.nvim_buf_clear_namespace(bufnr, ns_flash, 0, -1) end
-  end, duration or 300)
-end
-
-local function nodes_for_file(filepath)
-  local result = {}
-  local npath = norm(filepath)
-  state.traverse_all(function(node)
-    if norm(node.filePath) == npath and node.type and (node.type.type == "TestMethod" or node.type.type == "Subcase") and node.signatureLine ~= nil then table.insert(result, node) end
-  end)
-  return result
-end
-
-local function node_at_line(filepath, line)
-  local npath = norm(filepath)
-
-  for _, node in ipairs(nodes_for_file(filepath)) do
-    local sig = node.signatureLine
-    local fin = node.endLine or sig
-    if sig and line >= sig and line <= fin then return node end
-  end
-
-  local class_match = nil
-  state.traverse_all(function(node)
-    if class_match then return end
-    if norm(node.filePath) == npath and node.type and node.type.type == "TestClass" then
-      local children = state.children(node.id)
-      if #children == 0 then return end
-      local first_line = math.huge
-      local last_line = 0
-      for _, child in ipairs(children) do
-        if child.signatureLine then first_line = math.min(first_line, child.signatureLine) end
-        if child.endLine then last_line = math.max(last_line, child.endLine) end
-      end
-      if line >= first_line and line <= last_line then class_match = node end
-    end
-  end)
-  return class_match
 end
 
 function M.apply_signs(filepath)
@@ -104,14 +155,9 @@ function M.apply_signs(filepath)
   vim.api.nvim_buf_clear_namespace(bufnr, ns_signs, 0, -1)
   extmark_ids[filepath] = {}
 
-  for _, node in ipairs(nodes_for_file(filepath)) do
-    local text, hl = get_sign(node)
-    local ok, id = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_signs, node.signatureLine, 0, {
-      sign_text = text,
-      sign_hl_group = hl,
-      priority = 100,
-    })
-    if ok then extmark_ids[filepath][node.id] = id end
+  local groups = group_nodes_by_line(filepath)
+  for sig_line, group in pairs(groups) do
+    apply_sign_for_group(bufnr, sig_line, group, filepath)
   end
 end
 
@@ -119,10 +165,33 @@ function M.update_sign(node)
   if not node.filePath or node.signatureLine == nil then return end
   local bufnr = vim.fn.bufnr(node.filePath)
   if bufnr == -1 or not vim.api.nvim_buf_is_valid(bufnr) then return end
+  local groups = group_nodes_by_line(node.filePath)
+  local group = groups[node.signatureLine]
+  if not group then
+    M.apply_signs(node.filePath)
+    return
+  end
 
   local file_marks = extmark_ids[node.filePath]
-  local existing_id = file_marks and file_marks[node.id]
-  local text, hl = get_sign(node)
+  local existing_id = file_marks and file_marks["line:" .. node.signatureLine]
+  local icons = get_icons()
+  local stype = aggregate_status(group.nodes)
+
+  local text = ({
+    Passed = (icons.passed or "") .. " ",
+    Failed = (icons.failed or "") .. " ",
+    Skipped = (icons.skipped or "") .. " ",
+    Running = (icons.reload or "") .. " ",
+    Debugging = (icons.reload or "") .. " ",
+  })[stype] or (icons.test or "󰙨") .. " "
+
+  local hl = ({
+    Passed = "EasyDotnetTestRunnerPassed",
+    Failed = "EasyDotnetTestRunnerFailed",
+    Skipped = "EasyDotnetTestRunnerSkipped",
+    Running = "EasyDotnetTestRunnerRunning",
+    Debugging = "EasyDotnetTestRunnerRunning",
+  })[stype] or "EasyDotnetTestRunnerTest"
 
   if existing_id then
     pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_signs, node.signatureLine, 0, {
@@ -141,30 +210,34 @@ function M.register_buf_keymaps(bufnr, client)
 
   local function map(lhs, desc, fn) vim.keymap.set("n", lhs, fn, { silent = true, buffer = bufnr, desc = desc }) end
 
-  local function current_node()
+  local function current_nodes()
     local filepath = norm(vim.api.nvim_buf_get_name(bufnr))
     local line = vim.api.nvim_win_get_cursor(0)[1] - 1
-    local node = node_at_line(filepath, line)
-    if not node then logger.warn(string.format("No test at line %d", line + 1)) end
-    return node
+    local nodes, sig_line, end_line = node_at_line(filepath, line)
+    if not nodes then logger.warn(string.format("No test at line %d", line + 1)) end
+    return nodes, sig_line, end_line
   end
 
   map(km.run_test_from_buffer and km.run_test_from_buffer.lhs or "<leader>r", "Run test", function()
-    local node = current_node()
-    if not node then return end
-    flash_method(bufnr, node)
-    client.testrunner:run(node.id, function(result)
-      if not result or not result.success then logger.error("Run failed") end
-    end)
+    local nodes, sig_line, end_line = current_nodes()
+    if not nodes then return end
+    flash_method(bufnr, sig_line, end_line, "CursorLine", 300)
+    for _, node in ipairs(nodes) do
+      client.testrunner:run(node.id, function(result)
+        if not result or not result.success then logger.error("Run failed") end
+      end)
+    end
   end)
 
   map(km.debug_test_from_buffer and km.debug_test_from_buffer.lhs or "<leader>d", "Debug test", function()
-    local node = current_node()
-    if not node then return end
+    local nodes, sig_line, end_line = current_nodes()
+    if not nodes then return end
+    local node = nodes[1]
     if node.type and node.type.type == "TestClass" then
       logger.warn("Debug not supported for entire class")
       return
     end
+    flash_method(bufnr, sig_line, end_line, "CursorLine", 300)
     client.testrunner:debug(node.id, function() end)
   end)
 
@@ -187,8 +260,9 @@ function M.register_buf_keymaps(bufnr, client)
   end)
 
   map(km.peek_stack_trace_from_buffer and km.peek_stack_trace_from_buffer.lhs or "<leader>p", "Peek test output", function()
-    local node = current_node()
-    if not node then return end
+    local nodes = current_nodes()
+    if not nodes then return end
+    local node = nodes[1]
     if node.type and node.type.type == "TestClass" then
       logger.warn("Peek not available for class")
       return
@@ -244,6 +318,7 @@ function M.attach(filepath, client)
 
         client.testrunner:sync_file(filepath, content, v, function(result)
           if not result then return end
+
           if result.version < version then return end
 
           local any_changed = false
@@ -262,7 +337,6 @@ end
 function M.on_status_update(node)
   vim.schedule(function()
     M.update_sign(node)
-
     local stype = node.status and node.status.type or nil
     if not stype then return end
     local stype_norm = stype:sub(1, 1):upper() .. stype:sub(2)
@@ -278,7 +352,7 @@ function M.on_status_update(node)
     local bufnr = vim.fn.bufnr(node.filePath or "")
     if bufnr == -1 or not vim.api.nvim_buf_is_valid(bufnr) then return end
 
-    flash_method(bufnr, node, hl, 500)
+    flash_method(bufnr, node.signatureLine, node.endLine, hl, 500)
   end)
 end
 
