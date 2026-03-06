@@ -21,6 +21,11 @@ function M.register(buf, client, options)
     end
   end
 
+  local function cancel()
+    state.cancel()
+    render.refresh()
+  end
+
   -- o: toggle expand/collapse current node
   map(
     km.expand and km.expand.lhs or "o",
@@ -31,18 +36,12 @@ function M.register(buf, client, options)
     end)
   )
 
-  map(km.cancel and km.cancel.lhs or "<C-c>", "Cancel operation", function()
-    local handle = require("easy-dotnet.test-runner.state").current_handle
-    if handle then handle.cancel() end
-  end)
-
   -- O: expand all children recursively from cursor
   map(
     km.expand_node and km.expand_node.lhs or "O",
     "Expand all children",
     with_node(function(node)
       state.traverse_all(function(n, _)
-        -- only nodes in the subtree of `node`
         local id = n.id
         local cur = id
         while cur do
@@ -76,7 +75,7 @@ function M.register(buf, client, options)
     end)
   )
 
-  -- r: Run (only if server says Run is available)
+  -- r: Run
   map(
     km.run and km.run.lhs or "r",
     "Run tests",
@@ -85,7 +84,7 @@ function M.register(buf, client, options)
         logger.warn("Run not available for this node")
         return
       end
-      state.current_handle = client.testrunner:run(node.id)
+      state.active_handle = client.testrunner:run(node.id)
     end)
   )
 
@@ -99,18 +98,18 @@ function M.register(buf, client, options)
         return
       end
       render.hide()
-      state.current_handle = client.testrunner:debug(node.id)
+      state.active_handle = client.testrunner:debug(node.id)
     end)
   )
 
-  -- R: Run all (shorthand for running root)
+  -- R: Run all
   map(km.run_all and km.run_all.lhs or "R", "Run all tests", function()
     if not state.root_id then return end
     local root = state.nodes[state.root_id]
-    if root and state.has_action(root, "Run") then client.testrunner:run(state.root_id) end
+    if root and state.has_action(root, "Run") then state.active_handle = client.testrunner:run(state.root_id) end
   end)
 
-  -- i: Invalidate (rebuild + rediscover)
+  -- i: Invalidate
   map(
     km.refresh_testrunner and km.refresh_testrunner.lhs or "i",
     "Invalidate node",
@@ -119,9 +118,12 @@ function M.register(buf, client, options)
         logger.warn("Invalidate not available for this node")
         return
       end
-      client.testrunner:invalidate(node.id)
+      state.active_handle = client.testrunner:invalidate(node.id)
     end)
   )
+
+  -- <C-c>: Cancel active operation
+  map("<C-c>", "Cancel active operation", cancel)
 
   -- gf: Go to source file
   map(

@@ -33,8 +33,6 @@ local M = {}
 ---@type table<string, easy-dotnet.TestRunner.Node>
 M.nodes = {}
 
-M.current_handle = nil
-
 -- Top-level runner status from testrunner/statusUpdate
 ---@type easy-dotnet.TestRunner.RunnerStatus
 M.runner_status = {
@@ -48,6 +46,8 @@ M.runner_status = {
 }
 
 M.root_id = nil
+
+M.active_handle = nil
 
 --- Upsert a node. Preserves local UI state (expanded) if the node already exists.
 ---@param node easy-dotnet.TestRunner.Node
@@ -79,7 +79,28 @@ end
 
 --- Update global runner status.
 ---@param status easy-dotnet.TestRunner.RunnerStatus
-function M.update_runner_status(status) M.runner_status = status end
+function M.update_runner_status(status)
+  M.runner_status = status
+  if not status.isLoading then M.active_handle = nil end
+end
+
+function M.cancel()
+  if not M.active_handle then return end
+  M.active_handle.cancel()
+  M.runner_status = vim.tbl_extend("force", M.runner_status, {
+    isLoading = true,
+    currentOperation = "Cancelling",
+  })
+  M.active_handle = nil
+end
+
+function M.update_line_numbers(update)
+  local node = M.nodes[update.id]
+  if not node then return end
+  node.signatureLine = update.signatureLine
+  node.bodyStartLine = update.bodyStartLine
+  node.endLine = update.endLine
+end
 
 --- Returns direct children of a node, sorted by displayName.
 ---@param parent_id string
@@ -142,14 +163,6 @@ function M.traverse_all(cb)
   end
 
   walk(M.root_id, 0)
-end
-
-function M.update_line_numbers(update)
-  local node = M.nodes[update.id]
-  if not node then return end
-  node.signatureLine = update.signatureLine
-  node.bodyStartLine = update.bodyStartLine
-  node.endLine = update.endLine
 end
 
 --- Returns true if the node has the given action available.

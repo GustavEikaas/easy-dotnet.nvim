@@ -31,7 +31,7 @@ function M.open()
   current_solution.get_or_pick_solution(function(solution_path)
     if not solution_path then return end
     client:initialize(function()
-      client.testrunner:initialize(solution_path, function(result)
+      state.active_handle = client.testrunner:initialize(solution_path, function(result)
         if not result or not result.success then require("easy-dotnet.logger").error("Test runner initialization failed") end
       end)
     end)
