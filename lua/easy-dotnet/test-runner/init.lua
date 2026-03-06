@@ -8,7 +8,10 @@ function M.auto_start()
   if state.root_id then return end
 
   local sln = current_solution.try_get_selected_solution()
-  if sln then client:initialize(function() client.testrunner:quick_discover(sln, nil) end) end
+  if sln then
+    M.quick_discover_started = true
+    client:initialize(function() client.testrunner:quick_discover(sln, nil) end)
+  end
 end
 
 function M.open()
@@ -26,7 +29,7 @@ function M.open()
   render.open(options.viewmode, options)
   require("easy-dotnet.test-runner.keymaps").register(render.buf, client, options)
 
-  if state.root_id then return end
+  if state.root_id or state.quick_discover_started then return end
 
   current_solution.get_or_pick_solution(function(solution_path)
     if not solution_path then return end

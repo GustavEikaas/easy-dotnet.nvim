@@ -32,6 +32,7 @@ local M = {}
 -- id → TestNode
 ---@type table<string, easy-dotnet.TestRunner.Node>
 M.nodes = {}
+M.quick_discover_started = false
 
 -- Top-level runner status from testrunner/statusUpdate
 ---@type easy-dotnet.TestRunner.RunnerStatus
