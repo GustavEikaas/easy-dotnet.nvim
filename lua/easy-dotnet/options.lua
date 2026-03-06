@@ -118,6 +118,7 @@ local M = {
     },
     ---@type easy-dotnet.TestRunner.Options
     test_runner = {
+      auto_start_testrunner = true,
       viewmode = "float",
       vsplit_width = nil,
       vsplit_pos = nil,

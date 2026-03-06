@@ -1,5 +1,6 @@
 ---@class easy-dotnet.RPC.Client.TestRunner
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
+---@field quick_discover fun(self: easy-dotnet.RPC.Client.TestRunner, solution_path: string, cb?: fun(result: table)): easy-dotnet.RPC.CallHandle
 ---@field initialize fun(self: easy-dotnet.RPC.Client.TestRunner, solution_path: string, cb?: fun(result: table)): easy-dotnet.RPC.CallHandle
 ---@field run fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult)): easy-dotnet.RPC.CallHandle
 ---@field debug fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult)): easy-dotnet.RPC.CallHandle
@@ -52,6 +53,16 @@ function M.new(client)
   local self = setmetatable({}, M)
   self._client = client
   return self
+end
+
+function M:quick_discover(solution_path, cb)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  return helper.create_rpc_call({
+    client = self._client,
+    method = "testrunner/quickDiscover",
+    params = { solutionPath = solution_path },
+    cb = cb,
+  })()
 end
 
 ---@param solution_path string

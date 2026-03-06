@@ -247,7 +247,7 @@ M.createfile = {
 }
 
 M.testrunner = {
-  handle = function(_, options) require("easy-dotnet.test-runner").open(options.test_runner) end,
+  handle = function() require("easy-dotnet.test-runner").open() end,
 }
 
 M.outdated = {

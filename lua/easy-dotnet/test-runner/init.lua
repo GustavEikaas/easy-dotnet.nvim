@@ -1,6 +1,18 @@
 local M = {}
 
-function M.open(options)
+function M.auto_start()
+  if not require("easy-dotnet.options").get_option("test_runner").auto_start_testrunner then return end
+  local current_solution = require("easy-dotnet.current_solution")
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  local state = require("easy-dotnet.test-runner.state")
+  if state.root_id then return end
+
+  local sln = current_solution.try_get_selected_solution()
+  if sln then client:initialize(function() client.testrunner:quick_discover(sln, nil) end) end
+end
+
+function M.open()
+  local options = require("easy-dotnet.options").get_option("test_runner")
   local render = require("easy-dotnet.test-runner.render")
   local state = require("easy-dotnet.test-runner.state")
   local current_solution = require("easy-dotnet.current_solution")

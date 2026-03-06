@@ -227,6 +227,8 @@ local function get_solutions_async(cb)
   })
 end
 
+local function auto_start_testrunner() require("easy-dotnet.test-runner").auto_start() end
+
 local function background_scanning(merged_opts)
   if merged_opts.background_scanning then
     --prewarm msbuild properties
@@ -312,11 +314,6 @@ M.setup = function(opts)
     end)
   end
 
-  if merged_opts.test_runner.enable_buffer_test_execution then
-    -- require("easy-dotnet.cs-mappings").add_test_signs()
-    -- require("easy-dotnet.fs-mappings").add_test_signs()
-  end
-
   polyfills.iter(collect_commands_with_handles(commands)):each(function(name, handle)
     M[name] = wrap(function(args, options) handle(args, options or require("easy-dotnet.options").options) end)
   end)
@@ -331,6 +328,7 @@ M.setup = function(opts)
   if merged_opts.projx_lsp.enabled == true then require("easy-dotnet.projx.lsp").enable() end
   wrap(auto_register_dap)(merged_opts)
   wrap(background_scanning)(merged_opts)
+  wrap(auto_start_testrunner)()
   wrap(auto_install_easy_dotnet)()
 end
 
@@ -347,8 +345,6 @@ M.try_get_selected_solution = function()
 end
 
 M.package_completion_source = require("easy-dotnet.csproj-mappings").package_completion_cmp
-
--- M.get_test_results = require("easy-dotnet.test-signs").get_test_results
 
 M.diagnostics = require("easy-dotnet.actions.diagnostics")
 
