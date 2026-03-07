@@ -87,6 +87,17 @@ M.handler = function(client, method, params)
         if params.test.filePath then buffer.attach(params.test.filePath, client) end
         render.refresh()
       end)
+    elseif method == "removeTest" then
+      local state = require("easy-dotnet.test-runner.state")
+      local render = require("easy-dotnet.test-runner.render")
+      local buffer = require("easy-dotnet.test-runner.buffer")
+      if not params or not params.id then return end
+      vim.schedule(function()
+        local node = state.nodes[params.id]
+        state.nodes[params.id] = nil
+        if node and node.filePath then buffer.apply_signs(node.filePath) end
+        render.refresh()
+      end)
     elseif method == "updateStatus" then
       local state = require("easy-dotnet.test-runner.state")
       local render = require("easy-dotnet.test-runner.render")
