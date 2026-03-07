@@ -26,7 +26,6 @@ function M.register(buf, client, options)
     render.refresh()
   end
 
-  -- o: toggle expand/collapse current node
   map(
     km.expand and km.expand.lhs or "o",
     "Toggle expand",
@@ -36,7 +35,6 @@ function M.register(buf, client, options)
     end)
   )
 
-  -- O: expand all children recursively from cursor
   map(
     km.expand_node and km.expand_node.lhs or "O",
     "Expand all children",
@@ -56,7 +54,6 @@ function M.register(buf, client, options)
     end)
   )
 
-  -- W: collapse all children recursively from cursor
   map(
     km.collapse_all and km.collapse_all.lhs or "W",
     "Collapse all children",
@@ -75,7 +72,6 @@ function M.register(buf, client, options)
     end)
   )
 
-  -- r: Run
   map(
     km.run and km.run.lhs or "r",
     "Run tests",
@@ -88,7 +84,6 @@ function M.register(buf, client, options)
     end)
   )
 
-  -- d: Debug
   map(
     km.debug_test and km.debug_test.lhs or "d",
     "Debug tests",
@@ -102,14 +97,12 @@ function M.register(buf, client, options)
     end)
   )
 
-  -- R: Run all
   map(km.run_all and km.run_all.lhs or "R", "Run all tests", function()
     if not state.root_id then return end
     local root = state.nodes[state.root_id]
     if root and state.has_action(root, "Run") then state.active_handle = client.testrunner:run(state.root_id) end
   end)
 
-  -- i: Invalidate
   map(
     km.refresh_testrunner and km.refresh_testrunner.lhs or "i",
     "Invalidate node",
@@ -122,10 +115,8 @@ function M.register(buf, client, options)
     end)
   )
 
-  -- <C-c>: Cancel active operation
   map("<C-c>", "Cancel active operation", cancel)
 
-  -- gf: Go to source file
   map(
     km.go_to_file and km.go_to_file.lhs or "gf",
     "Go to source",
@@ -137,14 +128,10 @@ function M.register(buf, client, options)
       if not node.filePath then return end
       render.hide()
       vim.cmd("edit " .. vim.fn.fnameescape(node.filePath))
-      if node.bodyStartLine then
-        -- lineNumber is 0-based (LSP); nvim cursor is 1-based
-        vim.api.nvim_win_set_cursor(0, { node.bodyStartLine + 1, 0 })
-      end
+      if node.bodyStartLine then vim.api.nvim_win_set_cursor(0, { node.bodyStartLine + 1, 0 }) end
     end)
   )
 
-  -- p: Peek results (stdout + stack trace, lazy fetch)
   map(
     km.peek_stacktrace and km.peek_stacktrace.lhs or "p",
     "Peek results",
@@ -163,50 +150,8 @@ function M.register(buf, client, options)
     end)
   )
 
-  -- e: Get build errors → populate qf list
-  map(
-    km.get_build_errors and km.get_build_errors.lhs or "e",
-    "Show build errors",
-    with_node(function(node)
-      if not state.has_action(node, "GetBuildErrors") then
-        logger.warn("No build errors available for this node")
-        return
-      end
-      client.testrunner:get_build_errors(node.id, function(result)
-        if not result or not result.errors or #result.errors == 0 then
-          logger.info("No build errors")
-          return
-        end
-        vim.schedule(function()
-          local qf = vim.tbl_map(
-            function(e)
-              return {
-                filename = e.filePath or "",
-                lnum = e.lineNumber or 0,
-                col = e.columnNumber or 0,
-                text = e.message or "Build error",
-                type = "E",
-              }
-            end,
-            result.errors
-          )
-          vim.fn.setqflist(qf, "r")
-          render.hide()
-          vim.cmd("copen")
-        end)
-      end)
-    end)
-  )
-
-  -- q / <Esc>: close
   map(km.close and km.close.lhs or "q", "Close test runner", function() render.hide() end)
   map("<Esc>", "Close test runner", function() render.hide() end)
-
-  -- F: filter failed only (pure UI — just re-render with a filter flag)
-  map(km.filter_failed_tests and km.filter_failed_tests.lhs or "F", "Filter failed tests", function()
-    state.filter_failed = not state.filter_failed
-    render.refresh()
-  end)
 end
 
 return M
