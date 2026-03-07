@@ -40,6 +40,7 @@
 ---@field project string
 ---@field dir string
 ---@field package string
+---@field class string
 
 ---@class easy-dotnet.TestRunner.Mappings
 ---@field run_test_from_buffer easy-dotnet.Keymap
@@ -135,6 +136,7 @@ local M = {
         project = "󰘐",
         dir = "",
         package = "",
+        class = "",
       },
       mappings = {
         run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },

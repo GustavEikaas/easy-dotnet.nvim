@@ -352,7 +352,7 @@ local function node_pre_icon(node_type, opts)
     Solution = icons.sln or "󰘼",
     Project = icons.project or "",
     Namespace = icons.dir or "",
-    TestClass = icons.dir or "",
+    TestClass = icons.class or "",
     TheoryGroup = icons.package or "",
     TestMethod = icons.test or "󰙨",
     Subcase = icons.test or "󰙨",

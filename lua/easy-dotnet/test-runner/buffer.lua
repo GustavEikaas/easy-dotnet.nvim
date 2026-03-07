@@ -41,7 +41,12 @@ local function nodes_for_file(filepath)
   local result = {}
   local npath = norm(filepath)
   state.traverse_all(function(node)
-    if norm(node.filePath) == npath and node.type and (node.type.type == "TestMethod" or node.type.type == "Subcase" or node.type.type == "TheoryGroup") and node.signatureLine ~= nil then
+    if
+      norm(node.filePath) == npath
+      and node.type
+      and (node.type.type == "TestMethod" or node.type.type == "Subcase" or node.type.type == "TheoryGroup" or node.type.type == "TestClass")
+      and node.signatureLine ~= nil
+    then
       table.insert(result, node)
     end
   end)
@@ -57,6 +62,7 @@ local function group_nodes_by_line(filepath)
     if node.endLine and node.endLine > groups[sig].endLine then groups[sig].endLine = node.endLine end
   end
 
+  -- Prefer TheoryGroup over individual Subcase nodes at the same line
   for sig, group in pairs(groups) do
     for _, node in ipairs(group.nodes) do
       if node.type and node.type.type == "TheoryGroup" then
@@ -89,11 +95,19 @@ local function node_at_line(filepath, line)
   local npath = norm(filepath)
   local groups = group_nodes_by_line(filepath)
 
+  -- Pick the narrowest matching range so a method sign always wins over a class sign
+  local best_nodes, best_sig, best_fin = nil, nil, nil
   for sig_line, group in pairs(groups) do
     local fin = group.endLine or sig_line
-    if line >= sig_line and line <= fin then return group.nodes, sig_line, fin end
+    if line >= sig_line and line <= fin then
+      if best_fin == nil or (fin - sig_line) < (best_fin - best_sig) then
+        best_nodes, best_sig, best_fin = group.nodes, sig_line, fin
+      end
+    end
   end
+  if best_nodes then return best_nodes, best_sig, best_fin end
 
+  -- Fallback: cursor is somewhere inside a class body between method groups
   local class_match, class_sig, class_fin = nil, nil, nil
   state.traverse_all(function(node)
     if class_match then return end
@@ -115,25 +129,31 @@ local function node_at_line(filepath, line)
   return class_match and { class_match } or nil, class_sig, class_fin
 end
 
-local function apply_sign_for_group(bufnr, sig_line, group, filepath)
+local sign_text_for = {
+  Passed = function(icons) return (icons.passed or "") .. " " end,
+  Failed = function(icons) return (icons.failed or "") .. " " end,
+  Skipped = function(icons) return (icons.skipped or "") .. " " end,
+  Running = function(icons) return (icons.reload or "") .. " " end,
+  Debugging = function(icons) return (icons.reload or "") .. " " end,
+}
+local sign_hl_for = {
+  Passed = "EasyDotnetTestRunnerPassed",
+  Failed = "EasyDotnetTestRunnerFailed",
+  Skipped = "EasyDotnetTestRunnerSkipped",
+  Running = "EasyDotnetTestRunnerRunning",
+  Debugging = "EasyDotnetTestRunnerRunning",
+}
+
+local function resolve_sign(nodes)
   local icons = get_icons()
-  local stype = aggregate_status(group.nodes)
+  local stype = aggregate_status(nodes)
+  local text = stype and sign_text_for[stype] and sign_text_for[stype](icons) or (icons.test or "󰙨") .. " "
+  local hl = sign_hl_for[stype] or "EasyDotnetTestRunnerTest"
+  return text, hl
+end
 
-  local text = ({
-    Passed = (icons.passed or "") .. " ",
-    Failed = (icons.failed or "") .. " ",
-    Skipped = (icons.skipped or "") .. " ",
-    Running = (icons.reload or "") .. " ",
-    Debugging = (icons.reload or "") .. " ",
-  })[stype] or (icons.test or "󰙨") .. " "
-
-  local hl = ({
-    Passed = "EasyDotnetTestRunnerPassed",
-    Failed = "EasyDotnetTestRunnerFailed",
-    Skipped = "EasyDotnetTestRunnerSkipped",
-    Running = "EasyDotnetTestRunnerRunning",
-    Debugging = "EasyDotnetTestRunnerRunning",
-  })[stype] or "EasyDotnetTestRunnerTest"
+local function apply_sign_for_group(bufnr, sig_line, group, filepath)
+  local text, hl = resolve_sign(group.nodes)
 
   local ok, id = pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_signs, sig_line, 0, {
     sign_text = text,
@@ -143,7 +163,6 @@ local function apply_sign_for_group(bufnr, sig_line, group, filepath)
 
   if ok then
     if not extmark_ids[filepath] then extmark_ids[filepath] = {} end
-
     extmark_ids[filepath]["line:" .. sig_line] = id
   end
 end
@@ -165,6 +184,7 @@ function M.update_sign(node)
   if not node.filePath or node.signatureLine == nil then return end
   local bufnr = vim.fn.bufnr(node.filePath)
   if bufnr == -1 or not vim.api.nvim_buf_is_valid(bufnr) then return end
+
   local groups = group_nodes_by_line(node.filePath)
   local group = groups[node.signatureLine]
   if not group then
@@ -174,24 +194,7 @@ function M.update_sign(node)
 
   local file_marks = extmark_ids[node.filePath]
   local existing_id = file_marks and file_marks["line:" .. node.signatureLine]
-  local icons = get_icons()
-  local stype = aggregate_status(group.nodes)
-
-  local text = ({
-    Passed = (icons.passed or "") .. " ",
-    Failed = (icons.failed or "") .. " ",
-    Skipped = (icons.skipped or "") .. " ",
-    Running = (icons.reload or "") .. " ",
-    Debugging = (icons.reload or "") .. " ",
-  })[stype] or (icons.test or "󰙨") .. " "
-
-  local hl = ({
-    Passed = "EasyDotnetTestRunnerPassed",
-    Failed = "EasyDotnetTestRunnerFailed",
-    Skipped = "EasyDotnetTestRunnerSkipped",
-    Running = "EasyDotnetTestRunnerRunning",
-    Debugging = "EasyDotnetTestRunnerRunning",
-  })[stype] or "EasyDotnetTestRunnerTest"
+  local text, hl = resolve_sign(group.nodes)
 
   if existing_id then
     pcall(vim.api.nvim_buf_set_extmark, bufnr, ns_signs, node.signatureLine, 0, {
@@ -272,7 +275,7 @@ function M.register_buf_keymaps(bufnr, client)
         logger.warn("No results yet — run the test first")
         return
       end
-      require("easy-dotnet.test-runner.results-float").open(node, result)
+      require("easy-dotnet.test-runner.results-float").open(node, result, { source = "buffer" })
     end)
   end)
 end
@@ -318,7 +321,6 @@ function M.attach(filepath, client)
 
         client.testrunner:sync_file(filepath, content, v, function(result)
           if not result then return end
-
           if result.version < version then return end
 
           local any_changed = false
@@ -341,12 +343,7 @@ function M.on_status_update(node)
     if not stype then return end
     local stype_norm = stype:sub(1, 1):upper() .. stype:sub(2)
 
-    local hl = ({
-      Passed = "EasyDotnetTestRunnerPassed",
-      Failed = "EasyDotnetTestRunnerFailed",
-      Skipped = "EasyDotnetTestRunnerSkipped",
-    })[stype_norm]
-
+    local hl = sign_hl_for[stype_norm]
     if not hl then return end
 
     local bufnr = vim.fn.bufnr(node.filePath or "")
