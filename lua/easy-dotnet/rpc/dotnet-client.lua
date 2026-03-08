@@ -285,7 +285,7 @@ function M:_initialize(cb, opts)
           method = "initialize",
           params = {
             request = {
-              clientInfo = { name = "EasyDotnet", version = "2.0.0", pid = vim.fn.getpid() },
+              clientInfo = { name = "EasyDotnet", version = "3.0.0", pid = vim.fn.getpid() },
               projectInfo = { rootDir = vim.fs.normalize(vim.fn.getcwd()), solutionFile = sln_file },
               options = {
                 useVisualStudio = use_visual_studio,

@@ -2,8 +2,10 @@ local M = {}
 
 local function do_initialize(client, solution_path)
   local state = require("easy-dotnet.test-runner.state")
-  state.active_handle = client.testrunner:initialize(solution_path, function(result)
-    if not result or not result.success then require("easy-dotnet.logger").error("Test runner initialization failed") end
+  client:initialize(function()
+    state.active_handle = client.testrunner:initialize(solution_path, function(result)
+      if not result or not result.success then require("easy-dotnet.logger").error("Test runner initialization failed") end
+    end)
   end)
 end
 
