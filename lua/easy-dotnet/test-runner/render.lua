@@ -210,15 +210,14 @@ end
 
 local function open_header_split()
   make_header_buf()
-  vim.cmd("2split")
+  vim.cmd("aboveleft 2split")
   M.header_win = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(M.header_win, M.header_buf)
   vim.wo[M.header_win].cursorline = false
   vim.wo[M.header_win].statusline = ""
   vim.wo[M.header_win].winfixheight = true
   vim.api.nvim_set_option_value("modifiable", false, { buf = M.header_buf })
-  -- Return focus to the caller so the main buf opens below
-  vim.cmd("wincmd j")
+  vim.api.nvim_set_current_win(M.win)
 end
 
 -- ---------------------------------------------------------------------------
