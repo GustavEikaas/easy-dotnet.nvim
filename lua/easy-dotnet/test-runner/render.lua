@@ -77,14 +77,19 @@ local function build_header_row(rs, frame)
   local empty_rs = { totalPassed = 0, totalFailed = 0, totalSkipped = 0, totalTests = 0 }
   local right_text, right_hls, right_dw = build_right_counts(rs or empty_rs)
   local left_dw = vim.fn.strdisplaywidth(left_text)
-  local pad = math.max(1, win_width - left_dw - right_dw)
-  local line = left_text .. string.rep(" ", pad) .. right_text
 
-  local hls = {}
+  -- If everything fits, right-align counts. If not, drop counts entirely
+  -- rather than wrapping or truncating mid-number.
+  local line, hls = left_text, {}
   if left_hl then table.insert(hls, { 0, left_hl_end, left_hl }) end
-  local right_offset = #left_text + pad
-  for _, h in ipairs(right_hls) do
-    table.insert(hls, { h[1] + right_offset, h[2] + right_offset, h[3] })
+
+  if left_dw + right_dw + 1 <= win_width then
+    local pad = win_width - left_dw - right_dw
+    local right_offset = #left_text + pad
+    line = left_text .. string.rep(" ", pad) .. right_text
+    for _, h in ipairs(right_hls) do
+      table.insert(hls, { h[1] + right_offset, h[2] + right_offset, h[3] })
+    end
   end
 
   return line, hls
@@ -218,6 +223,9 @@ local function open_header_split()
   vim.wo[M.header_win].cursorline = false
   vim.wo[M.header_win].statusline = ""
   vim.wo[M.header_win].winfixheight = true
+  vim.wo[M.header_win].number = false
+  vim.wo[M.header_win].relativenumber = false
+  vim.wo[M.header_win].signcolumn = "no"
   vim.api.nvim_set_option_value("modifiable", false, { buf = M.header_buf })
   vim.api.nvim_set_current_win(M.win)
 end
@@ -230,6 +238,9 @@ local function open_footer_split()
   vim.wo[M.footer_win].cursorline = false
   vim.wo[M.footer_win].statusline = ""
   vim.wo[M.footer_win].winfixheight = true
+  vim.wo[M.footer_win].number = false
+  vim.wo[M.footer_win].relativenumber = false
+  vim.wo[M.footer_win].signcolumn = "no"
   vim.api.nvim_set_option_value("modifiable", false, { buf = M.footer_buf })
   vim.api.nvim_set_current_win(M.win)
 end
@@ -278,6 +289,7 @@ function M.open(mode, options)
         spinner_stop()
         close_aux_wins()
         M.win = nil
+        pcall(vim.api.nvim_del_augroup_by_name, "EasyDotnetTestRunnerResize")
       end,
     })
   elseif mode == "split" or mode == "vsplit" then
@@ -300,6 +312,7 @@ function M.open(mode, options)
         spinner_stop()
         close_aux_wins()
         M.win = nil
+        pcall(vim.api.nvim_del_augroup_by_name, "EasyDotnetTestRunnerResize")
       end,
     })
   end
@@ -311,7 +324,7 @@ function M.open(mode, options)
       callback = function() render_footer(M.node_at_cursor()) end,
     })
     vim.api.nvim_create_autocmd("VimResized", {
-      buffer = M.buf,
+      group = vim.api.nvim_create_augroup("EasyDotnetTestRunnerResize", { clear = true }),
       callback = function() M.refresh() end,
     })
   end
