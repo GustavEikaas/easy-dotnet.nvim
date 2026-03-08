@@ -2,6 +2,104 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## Test Runner v2 ([#838](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/838))
+
+The test runner has been completely rewritten. The old implementation was almost entirely Lua, which made it very hard to refactor or improve without introducing regressions. Moving it to the C# server (as discussed in [#809](https://github.com/GustavEikaas/easy-dotnet.nvim/issues/809)) brings strong typing, proper testability, and a much cleaner boundary between UI and business logic. The Lua side is now a thin UI layer the server handles everything else.
+
+If you run into regressions, please report them in the dedicated feedback issue [#841](https://github.com/GustavEikaas/easy-dotnet.nvim/issues/841) the test runner is complex and edge cases are expected.
+
+### What's new
+
+**Auto-start and silent background discovery**
+
+The test runner now starts automatically when the server starts. Discovery runs silently in the background against any already-built DLLs, so the tree is populated before you even open the window. For projects that haven't been built yet, the runner waits until you open the window and then builds and discovers the remaining projects automatically. No more cold-start friction.
+
+This can be disabled if you prefer to start the runner manually:
+
+```lua
+dotnet.setup({
+  test_runner = {
+    auto_start_testrunner = false,
+  }
+})
+```
+
+**Cancellation support**
+
+There was previously no cancellation support closing the window or triggering a new run had no effect on whatever the test binary was doing. The runner now supports cancellation properly, signalling the test binary to stop and waiting for it to finish cleanly.
+
+**Class-level test execution from buffer**
+
+You can now run an entire test class directly from the buffer. This replaces the old `run_all_tests_from_buffer` command, which only ran individual methods.
+
+**Improved debugger integration**
+
+Debugging can now be triggered from namespace, class, and project nodes in the runner, not only from individual tests or theory groups.
+
+Automatic breakpoint insertion when starting a debug session from the runner or buffer has been removed. Breakpoints need to be set manually. With debug now supported at the namespace, class, and project level there is no single sensible location to insert a breakpoint automatically, so breakpoints are left entirely to you.
+
+**Flash on run and completion from buffer**
+
+When you trigger a test from the buffer, the method or class flashes to confirm the run was picked up. When the run finishes, it flashes again in the colour of the result green for passed, red for failed, and so on. Both methods and classes support this.
+
+**Improved floating stacktrace from buffer**
+
+The floating stacktrace view now focuses on the stacktrace itself. The source buffer float is hidden in this mode as it provides no useful information.
+
+The stacktrace is now parsed and syntax highlighted. Lines from your own code are highlighted in yellow and framework code is dimmed in grey, making it easy to see at a glance where in your code the failure originated. Press `<CR>` on any yellow line to jump directly to that location.
+
+**Class-level icons and signs**
+
+Test result icons and gutter signs are now tracked at the class level in addition to individual methods.
+
+**Correct and responsive test signs**
+
+Previously, signs were placed based on line positions reported by the DLL at build time. This meant signs would render on incorrect lines whenever you edited a file and would stay wrong until the next rebuild. Under heavy editing this could also produce out-of-bounds errors as the runner tried to place signs on lines that no longer existed.
+
+Signs now use the Roslyn AST to sync their position after every `BufWritePost`, so they always reflect the current state of the file regardless of edits.
+
+Because we now resolve test locations through Roslyn rather than relying on what the test adapters report, a few other things also improved. We now know the start line of the method body and the end line of each test method, neither of which are reported by VSTest or MTP. We also use a consistent line for both adapters: previously MTP pointed to the [Test] attribute line and VSTest pointed to the function signature line, making them disagree on the same test. Both now resolve to the same location.
+
+**Stable tree during rediscovery**
+
+The tree no longer collapses while rediscovery is running. Only new and orphaned nodes are affected newly discovered nodes are added and nodes that no longer exist are removed, while everything else stays exactly where it was.
+
+**`M.get_test_results` removed**
+
+This API was added in [#485](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/485) to support use cases like displaying test results as code lens via plugins such as [lensline.nvim](https://github.com/oribarilan/lensline.nvim). It has been removed in v2 and test signs are the intended replacement for surfacing results outside the runner window. If signs don't cover your use case please open an issue and we can figure out the best way to bring that functionality back properly.
+
+### Breaking changes
+
+**Removed options**
+
+- `noBuild` no longer meaningful given how the runner manages the build lifecycle
+- `enable_buffer_test_execution` buffer test execution is always enabled now. If you want to disable it, simply unbind the default keys
+- `additional_args` removed. Passing global additional args independent of project context doesn't really make sense use a `.runsettings` file or the MTP equivalent instead
+- `run_all_tests_from_buffer` keybind removed. Now that running an entire class from the buffer is supported, this command no longer makes sense
+
+Remove these from your config.
+
+### Performance improvements
+
+- Silent background discovery on startup means the tree is populated before you open it
+- Now using the new `EasyDotnet.BuildServer` which is significantly faster than the old dotnet CLI wrapper, and also improves test project properties resolution
+- Multi-project runs share a single build step
+- Incremental tree diffing only changed nodes trigger a re-render
+
+### UI/UX improvements
+
+- The runner now has a proper header and footer window. Previously there was only virtual text that would disappear if you scrolled too far down
+- The header right-aligns pass/fail/skip counts and degrades gracefully in narrow splits
+- Spinner and status update live during runs without re-rendering the full tree
+- Improved layout responsiveness the runner handles resizing correctly in all split modes
+
+### Upgrade notes
+
+1. Remove `noBuild`, `enable_buffer_test_execution`, `additional_args`, and any `run_all_tests_from_buffer` bindings from your config
+2. Migrate any extra test arguments to `.runsettings` or MTP config
+
+If something that worked in v1 is broken, please drop a note in [#841](https://github.com/GustavEikaas/easy-dotnet.nvim/issues/841)
+
 ## Interactive debugger console ([#813](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/813))
 
 As many of you know, `easy-dotnet` automatically configures DAP for you with netcoredbg, some of you probably noticed that `Console.ReadLine()` would throw an exception due to netcoredbg not running in an actual console. To make matters worse, all of your application's output was dumped directly into the DAP REPL, creating a messy debugging experience.
