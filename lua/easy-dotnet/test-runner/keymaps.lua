@@ -150,6 +150,18 @@ function M.register(buf, client, options)
     end)
   )
 
+  map(
+    km.get_build_errors and km.get_build_errors.lhs or "e",
+    "Show build errors",
+    with_node(function(node)
+      if not state.has_action(node, "GetBuildErrors") then
+        logger.warn("No build errors available for this node")
+        return
+      end
+      client.testrunner:get_build_errors(node.id)
+    end)
+  )
+
   map(km.close and km.close.lhs or "q", "Close test runner", function() render.hide() end)
   map("<Esc>", "Close test runner", function() render.hide() end)
 end

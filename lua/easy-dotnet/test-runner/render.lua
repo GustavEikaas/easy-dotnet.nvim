@@ -402,6 +402,7 @@ local status_highlights = {
   Running = "EasyDotnetTestRunnerRunning",
   Debugging = "EasyDotnetTestRunnerRunning",
   Building = "EasyDotnetTestRunnerRunning",
+  BuildFailed = "EasyDotnetTestRunnerFailed",
   Discovering = "EasyDotnetTestRunnerRunning",
   Queued = "EasyDotnetTestRunnerRunning",
   Cancelling = "EasyDotnetTestRunnerRunning",
@@ -431,6 +432,7 @@ local function get_status_icon(stype)
     Debugging = " " .. icons.reload,
     Building = " " .. icons.reload,
     Discovering = icons.reload,
+    BuildFailed = " " .. icons.build_failed,
     Queued = " …",
     Cancelling = " " .. icons.reload,
   })[stype] or ""

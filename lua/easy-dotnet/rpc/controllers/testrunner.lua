@@ -6,7 +6,7 @@
 ---@field debug fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult)): easy-dotnet.RPC.CallHandle
 ---@field invalidate fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult)): easy-dotnet.RPC.CallHandle
 ---@field get_results fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb: fun(result: easy-dotnet.TestRunner.Results)): easy-dotnet.RPC.CallHandle
----@field get_build_errors fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb: fun(result: easy-dotnet.TestRunner.BuildErrorsResult)): easy-dotnet.RPC.CallHandle
+---@field get_build_errors fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string): easy-dotnet.RPC.CallHandle
 ---@field sync_file fun(self: easy-dotnet.RPC.Client.TestRunner, path: string, content: string, version: integer, cb: fun(result: easy-dotnet.TestRunner.SyncFileResult)): easy-dotnet.RPC.CallHandle
 
 ---@class easy-dotnet.TestRunner.OperationResult
@@ -125,18 +125,6 @@ function M:get_results(node_id, cb)
   })()
 end
 
----@param node_id string
----@param cb fun(result: easy-dotnet.TestRunner.BuildErrors)
-function M:get_build_errors(node_id, cb)
-  local helper = require("easy-dotnet.rpc.dotnet-client")
-  return helper.create_rpc_call({
-    client = self._client,
-    method = "testrunner/getBuildErrors",
-    params = { id = node_id },
-    cb = cb,
-  })()
-end
-
 --- testrunner/syncFile — parse in-memory buffer content and update line numbers.
 --- Called on BufWritePost for known test files. Version is a monotonic counter
 --- per file — stale responses (version < latest sent) are discarded by the caller.
@@ -151,6 +139,19 @@ function M:sync_file(path, content, version, cb)
     method = "testrunner/syncFile",
     params = { path = path, content = content, version = version },
     cb = cb,
+  })()
+end
+
+--- testrunner/getBuildErrors — tell the server to push build errors for a failed project node.
+--- The server responds by sending a quickfix/set notification; no return value here.
+--- The notification handler closes the test runner and opens the qf list automatically.
+---@param node_id string
+function M:get_build_errors(node_id)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  return helper.create_rpc_call({
+    client = self._client,
+    method = "testrunner/getBuildErrors",
+    params = { id = node_id },
   })()
 end
 

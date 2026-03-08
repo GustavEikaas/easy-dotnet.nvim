@@ -52,6 +52,7 @@ M.handler = function(client, method, params)
     elseif method == "displayMessage" then
       logger.info(params.message)
     elseif method == "quickfix/set" then
+      require("easy-dotnet.test-runner.render").hide()
       local items = vim.tbl_map(
         function(value)
           return {
