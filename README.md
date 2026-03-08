@@ -485,67 +485,72 @@ Just open a C# file and the official .NET language server starts automatically.
 
 For more information [check out](./docs/lsp.md)
 
-## Testrunner
+## Test runner
 
-Integrated test runner inspired by Rider IDE
-![image](https://github.com/user-attachments/assets/874a1ef1-18cb-43f6-a477-834a783cf785)
-![image](https://github.com/user-attachments/assets/2d0512f3-f807-4fbd-bf64-a57eb3c06b18)
+Integrated test runner inspired by Rider IDE. Powered by [easy-dotnet-server](https://github.com/GustavEikaas/easy-dotnet-server).
 
-Should support all test adapters like NUnit, XUnit, MSTest, Expecto etc..
-If you are experiencing issues with any test adapter please let me know
+<img width="1911" height="1049" alt="testrunner float" src="https://github.com/user-attachments/assets/f50ba57a-34bf-4a79-8c35-f44f1ef02dc0" />
+<img width="1879" height="1051" alt="testrunner mid-run" src="https://github.com/user-attachments/assets/39f1c14c-965b-4cef-914e-0d4ca44f12f8" />
+
+If you experience issues with a test adapter please open an issue.
+
+The test runner starts automatically when the server starts and runs discovery silently in the background, so the tree is ready before you open the window.
 
 - [x] Test runner window
-  - [x] Different viewmodes (float/buf/split)
-  - [x] Grouped by namespace
-  - [x] Passed, skipped, failed
-  - [x] Configurable highlights
-  - [x] Filter failed tests
-  - [x] Test counting
-  - [x] Unit test name
-  - [x] Collapsable hieararchy 
-  - [x] Peek stack trace
-  - [x] Run sln,project,namespace,test
-  - [x] Aggregate test results
+  - [x] Float, split and vsplit view modes
+  - [x] Grouped by solution, project, namespace and class
+  - [x] Passed, skipped, failed with live counts in header
+  - [x] Configurable icons and highlights
+  - [x] Collapsible hierarchy
+  - [x] Peek stacktrace with parsed highlighting (your code in yellow, framework code in grey)
+  - [x] Run and debug from solution, project, namespace, class or test
+  - [x] Cancel in-flight runs
   - [x] Go to file
+  - [x] Aggregate test results across projects
+- [x] Buffer integration
+  - [x] Gutter signs on test methods and classes
+  - [x] Run test or class from buffer
+  - [x] Debug test or class from buffer
+  - [x] Peek stacktrace from buffer
+  - [x] Flash on run and result
 
 ### Keymaps
-- `W` -> Collapse all
-- `E` -> Expand all
-- `o` -> Expand/collapse under cursor
-- `<leader>r` -> Run test under cursor
-- `<leader>d` -> `[Experimental]` Debug test under cursor using nvim-dap
-- `<leader>R` -> Run all tests
-- `<leader>p` -> Peek stacktrace on failed test
-- `<leader>fe` -> Show only failed tests
 
-- `g` -> Go to file
-- `q` -> Close window
-- `<leader>gf` -> Go to file (inside stacktrace float)
+| Key | Action |
+|-----|--------|
+| `o` | Expand / collapse node under cursor |
+| `E` | Expand all |
+| `W` | Collapse all |
+| `<leader>r` | Run test under cursor |
+| `<leader>R` | Run all tests |
+| `<leader>d` | Debug test under cursor |
+| `<leader>p` | Peek stacktrace of failed test |
+| `<leader>g` | Go to file |
+| `<C-r>` | Refresh test runner node |
+| `<C-c>` | Cancel in-flight operation |
+| `q` | Close window |
 
 ### Debugging tests
-Using the keybinding `<leader>d` will set a breakpoint in the test and launch nvim-dap
 
-https://github.com/user-attachments/assets/b56891c9-1b65-4522-8057-43eff3d1102d
+Use `<leader>d` on any node in the runner to start a debug session. Breakpoints must be set manually before starting the session.
 
-### Running tests directly from buffer
 
-Gutter signs will appear indicating runnable tests
-- `<leader>r` to run test
 
->[!IMPORTANT]
->Testrunner discovery must have completed before entering the buffer for the signs to appear
+### Running tests from buffer
 
-![image](https://github.com/user-attachments/assets/1a22fe4d-81c2-4f5a-86b1-c87f7b6fb701)
+Gutter signs appear automatically on test methods and classes once discovery has completed.
 
-### Debugging tests directly from buffer
+| Key | Action |
+|-----|--------|
+| `<leader>r` | Run test or class under cursor |
+| `<leader>d` | Debug test or class under cursor |
+| `<leader>p` | Peek stacktrace of failed test |
 
-Gutter signs will appear indicating runnable tests
-- `<leader>d` to debug test
+When a run is triggered from the buffer the method or class flashes to confirm it was picked up. When the run finishes it flashes again in the colour of the result.
 
->[!IMPORTANT]
->Nvim dap must be installed and coreclr adapter must be configured
-
-![image](https://github.com/user-attachments/assets/209aca03-397a-424f-973c-c53bae260031)
+<img width="1238" height="575" alt="test signs" src="https://github.com/user-attachments/assets/9e6e2d96-b389-4b35-b2a1-c8392ffdbcba" />
+<img width="1228" height="578" alt="test flash confirm" src="https://github.com/user-attachments/assets/bcb8377a-577f-4808-a20e-1c90f884d9d4" />
+<img width="1885" height="1044" alt="floating stacktrace from buffer" src="https://github.com/user-attachments/assets/109fdfdd-d93b-400e-a4e0-8ebf41ff9312" />
 
 ## Project view
 
