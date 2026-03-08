@@ -264,7 +264,7 @@ function M.open(mode, options)
 
   if mode == "float" then
     local width = math.floor(vim.o.columns * 0.8)
-    local height = math.floor(vim.o.lines * 0.8)
+    local height = math.floor(vim.o.lines * 0.7)
     local col = math.floor((vim.o.columns - width) / 2)
     local row = math.floor((vim.o.lines - height) / 2)
 
