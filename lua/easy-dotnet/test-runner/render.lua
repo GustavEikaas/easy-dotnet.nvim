@@ -78,8 +78,6 @@ local function build_header_row(rs, frame)
   local right_text, right_hls, right_dw = build_right_counts(rs or empty_rs)
   local left_dw = vim.fn.strdisplaywidth(left_text)
 
-  -- If everything fits, right-align counts. If not, drop counts entirely
-  -- rather than wrapping or truncating mid-number.
   local line, hls = left_text, {}
   if left_hl then table.insert(hls, { 0, left_hl_end, left_hl }) end
 
@@ -114,16 +112,27 @@ local function render_header(frame)
 end
 
 local function build_footer_line(node, loading)
-  if loading then return " Cancel", { { 0, 7, "Comment" } } end
+  if loading then return " Cancel", { { 1, 7, "Comment" } } end
   if not node or not node.availableActions or #node.availableActions == 0 then return "", {} end
-  local parts = {}
-  for _, action in ipairs(node.availableActions) do
+
+  local text = " "
+  local hls = {}
+
+  for i, action in ipairs(node.availableActions) do
     local label = action_display[action]
-    if label then table.insert(parts, label) end
+    if label then
+      if i > 1 then
+        local sep = " · "
+        table.insert(hls, { #text, #text + #sep, "Comment" })
+        text = text .. sep
+      end
+      table.insert(hls, { #text, #text + #label, "Normal" })
+      text = text .. label
+    end
   end
-  if #parts == 0 then return "", {} end
-  local text = " " .. table.concat(parts, " · ")
-  return text, { { 0, #text, "Comment" } }
+
+  if text == " " then return "", {} end
+  return text, hls
 end
 
 local function render_footer(node)
@@ -144,8 +153,19 @@ local function render_footer(node)
   end
 end
 
+local function spinner_stop()
+  if not spinner.timer then return end
+  spinner.timer:stop()
+  spinner.timer:close()
+  spinner.timer = nil
+  if M.header_buf and vim.api.nvim_buf_is_valid(M.header_buf) then vim.api.nvim_buf_clear_namespace(M.header_buf, ns_spinner, 0, -1) end
+end
+
 local function spinner_tick()
-  if not M.header_buf or not vim.api.nvim_buf_is_valid(M.header_buf) then return end
+  if not M.header_buf or not vim.api.nvim_buf_is_valid(M.header_buf) then
+    spinner_stop()
+    return
+  end
   spinner.frame = (spinner.frame % #spinner.frames) + 1
   render_header(spinner.frames[spinner.frame])
 end
@@ -155,14 +175,6 @@ local function spinner_start()
   spinner.frame = 1
   spinner.timer = vim.uv.new_timer()
   spinner.timer:start(0, spinner.interval, vim.schedule_wrap(spinner_tick))
-end
-
-local function spinner_stop()
-  if not spinner.timer then return end
-  spinner.timer:stop()
-  spinner.timer:close()
-  spinner.timer = nil
-  if M.header_buf and vim.api.nvim_buf_is_valid(M.header_buf) then vim.api.nvim_buf_clear_namespace(M.header_buf, ns_spinner, 0, -1) end
 end
 
 local function make_scratch_buf(name)
@@ -181,14 +193,52 @@ local function ensure_footer_buf()
   if not M.footer_buf or not vim.api.nvim_buf_is_valid(M.footer_buf) then M.footer_buf = make_scratch_buf() end
 end
 
-local function open_header_float(main_cfg)
+local function get_float_dims()
+  local width = math.floor(vim.o.columns * 0.8)
+  local main_height = math.floor(vim.o.lines * 0.7)
+  local has_footer = not M.options.hide_legend
+  local total_visual_height = main_height + (has_footer and 6 or 4)
+  local start_visual_row = math.floor((vim.o.lines - total_visual_height) / 2) - 2
+  start_visual_row = math.max(1, start_visual_row)
+
+  local main_row = start_visual_row + 3
+  local col = math.floor((vim.o.columns - width) / 2)
+
+  return {
+    width = width,
+    height = main_height,
+    col = col,
+    row = main_row,
+    header_row = main_row - 2,
+    footer_row = main_row + main_height + 1,
+  }
+end
+
+local function resize_floats()
+  if not M.win or not vim.api.nvim_win_is_valid(M.win) then return end
+  local dims = get_float_dims()
+
+  vim.api.nvim_win_set_config(M.win, { width = dims.width, height = dims.height, col = dims.col, row = dims.row, relative = "editor" })
+
+  if M.header_win and vim.api.nvim_win_is_valid(M.header_win) then
+    vim.api.nvim_win_set_config(M.header_win, { width = dims.width, height = 1, col = dims.col, row = dims.header_row, relative = "editor" })
+  end
+
+  if M.footer_win and vim.api.nvim_win_is_valid(M.footer_win) then
+    vim.api.nvim_win_set_config(M.footer_win, { width = dims.width, height = 1, col = dims.col, row = dims.footer_row, relative = "editor" })
+  end
+
+  M.refresh()
+end
+
+local function open_header_float(dims)
   ensure_header_buf()
   M.header_win = vim.api.nvim_open_win(M.header_buf, false, {
     relative = "editor",
-    width = main_cfg.width,
+    width = dims.width,
     height = 1,
-    col = main_cfg.col,
-    row = main_cfg.row - 2,
+    col = dims.col,
+    row = dims.header_row,
     style = "minimal",
     border = "rounded",
     focusable = false,
@@ -198,14 +248,14 @@ local function open_header_float(main_cfg)
   vim.wo[M.header_win].winhighlight = "Normal:NormalFloat"
 end
 
-local function open_footer_float(main_cfg)
+local function open_footer_float(dims)
   ensure_footer_buf()
   M.footer_win = vim.api.nvim_open_win(M.footer_buf, false, {
     relative = "editor",
-    width = main_cfg.width,
+    width = dims.width,
     height = 1,
-    col = main_cfg.col,
-    row = main_cfg.row + main_cfg.height + 1,
+    col = dims.col,
+    row = dims.footer_row,
     style = "minimal",
     border = "rounded",
     focusable = false,
@@ -256,6 +306,7 @@ end
 ---@param mode "float"|"split"|"vsplit"
 function M.open(mode, options)
   M.options = options or M.options
+  M.viewmode = mode
 
   if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
     M.buf = make_scratch_buf("Test Runner")
@@ -263,20 +314,17 @@ function M.open(mode, options)
   end
 
   if mode == "float" then
-    local width = math.floor(vim.o.columns * 0.8)
-    local height = math.floor(vim.o.lines * 0.7)
-    local col = math.floor((vim.o.columns - width) / 2)
-    local row = math.floor((vim.o.lines - height) / 2)
+    local dims = get_float_dims()
 
-    open_header_float({ width = width, height = height, col = col, row = row })
-    if not M.options.hide_legend then open_footer_float({ width = width, height = height, col = col, row = row }) end
+    open_header_float(dims)
+    if not M.options.hide_legend then open_footer_float(dims) end
 
     M.win = vim.api.nvim_open_win(M.buf, true, {
       relative = "editor",
-      width = width,
-      height = height,
-      col = col,
-      row = row,
+      width = dims.width,
+      height = dims.height,
+      col = dims.col,
+      row = dims.row,
       style = "minimal",
       border = "rounded",
       focusable = true,
@@ -325,7 +373,13 @@ function M.open(mode, options)
     })
     vim.api.nvim_create_autocmd("VimResized", {
       group = vim.api.nvim_create_augroup("EasyDotnetTestRunnerResize", { clear = true }),
-      callback = function() M.refresh() end,
+      callback = function()
+        if M.viewmode == "float" then
+          resize_floats()
+        else
+          M.refresh()
+        end
+      end,
     })
   end
 
