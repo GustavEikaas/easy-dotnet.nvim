@@ -6,211 +6,221 @@ local M = {
   win = nil,
   header_buf = nil,
   header_win = nil,
+  footer_buf = nil,
+  footer_win = nil,
   options = {},
 }
 
 local ns_header = vim.api.nvim_create_namespace("easy_dotnet_testrunner_header")
-local ns_loader = vim.api.nvim_create_namespace("easy_dotnet_testrunner_loader")
+local ns_spinner = vim.api.nvim_create_namespace("easy_dotnet_testrunner_spinner")
+local ns_footer = vim.api.nvim_create_namespace("easy_dotnet_testrunner_footer")
 
-local loader = {
+local spinner = {
+  frames = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" },
   timer = nil,
-  pos = -180,
-  width = 180,
-  step = 3,
-  interval = 60,
+  frame = 1,
+  interval = 80,
 }
 
-local function loader_tick()
-  if not M.header_buf or not vim.api.nvim_buf_is_valid(M.header_buf) then return end
-  if not M.header_win or not vim.api.nvim_win_is_valid(M.header_win) then return end
-
-  local win_width = vim.api.nvim_win_get_width(M.header_win)
-
-  local line = string.rep("▂", win_width)
-
-  vim.api.nvim_buf_clear_namespace(M.header_buf, ns_loader, 0, -1)
-  vim.api.nvim_set_option_value("modifiable", true, { buf = M.header_buf })
-  vim.api.nvim_buf_set_lines(M.header_buf, 1, 2, false, { line })
-  vim.api.nvim_set_option_value("modifiable", false, { buf = M.header_buf })
-
-  local seg_start = math.max(loader.pos, 0)
-  local seg_end = math.min(loader.pos + loader.width, win_width)
-  if seg_start < seg_end then vim.api.nvim_buf_set_extmark(M.header_buf, ns_loader, 1, seg_start, {
-    end_col = seg_end,
-    hl_group = "EasyDotnetTestRunnerRunning",
-    priority = 150,
-  }) end
-
-  loader.pos = loader.pos + loader.step
-  if loader.pos >= win_width then loader.pos = -loader.width end
-end
-
-local function loader_start()
-  if loader.timer then return end -- already running
-  loader.pos = -loader.width
-  loader.timer = vim.uv.new_timer()
-  loader.timer:start(0, loader.interval, vim.schedule_wrap(loader_tick))
-end
-
-local function loader_stop()
-  if not loader.timer then return end
-  loader.timer:stop()
-  loader.timer:close()
-  loader.timer = nil
-  if M.header_buf and vim.api.nvim_buf_is_valid(M.header_buf) then
-    vim.api.nvim_buf_clear_namespace(M.header_buf, ns_loader, 0, -1)
-    -- Restore the legend row — refresh_header will rewrite it on next render
-    vim.api.nvim_set_option_value("modifiable", true, { buf = M.header_buf })
-    vim.api.nvim_buf_set_lines(M.header_buf, 1, 2, false, { "" })
-    vim.api.nvim_set_option_value("modifiable", false, { buf = M.header_buf })
-  end
-end
-
--- Maps action → { key fallback, display label }
-local action_labels = {
-  Run = { key = "r", label = "run" },
-  Debug = { key = "d", label = "debug" },
-  Invalidate = { key = "i", label = "invalidate" },
-  GoToSource = { key = "gf", label = "source" },
-  PeekResults = { key = "p", label = "peek" },
-  GetBuildErrors = { key = "e", label = "build errors" },
-  Cancel = { key = "<C-c>", label = "cancel" },
+local action_display = {
+  Run = "Run",
+  Debug = "Debug",
+  Invalidate = "Invalidate",
+  GoToSource = "Go To File",
+  PeekResults = "Peek Stacktrace",
+  GetBuildErrors = "Build Errors",
+  Cancel = "Cancel",
 }
 
--- ---------------------------------------------------------------------------
--- Header content
--- ---------------------------------------------------------------------------
+local function get_icons()
+  local ic = M.options.icons or {}
+  return {
+    passed = ic.success or "",
+    failed = ic.failed or "",
+    skipped = ic.skipped or "⊘",
+  }
+end
 
-local function build_status_line(rs)
-  if not rs then return "", {} end
-
-  local hls = {}
+local function build_right_counts(rs)
+  local ic = get_icons()
   local parts = {}
-  local col = 0
+  local hls = {}
+  local byte_col = 0
 
   local function push(text, hl)
-    if hl then table.insert(hls, { col, col + #text, hl }) end
+    if hl then table.insert(hls, { byte_col, byte_col + #text, hl }) end
     table.insert(parts, text)
-    col = col + #text
+    byte_col = byte_col + #text
   end
 
-  local passed_str = string.format("  %d", rs.totalPassed)
-  local failed_str = string.format("   %d", rs.totalFailed)
-  local skipped_str = string.format("  ⊘ %d", rs.totalSkipped)
-  local total_str = string.format("  %d tests", rs.totalTests or 0)
+  push(string.format("%s %d  ", ic.passed, rs.totalPassed), "EasyDotnetTestRunnerPassed")
+  push(string.format("%s %d  ", ic.failed, rs.totalFailed), "EasyDotnetTestRunnerFailed")
+  push(string.format("%s %d  ", ic.skipped, rs.totalSkipped), "EasyDotnetTestRunnerSkipped")
+  push(string.format("%d tests", rs.totalTests or 0), "Comment")
 
-  -- No loading text — the sliding bar in ns_loader communicates activity
-  push(" ", nil)
-  push(passed_str, "EasyDotnetTestRunnerPassed")
-  push(failed_str, "EasyDotnetTestRunnerFailed")
-  push(skipped_str, "EasyDotnetTestRunnerSkipped")
-  push(total_str, "Comment")
-
-  if not rs.isLoading then push(string.format("   %s", rs.overallStatus or "Idle"), "Comment") end
-
-  return table.concat(parts), hls
+  local text = table.concat(parts)
+  return text, hls, vim.fn.strdisplaywidth(text)
 end
 
-local function build_legend_line(node, opts)
-  if not node or not node.availableActions or #node.availableActions == 0 then return " No actions available", {} end
+local function build_header_row(rs, frame)
+  local win = M.header_win
+  if not win or not vim.api.nvim_win_is_valid(win) then return "", {} end
+  local win_width = vim.api.nvim_win_get_width(win)
+  local loading = rs and rs.isLoading
 
-  local km = opts and opts.mappings or {}
-  local parts = {}
-  local hls = {}
-  local col = 1 -- starts at 1 to account for the leading " " prepended at the end
-
-  for i, action in ipairs(node.availableActions) do
-    local def = action_labels[action]
-    if def then
-      local key = (km[action:lower()] and km[action:lower()].lhs) or def.key
-      local bracket = "[" .. key .. "]"
-      local label = " " .. def.label
-
-      if i > 1 then
-        table.insert(parts, "  ")
-        col = col + 2
-      end
-
-      -- [key] highlighted as Special
-      table.insert(hls, { col, col + #bracket, "Special" })
-      col = col + #bracket
-
-      -- label highlighted as Comment
-      table.insert(hls, { col, col + #label, "Comment" })
-      col = col + #label
-
-      table.insert(parts, bracket .. label)
+  local left_text, left_hl, left_hl_end
+  if loading then
+    local op = rs.currentOperation or "Running"
+    left_text = string.format(" %s %s", frame or spinner.frames[spinner.frame], op)
+    left_hl = "EasyDotnetTestRunnerRunning"
+    left_hl_end = #left_text
+  else
+    local status = (rs and rs.overallStatus and rs.overallStatus ~= "Idle") and rs.overallStatus or ""
+    left_text = " " .. status
+    if status ~= "" then
+      left_hl = rs.overallStatus == "Failed" and "EasyDotnetTestRunnerFailed" or "EasyDotnetTestRunnerPassed"
+      left_hl_end = #left_text
     end
   end
 
-  return " " .. table.concat(parts), hls
+  local empty_rs = { totalPassed = 0, totalFailed = 0, totalSkipped = 0, totalTests = 0 }
+  local right_text, right_hls, right_dw = build_right_counts(rs or empty_rs)
+  local left_dw = vim.fn.strdisplaywidth(left_text)
+  local pad = math.max(1, win_width - left_dw - right_dw)
+  local line = left_text .. string.rep(" ", pad) .. right_text
+
+  local hls = {}
+  if left_hl then table.insert(hls, { 0, left_hl_end, left_hl }) end
+  local right_offset = #left_text + pad
+  for _, h in ipairs(right_hls) do
+    table.insert(hls, { h[1] + right_offset, h[2] + right_offset, h[3] })
+  end
+
+  return line, hls
 end
 
-local function refresh_header(node)
+local function render_header(frame)
   if not M.header_buf or not vim.api.nvim_buf_is_valid(M.header_buf) then return end
   if not M.header_win or not vim.api.nvim_win_is_valid(M.header_win) then return end
 
-  vim.api.nvim_buf_clear_namespace(M.header_buf, ns_header, 0, -1)
-  vim.api.nvim_set_option_value("modifiable", true, { buf = M.header_buf })
-
   local rs = state.runner_status
-  local status_line, status_hls = build_status_line(rs)
+  local line, hls = build_header_row(rs, frame)
 
-  if rs and rs.isLoading then
-    local win_width = vim.api.nvim_win_get_width(M.header_win)
-    local pad = win_width - vim.fn.strdisplaywidth(status_line)
-    if pad > 0 then status_line = status_line .. string.rep(" ", pad) end
-    vim.api.nvim_buf_set_lines(M.header_buf, 0, 1, false, { status_line })
-    vim.api.nvim_set_option_value("modifiable", false, { buf = M.header_buf })
-    for _, hl in ipairs(status_hls) do
-      vim.api.nvim_buf_add_highlight(M.header_buf, ns_header, hl[3], 0, hl[1], hl[2])
-    end
-    return
-  end
-
-  local legend_line, legend_hls = build_legend_line(node, M.options)
-  vim.api.nvim_buf_set_lines(M.header_buf, 0, -1, false, { status_line, legend_line })
+  vim.api.nvim_buf_clear_namespace(M.header_buf, ns_header, 0, -1)
+  vim.api.nvim_buf_clear_namespace(M.header_buf, ns_spinner, 0, -1)
+  vim.api.nvim_set_option_value("modifiable", true, { buf = M.header_buf })
+  vim.api.nvim_buf_set_lines(M.header_buf, 0, -1, false, { line })
   vim.api.nvim_set_option_value("modifiable", false, { buf = M.header_buf })
 
-  for _, hl in ipairs(status_hls) do
+  for _, hl in ipairs(hls) do
     vim.api.nvim_buf_add_highlight(M.header_buf, ns_header, hl[3], 0, hl[1], hl[2])
-  end
-  for _, hl in ipairs(legend_hls) do
-    vim.api.nvim_buf_add_highlight(M.header_buf, ns_header, hl[3], 1, hl[1], hl[2])
   end
 end
 
--- ---------------------------------------------------------------------------
--- Opening windows
--- ---------------------------------------------------------------------------
+local function build_footer_line(node, loading)
+  if loading then return " Cancel", { { 0, 7, "Comment" } } end
+  if not node or not node.availableActions or #node.availableActions == 0 then return "", {} end
+  local parts = {}
+  for _, action in ipairs(node.availableActions) do
+    local label = action_display[action]
+    if label then table.insert(parts, label) end
+  end
+  if #parts == 0 then return "", {} end
+  local text = " " .. table.concat(parts, " · ")
+  return text, { { 0, #text, "Comment" } }
+end
 
-local function make_header_buf()
-  if M.header_buf and vim.api.nvim_buf_is_valid(M.header_buf) then return end
-  M.header_buf = vim.api.nvim_create_buf(false, true)
-  vim.api.nvim_set_option_value("bufhidden", "hide", { buf = M.header_buf })
-  vim.api.nvim_set_option_value("filetype", "easy-dotnet", { buf = M.header_buf })
+local function render_footer(node)
+  if not M.footer_buf or not vim.api.nvim_buf_is_valid(M.footer_buf) then return end
+  if not M.footer_win or not vim.api.nvim_win_is_valid(M.footer_win) then return end
+
+  local loading = state.runner_status and state.runner_status.isLoading
+  local text, hls = build_footer_line(node, loading)
+
+  vim.api.nvim_buf_clear_namespace(M.footer_buf, ns_footer, 0, -1)
+  vim.api.nvim_set_option_value("modifiable", true, { buf = M.footer_buf })
+  vim.api.nvim_buf_set_lines(M.footer_buf, 0, -1, false, { text })
+  vim.api.nvim_set_option_value("modifiable", false, { buf = M.footer_buf })
+
+  for _, h in ipairs(hls) do
+    vim.api.nvim_buf_add_highlight(M.footer_buf, ns_footer, h[3], 0, h[1], h[2])
+  end
+end
+
+local function spinner_tick()
+  if not M.header_buf or not vim.api.nvim_buf_is_valid(M.header_buf) then return end
+  spinner.frame = (spinner.frame % #spinner.frames) + 1
+  render_header(spinner.frames[spinner.frame])
+end
+
+local function spinner_start()
+  if spinner.timer then return end
+  spinner.frame = 1
+  spinner.timer = vim.uv.new_timer()
+  spinner.timer:start(0, spinner.interval, vim.schedule_wrap(spinner_tick))
+end
+
+local function spinner_stop()
+  if not spinner.timer then return end
+  spinner.timer:stop()
+  spinner.timer:close()
+  spinner.timer = nil
+  if M.header_buf and vim.api.nvim_buf_is_valid(M.header_buf) then vim.api.nvim_buf_clear_namespace(M.header_buf, ns_spinner, 0, -1) end
+end
+
+local function make_scratch_buf(name)
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_set_option_value("bufhidden", "hide", { buf = buf })
+  vim.api.nvim_set_option_value("filetype", "easy-dotnet", { buf = buf })
+  if name then vim.api.nvim_buf_set_name(buf, name) end
+  return buf
+end
+
+local function ensure_header_buf()
+  if not M.header_buf or not vim.api.nvim_buf_is_valid(M.header_buf) then M.header_buf = make_scratch_buf() end
+end
+
+local function ensure_footer_buf()
+  if not M.footer_buf or not vim.api.nvim_buf_is_valid(M.footer_buf) then M.footer_buf = make_scratch_buf() end
 end
 
 local function open_header_float(main_cfg)
-  make_header_buf()
+  ensure_header_buf()
   M.header_win = vim.api.nvim_open_win(M.header_buf, false, {
     relative = "editor",
     width = main_cfg.width,
-    height = 2,
+    height = 1,
     col = main_cfg.col,
-    row = main_cfg.row,
+    row = main_cfg.row - 2,
     style = "minimal",
     border = "rounded",
     focusable = false,
-    zindex = 51, -- above the main float (default is 50)
+    zindex = 51,
   })
   vim.wo[M.header_win].cursorline = false
   vim.wo[M.header_win].winhighlight = "Normal:NormalFloat"
 end
 
+local function open_footer_float(main_cfg)
+  ensure_footer_buf()
+  M.footer_win = vim.api.nvim_open_win(M.footer_buf, false, {
+    relative = "editor",
+    width = main_cfg.width,
+    height = 1,
+    col = main_cfg.col,
+    row = main_cfg.row + main_cfg.height + 1,
+    style = "minimal",
+    border = "rounded",
+    focusable = false,
+    zindex = 51,
+  })
+  vim.wo[M.footer_win].cursorline = false
+  vim.wo[M.footer_win].winhighlight = "Normal:NormalFloat"
+end
+
 local function open_header_split()
-  make_header_buf()
-  vim.cmd("aboveleft 2split")
+  ensure_header_buf()
+  vim.cmd("aboveleft 1split")
   M.header_win = vim.api.nvim_get_current_win()
   vim.api.nvim_win_set_buf(M.header_win, M.header_buf)
   vim.wo[M.header_win].cursorline = false
@@ -220,35 +230,48 @@ local function open_header_split()
   vim.api.nvim_set_current_win(M.win)
 end
 
--- ---------------------------------------------------------------------------
--- Public API
--- ---------------------------------------------------------------------------
+local function open_footer_split()
+  ensure_footer_buf()
+  vim.cmd("belowright 1split")
+  M.footer_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(M.footer_win, M.footer_buf)
+  vim.wo[M.footer_win].cursorline = false
+  vim.wo[M.footer_win].statusline = ""
+  vim.wo[M.footer_win].winfixheight = true
+  vim.api.nvim_set_option_value("modifiable", false, { buf = M.footer_buf })
+  vim.api.nvim_set_current_win(M.win)
+end
+
+local function close_aux_wins()
+  for _, w in ipairs({ M.header_win, M.footer_win }) do
+    if w and vim.api.nvim_win_is_valid(w) then vim.api.nvim_win_close(w, true) end
+  end
+  M.header_win = nil
+  M.footer_win = nil
+end
 
 ---@param mode "float"|"split"|"vsplit"
 function M.open(mode, options)
   M.options = options or M.options
 
   if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
-    M.buf = vim.api.nvim_create_buf(false, true)
+    M.buf = make_scratch_buf("Test Runner")
     vim.api.nvim_buf_set_name(M.buf, "Test Runner")
-    vim.api.nvim_set_option_value("filetype", "easy-dotnet", { buf = M.buf })
-    vim.api.nvim_set_option_value("bufhidden", "hide", { buf = M.buf })
   end
 
   if mode == "float" then
     local width = math.floor(vim.o.columns * 0.8)
-    local height = math.floor(vim.o.lines * 0.8)
+    local height = math.floor(vim.o.lines * 0.7)
     local col = math.floor((vim.o.columns - width) / 2)
     local row = math.floor((vim.o.lines - height) / 2)
 
-    -- Header sits above the main float
-    open_header_float({ width = width, height = height, col = col, row = row - 3 })
+    open_header_float({ width = width, height = height, col = col, row = row })
+    open_footer_float({ width = width, height = height, col = col, row = row })
 
-    -- Main float: shifted down to give header room (header=2 lines + 1 gap)
     M.win = vim.api.nvim_open_win(M.buf, true, {
       relative = "editor",
       width = width,
-      height = height - 3,
+      height = height,
       col = col,
       row = row,
       style = "minimal",
@@ -256,49 +279,48 @@ function M.open(mode, options)
       focusable = true,
     })
 
-    -- Close header when float is closed
     vim.api.nvim_create_autocmd("WinClosed", {
       pattern = tostring(M.win),
       once = true,
       callback = function()
-        loader_stop()
-        if M.header_win and vim.api.nvim_win_is_valid(M.header_win) then vim.api.nvim_win_close(M.header_win, true) end
+        spinner_stop()
+        close_aux_wins()
         M.win = nil
-        M.header_win = nil
       end,
     })
   elseif mode == "split" or mode == "vsplit" then
     if mode == "vsplit" then
       local w = options and options.vsplit_width or math.floor(vim.o.columns * 0.4)
       vim.cmd((options and options.vsplit_pos or "") .. tostring(w) .. "vsplit")
-      M.win = vim.api.nvim_get_current_win()
-      vim.api.nvim_win_set_buf(M.win, M.buf)
     else
       vim.cmd("split")
-      M.win = vim.api.nvim_get_current_win()
-      vim.api.nvim_win_set_buf(M.win, M.buf)
     end
+    M.win = vim.api.nvim_get_current_win()
+    vim.api.nvim_win_set_buf(M.win, M.buf)
 
-    -- Pin header above the main split
     open_header_split()
+    open_footer_split()
 
     vim.api.nvim_create_autocmd("WinClosed", {
       pattern = tostring(M.win),
       once = true,
       callback = function()
-        if M.header_win and vim.api.nvim_win_is_valid(M.header_win) then vim.api.nvim_win_close(M.header_win, true) end
+        spinner_stop()
+        close_aux_wins()
         M.win = nil
-        M.header_win = nil
       end,
     })
   end
 
   if M.win and vim.api.nvim_win_is_valid(M.win) then
     vim.api.nvim_set_option_value("cursorline", true, { win = M.win })
-    -- Update legend on cursor move
     vim.api.nvim_create_autocmd("CursorMoved", {
       buffer = M.buf,
-      callback = function() refresh_header(M.node_at_cursor()) end,
+      callback = function() render_footer(M.node_at_cursor()) end,
+    })
+    vim.api.nvim_create_autocmd("VimResized", {
+      buffer = M.buf,
+      callback = function() M.refresh() end,
     })
   end
 
@@ -306,19 +328,13 @@ function M.open(mode, options)
 end
 
 function M.hide()
-  if M.header_win and vim.api.nvim_win_is_valid(M.header_win) then
-    vim.api.nvim_win_close(M.header_win, true)
-    M.header_win = nil
-  end
+  spinner_stop()
+  close_aux_wins()
   if M.win and vim.api.nvim_win_is_valid(M.win) then
     vim.api.nvim_win_close(M.win, false)
     M.win = nil
   end
 end
-
--- ---------------------------------------------------------------------------
--- Rendering
--- ---------------------------------------------------------------------------
 
 local status_highlights = {
   Passed = "EasyDotnetTestRunnerPassed",
@@ -364,6 +380,7 @@ local function render_node(node, depth)
   local pre = node_pre_icon(ntype, M.options)
   local icons = M.options.icons or {}
   local children = state.children(node.id)
+
   local expand_icon
   if #children > 0 then
     expand_icon = node.expanded and (icons.expanded or " ") or (icons.collapsed or " ")
@@ -400,10 +417,13 @@ function M.refresh()
 
   local rs = state.runner_status
   if rs and rs.isLoading then
-    loader_start()
+    spinner_start()
   else
-    loader_stop()
+    spinner_stop()
   end
+
+  render_header()
+  render_footer(M.node_at_cursor())
 
   if not M.win or not vim.api.nvim_win_is_valid(M.win) then return end
 
@@ -424,8 +444,6 @@ function M.refresh()
   for _, h in ipairs(highlights) do
     vim.api.nvim_buf_add_highlight(M.buf, ns_id, h.hl, h.row, 0, -1)
   end
-
-  refresh_header(M.node_at_cursor())
 end
 
 function M.node_at_cursor()
