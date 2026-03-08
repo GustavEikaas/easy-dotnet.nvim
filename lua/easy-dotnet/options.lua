@@ -66,8 +66,6 @@
 ---@field viewmode string
 ---@field vsplit_width number|nil
 ---@field vsplit_pos string|nil
----@field enable_buffer_test_execution boolean
----@field noBuild boolean
 ---@field icons easy-dotnet.TestRunner.Icons
 ---@field mappings easy-dotnet.TestRunner.Mappings
 ---@field additional_args table
@@ -122,8 +120,6 @@ local M = {
       viewmode = "float",
       vsplit_width = nil,
       vsplit_pos = nil,
-      enable_buffer_test_execution = true,
-      noBuild = false,
       icons = {
         passed = "",
         skipped = "",
