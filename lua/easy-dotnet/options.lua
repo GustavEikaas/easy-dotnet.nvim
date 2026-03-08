@@ -46,17 +46,17 @@
 ---@field run_test_from_buffer easy-dotnet.Keymap
 ---@field peek_stack_trace_from_buffer easy-dotnet.Keymap
 ---@field debug_test_from_buffer easy-dotnet.Keymap
----@field go_to_file easy-dotnet.Keymap
 ---@field debug_test easy-dotnet.Keymap
----@field filter_failed_tests easy-dotnet.Keymap
----@field expand_all easy-dotnet.Keymap
----@field collapse_all easy-dotnet.Keymap
----@field expand easy-dotnet.Keymap
----@field peek_stacktrace easy-dotnet.Keymap
+---@field go_to_file easy-dotnet.Keymap
 ---@field run_all easy-dotnet.Keymap
 ---@field run easy-dotnet.Keymap
----@field close easy-dotnet.Keymap
+---@field peek_stacktrace easy-dotnet.Keymap
+---@field expand easy-dotnet.Keymap
+---@field expand_node easy-dotnet.Keymap
+---@field collapse_all easy-dotnet.Keymap
 ---@field refresh_testrunner easy-dotnet.Keymap
+---@field close easy-dotnet.Keymap
+---@field cancel easy-dotnet.Keymap
 
 ---@class easy-dotnet.Keymap
 ---@field lhs string
@@ -68,7 +68,6 @@
 ---@field vsplit_pos string|nil
 ---@field icons easy-dotnet.TestRunner.Icons
 ---@field mappings easy-dotnet.TestRunner.Mappings
----@field additional_args table
 
 ---@alias easy-dotnet.PickerType nil | "telescope" | "fzf" | "snacks" | "basic"
 
@@ -117,6 +116,7 @@ local M = {
     ---@type easy-dotnet.TestRunner.Options
     test_runner = {
       auto_start_testrunner = true,
+      hide_legend = false,
       viewmode = "float",
       vsplit_width = nil,
       vsplit_pos = nil,
@@ -137,7 +137,6 @@ local M = {
         run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
         peek_stack_trace_from_buffer = { lhs = "<leader>p", desc = "peek stack trace from buffer" },
         debug_test_from_buffer = { lhs = "<leader>d", desc = "run test from buffer" },
-        filter_failed_tests = { lhs = "<leader>fe", desc = "filter failed tests" },
         debug_test = { lhs = "<leader>d", desc = "debug test" },
         go_to_file = { lhs = "<leader>g", desc = "go to file" },
         run_all = { lhs = "<leader>R", desc = "run all tests" },
@@ -145,13 +144,11 @@ local M = {
         peek_stacktrace = { lhs = "<leader>p", desc = "peek stacktrace of failed test" },
         expand = { lhs = "o", desc = "expand" },
         expand_node = { lhs = "E", desc = "expand node" },
-        expand_all = { lhs = "-", desc = "expand all" },
         collapse_all = { lhs = "W", desc = "collapse all" },
         close = { lhs = "q", desc = "close testrunner" },
         refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" },
         cancel = { lhs = "<C-c>", desc = "cancel in-flight operation" },
       },
-      additional_args = {},
     },
     csproj_mappings = true,
     fsproj_mappings = true,

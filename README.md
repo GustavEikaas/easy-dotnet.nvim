@@ -158,29 +158,31 @@ Although not *required* by the plugin, it is highly recommended to install one o
       },
       ---@type TestRunnerOptions
       test_runner = {
+        auto_start_testrunner = true,
+        hide_legend = false,
         ---@type "split" | "vsplit" | "float" | "buf"
         viewmode = "float",
         ---@type number|nil
         vsplit_width = nil,
         ---@type string|nil "topleft" | "topright" 
         vsplit_pos = nil,
-          icons = {
-            passed = "",
-            skipped = "",
-            failed = "",
-            success = "",
-            reload = "",
-            test = "",
-            sln = "󰘐",
-            project = "󰘐",
-            dir = "",
-            package = "",
-          },
+        icons = {
+          passed = "",
+          skipped = "",
+          failed = "",
+          success = "",
+          reload = "",
+          test = "",
+          sln = "󰘐",
+          project = "󰘐",
+          dir = "",
+          package = "",
+          class = "",
+        },
         mappings = {
           run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
-          run_all_tests_from_buffer = { lhs = "<leader>t", desc = "run all tests from buffer" },
           peek_stack_trace_from_buffer = { lhs = "<leader>p", desc = "peek stack trace from buffer" },
-          filter_failed_tests = { lhs = "<leader>fe", desc = "filter failed tests" },
+          debug_test_from_buffer = { lhs = "<leader>d", desc = "run test from buffer" },
           debug_test = { lhs = "<leader>d", desc = "debug test" },
           go_to_file = { lhs = "g", desc = "go to file" },
           run_all = { lhs = "<leader>R", desc = "run all tests" },
@@ -188,13 +190,11 @@ Although not *required* by the plugin, it is highly recommended to install one o
           peek_stacktrace = { lhs = "<leader>p", desc = "peek stacktrace of failed test" },
           expand = { lhs = "o", desc = "expand" },
           expand_node = { lhs = "E", desc = "expand node" },
-          expand_all = { lhs = "-", desc = "expand all" },
           collapse_all = { lhs = "W", desc = "collapse all" },
           close = { lhs = "q", desc = "close testrunner" },
           refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" }
-        },
-        --- Optional table of extra args e.g "--blame crash"
-        additional_args = {}
+          cancel = { lhs = "<C-c>", desc = "cancel in-flight operation" },
+        }
       },
       new = {
         project = {

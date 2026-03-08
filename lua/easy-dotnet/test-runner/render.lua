@@ -32,17 +32,8 @@ local action_display = {
   Cancel = "Cancel",
 }
 
-local function get_icons()
-  local ic = M.options.icons or {}
-  return {
-    passed = ic.success or "",
-    failed = ic.failed or "",
-    skipped = ic.skipped or "⊘",
-  }
-end
-
 local function build_right_counts(rs)
-  local ic = get_icons()
+  local ic = M.options.icons
   local parts = {}
   local hls = {}
   local byte_col = 0
@@ -53,7 +44,7 @@ local function build_right_counts(rs)
     byte_col = byte_col + #text
   end
 
-  push(string.format("%s %d  ", ic.passed, rs.totalPassed), "EasyDotnetTestRunnerPassed")
+  push(string.format("%s %d  ", ic.success, rs.totalPassed), "EasyDotnetTestRunnerPassed")
   push(string.format("%s %d  ", ic.failed, rs.totalFailed), "EasyDotnetTestRunnerFailed")
   push(string.format("%s %d  ", ic.skipped, rs.totalSkipped), "EasyDotnetTestRunnerSkipped")
   push(string.format("%d tests", rs.totalTests or 0), "Comment")
@@ -131,6 +122,7 @@ local function build_footer_line(node, loading)
 end
 
 local function render_footer(node)
+  if M.options.hide_legend then return end
   if not M.footer_buf or not vim.api.nvim_buf_is_valid(M.footer_buf) then return end
   if not M.footer_win or not vim.api.nvim_win_is_valid(M.footer_win) then return end
 
@@ -261,12 +253,12 @@ function M.open(mode, options)
 
   if mode == "float" then
     local width = math.floor(vim.o.columns * 0.8)
-    local height = math.floor(vim.o.lines * 0.7)
+    local height = math.floor(vim.o.lines * 0.8)
     local col = math.floor((vim.o.columns - width) / 2)
     local row = math.floor((vim.o.lines - height) / 2)
 
     open_header_float({ width = width, height = height, col = col, row = row })
-    open_footer_float({ width = width, height = height, col = col, row = row })
+    if not M.options.hide_legend then open_footer_float({ width = width, height = height, col = col, row = row }) end
 
     M.win = vim.api.nvim_open_win(M.buf, true, {
       relative = "editor",
@@ -299,7 +291,7 @@ function M.open(mode, options)
     vim.api.nvim_win_set_buf(M.win, M.buf)
 
     open_header_split()
-    open_footer_split()
+    if not M.options.hide_legend then open_footer_split() end
 
     vim.api.nvim_create_autocmd("WinClosed", {
       pattern = tostring(M.win),
@@ -349,50 +341,44 @@ local status_highlights = {
   Cancelled = "EasyDotnetTestRunnerFailed",
 }
 
-local status_icons = {
-  Failed = " ✗",
-  Skipped = " ⊘",
-  Running = " ⟳",
-  Debugging = " ⟳",
-  Building = " ⟳",
-  Discovering = "⟳",
-  Queued = " …",
-  Cancelling = " ⟳",
-  Cancelled = " ✗",
-}
-
-local function node_pre_icon(node_type, opts)
-  local icons = opts and opts.icons or {}
+local function node_pre_icon(node_type)
+  local icons = M.options.icons
   return ({
-    Solution = icons.sln or "󰘼",
-    Project = icons.project or "",
-    Namespace = icons.dir or "",
-    TestClass = icons.class or "",
-    TheoryGroup = icons.package or "",
-    TestMethod = icons.test or "󰙨",
-    Subcase = icons.test or "󰙨",
+    Solution = icons.sln,
+    Project = icons.project,
+    Namespace = icons.dir,
+    TestClass = icons.class,
+    TheoryGroup = icons.package,
+    TestMethod = icons.test,
+    Subcase = icons.test,
   })[node_type] or "?"
+end
+
+local function get_status_icon(stype)
+  local icons = M.options.icons
+  return ({
+    Failed = " " .. icons.failed,
+    Skipped = " " .. icons.skipped,
+    Cancelled = " " .. icons.failed,
+    Running = " " .. icons.reload,
+    Debugging = " " .. icons.reload,
+    Building = " " .. icons.reload,
+    Discovering = icons.reload,
+    Queued = " …",
+    Cancelling = " " .. icons.reload,
+  })[stype] or ""
 end
 
 local function render_node(node, depth)
   local indent = string.rep(" ", depth * 2)
   local ntype = node.type and node.type.type or ""
-  local pre = node_pre_icon(ntype, M.options)
-  local icons = M.options.icons or {}
-  local children = state.children(node.id)
-
-  local expand_icon
-  if #children > 0 then
-    expand_icon = node.expanded and (icons.expanded or " ") or (icons.collapsed or " ")
-  else
-    expand_icon = " "
-  end
+  local pre = node_pre_icon(ntype)
 
   local status_suffix = ""
   local hl = nil
   if node.status then
     local stype = node.status.type
-    status_suffix = status_icons[stype] or ""
+    status_suffix = get_status_icon(stype)
     hl = status_highlights[stype]
     if stype == "Passed" and node.status.durationDisplay then status_suffix = "  " .. node.status.durationDisplay end
   end
@@ -409,7 +395,7 @@ local function render_node(node, depth)
     })[ntype]
   end
 
-  return string.format("%s%s%s %s%s", indent, expand_icon, pre, node.displayName, status_suffix), hl
+  return string.format("%s%s %s%s", indent, pre, node.displayName, status_suffix), hl
 end
 
 function M.refresh()
