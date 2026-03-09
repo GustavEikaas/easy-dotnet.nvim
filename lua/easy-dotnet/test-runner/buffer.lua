@@ -26,10 +26,12 @@ local function flash_method(bufnr, sig_line, end_line, hl_group, duration)
   vim.api.nvim_buf_clear_namespace(bufnr, ns_flash, 0, -1)
 
   for line = sig_line, fin do
-    vim.api.nvim_buf_set_extmark(bufnr, ns_flash, line, 0, {
-      line_hl_group = hl_group or "CursorLine",
-      priority = 200,
-    })
+    pcall(function()
+      vim.api.nvim_buf_set_extmark(bufnr, ns_flash, line, 0, {
+        line_hl_group = hl_group or "CursorLine",
+        priority = 200,
+      })
+    end)
   end
 
   vim.defer_fn(function()
@@ -299,11 +301,13 @@ function M.attach(filepath, client)
       pattern = filepath,
       callback = function(ev)
         vim.schedule(function()
-          M.apply_signs(filepath)
-          if not registered_bufs[ev.buf] then
-            M.register_buf_keymaps(ev.buf, client)
-            registered_bufs[ev.buf] = true
-          end
+          pcall(function()
+            M.apply_signs(filepath)
+            if not registered_bufs[ev.buf] then
+              M.register_buf_keymaps(ev.buf, client)
+              registered_bufs[ev.buf] = true
+            end
+          end)
         end)
       end,
     })
@@ -323,13 +327,17 @@ function M.attach(filepath, client)
           if not result then return end
           if result.version < version then return end
 
-          local any_changed = false
-          for _, update in ipairs(result.updates or {}) do
-            state.update_line_numbers(update)
-            any_changed = true
+          local live_ids = {}
+          for _, loc in ipairs(result.updates or {}) do
+            live_ids[loc.id] = true
+            state.update_line_numbers(loc)
           end
 
-          if any_changed then M.apply_signs(filepath) end
+          state.traverse_all(function(node)
+            if norm(node.filePath) == norm(filepath) and not live_ids[node.id] then state.remove(node.id) end
+          end)
+
+          M.apply_signs(filepath)
         end)
       end,
     })

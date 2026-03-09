@@ -32,9 +32,7 @@ local M = {}
 -- id → TestNode
 ---@type table<string, easy-dotnet.TestRunner.Node>
 M.nodes = {}
-M.quick_discover_started = false
 
--- Top-level runner status from testrunner/statusUpdate
 ---@type easy-dotnet.TestRunner.RunnerStatus
 M.runner_status = {
   isLoading = false,
@@ -47,7 +45,7 @@ M.runner_status = {
 }
 
 M.root_id = nil
-
+M.initialized = false
 M.active_handle = nil
 
 --- Upsert a node. Preserves local UI state (expanded) if the node already exists.
@@ -66,6 +64,10 @@ function M.register(node)
   M.nodes[node.id] = node
   if node.parentId == nil then M.root_id = node.id end
 end
+
+--- Remove a node from the state.
+---@param id string
+function M.remove(id) M.nodes[id] = nil end
 
 --- Update cached status for a node. nil status = reset to idle.
 ---@param id string
@@ -115,10 +117,10 @@ function M.children(parent_id)
   return result
 end
 
---- Wipe all state. Called before a fresh initialize.
 function M.clear()
   M.nodes = {}
   M.root_id = nil
+  M.initialized = false
   M.runner_status = {
     isLoading = false,
     currentOperation = nil,
