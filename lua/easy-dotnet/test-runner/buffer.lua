@@ -64,7 +64,6 @@ local function group_nodes_by_line(filepath)
     if node.endLine and node.endLine > groups[sig].endLine then groups[sig].endLine = node.endLine end
   end
 
-  -- Prefer TheoryGroup over individual Subcase nodes at the same line
   for sig, group in pairs(groups) do
     for _, node in ipairs(group.nodes) do
       if node.type and node.type.type == "TheoryGroup" then
@@ -97,7 +96,6 @@ local function node_at_line(filepath, line)
   local npath = norm(filepath)
   local groups = group_nodes_by_line(filepath)
 
-  -- Pick the narrowest matching range so a method sign always wins over a class sign
   local best_nodes, best_sig, best_fin = nil, nil, nil
   for sig_line, group in pairs(groups) do
     local fin = group.endLine or sig_line
@@ -109,7 +107,6 @@ local function node_at_line(filepath, line)
   end
   if best_nodes then return best_nodes, best_sig, best_fin end
 
-  -- Fallback: cursor is somewhere inside a class body between method groups
   local class_match, class_sig, class_fin = nil, nil, nil
   state.traverse_all(function(node)
     if class_match then return end

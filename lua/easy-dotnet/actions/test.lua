@@ -43,7 +43,7 @@ local function pick_project_framework_or_solution(use_default)
     return default.project, solution_file_path
   end
 
-  local projects_with_sln = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(i) return i.isTestProject == true end)
+  local projects_with_sln = sln_parse.get_projects_and_frameworks_flattened_from_sln(solution_file_path, function(i) return i.isTestProject == true or i.isTestPlatformProject == true end)
   table.insert(projects_with_sln, { display = "Solution" })
 
   if #projects_with_sln == 0 then error(error_messages.no_test_projects_found) end
