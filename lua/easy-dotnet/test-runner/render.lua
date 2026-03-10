@@ -1,447 +1,518 @@
 local ns_id = require("easy-dotnet.constants").ns_id
-local polyfills = require("easy-dotnet.polyfills")
-
----@class easy-dotnet.Window
----@field tree table<string,easy-dotnet.TestRunner.Node>
----@field jobs table
----@field appendJob table
----@field buf integer | nil
----@field win integer | nil
----@field height integer
----@field modifiable boolean
----@field buf_name string
----@field filetype string
----@field filter easy-dotnet.TestRunner.Result
----@field keymap table
----@field options table
-
----@class easy-dotnet.Highlight
----@field index number
----@field highlight string
-
----@alias easy-dotnet.TestRunner.Result '"Failed"' | '"NotExecuted"' | '"Passed"'
+local state = require("easy-dotnet.test-runner.state")
 
 local M = {
-  tree = {},
-  jobs = {},
-  appendJob = nil,
   buf = nil,
   win = nil,
-  height = 10,
-  modifiable = false,
-  buf_name = "",
-  filetype = "",
-  filter = nil,
-  keymap = {},
+  header_buf = nil,
+  header_win = nil,
+  footer_buf = nil,
+  footer_win = nil,
   options = {},
 }
 
----Traverses a tree from the given node, giving a callback for every item
----@param node easy-dotnet.TestRunner.Node | nil
----@param cb function
-M.traverse = function(node, cb)
-  if not node then node = M.tree end
-  --HACK: handle no tree set
-  if not node.name then return end
+local ns_header = vim.api.nvim_create_namespace("easy_dotnet_testrunner_header")
+local ns_spinner = vim.api.nvim_create_namespace("easy_dotnet_testrunner_spinner")
+local ns_footer = vim.api.nvim_create_namespace("easy_dotnet_testrunner_footer")
 
-  cb(node)
-  local keys = vim.tbl_keys(node.children or {})
-  table.sort(keys)
-  for _, key in ipairs(keys) do
-    M.traverse(node.children[key], cb)
-  end
-end
+local spinner = {
+  frames = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" },
+  timer = nil,
+  frame = 1,
+  interval = 80,
+}
 
-M.traverse_expanded = function(node, cb)
-  if not node then node = M.tree end
-  --HACK: handle no tree set
-  if not node.name then return end
-  cb(node)
-  local keys = vim.tbl_keys(node.children or {})
-  table.sort(keys)
-  for _, key in ipairs(keys) do
-    local child_node = node.children[key]
-    local filterpass = M.filter == nil or (M.filter == child_node.icon or child_node.icon == "<Running>")
-    if node.expanded and filterpass then M.traverse_expanded(child_node, cb) end
-  end
-end
+local action_display = {
+  Run = "Run",
+  Debug = "Debug",
+  Invalidate = "Invalidate",
+  GoToSource = "Go To File",
+  PeekResults = "Peek Stacktrace",
+  GetBuildErrors = "Build Errors",
+  Cancel = "Cancel",
+}
 
-M.traverse_filtered = function(node, cb)
-  if not node then node = M.tree end
-  --HACK: handle no tree set
-  if not node.name then return end
-  cb(node)
-  local keys = vim.tbl_keys(node.children or {})
-  table.sort(keys)
-  for _, key in ipairs(keys) do
-    local child_node = node.children[key]
-    local filterpass = M.filter == nil or (M.filter == child_node.icon)
-    if filterpass then M.traverse_filtered(child_node, cb) end
-  end
-end
+local function build_right_counts(rs)
+  local ic = M.options.icons
+  local parts = {}
+  local hls = {}
+  local byte_col = 0
 
----@param id string
----@param type "Run" | "Server"
----@param subtask_count number | nil
-function M.appendJob(id, type, subtask_count)
-  local job = {
-    type = type,
-    id = id,
-    subtask_count = (subtask_count and subtask_count > 0) and subtask_count or 1,
-  }
-  table.insert(M.jobs, job)
-  M.refreshTree()
-
-  local on_job_finished_callback = function()
-    job.completed = true
-    local is_all_finished = polyfills.iter(M.jobs):all(function(s) return s.completed end)
-    if is_all_finished == true then M.jobs = {} end
-    M.refreshTree()
+  local function push(text, hl)
+    if hl then table.insert(hls, { byte_col, byte_col + #text, hl }) end
+    table.insert(parts, text)
+    byte_col = byte_col + #text
   end
 
-  local partial_finished = function(count)
-    if job.subtask_count then job.subtask_count = job.subtask_count - count end
-    M.refreshTree()
-  end
+  push(string.format("%s %d  ", ic.success, rs.totalPassed), "EasyDotnetTestRunnerPassed")
+  push(string.format("%s %d  ", ic.failed, rs.totalFailed), "EasyDotnetTestRunnerFailed")
+  push(string.format("%s %d  ", ic.skipped, rs.totalSkipped), "EasyDotnetTestRunnerSkipped")
+  push(string.format("%d tests", rs.totalTests or 0), "Comment")
 
-  return on_job_finished_callback, partial_finished
+  local text = table.concat(parts)
+  return text, hls, vim.fn.strdisplaywidth(text)
 end
 
-function M.redraw_virtual_text()
-  if #M.jobs > 0 then
-    local total_subtask_count = 0
-    local completed_count = 0
-    for _, value in ipairs(M.jobs) do
-      total_subtask_count = total_subtask_count + value.subtask_count
-      if value.completed == true then completed_count = completed_count + value.subtask_count end
-    end
+local function build_header_row(rs, frame)
+  local win = M.header_win
+  if not win or not vim.api.nvim_win_is_valid(win) then return "", {} end
+  local win_width = vim.api.nvim_win_get_width(win)
+  local loading = rs and rs.isLoading
 
-    local job_type = M.jobs[1].type
-
-    vim.api.nvim_buf_set_extmark(M.buf, ns_id, 0, 0, {
-      virt_text = {
-        {
-          string.format(
-            "%s %s/%s",
-            job_type == "Run" and "Running" or job_type == "Discovery" and "Discovering" or job_type == "Build" and "Building" or "Starting server",
-            completed_count,
-            total_subtask_count
-          ),
-          "Character",
-        },
-      },
-      virt_text_pos = "right_align",
-      priority = 200,
-    })
-  end
-end
-
-local function setBufferOptions()
-  if M.options.viewmode ~= "buf" and M.options.viewmode ~= "vsplit" then vim.api.nvim_win_set_height(M.win, M.height) end
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
-  vim.api.nvim_buf_set_name(M.buf, M.buf_name)
-  vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
-  if M.win and vim.api.nvim_win_is_valid(M.win) then vim.api.nvim_set_option_value("cursorline", true, { win = M.win }) end
-end
-
----Translates a line number to the corresponding node in the tree structure, considering the `expanded` flag of nodes.
----Only expanded nodes contribute to the line number count, while collapsed nodes and their children are ignored.
----
----@param line_num number The line number in the buffer to be translated to a node in the tree structure.
----@param tree easy-dotnet.TestRunner.Node The root node of the tree structure to traverse.
----@return easy-dotnet.TestRunner.Node | nil
-local function translateIndex(line_num, tree)
-  local current_line = 1
-  local result = nil
-
-  M.traverse_expanded(tree, function(node)
-    if result ~= nil then return end
-    if current_line == line_num then result = node end
-    current_line = current_line + 1
-  end)
-
-  return result
-end
-
----@param highlights easy-dotnet.Highlight[]
-local function apply_highlights(highlights)
-  for _, value in ipairs(highlights) do
-    if value.highlight ~= nil then vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, value.index - 1, 0, -1) end
-  end
-end
-
----@param node easy-dotnet.TestRunner.Node
----@return string | nil
-local function calculate_highlight(node)
-  if node.job then
-    if node.job.state == "pending" then
-      return "EasyDotnetTestRunnerRunning"
-    elseif node.job.state == "error" then
-      return "EasyDotnetTestRunnerFailed"
-    end
-  end
-  if node.icon == M.options.icons.failed then
-    return "EasyDotnetTestRunnerFailed"
-  elseif node.icon == "<Running>" then
-    return "EasyDotnetTestRunnerRunning"
-  elseif node.icon == M.options.icons.passed then
-    return "EasyDotnetTestRunnerPassed"
-  elseif node.highlight ~= nil and type(node.highlight) == "string" then
-    return node.highlight
-  end
-  return nil
-end
-
-local function convert_time(time_str)
-  local hours, minutes, seconds, microseconds = time_str:match("(%d+):(%d+):(%d+)%.(%d+)")
-  hours = tonumber(hours)
-  minutes = tonumber(minutes)
-  seconds = tonumber(seconds)
-  microseconds = tonumber(microseconds)
-
-  local totalSeconds = hours * 3600 + minutes * 60 + seconds + microseconds / 1000000
-
-  if totalSeconds >= 3600 then
-    return string.format("%.1f h", totalSeconds / 3600)
-  elseif totalSeconds >= 60 then
-    return string.format("%.1f m", totalSeconds / 60)
-  elseif totalSeconds >= 1 then
-    return string.format("%.1f s", totalSeconds)
-  elseif totalSeconds > 0 then
-    return string.format("< 1 ms")
+  local left_text, left_hl, left_hl_end
+  if loading then
+    local op = rs.currentOperation or "Running"
+    left_text = string.format(" %s %s", frame or spinner.frames[spinner.frame], op)
+    left_hl = "EasyDotnetTestRunnerRunning"
+    left_hl_end = #left_text
   else
-    return "< 1 ms"
+    local status = (rs and rs.overallStatus and rs.overallStatus ~= "Idle") and rs.overallStatus or ""
+    left_text = " " .. status
+    if status ~= "" then
+      left_hl = rs.overallStatus == "Failed" and "EasyDotnetTestRunnerFailed" or "EasyDotnetTestRunnerPassed"
+      left_hl_end = #left_text
+    end
+  end
+
+  local empty_rs = { totalPassed = 0, totalFailed = 0, totalSkipped = 0, totalTests = 0 }
+  local right_text, right_hls, right_dw = build_right_counts(rs or empty_rs)
+  local left_dw = vim.fn.strdisplaywidth(left_text)
+
+  local line, hls = left_text, {}
+  if left_hl then table.insert(hls, { 0, left_hl_end, left_hl }) end
+
+  if left_dw + right_dw + 1 <= win_width then
+    local pad = win_width - left_dw - right_dw
+    local right_offset = #left_text + pad
+    line = left_text .. string.rep(" ", pad) .. right_text
+    for _, h in ipairs(right_hls) do
+      table.insert(hls, { h[1] + right_offset, h[2] + right_offset, h[3] })
+    end
+  end
+
+  return line, hls
+end
+
+local function render_header(frame)
+  if not M.header_buf or not vim.api.nvim_buf_is_valid(M.header_buf) then return end
+  if not M.header_win or not vim.api.nvim_win_is_valid(M.header_win) then return end
+
+  local rs = state.runner_status
+  local line, hls = build_header_row(rs, frame)
+
+  vim.api.nvim_buf_clear_namespace(M.header_buf, ns_header, 0, -1)
+  vim.api.nvim_buf_clear_namespace(M.header_buf, ns_spinner, 0, -1)
+  vim.api.nvim_set_option_value("modifiable", true, { buf = M.header_buf })
+  vim.api.nvim_buf_set_lines(M.header_buf, 0, -1, false, { line })
+  vim.api.nvim_set_option_value("modifiable", false, { buf = M.header_buf })
+
+  for _, hl in ipairs(hls) do
+    vim.api.nvim_buf_add_highlight(M.header_buf, ns_header, hl[3], 0, hl[1], hl[2])
   end
 end
 
----@param a easy-dotnet.MSBuild.BuildJob | easy-dotnet.Job.DiscoverJob
-local function stringify_job(a)
-  if a.name == "build" then return a.state == "pending" and "Building" or a.state == "error" and "build failed" or "" end
+local function build_footer_line(node, loading)
+  if loading then return " Cancel", { { 1, 7, "Comment" } } end
+  if not node or not node.availableActions or #node.availableActions == 0 then return "", {} end
 
-  if a.name == "discover" then return a.state == "pending" and "Discovering" or a.state == "error" and "discovery failed" or "" end
-end
+  local text = " "
+  local hls = {}
 
----@param node easy-dotnet.TestRunner.Node
-local function node_to_string(node)
-  local total_tests = 0
-  ---@param i easy-dotnet.TestRunner.Node
-  M.traverse(node, function(i)
-    if i.type == "subcase" or i.type == "test" then total_tests = total_tests + 1 end
-  end)
-
-  if node.job then
-    local formatted = string.format(
-      "%s%s%s%s  <%s>",
-      string.rep(" ", node.indent or 0),
-      node.preIcon and (node.preIcon .. " ") or "",
-      node.name,
-      node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
-      stringify_job(node.job)
-    )
-    return formatted
+  for i, action in ipairs(node.availableActions) do
+    local label = action_display[action]
+    if label then
+      if i > 1 then
+        local sep = " · "
+        table.insert(hls, { #text, #text + #sep, "Comment" })
+        text = text .. sep
+      end
+      table.insert(hls, { #text, #text + #label, "Normal" })
+      text = text .. label
+    end
   end
 
-  local formatted = string.format(
-    "%s%s%s%s %s %s",
-    string.rep(" ", node.indent or 0),
-    node.preIcon and (node.preIcon .. " ") or "",
-    node.name,
-    node.icon and node.icon ~= M.options.icons.passed and (" " .. node.icon) or "",
-    node.type ~= "subcase" and node.type ~= "test" and string.format("(%s)", total_tests) or "",
-    type(node.duration) == "string" and convert_time(node.duration) or ""
-  )
-
-  return formatted
+  if text == " " then return "", {} end
+  return text, hls
 end
 
----@param tree easy-dotnet.TestRunner.Node
----@return string[], table[]
-local function tree_to_string(tree)
-  local result = {}
-  local highlights = {}
-  local index = 0
-  ---@param node easy-dotnet.TestRunner.Node
-  M.traverse_expanded(tree, function(node)
-    index = index + 1
+local function render_footer(node)
+  if M.options.hide_legend then return end
+  if not M.footer_buf or not vim.api.nvim_buf_is_valid(M.footer_buf) then return end
+  if not M.footer_win or not vim.api.nvim_win_is_valid(M.footer_win) then return end
 
-    local formatted = node_to_string(node)
-    local highlight = calculate_highlight(node)
-    table.insert(highlights, { index = index, highlight = highlight })
-    table.insert(result, formatted)
-  end)
-  return result, highlights
-end
+  local loading = state.runner_status and state.runner_status.isLoading
+  local text, hls = build_footer_line(node, loading)
 
-local function printNodes()
-  vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
-  local stringLines, highlights = tree_to_string(M.tree)
-  vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, stringLines)
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
+  vim.api.nvim_buf_clear_namespace(M.footer_buf, ns_footer, 0, -1)
+  vim.api.nvim_set_option_value("modifiable", true, { buf = M.footer_buf })
+  vim.api.nvim_buf_set_lines(M.footer_buf, 0, -1, false, { text })
+  vim.api.nvim_set_option_value("modifiable", false, { buf = M.footer_buf })
 
-  M.redraw_virtual_text()
-  apply_highlights(highlights)
-end
-
-local function setMappings()
-  if M.keymap == nil then return end
-  if M.buf == nil or not vim.api.nvim_buf_is_valid(M.buf) then return end
-  for key, value in pairs(M.keymap()) do
-    vim.keymap.set("n", key, function()
-      local line_num = vim.api.nvim_win_get_cursor(0)[1]
-      local node = translateIndex(line_num, M.tree)
-      if not node then error("Current line is not a node") end
-      value.handle(node, M)
-    end, { buffer = M.buf, desc = value.desc, noremap = true, silent = true })
+  for _, h in ipairs(hls) do
+    vim.api.nvim_buf_add_highlight(M.footer_buf, ns_footer, h[3], 0, h[1], h[2])
   end
 end
 
-M.setKeymaps = function(mappings)
-  M.keymap = mappings
-  setMappings()
-  return M
+local function spinner_stop()
+  if not spinner.timer then return end
+  spinner.timer:stop()
+  spinner.timer:close()
+  spinner.timer = nil
+  if M.header_buf and vim.api.nvim_buf_is_valid(M.header_buf) then vim.api.nvim_buf_clear_namespace(M.header_buf, ns_spinner, 0, -1) end
 end
 
----@param options easy-dotnet.TestRunner.Options
-M.setOptions = function(options)
-  if options then M.options = options end
-  return M
+local function spinner_tick()
+  if not M.header_buf or not vim.api.nvim_buf_is_valid(M.header_buf) then
+    spinner_stop()
+    return
+  end
+  spinner.frame = (spinner.frame % #spinner.frames) + 1
+  render_header(spinner.frames[spinner.frame])
 end
 
-local function get_default_win_opts()
+local function spinner_start()
+  if spinner.timer then return end
+  spinner.frame = 1
+  spinner.timer = vim.uv.new_timer()
+  spinner.timer:start(0, spinner.interval, vim.schedule_wrap(spinner_tick))
+end
+
+local function make_scratch_buf(name)
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_set_option_value("bufhidden", "hide", { buf = buf })
+  vim.api.nvim_set_option_value("filetype", "easy-dotnet", { buf = buf })
+  if name then vim.api.nvim_buf_set_name(buf, name) end
+  return buf
+end
+
+local function ensure_header_buf()
+  if not M.header_buf or not vim.api.nvim_buf_is_valid(M.header_buf) then M.header_buf = make_scratch_buf() end
+end
+
+local function ensure_footer_buf()
+  if not M.footer_buf or not vim.api.nvim_buf_is_valid(M.footer_buf) then M.footer_buf = make_scratch_buf() end
+end
+
+local function get_float_dims()
   local width = math.floor(vim.o.columns * 0.8)
-  local height = math.floor(vim.o.lines * 0.8)
-  M.height = height
+  local main_height = math.floor(vim.o.lines * 0.7)
+  local has_footer = not M.options.hide_legend
+  local total_visual_height = main_height + (has_footer and 6 or 4)
+  local start_visual_row = math.floor((vim.o.lines - total_visual_height) / 2) - 2
+  start_visual_row = math.max(1, start_visual_row)
+
+  local main_row = start_visual_row + 3
+  local col = math.floor((vim.o.columns - width) / 2)
 
   return {
-    relative = "editor",
     width = width,
-    height = height,
-    col = math.floor((vim.o.columns - width) / 2),
-    row = math.floor((vim.o.lines - height) / 2),
-    style = "minimal",
-    border = "rounded",
+    height = main_height,
+    col = col,
+    row = main_row,
+    header_row = main_row - 2,
+    footer_row = main_row + main_height + 1,
   }
 end
 
-local function has_multiple_listed_buffers()
-  local listed_buffers = 0
+local function resize_floats()
+  if not M.win or not vim.api.nvim_win_is_valid(M.win) then return end
+  local dims = get_float_dims()
 
-  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_get_option(buf, "buflisted") then listed_buffers = listed_buffers + 1 end
+  vim.api.nvim_win_set_config(M.win, { width = dims.width, height = dims.height, col = dims.col, row = dims.row, relative = "editor" })
+
+  if M.header_win and vim.api.nvim_win_is_valid(M.header_win) then
+    vim.api.nvim_win_set_config(M.header_win, { width = dims.width, height = 1, col = dims.col, row = dims.header_row, relative = "editor" })
   end
 
-  return listed_buffers > 0
-end
-
--- Toggle function to handle different window modes
----@param mode "float" | "split" | "buf" | "vsplit"
--- Function to hide the window or buffer based on the mode
-function M.hide(mode)
-  if not mode then mode = M.options.viewmode end
-  if mode == "float" or mode == "split" or mode == "vsplit" then
-    if M.win and vim.api.nvim_win_is_valid(M.win) then
-      vim.api.nvim_win_close(M.win, false)
-      M.win = nil
-      return true
-    end
-  elseif mode == "buf" then
-    if M.buf and vim.api.nvim_buf_is_valid(M.buf) and has_multiple_listed_buffers() then
-      vim.cmd("bprev")
-      return true
-    end
+  if M.footer_win and vim.api.nvim_win_is_valid(M.footer_win) then
+    vim.api.nvim_win_set_config(M.footer_win, { width = dims.width, height = 1, col = dims.col, row = dims.footer_row, relative = "editor" })
   end
-  return false
+
+  M.refresh()
 end
 
-function M.close()
-  if M.buf then
-    vim.api.nvim_buf_delete(M.buf, { force = true })
-    M.buf = nil
+local function open_header_float(dims)
+  ensure_header_buf()
+  M.header_win = vim.api.nvim_open_win(M.header_buf, false, {
+    relative = "editor",
+    width = dims.width,
+    height = 1,
+    col = dims.col,
+    row = dims.header_row,
+    style = "minimal",
+    border = "rounded",
+    focusable = false,
+    zindex = 51,
+  })
+  vim.wo[M.header_win].cursorline = false
+  vim.wo[M.header_win].winhighlight = "Normal:NormalFloat"
+end
+
+local function open_footer_float(dims)
+  ensure_footer_buf()
+  M.footer_win = vim.api.nvim_open_win(M.footer_buf, false, {
+    relative = "editor",
+    width = dims.width,
+    height = 1,
+    col = dims.col,
+    row = dims.footer_row,
+    style = "minimal",
+    border = "rounded",
+    focusable = false,
+    zindex = 51,
+  })
+  vim.wo[M.footer_win].cursorline = false
+  vim.wo[M.footer_win].winhighlight = "Normal:NormalFloat"
+end
+
+local function open_header_split()
+  ensure_header_buf()
+  vim.cmd("aboveleft 1split")
+  M.header_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(M.header_win, M.header_buf)
+  vim.wo[M.header_win].cursorline = false
+  vim.wo[M.header_win].statusline = ""
+  vim.wo[M.header_win].winfixheight = true
+  vim.wo[M.header_win].number = false
+  vim.wo[M.header_win].relativenumber = false
+  vim.wo[M.header_win].signcolumn = "no"
+  vim.api.nvim_set_option_value("modifiable", false, { buf = M.header_buf })
+  vim.api.nvim_set_current_win(M.win)
+end
+
+local function open_footer_split()
+  ensure_footer_buf()
+  vim.cmd("belowright 1split")
+  M.footer_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(M.footer_win, M.footer_buf)
+  vim.wo[M.footer_win].cursorline = false
+  vim.wo[M.footer_win].statusline = ""
+  vim.wo[M.footer_win].winfixheight = true
+  vim.wo[M.footer_win].number = false
+  vim.wo[M.footer_win].relativenumber = false
+  vim.wo[M.footer_win].signcolumn = "no"
+  vim.api.nvim_set_option_value("modifiable", false, { buf = M.footer_buf })
+  vim.api.nvim_set_current_win(M.win)
+end
+
+local function close_aux_wins()
+  for _, w in ipairs({ M.header_win, M.footer_win }) do
+    if w and vim.api.nvim_win_is_valid(w) then vim.api.nvim_win_close(w, true) end
   end
+  M.header_win = nil
+  M.footer_win = nil
 end
 
----@param mode "float" | "split" | "buf" | "vsplit"
-function M.open(mode)
-  if not mode then mode = M.options.viewmode end
+---@param mode "float"|"split"|"vsplit"
+function M.open(mode, options)
+  M.options = options or M.options
+  M.viewmode = mode
+
+  if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
+    M.buf = make_scratch_buf("Test Runner")
+    vim.api.nvim_buf_set_name(M.buf, "Test Runner")
+  end
 
   if mode == "float" then
-    if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
-    local win_opts = get_default_win_opts()
-    M.win = vim.api.nvim_open_win(M.buf, true, win_opts)
-    vim.wo[M.win].winfixbuf = true
-    vim.api.nvim_buf_set_option(M.buf, "bufhidden", "hide")
-    return true
+    local dims = get_float_dims()
+
+    open_header_float(dims)
+    if not M.options.hide_legend then open_footer_float(dims) end
+
+    M.win = vim.api.nvim_open_win(M.buf, true, {
+      relative = "editor",
+      width = dims.width,
+      height = dims.height,
+      col = dims.col,
+      row = dims.row,
+      style = "minimal",
+      border = "rounded",
+      focusable = true,
+    })
+
+    vim.api.nvim_create_autocmd("WinClosed", {
+      pattern = tostring(M.win),
+      once = true,
+      callback = function()
+        spinner_stop()
+        close_aux_wins()
+        M.win = nil
+        pcall(vim.api.nvim_del_augroup_by_name, "EasyDotnetTestRunnerResize")
+      end,
+    })
   elseif mode == "split" or mode == "vsplit" then
-    if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
-    if mode == "vsplit" and type(M.options.vsplit_width) == "number" and M.options.vsplit_width < vim.o.columns then
-      mode = (M.options.vsplit_pos or "") .. tostring(M.options.vsplit_width) .. mode
+    if mode == "vsplit" then
+      local w = options and options.vsplit_width or math.floor(vim.o.columns * 0.4)
+      vim.cmd((options and options.vsplit_pos or "") .. tostring(w) .. "vsplit")
     else
-      mode = (M.options.vsplit_pos or "") .. tostring(math.floor(vim.o.columns * 0.5)) .. mode
+      vim.cmd("split")
     end
-    vim.cmd(mode)
     M.win = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_buf(M.win, M.buf)
-    return true
-  elseif mode == "buf" then
-    if not M.buf then M.buf = vim.api.nvim_create_buf(false, true) end
-    M.win = vim.api.nvim_get_current_win()
-    vim.api.nvim_set_current_buf(M.buf)
-    return true
+
+    open_header_split()
+    if not M.options.hide_legend then open_footer_split() end
+
+    vim.api.nvim_create_autocmd("WinClosed", {
+      pattern = tostring(M.win),
+      once = true,
+      callback = function()
+        spinner_stop()
+        close_aux_wins()
+        M.win = nil
+        pcall(vim.api.nvim_del_augroup_by_name, "EasyDotnetTestRunnerResize")
+      end,
+    })
   end
-  return false
-end
 
----@param mode "float" | "split" | "buf" | "vsplit"
-function M.toggle(mode)
-  if not mode then mode = M.options.viewmode end
-
-  if mode == "float" or mode == "split" or mode == "vsplit" then
-    if M.win and vim.api.nvim_win_is_valid(M.win) then
-      return not M.hide(mode)
-    else
-      return M.open(mode)
-    end
-  elseif mode == "buf" then
-    if M.buf and vim.api.nvim_buf_is_valid(M.buf) and vim.api.nvim_get_current_buf() == M.buf then
-      return not M.hide(mode)
-    else
-      return M.open(mode)
-    end
+  if M.win and vim.api.nvim_win_is_valid(M.win) then
+    vim.api.nvim_set_option_value("cursorline", true, { win = M.win })
+    vim.api.nvim_create_autocmd("CursorMoved", {
+      buffer = M.buf,
+      callback = function() render_footer(M.node_at_cursor()) end,
+    })
+    vim.api.nvim_create_autocmd("VimResized", {
+      group = vim.api.nvim_create_augroup("EasyDotnetTestRunnerResize", { clear = true }),
+      callback = function()
+        if M.viewmode == "float" then
+          resize_floats()
+        else
+          M.refresh()
+        end
+      end,
+    })
   end
-  return false
+
+  M.refresh()
 end
 
---- Renders the buffer
----@param mode "float" | "split" | "buf" | "vsplit"
-M.render = function(mode)
-  local isVisible = M.toggle(mode)
-  if not isVisible then return end
-
-  printNodes()
-  setBufferOptions()
-  setMappings()
-  return M
+function M.hide()
+  spinner_stop()
+  close_aux_wins()
+  if M.win and vim.api.nvim_win_is_valid(M.win) then
+    vim.api.nvim_win_close(M.win, false)
+    M.win = nil
+  end
 end
 
-M.refreshMappings = function()
-  if M.buf == nil then error("Can not refresh buffer before render() has been called") end
-  setMappings()
-  return M
+local status_highlights = {
+  Passed = "EasyDotnetTestRunnerPassed",
+  Failed = "EasyDotnetTestRunnerFailed",
+  Skipped = "EasyDotnetTestRunnerSkipped",
+  Running = "EasyDotnetTestRunnerRunning",
+  Debugging = "EasyDotnetTestRunnerRunning",
+  Building = "EasyDotnetTestRunnerRunning",
+  BuildFailed = "EasyDotnetTestRunnerFailed",
+  NotRun = "EasyDotnetTestRunnerFailed",
+  Discovering = "EasyDotnetTestRunnerRunning",
+  Queued = "EasyDotnetTestRunnerRunning",
+  Cancelling = "EasyDotnetTestRunnerRunning",
+  Cancelled = "EasyDotnetTestRunnerFailed",
+}
+
+local function node_pre_icon(node_type)
+  local icons = M.options.icons
+  return ({
+    Solution = icons.sln,
+    Project = icons.project,
+    Namespace = icons.dir,
+    TestClass = icons.class,
+    TheoryGroup = icons.package,
+    TestMethod = icons.test,
+    Subcase = icons.test,
+  })[node_type] or "?"
 end
 
-M.refreshTree = function()
-  if M.buf == nil then error("Can not refresh buffer before render() has been called") end
-  printNodes()
-  return M
+local function get_status_icon(stype)
+  local icons = M.options.icons
+  return ({
+    Failed = " " .. icons.failed,
+    Skipped = " " .. icons.skipped,
+    Cancelled = " " .. icons.failed,
+    NotRun = " " .. icons.build_failed,
+    Running = " " .. icons.reload,
+    Debugging = " " .. icons.reload,
+    Building = " " .. icons.reload,
+    Discovering = icons.reload,
+    BuildFailed = " " .. icons.build_failed,
+    Queued = " …",
+    Cancelling = " " .. icons.reload,
+  })[stype] or ""
 end
 
---- Refreshes the buffer if lines have changed
-M.refresh = function()
-  if M.buf == nil then error("Can not refresh buffer before render() has been called") end
-  printNodes()
-  setBufferOptions()
-  return M
+local function render_node(node, depth)
+  local indent = string.rep(" ", depth * 2)
+  local ntype = node.type and node.type.type or ""
+  local pre = node_pre_icon(ntype)
+
+  local status_suffix = ""
+  local hl = nil
+  if node.status then
+    local stype = node.status.type
+    status_suffix = get_status_icon(stype)
+    hl = status_highlights[stype]
+    if stype == "Passed" and node.status.durationDisplay then status_suffix = "  " .. node.status.durationDisplay end
+  end
+
+  if not hl then
+    hl = ({
+      Solution = "EasyDotnetTestRunnerSolution",
+      Project = "EasyDotnetTestRunnerProject",
+      Namespace = "EasyDotnetTestRunnerDir",
+      TestClass = "EasyDotnetTestRunnerDir",
+      TheoryGroup = "EasyDotnetTestRunnerTest",
+      TestMethod = "EasyDotnetTestRunnerTest",
+      Subcase = "EasyDotnetTestRunnerSubcase",
+    })[ntype]
+  end
+
+  return string.format("%s%s %s%s", indent, pre, node.displayName, status_suffix), hl
+end
+
+function M.refresh()
+  if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then return end
+
+  local rs = state.runner_status
+  if rs and rs.isLoading then
+    spinner_start()
+  else
+    spinner_stop()
+  end
+
+  render_header()
+  render_footer(M.node_at_cursor())
+
+  if not M.win or not vim.api.nvim_win_is_valid(M.win) then return end
+
+  vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
+  vim.api.nvim_set_option_value("modifiable", true, { buf = M.buf })
+
+  local lines = {}
+  local highlights = {}
+  state.traverse_visible(function(node, depth)
+    local line, hl = render_node(node, depth)
+    table.insert(lines, line)
+    if hl then table.insert(highlights, { row = #lines - 1, hl = hl }) end
+  end)
+
+  vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, lines)
+  vim.api.nvim_set_option_value("modifiable", false, { buf = M.buf })
+
+  for _, h in ipairs(highlights) do
+    vim.api.nvim_buf_add_highlight(M.buf, ns_id, h.hl, h.row, 0, -1)
+  end
+end
+
+function M.node_at_cursor()
+  if not M.win or not vim.api.nvim_win_is_valid(M.win) then return nil end
+  local row = vim.api.nvim_win_get_cursor(M.win)[1]
+  local current = 0
+  local found = nil
+  state.traverse_visible(function(node)
+    current = current + 1
+    if current == row and not found then found = node end
+  end)
+  return found
 end
 
 return M
