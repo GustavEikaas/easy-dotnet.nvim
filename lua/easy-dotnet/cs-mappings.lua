@@ -83,5 +83,4 @@ M.auto_bootstrap_namespace = function(mode)
   })
 end
 
-
 return M
