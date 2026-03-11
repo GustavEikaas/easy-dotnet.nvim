@@ -194,7 +194,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
           expand_node = { lhs = "E", desc = "expand node" },
           collapse_all = { lhs = "W", desc = "collapse all" },
           close = { lhs = "q", desc = "close testrunner" },
-          refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" }
+          refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" },
           cancel = { lhs = "<C-c>", desc = "cancel in-flight operation" },
         }
       },
