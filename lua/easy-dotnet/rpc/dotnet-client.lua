@@ -291,6 +291,7 @@ function M:_initialize(cb, opts)
                 useVisualStudio = use_visual_studio,
                 debuggerOptions = debuggerOptions,
                 externalTerminal = ext_terminal,
+                -- enableOsNotifications = true,
               },
             },
           },
