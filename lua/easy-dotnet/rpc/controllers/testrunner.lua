@@ -81,7 +81,6 @@ end
 ---@param cb? fun(result: table)
 ---@param source string where the run was initiated from (e.g. "testrunner"|"buffer")
 function M:run(node_id, cb, source)
-  assert(type(source) == "string", "testrunner/run requires source")
   local helper = require("easy-dotnet.rpc.dotnet-client")
   return helper.create_rpc_call({
     client = self._client,
@@ -95,7 +94,6 @@ end
 ---@param cb? fun(result: table)
 ---@param source string where the debug was initiated from (e.g. "testrunner"|"buffer")
 function M:debug(node_id, cb, source)
-  assert(type(source) == "string", "testrunner/debug requires source")
   local helper = require("easy-dotnet.rpc.dotnet-client")
   return helper.create_rpc_call({
     client = self._client,
