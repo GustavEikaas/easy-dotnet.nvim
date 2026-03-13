@@ -227,7 +227,7 @@ function M.register_buf_keymaps(bufnr, client)
     for _, node in ipairs(nodes) do
       client.testrunner:run(node.id, function(result)
         if not result or not result.success then logger.error("Run failed") end
-      end)
+      end, "buffer")
     end
   end)
 
@@ -240,7 +240,7 @@ function M.register_buf_keymaps(bufnr, client)
       return
     end
     flash_method(bufnr, sig_line, end_line, "CursorLine", 300)
-    client.testrunner:debug(node.id, function() end)
+    client.testrunner:debug(node.id, function() end, "buffer")
   end)
 
   map(km.run_all_tests_from_buffer and km.run_all_tests_from_buffer.lhs or "<leader>t", "Run all tests in file", function()
@@ -257,7 +257,7 @@ function M.register_buf_keymaps(bufnr, client)
       return
     end
     for _, pid in ipairs(project_ids) do
-      client.testrunner:run(pid, function() end)
+      client.testrunner:run(pid, function() end, "buffer")
     end
   end)
 

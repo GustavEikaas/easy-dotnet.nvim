@@ -2,8 +2,8 @@
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
 ---@field quick_discover fun(self: easy-dotnet.RPC.Client.TestRunner, solution_path: string, cb?: fun(result: table)): easy-dotnet.RPC.CallHandle
 ---@field initialize fun(self: easy-dotnet.RPC.Client.TestRunner, solution_path: string, cb?: fun(result: table)): easy-dotnet.RPC.CallHandle
----@field run fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult)): easy-dotnet.RPC.CallHandle
----@field debug fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult)): easy-dotnet.RPC.CallHandle
+---@field run fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult), source: string): easy-dotnet.RPC.CallHandle
+---@field debug fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult), source: string): easy-dotnet.RPC.CallHandle
 ---@field invalidate fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult)): easy-dotnet.RPC.CallHandle
 ---@field get_results fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb: fun(result: easy-dotnet.TestRunner.Results)): easy-dotnet.RPC.CallHandle
 ---@field get_build_errors fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string): easy-dotnet.RPC.CallHandle
@@ -79,24 +79,28 @@ end
 
 ---@param node_id string stable server-generated node ID
 ---@param cb? fun(result: table)
-function M:run(node_id, cb)
+---@param source string where the run was initiated from (e.g. "testrunner"|"buffer")
+function M:run(node_id, cb, source)
+  assert(type(source) == "string", "testrunner/run requires source")
   local helper = require("easy-dotnet.rpc.dotnet-client")
   return helper.create_rpc_call({
     client = self._client,
     method = "testrunner/run",
-    params = { id = node_id },
+    params = { id = node_id, source = source },
     cb = cb,
   })()
 end
 
 ---@param node_id string
 ---@param cb? fun(result: table)
-function M:debug(node_id, cb)
+---@param source string where the debug was initiated from (e.g. "testrunner"|"buffer")
+function M:debug(node_id, cb, source)
+  assert(type(source) == "string", "testrunner/debug requires source")
   local helper = require("easy-dotnet.rpc.dotnet-client")
   return helper.create_rpc_call({
     client = self._client,
     method = "testrunner/debug",
-    params = { id = node_id },
+    params = { id = node_id, source = source },
     cb = cb,
   })()
 end
