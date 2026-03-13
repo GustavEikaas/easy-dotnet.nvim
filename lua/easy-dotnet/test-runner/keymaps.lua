@@ -80,7 +80,7 @@ function M.register(buf, client, options)
         logger.warn("Run not available for this node")
         return
       end
-      state.active_handle = client.testrunner:run(node.id)
+      state.active_handle = client.testrunner:run(node.id, nil, "testrunner")
     end)
   )
 
@@ -93,14 +93,14 @@ function M.register(buf, client, options)
         return
       end
       render.hide()
-      state.active_handle = client.testrunner:debug(node.id)
+      state.active_handle = client.testrunner:debug(node.id, nil, "testrunner")
     end)
   )
 
   map(km.run_all and km.run_all.lhs or "R", "Run all tests", function()
     if not state.root_id then return end
     local root = state.nodes[state.root_id]
-    if root and state.has_action(root, "Run") then state.active_handle = client.testrunner:run(state.root_id) end
+    if root and state.has_action(root, "Run") then state.active_handle = client.testrunner:run(state.root_id, nil, "testrunner") end
   end)
 
   map(

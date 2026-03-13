@@ -117,6 +117,7 @@ local function encode_rpc_message(message)
 end
 
 local handlers = {
+  ["testrunner/isVisible"] = require("easy-dotnet.rpc.handlers.is_test_runner_visible"),
   openBuffer = require("easy-dotnet.rpc.handlers.open_buffer"),
   setBreakpoint = require("easy-dotnet.rpc.handlers.set_breakpoint"),
   promptConfirm = require("easy-dotnet.rpc.handlers.prompt_confirm"),
