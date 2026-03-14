@@ -123,12 +123,8 @@ end
 local function build_footer_line(node, loading)
   if loading then
     local rs = state.runner_status
-    if rs and rs.overallStatus == "Cancelling" then
-      return " Kill", { { 1, 5, "EasyDotnetTestRunnerFailed" } }
-    end
-    if rs and rs.overallStatus == "Killing" then
-      return "", {}
-    end
+    if rs and rs.overallStatus == "Cancelling" then return " Kill", { { 1, 5, "EasyDotnetTestRunnerFailed" } } end
+    if rs and rs.overallStatus == "Killing" then return "", {} end
     return " Cancel", { { 1, 7, "Comment" } }
   end
   if not node or not node.availableActions or #node.availableActions == 0 then return "", {} end

@@ -116,9 +116,7 @@ function M:invalidate(node_id, cb)
   })()
 end
 
-function M:cancel()
-  return self._client.notify("testrunner/cancel", {})
-end
+function M:cancel() return self._client.notify("testrunner/cancel", {}) end
 
 ---@param node_id string
 ---@param cb fun(result: easy-dotnet.TestRunner.Results)
