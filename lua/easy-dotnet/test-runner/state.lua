@@ -87,16 +87,6 @@ function M.update_runner_status(status)
   if not status.isLoading then M.active_handle = nil end
 end
 
-function M.cancel()
-  if not M.active_handle then return end
-  M.active_handle.cancel()
-  M.runner_status = vim.tbl_extend("force", M.runner_status, {
-    isLoading = true,
-    currentOperation = "Cancelling",
-  })
-  M.active_handle = nil
-end
-
 function M.update_line_numbers(update)
   local node = M.nodes[update.id]
   if not node then return end

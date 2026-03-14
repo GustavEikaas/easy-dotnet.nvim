@@ -22,8 +22,8 @@ function M.register(buf, client, options)
   end
 
   local function cancel()
-    state.cancel()
-    render.refresh()
+    if state.runner_status and state.runner_status.overallStatus == "Killing" then return end
+    client.testrunner:cancel()
   end
 
   map(

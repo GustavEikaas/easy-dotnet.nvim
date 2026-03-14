@@ -5,6 +5,7 @@
 ---@field run fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult), source: string): easy-dotnet.RPC.CallHandle
 ---@field debug fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult), source: string): easy-dotnet.RPC.CallHandle
 ---@field invalidate fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult)): easy-dotnet.RPC.CallHandle
+---@field cancel fun(self: easy-dotnet.RPC.Client.TestRunner): boolean
 ---@field get_results fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb: fun(result: easy-dotnet.TestRunner.Results)): easy-dotnet.RPC.CallHandle
 ---@field get_build_errors fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string): easy-dotnet.RPC.CallHandle
 ---@field sync_file fun(self: easy-dotnet.RPC.Client.TestRunner, path: string, content: string, version: integer, cb: fun(result: easy-dotnet.TestRunner.SyncFileResult)): easy-dotnet.RPC.CallHandle
@@ -114,6 +115,8 @@ function M:invalidate(node_id, cb)
     cb = cb,
   })()
 end
+
+function M:cancel() return self._client.notify("testrunner/cancel", {}) end
 
 ---@param node_id string
 ---@param cb fun(result: easy-dotnet.TestRunner.Results)

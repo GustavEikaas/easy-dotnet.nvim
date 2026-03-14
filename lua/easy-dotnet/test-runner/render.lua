@@ -60,16 +60,25 @@ local function build_header_row(rs, frame)
   local loading = rs and rs.isLoading
 
   local left_text, left_hl, left_hl_end
+  local status = (rs and rs.overallStatus) or "Idle"
+
   if loading then
-    local op = rs.currentOperation or "Running"
-    left_text = string.format(" %s %s", frame or spinner.frames[spinner.frame], op)
+    left_text = string.format(" %s %s", frame or spinner.frames[spinner.frame], status)
     left_hl = "EasyDotnetTestRunnerRunning"
     left_hl_end = #left_text
   else
-    local status = (rs and rs.overallStatus and rs.overallStatus ~= "Idle") and rs.overallStatus or ""
-    left_text = " " .. status
-    if status ~= "" then
-      left_hl = rs.overallStatus == "Failed" and "EasyDotnetTestRunnerFailed" or "EasyDotnetTestRunnerPassed"
+    local shown = status ~= "Idle" and status or ""
+    left_text = " " .. shown
+    if shown ~= "" then
+      if shown == "Killed" then
+        left_hl = "EasyDotnetTestRunnerFailed"
+      elseif shown == "Cancelled" then
+        left_hl = "Comment"
+      elseif shown == "Failed" then
+        left_hl = "EasyDotnetTestRunnerFailed"
+      else
+        left_hl = "EasyDotnetTestRunnerPassed"
+      end
       left_hl_end = #left_text
     end
   end
@@ -112,7 +121,12 @@ local function render_header(frame)
 end
 
 local function build_footer_line(node, loading)
-  if loading then return " Cancel", { { 1, 7, "Comment" } } end
+  if loading then
+    local rs = state.runner_status
+    if rs and rs.overallStatus == "Cancelling" then return " Kill", { { 1, 5, "EasyDotnetTestRunnerFailed" } } end
+    if rs and rs.overallStatus == "Killing" then return "", {} end
+    return " Cancel", { { 1, 7, "Comment" } }
+  end
   if not node or not node.availableActions or #node.availableActions == 0 then return "", {} end
 
   local text = " "
@@ -407,7 +421,7 @@ local status_highlights = {
   Discovering = "EasyDotnetTestRunnerRunning",
   Queued = "EasyDotnetTestRunnerRunning",
   Cancelling = "EasyDotnetTestRunnerRunning",
-  Cancelled = "EasyDotnetTestRunnerFailed",
+  Cancelled = "Comment",
 }
 
 local function node_pre_icon(node_type)
