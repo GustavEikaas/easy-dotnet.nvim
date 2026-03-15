@@ -358,6 +358,30 @@ function M.on_status_update(node)
   end)
 end
 
+--- @param project_id string|nil
+function M.refresh_signs(project_id)
+  local candidates = {}
+
+  for filepath in pairs(extmark_ids) do
+    candidates[filepath] = true
+  end
+
+  state.traverse_all(function(node)
+    if not node.filePath then return end
+    if project_id == nil or node.projectId == project_id then candidates[node.filePath] = true end
+  end)
+
+  for filepath in pairs(candidates) do
+    local bufnr = vim.fn.bufnr(filepath)
+    if bufnr == -1 then bufnr = vim.fn.bufnr(norm(filepath) or filepath) end
+    if bufnr ~= -1 and vim.api.nvim_buf_is_valid(bufnr) then
+      vim.api.nvim_buf_clear_namespace(bufnr, ns_signs, 0, -1)
+      extmark_ids[filepath] = {}
+      if #nodes_for_file(filepath) > 0 then M.apply_signs(filepath) end
+    end
+  end
+end
+
 function M.clear_all()
   for filepath in pairs(extmark_ids) do
     local bufnr = vim.fn.bufnr(filepath)
