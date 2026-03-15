@@ -110,6 +110,12 @@ M.handler = function(client, method, params)
         if node then buffer.on_status_update(node) end
         render.refresh()
       end)
+    elseif method == "refreshTestSigns" then
+      local buffer = require("easy-dotnet.test-runner.buffer")
+      local project_id = params and params.projectId or nil
+      vim.schedule(function()
+        buffer.refresh_signs(project_id)
+      end)
     elseif method == "testrunner/statusUpdate" then
       local state = require("easy-dotnet.test-runner.state")
       local render = require("easy-dotnet.test-runner.render")
