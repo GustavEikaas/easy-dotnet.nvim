@@ -107,6 +107,8 @@ local function define_highlights()
   end
 end
 
+vim.api.nvim_create_autocmd("ColorScheme", { callback = define_highlights })
+
 local register_legacy_functions = function()
   ---Deprecated prefer dotnet.test instead
   ---@deprecated prefer dotnet.test instead
