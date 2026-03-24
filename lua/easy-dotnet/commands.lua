@@ -42,56 +42,64 @@ local actions = require("easy-dotnet.actions")
 M.run = {
   handle = function(args, _)
     local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-    client:initialize(function()
-      client.workspace:run({
-        use_default = false,
-        use_launch_profile = false,
-        file_path = vim.api.nvim_buf_get_name(0),
-        cli_args = passthrough_dotnet_cli_args_handler(args),
-      })
-    end)
+    client:initialize(
+      function()
+        client.workspace:run({
+          use_default = false,
+          use_launch_profile = false,
+          file_path = vim.api.nvim_buf_get_name(0),
+          cli_args = passthrough_dotnet_cli_args_handler(args),
+        })
+      end
+    )
   end,
   passthrough = true,
   subcommands = {
     default = {
       handle = function(args, _)
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-        client:initialize(function()
-          client.workspace:run({
-            use_default = true,
-            use_launch_profile = false,
-            file_path = vim.api.nvim_buf_get_name(0),
-            cli_args = passthrough_dotnet_cli_args_handler(args),
-          })
-        end)
+        client:initialize(
+          function()
+            client.workspace:run({
+              use_default = true,
+              use_launch_profile = false,
+              file_path = vim.api.nvim_buf_get_name(0),
+              cli_args = passthrough_dotnet_cli_args_handler(args),
+            })
+          end
+        )
       end,
       passthrough = true,
     },
     profile = {
       handle = function(args, _)
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-        client:initialize(function()
-          client.workspace:run({
-            use_default = false,
-            use_launch_profile = true,
-            file_path = vim.api.nvim_buf_get_name(0),
-            cli_args = passthrough_dotnet_cli_args_handler(args),
-          })
-        end)
+        client:initialize(
+          function()
+            client.workspace:run({
+              use_default = false,
+              use_launch_profile = true,
+              file_path = vim.api.nvim_buf_get_name(0),
+              cli_args = passthrough_dotnet_cli_args_handler(args),
+            })
+          end
+        )
       end,
       passthrough = true,
       subcommands = {
         default = {
           handle = function(args, _)
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-            client:initialize(function()
-              client.workspace:run({
-                use_default = true,
-                use_launch_profile = true,
-                file_path = vim.api.nvim_buf_get_name(0),
-                cli_args = passthrough_dotnet_cli_args_handler(args),
-              })
-            end)
+            client:initialize(
+              function()
+                client.workspace:run({
+                  use_default = true,
+                  use_launch_profile = true,
+                  file_path = vim.api.nvim_buf_get_name(0),
+                  cli_args = passthrough_dotnet_cli_args_handler(args),
+                })
+              end
+            )
           end,
           passthrough = true,
         },
