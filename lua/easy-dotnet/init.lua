@@ -116,12 +116,6 @@ local register_legacy_functions = function()
 
   ---@deprecated I suspect this is not used as the testrunner seems to be mainly used, if this were to live on it should sync with testrunner
   M.watch_tests = function() actions.test_watcher(require("easy-dotnet.options").options.test_runner.icons) end
-
-  ---Deprecated prefer dotnet.run instead
-  ---@deprecated prefer dotnet.run instead
-  M.run_with_profile = function(use_default)
-    wrap(function() actions.run_with_profile(require("easy-dotnet.options").options.terminal, use_default == nil and false or use_default) end)()
-  end
 end
 
 local function auto_register_dap(merged_opts)

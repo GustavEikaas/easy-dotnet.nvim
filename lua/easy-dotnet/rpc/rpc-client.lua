@@ -83,6 +83,8 @@ local M = {
 ---| "template/list"
 ---| "template/parameters"
 ---| "template/instantiate"
+---| "workspace/run"
+---| "workspace/debug"
 ---| "$/enumerator/next"
 
 local connection = nil

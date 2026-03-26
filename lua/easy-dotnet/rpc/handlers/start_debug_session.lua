@@ -1,6 +1,7 @@
 local constants = require("easy-dotnet.constants")
 
 return function(params, response, throw, validate)
+  local options = require("easy-dotnet.options").get_option("debugger")
   local host = params.host
   local port = params.port
 
@@ -17,7 +18,7 @@ return function(params, response, throw, validate)
     return
   end
 
-  dap.run({ type = constants.debug_adapter_name, name = constants.debug_adapter_name, request = "attach", host = host, port = port }, { new = true })
+  dap.run({ type = constants.debug_adapter_name, name = constants.debug_adapter_name, request = "attach", host = host, port = port, console = options.console }, { new = true })
 
   local session = dap.session()
   if not session then

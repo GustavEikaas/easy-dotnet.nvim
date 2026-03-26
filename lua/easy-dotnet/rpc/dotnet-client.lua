@@ -128,6 +128,7 @@ end
 ---@field roslyn easy-dotnet.RPC.Client.Roslyn
 ---@field test easy-dotnet.RPC.Client.Test
 -- luacheck: no max line length
+---@field workspace easy-dotnet.RPC.Client.Workspace
 ---@field secrets_init fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.RPC.ProjectUserSecretsInitResponse), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request adding package
 -- luacheck: no max line length
 ---@field solution_list_projects fun(self: easy-dotnet.RPC.Client.Dotnet, solution_file_path: string, cb?: fun(res: easy-dotnet.Server.SolutionFileProjectResponse[]), include_non_existing?: boolean, opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
@@ -160,6 +161,7 @@ function M:new()
   instance.debugger = require("easy-dotnet.rpc.controllers.debugger").new(client)
   instance.lsp = require("easy-dotnet.rpc.controllers.lsp").new(client)
   instance.test = require("easy-dotnet.rpc.controllers.test").new(client)
+  instance.workspace = require("easy-dotnet.rpc.controllers.workspace").new(client)
   return instance
 end
 
