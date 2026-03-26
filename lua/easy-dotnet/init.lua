@@ -119,9 +119,9 @@ local register_legacy_functions = function()
 
   ---Deprecated prefer dotnet.run instead
   ---@deprecated prefer dotnet.run instead
-  M.run_with_profile = function(use_default)
-    wrap(function() actions.run_with_profile(require("easy-dotnet.options").options.terminal, use_default == nil and false or use_default) end)()
-  end
+  -- M.run_with_profile = function(use_default)
+  --   wrap(function() actions.run_with_profile(require("easy-dotnet.options").options.terminal, use_default == nil and false or use_default) end)()
+  -- end
 end
 
 local function auto_register_dap(merged_opts)
