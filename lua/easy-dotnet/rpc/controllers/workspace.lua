@@ -14,6 +14,7 @@
 ---@field use_default boolean
 ---@field use_launch_profile boolean
 ---@field file_path string | nil
+---@field cli_args string | nil
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 local M = {}
@@ -74,6 +75,7 @@ function M:debug(opts)
       useDefault = opts.use_default or false,
       useLaunchProfile = opts.use_launch_profile or false,
       filePath = file_path or vim.NIL,
+      cliArgs = opts.cli_args or vim.NIL,
     },
     cb = nil,
     on_crash = opts.on_crash,
