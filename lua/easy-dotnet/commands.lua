@@ -295,38 +295,47 @@ M.restore = {
 }
 
 M.build = {
-  handle = function(args, options)
-    local terminal = options and options.terminal or nil
-    actions.build(terminal, false, passthrough_dotnet_cli_args_handler(args))
+  handle = function(args, _)
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+    client:initialize(function() client.workspace:build({ use_default = false, use_terminal = true, build_args = passthrough_dotnet_cli_args_handler(args) }) end)
   end,
   passthrough = true,
   subcommands = {
     quickfix = {
-      handle = function(args) actions.build_quickfix(false, passthrough_dotnet_cli_args_handler(args)) end,
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client.workspace:build({ use_default = false, use_terminal = false, build_args = passthrough_dotnet_cli_args_handler(args) }) end)
+      end,
       passthrough = true,
     },
     solution = {
-      handle = function(args, options)
-        local terminal = options and options.terminal or nil
-        actions.build_solution(terminal, passthrough_dotnet_cli_args_handler(args))
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client.workspace:build_solution({ use_terminal = true, build_args = passthrough_dotnet_cli_args_handler(args) }) end)
       end,
       passthrough = true,
       subcommands = {
         quickfix = {
-          handle = function(args) actions.build_solution_quickfix(passthrough_dotnet_cli_args_handler(args)) end,
+          handle = function(args, _)
+            local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+            client:initialize(function() client.workspace:build_solution({ use_terminal = false, build_args = passthrough_dotnet_cli_args_handler(args) }) end)
+          end,
           passthrough = true,
         },
       },
     },
     default = {
-      handle = function(args, options)
-        local terminal = options and options.terminal or nil
-        actions.build(terminal, true, passthrough_dotnet_cli_args_handler(args))
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client.workspace:build({ use_default = true, use_terminal = true, build_args = passthrough_dotnet_cli_args_handler(args) }) end)
       end,
       passthrough = true,
       subcommands = {
         quickfix = {
-          handle = function(args) actions.build_quickfix(true, passthrough_dotnet_cli_args_handler(args)) end,
+          handle = function(args, _)
+            local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+            client:initialize(function() client.workspace:build({ use_default = true, use_terminal = false, build_args = passthrough_dotnet_cli_args_handler(args) }) end)
+          end,
           passthrough = true,
         },
       },
