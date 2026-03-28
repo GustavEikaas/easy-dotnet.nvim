@@ -3,6 +3,7 @@
 ---@field run fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.RunOpts): easy-dotnet.RPC.CallHandle
 ---@field debug fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.DebugOpts): easy-dotnet.RPC.CallHandle
 ---@field build fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.BuildOpts): easy-dotnet.RPC.CallHandle
+---@field restore fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.RestoreOpts): easy-dotnet.RPC.CallHandle
 ---@field build_solution fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.BuildSolutionOpts): easy-dotnet.RPC.CallHandle
 
 ---@class easy-dotnet.RPC.Client.Workspace.RunOpts
@@ -28,6 +29,10 @@
 ---@class easy-dotnet.RPC.Client.Workspace.BuildSolutionOpts
 ---@field use_terminal boolean
 ---@field build_args string | nil
+---@field on_crash? fun(err: easy-dotnet.RPC.Error)
+
+---@class easy-dotnet.RPC.Client.Workspace.RestoreOpts
+---@field restore_args string | nil
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 local M = {}
@@ -129,6 +134,24 @@ function M:build_solution(opts)
       useDefault = false,
       useTerminal = opts.use_terminal or false,
       buildArgs = opts.build_args or vim.NIL,
+    },
+    cb = nil,
+    on_crash = opts.on_crash,
+  })()
+end
+
+---@param opts easy-dotnet.RPC.Client.Workspace.RestoreOpts
+---@return easy-dotnet.RPC.CallHandle
+function M:restore(opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+
+  return helper.create_rpc_call({
+    client = self._client,
+    job = nil,
+    method = "workspace/restore",
+    params = {
+      restoreArgs = opts.restore_args or vim.NIL,
     },
     cb = nil,
     on_crash = opts.on_crash,

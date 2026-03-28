@@ -290,7 +290,10 @@ M.test = {
 }
 
 M.restore = {
-  handle = function(args, options) actions.restore(options.terminal, stringify_args(args)) end,
+  handle = function(args, _)
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+    client:initialize(function() client.workspace:restore({ restore_args = passthrough_dotnet_cli_args_handler(args) }) end)
+  end,
   passthrough = true,
 }
 
