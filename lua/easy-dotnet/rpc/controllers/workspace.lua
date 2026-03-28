@@ -5,6 +5,8 @@
 ---@field build fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.BuildOpts): easy-dotnet.RPC.CallHandle
 ---@field restore fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.RestoreOpts): easy-dotnet.RPC.CallHandle
 ---@field build_solution fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.BuildSolutionOpts): easy-dotnet.RPC.CallHandle
+---@field test fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.TestOpts): easy-dotnet.RPC.CallHandle
+---@field test_solution fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.TestOpts): easy-dotnet.RPC.CallHandle
 
 ---@class easy-dotnet.RPC.Client.Workspace.RunOpts
 ---@field use_default boolean
@@ -33,6 +35,11 @@
 
 ---@class easy-dotnet.RPC.Client.Workspace.RestoreOpts
 ---@field restore_args string | nil
+---@field on_crash? fun(err: easy-dotnet.RPC.Error)
+
+---@class easy-dotnet.RPC.Client.Workspace.TestOpts
+---@field use_default boolean
+---@field test_args string | nil
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 local M = {}
@@ -152,6 +159,44 @@ function M:restore(opts)
     method = "workspace/restore",
     params = {
       restoreArgs = opts.restore_args or vim.NIL,
+    },
+    cb = nil,
+    on_crash = opts.on_crash,
+  })()
+end
+
+---@param opts easy-dotnet.RPC.Client.Workspace.TestOpts
+---@return easy-dotnet.RPC.CallHandle
+function M:test(opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+
+  return helper.create_rpc_call({
+    client = self._client,
+    job = nil,
+    method = "workspace/test",
+    params = {
+      useDefault = opts.use_default or false,
+      testArgs = opts.test_args or vim.NIL,
+    },
+    cb = nil,
+    on_crash = opts.on_crash,
+  })()
+end
+
+---@param opts easy-dotnet.RPC.Client.Workspace.TestOpts
+---@return easy-dotnet.RPC.CallHandle
+function M:test_solution(opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+
+  return helper.create_rpc_call({
+    client = self._client,
+    job = nil,
+    method = "workspace/test-solution",
+    params = {
+      useDefault = false,
+      testArgs = opts.test_args or vim.NIL,
     },
     cb = nil,
     on_crash = opts.on_crash,

@@ -265,15 +265,24 @@ M.secrets = {
 }
 
 M.test = {
-  handle = function(args, options) actions.test(options.terminal, false, passthrough_dotnet_cli_args_handler(args)) end,
+  handle = function(args, _)
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+    client:initialize(function() client.workspace:test({ use_default = false, test_args = passthrough_dotnet_cli_args_handler(args) }) end)
+  end,
   passthrough = true,
   subcommands = {
     default = {
-      handle = function(args, options) actions.test(options.terminal, true, passthrough_dotnet_cli_args_handler(args)) end,
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client.workspace:test({ use_default = true, test_args = passthrough_dotnet_cli_args_handler(args) }) end)
+      end,
       passthrough = true,
     },
     solution = {
-      handle = function(args, options) actions.test_solution(options.terminal, passthrough_dotnet_cli_args_handler(args)) end,
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client.workspace:test_solution({ use_default = false, test_args = passthrough_dotnet_cli_args_handler(args) }) end)
+      end,
       passthrough = true,
     },
     ["run-settings"] = {

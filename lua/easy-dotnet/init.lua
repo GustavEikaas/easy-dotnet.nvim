@@ -109,15 +109,6 @@ end
 
 vim.api.nvim_create_autocmd("ColorScheme", { callback = define_highlights })
 
-local register_legacy_functions = function()
-  ---Deprecated prefer dotnet.test instead
-  ---@deprecated prefer dotnet.test instead
-  M.test_project = function() require("easy-dotnet.commands").test.handle({}, require("easy-dotnet.options").options) end
-
-  ---@deprecated I suspect this is not used as the testrunner seems to be mainly used, if this were to live on it should sync with testrunner
-  M.watch_tests = function() actions.test_watcher(require("easy-dotnet.options").options.test_runner.icons) end
-end
-
 local function auto_register_dap(merged_opts)
   if merged_opts.debugger.auto_register_dap == true then
     local success, dap = pcall(require, "dap")
@@ -313,8 +304,6 @@ M.setup = function(opts)
   polyfills.iter(collect_commands_with_handles(commands)):each(function(name, handle)
     M[name] = wrap(function(args, options) handle(args, options or require("easy-dotnet.options").options) end)
   end)
-
-  register_legacy_functions()
 
   if merged_opts.lsp.enabled == true then
     local lsp = require("easy-dotnet.roslyn.lsp")
