@@ -1,4 +1,3 @@
-local actions = require("easy-dotnet.actions")
 local debug = require("easy-dotnet.debugger")
 local constants = require("easy-dotnet.constants")
 local commands = require("easy-dotnet.commands")
