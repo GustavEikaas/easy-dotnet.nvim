@@ -1,4 +1,3 @@
-local debug = require("easy-dotnet.debugger")
 local constants = require("easy-dotnet.constants")
 local commands = require("easy-dotnet.commands")
 local polyfills = require("easy-dotnet.polyfills")
@@ -112,7 +111,6 @@ local function auto_register_dap(merged_opts)
   if merged_opts.debugger.auto_register_dap == true then
     local success, dap = pcall(require, "dap")
     if not success then return end
-    local dotnet = require("easy-dotnet")
 
     local debugger_conf = dap.configurations["cs"] or {}
 
@@ -121,7 +119,10 @@ local function auto_register_dap(merged_opts)
         type = constants.debug_adapter_name,
         name = constants.debug_adapter_name,
         request = "attach",
-        port = dotnet.prepare_debugger,
+        port = function()
+          vim.schedule(function() vim.cmd("Dotnet debug profile") end)
+          return dap.ABORT
+        end,
         console = merged_opts.debugger.console,
       },
     })
@@ -317,8 +318,6 @@ M.setup = function(opts)
 end
 
 M.create_new_item = wrap(function(...) require("easy-dotnet.actions.new").create_new_item(...) end)
-
-M.prepare_debugger = debug.prepare_debugger
 
 M.try_get_selected_solution = function()
   local file = require("easy-dotnet.parsers.sln-parse").try_get_selected_solution_file()
