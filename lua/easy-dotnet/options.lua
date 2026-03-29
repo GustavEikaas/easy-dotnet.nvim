@@ -94,23 +94,6 @@ local M = {
     },
     -- Optional configuration for external terminals (matches nvim-dap structure)
     external_terminal = nil,
-    ---@param path string
-    ---@param action "test"|"restore"|"build"|"run"|"watch"
-    ---@param args string
-    terminal = function(path, action, args, ctx)
-      args = args or ""
-      local commands = {
-        run = function() return string.format("%s %s", ctx.cmd, args) end,
-        test = function() return string.format("%s %s", ctx.cmd, args) end,
-        restore = function() return string.format("%s %s", ctx.cmd, args) end,
-        build = function() return string.format("%s %s", ctx.cmd, args) end,
-        watch = function() return string.format("dotnet watch --project %s %s", path, args) end,
-      }
-      local command = commands[action]()
-      if require("easy-dotnet.extensions").isWindows() == true then command = command .. "\r" end
-      vim.cmd("vsplit")
-      vim.cmd("term " .. command)
-    end,
     secrets = {
       path = get_secret_path,
     },
