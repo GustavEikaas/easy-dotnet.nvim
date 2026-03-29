@@ -201,11 +201,35 @@ M._cached_files = {
 }
 
 M.watch = {
-  handle = function(args, options) actions.watch(options.terminal, false, passthrough_dotnet_cli_args_handler(args)) end,
+  handle = function(args, _)
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+    client:initialize(
+      function()
+        client.workspace:watch({
+          use_default = false,
+          use_launch_profile = false,
+          file_path = vim.api.nvim_buf_get_name(0),
+          cli_args = passthrough_dotnet_cli_args_handler(args),
+        })
+      end
+    )
+  end,
   passthrough = true,
   subcommands = {
     default = {
-      handle = function(args, options) actions.watch(options.terminal, true, passthrough_dotnet_cli_args_handler(args)) end,
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(
+          function()
+            client.workspace:watch({
+              use_default = true,
+              use_launch_profile = false,
+              file_path = vim.api.nvim_buf_get_name(0),
+              cli_args = passthrough_dotnet_cli_args_handler(args),
+            })
+          end
+        )
+      end,
       passthrough = true,
     },
   },
