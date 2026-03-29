@@ -2,6 +2,7 @@
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
 ---@field run fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.RunOpts): easy-dotnet.RPC.CallHandle
 ---@field debug fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.DebugOpts): easy-dotnet.RPC.CallHandle
+---@field watch fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.WatchOpts): easy-dotnet.RPC.CallHandle
 ---@field build fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.BuildOpts): easy-dotnet.RPC.CallHandle
 ---@field restore fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.RestoreOpts): easy-dotnet.RPC.CallHandle
 ---@field build_solution fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.BuildSolutionOpts): easy-dotnet.RPC.CallHandle
@@ -16,6 +17,13 @@
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 ---@class easy-dotnet.RPC.Client.Workspace.DebugOpts
+---@field use_default boolean
+---@field use_launch_profile boolean
+---@field file_path string | nil
+---@field cli_args string | nil
+---@field on_crash? fun(err: easy-dotnet.RPC.Error)
+
+---@class easy-dotnet.RPC.Client.Workspace.WatchOpts
 ---@field use_default boolean
 ---@field use_launch_profile boolean
 ---@field file_path string | nil
@@ -53,18 +61,21 @@ function M.new(client)
   return self
 end
 
+--- Normalises a file_path hint: expands to absolute, clears it if not a .cs file.
+---@param file_path string | nil
+---@return string | nil
+local function resolve_file_path(file_path)
+  if not file_path then return nil end
+  file_path = vim.fn.fnamemodify(file_path, ":p")
+  if vim.fn.fnamemodify(file_path, ":e") ~= "cs" then return nil end
+  return file_path
+end
+
 ---@param opts easy-dotnet.RPC.Client.Workspace.RunOpts
 ---@return easy-dotnet.RPC.CallHandle
 function M:run(opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
-
-  local file_path = opts.file_path
-  if file_path then
-    file_path = vim.fn.fnamemodify(file_path, ":p")
-    if vim.fn.fnamemodify(file_path, ":e") ~= "cs" then file_path = nil end
-  end
-
   return helper.create_rpc_call({
     client = self._client,
     job = nil,
@@ -72,7 +83,7 @@ function M:run(opts)
     params = {
       useDefault = opts.use_default or false,
       useLaunchProfile = opts.use_launch_profile or false,
-      filePath = file_path or vim.NIL,
+      filePath = resolve_file_path(opts.file_path) or vim.NIL,
       cliArgs = opts.cli_args or vim.NIL,
     },
     cb = nil,
@@ -85,13 +96,6 @@ end
 function M:debug(opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
-
-  local file_path = opts.file_path
-  if file_path then
-    file_path = vim.fn.fnamemodify(file_path, ":p")
-    if vim.fn.fnamemodify(file_path, ":e") ~= "cs" then file_path = nil end
-  end
-
   return helper.create_rpc_call({
     client = self._client,
     job = nil,
@@ -99,7 +103,28 @@ function M:debug(opts)
     params = {
       useDefault = opts.use_default or false,
       useLaunchProfile = opts.use_launch_profile or false,
-      filePath = file_path or vim.NIL,
+      filePath = resolve_file_path(opts.file_path) or vim.NIL,
+      cliArgs = opts.cli_args or vim.NIL,
+    },
+    cb = nil,
+    on_crash = opts.on_crash,
+  })()
+end
+
+---@param opts easy-dotnet.RPC.Client.Workspace.WatchOpts
+---@return easy-dotnet.RPC.CallHandle
+function M:watch(opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+  return helper.create_rpc_call({
+    client = self._client,
+    job = nil,
+    method = "workspace/watch",
+    params = {
+      useDefault = opts.use_default or false,
+      useLaunchProfile = opts.use_launch_profile or false,
+      useDebugger = false,
+      filePath = resolve_file_path(opts.file_path) or vim.NIL,
       cliArgs = opts.cli_args or vim.NIL,
     },
     cb = nil,
@@ -112,7 +137,6 @@ end
 function M:build(opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
-
   return helper.create_rpc_call({
     client = self._client,
     job = nil,
@@ -132,7 +156,6 @@ end
 function M:build_solution(opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
-
   return helper.create_rpc_call({
     client = self._client,
     job = nil,
@@ -152,7 +175,6 @@ end
 function M:restore(opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
-
   return helper.create_rpc_call({
     client = self._client,
     job = nil,
@@ -170,7 +192,6 @@ end
 function M:test(opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
-
   return helper.create_rpc_call({
     client = self._client,
     job = nil,
@@ -189,7 +210,6 @@ end
 function M:test_solution(opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
-
   return helper.create_rpc_call({
     client = self._client,
     job = nil,
