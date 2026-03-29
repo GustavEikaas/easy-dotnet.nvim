@@ -118,12 +118,10 @@ end
 ---@field stop fun(self: easy-dotnet.RPC.Client.Dotnet, cb: fun()): nil # Stops the dotnet server
 ---@field restart fun(self: easy-dotnet.RPC.Client.Dotnet, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
 ---@field msbuild easy-dotnet.RPC.Client.MsBuild
----@field debugger easy-dotnet.RPC.Client.Debugger
 ---@field lsp easy-dotnet.RPC.Client.Lsp
 ---@field entity_framework easy-dotnet.RPC.Client.EntityFramework
 ---@field testrunner easy-dotnet.RPC.Client.TestRunner
 ---@field template_engine easy-dotnet.RPC.Client.TemplateEngine
----@field launch_profiles easy-dotnet.RPC.Client.LaunchProfiles
 ---@field nuget easy-dotnet.RPC.Client.Nuget
 ---@field roslyn easy-dotnet.RPC.Client.Roslyn
 ---@field test easy-dotnet.RPC.Client.Test
@@ -154,11 +152,9 @@ function M:new()
   instance.msbuild = require("easy-dotnet.rpc.controllers.msbuild").new(client)
   instance.testrunner = require("easy-dotnet.rpc.controllers.testrunner").new(client)
   instance.template_engine = require("easy-dotnet.rpc.controllers.template").new(client)
-  instance.launch_profiles = require("easy-dotnet.rpc.controllers.launch-profiles").new(client)
   instance.entity_framework = require("easy-dotnet.rpc.controllers.entity-framework").new(client)
   instance.nuget = require("easy-dotnet.rpc.controllers.nuget").new(client)
   instance.roslyn = require("easy-dotnet.rpc.controllers.roslyn").new(client)
-  instance.debugger = require("easy-dotnet.rpc.controllers.debugger").new(client)
   instance.lsp = require("easy-dotnet.rpc.controllers.lsp").new(client)
   instance.test = require("easy-dotnet.rpc.controllers.test").new(client)
   instance.workspace = require("easy-dotnet.rpc.controllers.workspace").new(client)
