@@ -203,21 +203,6 @@ Although not *required* by the plugin, it is highly recommended to install one o
           prefix = "sln" -- "sln" | "none"
         }
       },
-      ---@param action "test" | "restore" | "build" | "run"
-      terminal = function(path, action, args)
-        args = args or ""
-        local commands = {
-          run = function() return string.format("dotnet run --project %s %s", path, args) end,
-          test = function() return string.format("dotnet test %s %s", path, args) end,
-          restore = function() return string.format("dotnet restore %s %s", path, args) end,
-          build = function() return string.format("dotnet build %s %s", path, args) end,
-          watch = function() return string.format("dotnet watch --project %s %s", path, args) end,
-        }
-        local command = commands[action]()
-        if require("easy-dotnet.extensions").isWindows() == true then command = command .. "\r" end
-        vim.cmd("vsplit")
-        vim.cmd("term " .. command)
-      end,
       csproj_mappings = true,
       fsproj_mappings = true,
       auto_bootstrap_namespace = {
