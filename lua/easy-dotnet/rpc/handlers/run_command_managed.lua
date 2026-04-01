@@ -1,5 +1,6 @@
 ---@class easy-dotnet.Job.TrackedJob
 ---@field jobId string
+---@field slotId string|nil
 ---@field command easy-dotnet.Server.RunCommand
 
 ---@class easy-dotnet.Server.RunCommand
@@ -10,8 +11,11 @@
 
 ---@param params easy-dotnet.Job.TrackedJob
 return function(params, response, throw, validate)
+  local Tab = require("easy-dotnet.terminal.tab")
+  local manager = require("easy-dotnet.terminal.manager")
+  local tabline = require("easy-dotnet.terminal.tabline")
   local header = require("easy-dotnet.terminal.header")
-  local state = require("easy-dotnet.terminal").state
+
   local job_id_ok, job_id_err = validate({ jobId = "string" }, params)
   if not job_id_ok then
     throw({ code = -32602, message = job_id_err })
@@ -24,115 +28,82 @@ return function(params, response, throw, validate)
     return
   end
 
-  state.exec_name = command.executable:match("([^/\\]+)$") or command.executable
-  state.full_args = table.concat(command.arguments or {}, " ")
+  local slot_id = params.slotId or "default"
+  local exec_basename = command.executable:match("([^/\\]+)$") or command.executable
+  local label = slot_id == "default" and exec_basename or slot_id:match("^run:(.+)$") or slot_id
+  local tab = manager.get_or_create(slot_id, label, "server")
 
-  if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
-    if state.job_id then pcall(vim.fn.jobstop, state.job_id) end
-    vim.api.nvim_buf_set_option(state.buf, "modified", false)
-  else
-    state.buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_option(state.buf, "bufhidden", "hide")
-    vim.api.nvim_buf_set_option(state.buf, "buflisted", false)
-  end
+  local prev_jid = Tab.job_id(tab)
+  if prev_jid then pcall(vim.fn.jobstop, prev_jid) end
 
-  if state.win and vim.api.nvim_win_is_valid(state.win) then
-    vim.api.nvim_set_current_win(state.win)
-  else
-    vim.cmd("split")
-    state.win = vim.api.nvim_get_current_win()
-    vim.w[state.win].easy_dotnet_terminal = true
-  end
+  local old_buf = tab.buf
+  tab.buf = vim.api.nvim_create_buf(false, true)
+  vim.bo[tab.buf].bufhidden = "hide"
+  vim.bo[tab.buf].buflisted = false
 
-  vim.api.nvim_win_set_buf(state.win, state.buf)
-  vim.cmd("normal! G")
+  tab.exec_name = exec_basename
+  tab.full_args = table.concat(command.arguments or {}, " ")
+  tab.last_status = "running"
+  tab.last_exit_code = nil
+  tab.owned_by = "server"
 
-  header.create_header_win()
-
-  vim.api.nvim_create_autocmd("WinClosed", {
-    pattern = tostring(state.win),
-    callback = function()
-      state.win = nil
-      header.cleanup_header()
-    end,
-    once = true,
-  })
-
-  vim.keymap.set("n", "q", function()
-    if state.win and vim.api.nvim_win_is_valid(state.win) then vim.api.nvim_win_close(state.win, false) end
-  end, { buffer = state.buf, nowait = true })
+  manager.set_active(slot_id)
+  local term = require("easy-dotnet.terminal")
+  term.show()
 
   local cmd = vim.list_extend({ command.executable }, command.arguments or {})
 
-  local job_id = vim.fn.jobstart(cmd, {
-    cwd = command.workingDirectory,
-    env = command.environmentVariables,
-    term = true,
-    on_exit = function(_, exit_code, _)
-      local managed_terminal_opts = require("easy-dotnet.options").get_option("managed_terminal")
-      local terminal = require("easy-dotnet.terminal")
-      state.last_status = "finished"
-      state.last_exit_code = exit_code
-      state.job_id = nil
+  local job_id
+  vim.api.nvim_buf_call(tab.buf, function()
+    job_id = vim.fn.termopen(cmd, {
+      cwd = command.workingDirectory,
+      env = command.environmentVariables,
+      on_exit = function(_, exit_code, _)
+        local managed_terminal_opts = require("easy-dotnet.options").get_option("managed_terminal")
 
-      vim.schedule(function()
-        header.cleanup_header()
-        if state.win and vim.api.nvim_win_is_valid(state.win) then
-          header.create_header_win()
-          header.update_header("finished", exit_code)
-        end
+        vim.schedule(function()
+          tab.last_status = "finished"
+          tab.last_exit_code = exit_code
 
-        if exit_code == 0 and managed_terminal_opts.auto_hide then
-          local delay = managed_terminal_opts.auto_hide_delay or 0
-          if delay > 0 then
-            local hide_timer = vim.loop.new_timer()
-            hide_timer:start(
-              delay,
-              0,
-              vim.schedule_wrap(function()
-                hide_timer:stop()
-                if not hide_timer:is_closing() then hide_timer:close() end
-                terminal.hide()
-              end)
-            )
-          else
-            terminal.hide()
+          tabline.render()
+          header.render()
+
+          if tab.owned_by == "server" and exit_code == 0 and managed_terminal_opts.auto_hide and manager.active_id == slot_id then
+            local delay = managed_terminal_opts.auto_hide_delay or 0
+            if delay > 0 then
+              local hide_timer = vim.loop.new_timer()
+              hide_timer:start(
+                delay,
+                0,
+                vim.schedule_wrap(function()
+                  hide_timer:stop()
+                  if not hide_timer:is_closing() then hide_timer:close() end
+                  term.hide()
+                end)
+              )
+            else
+              term.hide()
+            end
           end
-        end
-      end)
+        end)
 
-      local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-      if client._initialized then client._client.notify("processExited", { jobId = params.jobId, exitCode = exit_code }) end
-    end,
-  })
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        if client._initialized then client._client.notify("processExited", { jobId = params.jobId, exitCode = exit_code }) end
+      end,
+    })
+  end)
 
   if job_id <= 0 then
     throw({ code = -32000, message = "Failed to start terminal job" })
     return
   end
 
-  state.job_id = job_id
-  state.last_status = "running"
-  state.last_exit_code = nil
+  if old_buf and vim.api.nvim_buf_is_valid(old_buf) then pcall(vim.api.nvim_buf_delete, old_buf, { force = true }) end
 
-  vim.b[state.buf].terminal_job_id = job_id
+  vim.b[tab.buf].terminal_job_id = job_id
   vim.cmd("startinsert")
 
-  local timer = vim.loop.new_timer()
-  state.timer = timer
-  timer:start(
-    0,
-    100,
-    vim.schedule_wrap(function()
-      local codes = vim.fn.jobwait({ job_id }, 0)
-      if codes[1] == -1 then
-        header.update_header("running")
-      else
-        timer:stop()
-        if not timer:is_closing() then timer:close() end
-      end
-    end)
-  )
+  tabline.ensure_timer()
 
   local pid_ok, pid = pcall(vim.fn.jobpid, job_id)
   response({ processId = pid_ok and pid or -1 })
