@@ -2,6 +2,9 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## External terminal window reuse ([#336](https://github.com/GustavEikaas/easy-dotnet-server/pull/336))
+When using `options.external_terminal`, running and debugging will spawn a completely separate window like Kitty or Windows Terminal. This is great and provides an easy way to see stdout from your application. Unfortunately, when your app exits, this window is orphaned. Depending on your config, one of 2 things will happen. The terminal window closes, causing you to miss crash logs if any. The window lingers, but it has lost its relationship with easy-dotnet, so when you start a new debug session a completely new window will be spawned. GustavEikaas/easy-dotnet-server#336 fixes this and ensures that terminal windows will be reused no matter which terminal emulator you use.
+
 ## Workspace run and debug moved to the server ([#858](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/858))
 
 `:Dotnet run` and `:Dotnet debug` have now been moved fully into the C# server, similar to the test runner rewrite.

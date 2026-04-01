@@ -26,6 +26,7 @@
 ---@class easy-dotnet.RPC.Client.Workspace.WatchOpts
 ---@field use_default boolean
 ---@field use_launch_profile boolean
+---@field use_debugger boolean
 ---@field file_path string | nil
 ---@field cli_args string | nil
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
@@ -123,7 +124,7 @@ function M:watch(opts)
     params = {
       useDefault = opts.use_default or false,
       useLaunchProfile = opts.use_launch_profile or false,
-      useDebugger = false,
+      useDebugger = opts.use_debugger or false,
       filePath = resolve_file_path(opts.file_path) or vim.NIL,
       cliArgs = opts.cli_args or vim.NIL,
     },
