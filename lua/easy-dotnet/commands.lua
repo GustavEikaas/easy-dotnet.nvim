@@ -216,22 +216,6 @@ M.watch = {
   end,
   passthrough = true,
   subcommands = {
-    debug = {
-      handle = function(args, _)
-        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-        client:initialize(
-          function()
-            client.workspace:watch({
-              use_debugger = true,
-              use_default = true,
-              use_launch_profile = false,
-              file_path = vim.api.nvim_buf_get_name(0),
-              cli_args = passthrough_dotnet_cli_args_handler(args),
-            })
-          end
-        )
-      end,
-    },
     default = {
       handle = function(args, _)
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
