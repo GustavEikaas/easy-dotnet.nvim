@@ -3,6 +3,8 @@ local Tab = require("easy-dotnet.terminal.tab")
 
 local M = {}
 
+local panel_height = 15
+
 local function apply_panel_keymaps(buf)
   local km = require("easy-dotnet.options").get_option("managed_terminal").mappings or {}
   local opts = { nowait = true, silent = true, buffer = buf }
@@ -62,7 +64,7 @@ function M.show()
 
   vim.cmd("botright split")
   local win = vim.api.nvim_get_current_win()
-  vim.api.nvim_win_set_height(win, 15)
+  vim.api.nvim_win_set_height(win, panel_height)
 
   local active = manager.active_id and manager.get(manager.active_id)
   if active then
@@ -82,6 +84,7 @@ function M.show()
     pattern = tostring(win),
     once = true,
     callback = function()
+      if manager.panel_win and vim.api.nvim_win_is_valid(manager.panel_win) then panel_height = vim.api.nvim_win_get_height(manager.panel_win) end
       manager.panel_win = nil
       require("easy-dotnet.terminal.tabline").destroy()
       require("easy-dotnet.terminal.header").destroy()
