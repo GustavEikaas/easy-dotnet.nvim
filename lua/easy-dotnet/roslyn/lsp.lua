@@ -401,11 +401,7 @@ function M.enable(opts)
     on_attach = function(client, buf)
       vim.b[buf].roslyn_buf_opened_at = now()
       if require("easy-dotnet.options").get_option("lsp").auto_refresh_codelens then
-        vim.lsp.codelens.refresh()
-        vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
-          buffer = buf,
-          callback = vim.lsp.codelens.refresh,
-        })
+        vim.lsp.codelens.enable(true, { bufnr = buf })
       end
       check_project_context(client, buf)
     end,
