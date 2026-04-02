@@ -12,7 +12,7 @@ local M = {
 ---@param t table<T, any> (table) Table
 ---@return T[] : List of keys
 function M.tbl_keys(t)
-  vim.validate({ t = { t, "t" } })
+  vim.validate("t", t, "t")
   --- @cast t table<any,any>
 
   local keys = {}
@@ -31,7 +31,7 @@ function M.fs.joinpath(...) return (table.concat({ ... }, "/"):gsub("//+", "/"))
 ---@param t table<any, T> (table) Table
 ---@return T[] : List of values
 function M.tbl_values(t)
-  vim.validate({ t = { t, "t" } })
+  vim.validate("t", t, "t")
 
   local values = {}
   for _, v in
@@ -49,7 +49,8 @@ end
 ---@param t table<any, T> Table
 ---@return table : Table of transformed values
 function M.tbl_map(func, t)
-  vim.validate({ func = { func, "c" }, t = { t, "t" } })
+  vim.validate("func", func, "c")
+  vim.validate("t", t, "t")
   --- @cast t table<any,any>
 
   local rettab = {} --- @type table<any,any>
@@ -66,7 +67,8 @@ end
 ---@param t table<any, T> (table) Table
 ---@return T[] : Table of filtered values
 function M.tbl_filter(func, t)
-  vim.validate({ func = { func, "c" }, t = { t, "t" } })
+  vim.validate("func", func, "c")
+  vim.validate("t", t, "t")
   --- @cast t table<any,any>
 
   local rettab = {} --- @type table<any,any>
@@ -101,12 +103,13 @@ end
 ---@param opts? M.tbl_contains.Opts Keyword arguments |kwargs|:
 ---@return boolean `true` if `t` contains `value`
 function M.tbl_contains(t, value, opts)
-  vim.validate({ t = { t, "t" }, opts = { opts, "t", true } })
+  vim.validate("t", t, "t")
+  vim.validate("opts", opts, "t", true)
   --- @cast t table<any,any>
 
   local pred --- @type fun(v: any): boolean?
   if opts and opts.predicate then
-    vim.validate({ value = { value, "c" } })
+    vim.validate("value", value, "c")
     pred = value
   else
     pred = function(v) return v == value end
@@ -126,7 +129,7 @@ end
 ---@param value any Value to compare
 ---@return boolean `true` if `t` contains `value`
 function M.list_contains(t, value)
-  vim.validate({ t = { t, "t" } })
+  vim.validate("t", t, "t")
   --- @cast t table<any,any>
 
   for _, v in ipairs(t) do
