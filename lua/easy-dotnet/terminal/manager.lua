@@ -7,8 +7,6 @@ local Tab = require("easy-dotnet.terminal.tab")
 ---@field panel_win integer|nil
 ---@field tabline_buf integer|nil
 ---@field tabline_win integer|nil
----@field header_buf integer|nil
----@field header_win integer|nil
 ---@field _user_counter integer
 ---@field _on_tab_activated fun(tab: easy-dotnet.TerminalTab)|nil
 
@@ -19,8 +17,6 @@ local M = {
   panel_win = nil,
   tabline_buf = nil,
   tabline_win = nil,
-  header_buf = nil,
-  header_win = nil,
   _user_counter = 0,
   _on_tab_activated = nil,
 }
@@ -76,8 +72,6 @@ function M.set_active(id)
 
   local ok_tl, tabline = pcall(require, "easy-dotnet.terminal.tabline")
   if ok_tl then tabline.render() end
-  local ok_h, header = pcall(require, "easy-dotnet.terminal.header")
-  if ok_h then header.render() end
 end
 
 ---Remove a tab and free its buffer.
@@ -137,8 +131,6 @@ function M.new_user_terminal()
           tab.last_exit_code = exit_code
           local ok_tl, tabline = pcall(require, "easy-dotnet.terminal.tabline")
           if ok_tl then tabline.render() end
-          local ok_h, header = pcall(require, "easy-dotnet.terminal.header")
-          if ok_h then header.render() end
         end)
       end,
     })

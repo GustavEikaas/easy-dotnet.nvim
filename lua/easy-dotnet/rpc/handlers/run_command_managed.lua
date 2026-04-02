@@ -14,7 +14,6 @@ return function(params, response, throw, validate)
   local Tab = require("easy-dotnet.terminal.tab")
   local manager = require("easy-dotnet.terminal.manager")
   local tabline = require("easy-dotnet.terminal.tabline")
-  local header = require("easy-dotnet.terminal.header")
 
   local job_id_ok, job_id_err = validate({ jobId = "string" }, params)
   if not job_id_ok then
@@ -66,7 +65,6 @@ return function(params, response, throw, validate)
           tab.last_exit_code = exit_code
 
           tabline.render()
-          header.render()
 
           if tab.owned_by == "server" and exit_code == 0 and managed_terminal_opts.auto_hide and manager.active_id == slot_id then
             local delay = managed_terminal_opts.auto_hide_delay or 0

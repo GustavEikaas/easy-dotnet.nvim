@@ -78,7 +78,6 @@ function M.show()
   if active then apply_panel_keymaps(active.buf) end
 
   require("easy-dotnet.terminal.tabline").create(win)
-  require("easy-dotnet.terminal.header").create(win)
 
   vim.api.nvim_create_autocmd("WinClosed", {
     pattern = tostring(win),
@@ -87,7 +86,6 @@ function M.show()
       if manager.panel_win and vim.api.nvim_win_is_valid(manager.panel_win) then panel_height = vim.api.nvim_win_get_height(manager.panel_win) end
       manager.panel_win = nil
       require("easy-dotnet.terminal.tabline").destroy()
-      require("easy-dotnet.terminal.header").destroy()
     end,
   })
 end
