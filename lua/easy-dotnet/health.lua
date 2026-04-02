@@ -146,6 +146,36 @@ local function get_commit_info()
   vim.health.info("Commit: " .. vim.trim(sha or ""))
 end
 
+local function check_indent_expr()
+  vim.health.start("Treesitter Indentation")
+
+  local ok, _ = pcall(vim.treesitter.language.add, "c_sharp")
+  if ok then
+    vim.health.ok("c_sharp parser is installed")
+  else
+    vim.health.error("c_sharp parser NOT found — run :TSInstall c_sharp")
+    return
+  end
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_name(buf, "healthcheck_tmp.cs")
+
+  vim.api.nvim_set_current_buf(buf)
+  vim.bo[buf].filetype = "cs"
+  vim.api.nvim_exec_autocmds("FileType", { buffer = buf, data = { match = "cs" } })
+
+  local indentexpr = vim.bo[buf].indentexpr
+
+  if indentexpr:find("nvim-treesitter", 1, true) then
+    vim.health.error(
+      "treesitter indentexpr is set for C# — this will break indentation, guard the indentexpr assignment by filetype",
+      { "https://github.com/GustavEikaas/easy-dotnet.nvim/issues/873" }
+    )
+  else
+    vim.health.ok("indentexpr is not set to treesitter — C# indentation should work correctly" .. (indentexpr ~= "" and " (using: '" .. indentexpr .. "')" or ""))
+  end
+end
+
 M.check = function()
   vim.health.start("General information")
   os_info()
@@ -163,6 +193,7 @@ M.check = function()
   ensure_nvim_dep_installed("plenary", "https://github.com/nvim-lua/plenary.nvim")
   ensure_nvim_dep_installed("dap", { "Some functionality will be disabled", "https://github.com/mfussenegger/nvim-dap" }, false)
 
+  check_indent_expr()
   vim.health.start("easy-dotnet dap configuration (optional)")
   check_debugger_configured()
 
