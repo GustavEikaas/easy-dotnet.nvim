@@ -84,9 +84,7 @@ local function build_header_row(rs, frame)
       end
       left_hl_end = #left_text
     end
-    if last_run_time then
-      left_text = left_text .. "  " .. last_run_time
-    end
+    if last_run_time then left_text = left_text .. "  " .. last_run_time end
   end
 
   local empty_rs = { totalPassed = 0, totalFailed = 0, totalSkipped = 0, totalTests = 0 }
