@@ -43,9 +43,7 @@ local function auto_bootstrap_namespace(bufnr, mode)
 
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 
-  local clear_virtual_text = function()
-    vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-  end
+  local clear_virtual_text = function() vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1) end
 
   local opts = { on_crash = function(_) clear_virtual_text() end }
 
