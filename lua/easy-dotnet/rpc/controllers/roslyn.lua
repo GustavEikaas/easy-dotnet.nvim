@@ -1,9 +1,9 @@
 ---@class easy-dotnet.RPC.Client.Roslyn
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
 -- luacheck: no max line length
----@field roslyn_bootstrap_file fun(self: easy-dotnet.RPC.Client.Roslyn, file_path: string, type: "Class" | "Interface" | "Record", prefer_file_scoped: boolean, cb?: fun(success: true), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+---@field roslyn_bootstrap_file_v2 fun(self: easy-dotnet.RPC.Client.Roslyn, file_path: string, type: "Class" | "Interface" | "Record", prefer_file_scoped: boolean, cb?: fun(success: true), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 -- luacheck: no max line length
----@field roslyn_bootstrap_file_json fun(self: easy-dotnet.RPC.Client.Roslyn, file_path: string, json_data: string, prefer_file_scoped: boolean, cb?: fun(success: true), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+---@field roslyn_bootstrap_file_json_v2 fun(self: easy-dotnet.RPC.Client.Roslyn, file_path: string, json_data: string, prefer_file_scoped: boolean, cb?: fun(success: true), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 -- luacheck: no max line length
 ---@field roslyn_scope_variables fun(self: easy-dotnet.RPC.Client.Roslyn, file_path: string, line: number, cb?: fun(variables: easy-dotnet.Roslyn.VariableLocation[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 -- luacheck: no max line length
@@ -21,7 +21,7 @@ function M.new(client)
   return self
 end
 
-function M:roslyn_bootstrap_file_json(file_path, json_data, prefer_file_scoped, cb, opts)
+function M:roslyn_bootstrap_file_json_v2(file_path, json_data, prefer_file_scoped, cb, opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
   return helper.create_rpc_call({
@@ -29,12 +29,12 @@ function M:roslyn_bootstrap_file_json(file_path, json_data, prefer_file_scoped, 
     job = nil,
     cb = function(res) cb(res.success) end,
     on_crash = opts.on_crash,
-    method = "json-code-gen",
+    method = "json-code-gen-v2",
     params = { filePath = file_path, jsonData = json_data, preferFileScopedNamespace = prefer_file_scoped },
   })()
 end
 
-function M:roslyn_bootstrap_file(file_path, type, prefer_file_scoped, cb, opts)
+function M:roslyn_bootstrap_file_v2(file_path, type, prefer_file_scoped, cb, opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   opts = opts or {}
   return helper.create_rpc_call({
@@ -42,7 +42,7 @@ function M:roslyn_bootstrap_file(file_path, type, prefer_file_scoped, cb, opts)
     job = nil,
     cb = function(res) cb(res.success) end,
     on_crash = opts.on_crash,
-    method = "roslyn/bootstrap-file",
+    method = "roslyn/bootstrap-file-v2",
     params = { filePath = file_path, kind = type, preferFileScopedNamespace = prefer_file_scoped },
   })()
 end
