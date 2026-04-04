@@ -426,17 +426,13 @@ M.solution = {
     add = {
       handle = function()
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-        client:initialize(function()
-          client:solution_add_project()
-        end)
+        client:initialize(function() client:solution_add_project() end)
       end,
     },
     remove = {
       handle = function()
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-        client:initialize(function()
-          client:solution_remove_project()
-        end)
+        client:initialize(function() client:solution_remove_project() end)
       end,
     },
   },
