@@ -130,6 +130,8 @@ end
 ---@field secrets_init fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.RPC.ProjectUserSecretsInitResponse), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request adding package
 -- luacheck: no max line length
 ---@field solution_list_projects fun(self: easy-dotnet.RPC.Client.Dotnet, solution_file_path: string, cb?: fun(res: easy-dotnet.Server.SolutionFileProjectResponse[]), include_non_existing?: boolean, opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+---@field solution_add_project fun(self: easy-dotnet.RPC.Client.Dotnet, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+---@field solution_remove_project fun(self: easy-dotnet.RPC.Client.Dotnet, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field outdated_packages fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.Nuget.OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
 ---@field ef fun(self: easy-dotnet.RPC.Client.Dotnet): integer | false
 ---@field get_state fun(self: easy-dotnet.RPC.Client.Dotnet): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
@@ -330,6 +332,28 @@ function M:solution_list_projects(solution_file_path, cb, include_non_existing, 
     on_crash = opts.on_crash,
     method = "solution/list-projects",
     params = { solutionFilePath = solution_file_path },
+  })()
+end
+
+function M:solution_add_project(cb, opts)
+  opts = opts or {}
+  return M.create_rpc_call({
+    client = self._client,
+    cb = cb,
+    on_crash = opts.on_crash,
+    method = "solution/add-project",
+    params = {},
+  })()
+end
+
+function M:solution_remove_project(cb, opts)
+  opts = opts or {}
+  return M.create_rpc_call({
+    client = self._client,
+    cb = cb,
+    on_crash = opts.on_crash,
+    method = "solution/remove-project",
+    params = {},
   })()
 end
 
