@@ -1,4 +1,3 @@
-local polyfills = require("easy-dotnet.polyfills")
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local logger = require("easy-dotnet.logger")
 local cache = require("easy-dotnet.modules.file-cache")
@@ -25,7 +24,7 @@ function M.add_project_to_solution(slnpath)
 
   local options = {}
   for _, value in ipairs(projects) do
-    if not polyfills.tbl_contains(sln_projects, function(a) return vim.fs.normalize(a.path) == value end, { predicate = true }) then
+    if not vim.tbl_contains(sln_projects, function(a) return vim.fs.normalize(a.path) == value end, { predicate = true }) then
       table.insert(options, {
         display = value,
         ordinal = value,
@@ -141,7 +140,7 @@ end
 ---@param project_paths string[]
 ---@return easy-dotnet.Project.Project[]
 local function get_all_projects_from_paths(project_paths)
-  return polyfills.tbl_map(function(proj_path)
+  return vim.tbl_map(function(proj_path)
     local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
     local project = csproj_parser.get_project_from_project_file(proj_path)
     return project
