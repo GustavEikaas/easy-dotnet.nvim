@@ -202,9 +202,7 @@ function M.open(node, result, opts)
   strip_cr(result.stdout)
   if result.frames then
     for _, frame in ipairs(result.frames) do
-      if frame.originalText then
-        frame.originalText = frame.originalText:gsub("\r", "")
-      end
+      if frame.originalText then frame.originalText = frame.originalText:gsub("\r", "") end
     end
   end
 
