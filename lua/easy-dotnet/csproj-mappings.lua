@@ -5,13 +5,12 @@ local M = {
 
 local picker = require("easy-dotnet.picker")
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-local polyfills = require("easy-dotnet.polyfills")
 local csproj = require("easy-dotnet.parsers.csproj-parse")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local error_messages = require("easy-dotnet.error-messages")
 local logger = require("easy-dotnet.logger")
 
-local function not_in_list(list, value) return not polyfills.tbl_contains(list, value) end
+local function not_in_list(list, value) return not vim.tbl_contains(list, value) end
 
 -- Gives a picker for adding a project reference to a csproject
 function M.add_project_reference(curr_project_path, cb)
@@ -84,7 +83,7 @@ M.package_completion_cmp = {
       end
       client:initialize(function()
         M.include_pending_cancel_cb = client.nuget:nuget_search(search_term, nil, function(res)
-          local items = polyfills.tbl_map(function(value) return { label = value.id, kind = 18 } end, res)
+          local items = vim.tbl_map(function(value) return { label = value.id, kind = 18 } end, res)
           callback({ items = items, isIncomplete = true })
         end).cancel
       end)
@@ -100,7 +99,7 @@ M.package_completion_cmp = {
           local index = 0
           local latest = nil
           local last_index = #res - 1
-          local items = polyfills.tbl_map(function(i)
+          local items = vim.tbl_map(function(i)
             index = index + 1
             local cmp_item = {
               label = i,

@@ -69,6 +69,8 @@ local M = {
 ---| "msbuild/project-properties"
 ---| "msbuild/add-package-reference"
 ---| "solution/list-projects"
+---| "solution/add-project"
+---| "solution/remove-project"
 ---| "nuget/push"
 ---| "nuget/get-package-versions"
 ---| "nuget/search-packages"
