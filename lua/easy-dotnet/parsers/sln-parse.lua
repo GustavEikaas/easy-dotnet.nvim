@@ -1,4 +1,3 @@
-local polyfills = require("easy-dotnet.polyfills")
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local cache = require("easy-dotnet.modules.file-cache")
 local current_solution = require("easy-dotnet.current_solution")
@@ -46,7 +45,7 @@ end
 ---@param project_paths string[]
 ---@return easy-dotnet.Project.Project[]
 local function get_all_projects_from_paths(project_paths)
-  return polyfills.tbl_map(function(proj_path)
+  return vim.tbl_map(function(proj_path)
     local csproj_parser = require("easy-dotnet.parsers.csproj-parse")
     local project = csproj_parser.get_project_from_project_file(proj_path)
     return project

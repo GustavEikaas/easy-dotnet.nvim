@@ -1,5 +1,4 @@
 local ns_id = require("easy-dotnet.constants").ns_id
-local polyfills = require("easy-dotnet.polyfills")
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local logger = require("easy-dotnet.logger")
 
@@ -96,7 +95,7 @@ function M.append_job(id)
 
   local on_job_finished_callback = function()
     job.completed = true
-    local is_all_finished = polyfills.iter(M.jobs):all(function(s) return s.completed end)
+    local is_all_finished = vim.iter(M.jobs):all(function(s) return s.completed end)
     if is_all_finished == true then M.jobs = {} end
     M.refresh()
   end
