@@ -425,24 +425,14 @@ M.solution = {
     },
     add = {
       handle = function()
-        current_solution.get_or_pick_solution(function(solution_path)
-          if not solution_path then
-            logger.info("No solutions found")
-            return
-          end
-          require("easy-dotnet.parsers.sln-parse").add_project_to_solution(solution_path)
-        end)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client:solution_add_project() end)
       end,
     },
     remove = {
       handle = function()
-        current_solution.get_or_pick_solution(function(solution_path)
-          if not solution_path then
-            logger.info("No solutions found")
-            return
-          end
-          require("easy-dotnet.parsers.sln-parse").remove_project_from_solution(solution_path)
-        end)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client:solution_remove_project() end)
       end,
     },
   },
