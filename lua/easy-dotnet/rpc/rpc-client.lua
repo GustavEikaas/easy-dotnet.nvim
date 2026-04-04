@@ -69,6 +69,8 @@ local M = {
 ---| "msbuild/project-properties"
 ---| "msbuild/add-package-reference"
 ---| "solution/list-projects"
+---| "solution/add-project"
+---| "solution/remove-project"
 ---| "nuget/push"
 ---| "nuget/get-package-versions"
 ---| "nuget/search-packages"
@@ -76,10 +78,10 @@ local M = {
 ---| "test/discover"
 ---| "test/run"
 ---| "outdated/packages"
----| "roslyn/bootstrap-file"
+---| "roslyn/bootstrap-file-v2"
 ---| "roslyn/scope-variables"
 ---| "roslyn/get-workspace-diagnostics"
----| "json-code-gen"
+---| "json-code-gen-v2"
 ---| "template/list"
 ---| "template/parameters"
 ---| "template/instantiate"
@@ -121,6 +123,7 @@ end
 local handlers = {
   ["testrunner/isVisible"] = require("easy-dotnet.rpc.handlers.is_test_runner_visible"),
   openBuffer = require("easy-dotnet.rpc.handlers.open_buffer"),
+  applyWorkspaceEdit = require("easy-dotnet.rpc.handlers.apply_workspace_edit"),
   setBreakpoint = require("easy-dotnet.rpc.handlers.set_breakpoint"),
   promptConfirm = require("easy-dotnet.rpc.handlers.prompt_confirm"),
   promptString = require("easy-dotnet.rpc.handlers.prompt_string"),

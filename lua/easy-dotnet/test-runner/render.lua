@@ -22,6 +22,9 @@ local spinner = {
   interval = 80,
 }
 
+local last_run_time = nil
+local was_loading = false
+
 local action_display = {
   Run = "Run",
   Debug = "Debug",
@@ -81,6 +84,7 @@ local function build_header_row(rs, frame)
       end
       left_hl_end = #left_text
     end
+    if last_run_time then left_text = left_text .. "  " .. last_run_time end
   end
 
   local empty_rs = { totalPassed = 0, totalFailed = 0, totalSkipped = 0, totalTests = 0 }
@@ -89,6 +93,10 @@ local function build_header_row(rs, frame)
 
   local line, hls = left_text, {}
   if left_hl then table.insert(hls, { 0, left_hl_end, left_hl }) end
+  if last_run_time and not loading then
+    local ts_text = "  " .. last_run_time
+    table.insert(hls, { #left_text - #ts_text, #left_text, "Comment" })
+  end
 
   if left_dw + right_dw + 1 <= win_width then
     local pad = win_width - left_dw - right_dw
@@ -465,7 +473,7 @@ local function render_node(node, depth)
     local stype = node.status.type
     status_suffix = get_status_icon(stype)
     hl = status_highlights[stype]
-    if stype == "Passed" and node.status.durationDisplay then status_suffix = "  " .. node.status.durationDisplay end
+    if node.status.durationDisplay then status_suffix = status_suffix .. "  " .. node.status.durationDisplay end
   end
 
   if not hl then
@@ -488,8 +496,13 @@ function M.refresh()
 
   local rs = state.runner_status
   if rs and rs.isLoading then
+    was_loading = true
     spinner_start()
   else
+    if was_loading then
+      last_run_time = os.date("%H:%M:%S")
+      was_loading = false
+    end
     spinner_stop()
   end
 

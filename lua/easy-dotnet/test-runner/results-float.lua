@@ -185,10 +185,27 @@ local function open_from_runner(node, result, refocus)
   end
 end
 
+-- Strip trailing \r from .NET \r\n line endings that survive the RPC \n split.
+-- Without this, Neovim renders the leftover \r as ^M in float buffers.
+local function strip_cr(lines)
+  if not lines then return end
+  for i, line in ipairs(lines) do
+    lines[i] = line:gsub("\r", "")
+  end
+end
+
 ---@param node   easy-dotnet.TestRunner.Node
 ---@param result easy-dotnet.TestRunner.Results   from testrunner/getResults
 ---@param opts?  { source: "buffer"|"runner" }    defaults to "runner"
 function M.open(node, result, opts)
+  strip_cr(result.errorMessage)
+  strip_cr(result.stdout)
+  if result.frames then
+    for _, frame in ipairs(result.frames) do
+      if frame.originalText then frame.originalText = frame.originalText:gsub("\r", "") end
+    end
+  end
+
   local source = opts and opts.source or "runner"
   local render = require("easy-dotnet.test-runner.render")
   local refocus = function()
