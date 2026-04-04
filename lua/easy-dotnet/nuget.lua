@@ -1,7 +1,6 @@
 local M = {}
 
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-local polyfills = require("easy-dotnet.polyfills")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
 local picker = require("easy-dotnet.picker")
@@ -45,7 +44,7 @@ end
 ---@param project_path string | nil
 ---@param allow_prerelease boolean
 local function add_package(package, project_path, allow_prerelease)
-  local versions = polyfills.tbl_map(function(v) return { value = v, display = v } end, get_all_versions(package, allow_prerelease))
+  local versions = vim.tbl_map(function(v) return { value = v, display = v } end, get_all_versions(package, allow_prerelease))
 
   local selected_version = picker.pick_sync(nil, versions, "Select a version", true)
   local finished = job.register_job({
@@ -105,7 +104,7 @@ M.remove_nuget = function()
   client:initialize(function()
     client.msbuild:msbuild_list_package_reference(project.path, project.msbuild_props.targetFramework, function(res)
       ---@param i easy-dotnet.MSBuild.PackageReference
-      local choices = polyfills.tbl_map(function(i) return { display = i.id .. "@" .. i.resolvedVersion, value = i.id } end, res)
+      local choices = vim.tbl_map(function(i) return { display = i.id .. "@" .. i.resolvedVersion, value = i.id } end, res)
       picker.picker(nil, choices, function(val)
         local package = val.value
         vim.fn.jobstart(string.format("dotnet remove %s package %s ", project_path, package), {

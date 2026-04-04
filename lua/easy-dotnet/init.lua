@@ -1,6 +1,5 @@
 local constants = require("easy-dotnet.constants")
 local commands = require("easy-dotnet.commands")
-local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
 local job = require("easy-dotnet.ui-modules.jobs")
 local current_solution = require("easy-dotnet.current_solution")
@@ -25,24 +24,24 @@ local function wrap(callback)
   end
 end
 local function collect_commands_with_handles(parent, prefix)
-  return polyfills.iter(parent):fold({}, function(command_handles, name, command)
+  return vim.iter(parent):fold({}, function(command_handles, name, command)
     local full_command = prefix and (prefix .. "_" .. name) or name
 
     if command.handle then command_handles[full_command] = command.handle end
 
-    if command.subcommands then polyfills.iter(collect_commands_with_handles(command.subcommands, full_command)):each(function(sub_name, sub_handle) command_handles[sub_name] = sub_handle end) end
+    if command.subcommands then vim.iter(collect_commands_with_handles(command.subcommands, full_command)):each(function(sub_name, sub_handle) command_handles[sub_name] = sub_handle end) end
 
     return command_handles
   end)
 end
 
 local function collect_commands(parent, prefix)
-  return polyfills.iter(parent):fold({}, function(cmds, name, command)
+  return vim.iter(parent):fold({}, function(cmds, name, command)
     local full_command = prefix and (prefix .. " " .. name) or name
 
     if command.handle then table.insert(cmds, full_command) end
 
-    if command.subcommands then polyfills.iter(collect_commands(command.subcommands, full_command)):each(function(sub) table.insert(cmds, sub) end) end
+    if command.subcommands then vim.iter(collect_commands(command.subcommands, full_command)):each(function(sub) table.insert(cmds, sub) end) end
 
     return cmds
   end)
@@ -149,7 +148,7 @@ local function auto_register_dap(merged_opts)
 end
 
 ---@return table<string>
-local function split_by_whitespace(str) return str and polyfills.iter(str:gmatch("%S+")):totable() or {} end
+local function split_by_whitespace(str) return str and vim.iter(str:gmatch("%S+")):totable() or {} end
 
 local function traverse_subcommands(args, parent)
   if next(args) then
@@ -164,7 +163,7 @@ local function traverse_subcommands(args, parent)
   elseif parent.handle then
     parent.handle(args, require("easy-dotnet.options").options)
   else
-    local required = polyfills.tbl_keys(parent.subcommands)
+    local required = vim.tbl_keys(parent.subcommands)
     print("Missing required argument " .. vim.inspect(required))
   end
 end
@@ -186,7 +185,7 @@ local function complete_command(arg_lead, cmdline)
   if not args then return all_commands end
   local pre_arg_lead = args:match("^(.*)" .. arg_lead .. "$")
 
-  local matches = polyfills
+  local matches = vim
     .iter(all_commands)
     :map(function(command)
       if pre_arg_lead ~= "" and pre_arg_lead ~= nil then
@@ -301,7 +300,7 @@ M.setup = function(opts)
     end)
   end
 
-  polyfills.iter(collect_commands_with_handles(commands)):each(function(name, handle)
+  vim.iter(collect_commands_with_handles(commands)):each(function(name, handle)
     M[name] = wrap(function(args, options) handle(args, options or require("easy-dotnet.options").options) end)
   end)
 

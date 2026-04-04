@@ -1,5 +1,3 @@
-local polyfills = require("easy-dotnet.polyfills")
-
 local M = {
   include_pending_cancel_cb = nil,
   version_pending_cancel_cb = nil,
@@ -43,7 +41,7 @@ function M:get_completions(ctx, callback)
     end
     client:initialize(function()
       M.include_pending_cancel_cb = client.nuget:nuget_search(search_term, nil, function(res)
-        local items = polyfills.tbl_map(function(value)
+        local items = vim.tbl_map(function(value)
           local label = string.format("%s (%s)", value.id, value.source)
           return { label = label, dup = 0, insertText = value.id, documentation = "", kind = 11 }
         end, res)
@@ -63,7 +61,7 @@ function M:get_completions(ctx, callback)
         local index = 0
         local latest = nil
         local last_index = #res - 1
-        local items = polyfills.tbl_map(function(i)
+        local items = vim.tbl_map(function(i)
           index = index + 1
           local cmp_item = {
             label = i,
