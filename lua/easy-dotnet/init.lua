@@ -307,7 +307,7 @@ M.setup = function(opts)
   if merged_opts.lsp.enabled == true then
     local lsp = require("easy-dotnet.roslyn.lsp")
     lsp.enable(merged_opts.lsp)
-    lsp.preload_roslyn(merged_opts.lsp)
+    if merged_opts.background_scanning then lsp.preload_roslyn(merged_opts.lsp) end
   end
   if merged_opts.projx_lsp.enabled == true then require("easy-dotnet.projx.lsp").enable() end
   wrap(auto_register_dap)(merged_opts)
