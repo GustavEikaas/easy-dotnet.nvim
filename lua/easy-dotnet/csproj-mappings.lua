@@ -3,51 +3,14 @@ local M = {
   version_pending_cancel_cb = nil,
 }
 
-local picker = require("easy-dotnet.picker")
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-local csproj = require("easy-dotnet.parsers.csproj-parse")
-local sln_parse = require("easy-dotnet.parsers.sln-parse")
-local error_messages = require("easy-dotnet.error-messages")
-local logger = require("easy-dotnet.logger")
 
-local function not_in_list(list, value) return not vim.tbl_contains(list, value) end
-
--- Gives a picker for adding a project reference to a csproject
 function M.add_project_reference(curr_project_path, cb)
-  local this_project = csproj.get_project_from_project_file(curr_project_path)
-  local references = csproj.get_project_references_from_projects(curr_project_path)
-
-  local solutionFilePath = sln_parse.try_get_selected_solution_file()
-  if solutionFilePath == nil then
-    logger.error(error_messages.no_project_definition_found)
-    return false
-  end
-
-  local all_projects = sln_parse.get_projects_from_sln(solutionFilePath)
-
-  local projects = {}
-  -- Ignore current project and already referenced projects
-  for _, value in ipairs(all_projects) do
-    if value.name ~= this_project.name and not_in_list(references, value.name) then table.insert(projects, value) end
-  end
-
-  if #projects == 0 then
-    logger.error(error_messages.no_projects_found)
-    return false
-  end
-
-  picker.picker(nil, projects, function(i)
-    client:initialize(function()
-      client.msbuild:msbuild_add_project_reference(curr_project_path, i.path, function(res)
-        if cb then cb() end
-        if res == false then
-          logger.error("Command failed")
-        else
-          vim.cmd("checktime")
-        end
-      end)
+  client:initialize(function()
+    client.project_reference:add_project_reference(curr_project_path, function()
+      if cb then cb() end
     end)
-  end, "Add project reference")
+  end)
 end
 
 local function attach_mappings()
