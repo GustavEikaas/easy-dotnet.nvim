@@ -209,37 +209,29 @@ local function add_project_keymap()
   return {
     key = "a",
     handler = function()
-      --HACK: fix this
-      local cleanup = nil
-      local add = M.project.language == "csharp" and require("easy-dotnet.csproj-mappings").add_project_reference or require("easy-dotnet.fsproj-mappings").add_project_reference
-      local res = add(M.project.path, function()
-        if cleanup then cleanup() end
-        vim.api.nvim_set_current_win(M.win)
-        discover_project_references(M.project)
+      local cleanup = M.append_job("Adding project reference")
+      client:initialize(function()
+        client.project_reference:add_project_reference(M.project.path, function()
+          cleanup()
+          vim.api.nvim_set_current_win(M.win)
+          discover_project_references(M.project)
+        end)
       end)
-      if res ~= false then cleanup = M.append_job("Adding project reference") end
     end,
   }
 end
 
-local function remove_project_keymap(ref)
+local function remove_project_keymap(_ref)
   return {
     key = "r",
     handler = function()
       local cleanup = M.append_job("Removing project reference")
-      coroutine.wrap(function()
-        client:initialize(function()
-          client.msbuild:msbuild_remove_project_reference(M.project.path, ref, function(res)
-            cleanup()
-            if res == false then
-              logger.error("Command failed")
-            else
-              logger.info("Project removed " .. ref)
-              discover_project_references(M.project)
-            end
-          end)
+      client:initialize(function()
+        client.project_reference:remove_project_reference(M.project.path, function()
+          cleanup()
+          discover_project_references(M.project)
         end)
-      end)()
+      end)
     end,
   }
 end
