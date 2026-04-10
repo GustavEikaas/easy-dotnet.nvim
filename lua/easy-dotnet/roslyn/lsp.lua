@@ -404,10 +404,10 @@ function M.enable(opts)
     end,
     on_attach = function(client, buf)
       vim.b[buf].roslyn_buf_opened_at = now()
-      if client:supports_method("textDocument/foldingRange") then
-        vim.wo[0].foldmethod = "expr"
-        vim.wo[0].foldexpr = "v:lua.vim.lsp.foldexpr()"
-      end
+
+      vim.wo[0].foldmethod = "expr"
+      vim.wo[0].foldexpr = "v:lua.vim.lsp.foldexpr()"
+
       if require("easy-dotnet.options").get_option("lsp").auto_refresh_codelens then
         if vim.fn.has("nvim-0.12") == 1 then
           vim.lsp.codelens.enable(true, { bufnr = buf })
