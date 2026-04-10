@@ -407,8 +407,6 @@ function M.enable(opts)
       if client:supports_method("textDocument/foldingRange") then
         vim.wo[0].foldmethod = "expr"
         vim.wo[0].foldexpr = "v:lua.vim.lsp.foldexpr()"
-        -- Optional: Start with all folds open
-        vim.wo[0].foldlevel = 99
       end
       if require("easy-dotnet.options").get_option("lsp").auto_refresh_codelens then
         if vim.fn.has("nvim-0.12") == 1 then
