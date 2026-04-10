@@ -314,6 +314,10 @@ local function source_generated_autocmd()
   })
 end
 
+local function fix_indent_expression(buf)
+  if vim.api.nvim_buf_is_valid(buf) then vim.bo[buf].indentexpr = "GetCSIndent(v:lnum)" end
+end
+
 ---@param opts easy-dotnet.LspOpts
 function M.enable(opts)
   if vim.fn.has("nvim-0.11") == 0 then
@@ -400,6 +404,7 @@ function M.enable(opts)
     end,
     on_attach = function(client, buf)
       vim.b[buf].roslyn_buf_opened_at = now()
+      fix_indent_expression(buf)
       if require("easy-dotnet.options").get_option("lsp").auto_refresh_codelens then
         if vim.fn.has("nvim-0.12") == 1 then
           vim.lsp.codelens.enable(true, { bufnr = buf })
