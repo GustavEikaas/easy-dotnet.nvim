@@ -314,6 +314,11 @@ local function source_generated_autocmd()
   })
 end
 
+local function use_roslyn_fold()
+  vim.wo[0].foldmethod = "expr"
+  vim.wo[0].foldexpr = "v:lua.vim.lsp.foldexpr()"
+end
+
 local function fix_indent_expression(buf)
   if vim.api.nvim_buf_is_valid(buf) then vim.bo[buf].indentexpr = "GetCSIndent(v:lnum)" end
 end
@@ -347,6 +352,10 @@ function M.enable(opts)
       },
       diagnostic = {
         dynamicRegistration = true,
+      },
+      foldingRange = {
+        dynamicRegistration = false,
+        lineFoldingOnly = true,
       },
     },
     workspace = {
@@ -404,6 +413,7 @@ function M.enable(opts)
     end,
     on_attach = function(client, buf)
       vim.b[buf].roslyn_buf_opened_at = now()
+      use_roslyn_fold()
       fix_indent_expression(buf)
       if require("easy-dotnet.options").get_option("lsp").auto_refresh_codelens then
         if vim.fn.has("nvim-0.12") == 1 then
