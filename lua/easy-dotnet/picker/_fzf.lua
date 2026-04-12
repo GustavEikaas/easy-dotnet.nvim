@@ -232,11 +232,6 @@ local function flatten_lines(lines)
   return out
 end
 
----Builds a fzf-lua builtin previewer that fetches preview content via
----the picker/preview RPC endpoint.
----Uses _ctor so fzf-lua creates a proper instance via Object.__call,
----preserving the full metatable chain to builtin.base.
----guid and display_to_id are closed over as upvalues — no instance fields needed.
 ---@param guid string scope GUID from server
 ---@param display_to_id table<string, string>
 ---@return table fzf-lua previewer class
@@ -246,8 +241,6 @@ local function make_server_previewer(guid, display_to_id)
 
   local P = builtin.base:extend()
 
-  -- Use _ctor so fzf-lua instantiates via Object.__call(P, spec, opts),
-  -- producing a real instance with P as metatable and a clean chain to builtin.base.
   P._ctor = function() return P end
 
   local current_item = nil
@@ -379,9 +372,6 @@ M.server_picker = function(params, response)
     fzf_opts = params.multi and { ["--multi"] = "" } or {},
     previewer = params.preview and make_server_previewer(params.guid, display_to_id) or nil,
     actions = {
-      -- on_close fires synchronously before the action inside fzf-lua's core.
-      -- Using vim.schedule defers it past the action so it only triggers for
-      -- Ctrl+C (where the action is skipped entirely due to nil selected).
       ["default"] = function(selected)
         local ids = {}
         for _, sel in ipairs(selected) do

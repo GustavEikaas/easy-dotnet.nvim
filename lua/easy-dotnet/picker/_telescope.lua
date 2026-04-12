@@ -442,7 +442,6 @@ M.server_picker = function(params, response)
       table.insert(ids, single_sel.value.id)
     end
 
-    -- Respond before closing so BufUnload cancel is a no-op
     do_response(#ids > 0 and { selectedIds = ids } or nil)
     actions.close(prompt_bufnr)
   end
@@ -459,7 +458,6 @@ M.server_picker = function(params, response)
       actions.select_default:replace(handle_selection)
       map("n", "q", function(pb) actions.close(pb) end)
       if not params.multi then
-        -- disable <Tab> toggle-selection so accidental tab doesn't mark entries
         map("i", "<Tab>", function() end)
         map("n", "<Tab>", function() end)
       end
