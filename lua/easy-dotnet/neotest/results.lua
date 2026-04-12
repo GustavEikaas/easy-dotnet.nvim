@@ -25,12 +25,8 @@ local function to_neotest_result(detail)
   local output_path = vim.fn.tempname()
   local f = io.open(output_path, "w")
   if f then
-    if detail.stdout and #detail.stdout > 0 then
-      f:write(table.concat(detail.stdout, "\n"))
-    end
-    if errors then
-      f:write("\n" .. (errors[1].message or ""))
-    end
+    if detail.stdout and #detail.stdout > 0 then f:write(table.concat(detail.stdout, "\n")) end
+    if errors then f:write("\n" .. (errors[1].message or "")) end
     f:close()
   end
 
