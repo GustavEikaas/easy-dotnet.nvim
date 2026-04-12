@@ -18,5 +18,6 @@ function M.test_picker() invoke("_test/picker") end
 function M.test_picker_preview() invoke("_test/picker-preview") end
 function M.test_multi_picker_preview() invoke("_test/multi-picker-preview") end
 function M.test_live_preview() invoke("_test/live-preview") end
+function M.test_nuget_search() invoke("_test/nuget-search") end
 
 return M

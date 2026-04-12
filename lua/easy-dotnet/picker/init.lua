@@ -126,6 +126,17 @@ M.server_picker = function(params, response)
   end
 end
 
+M.server_live = function(params, response)
+  local active_picker = get_active_picker()
+
+  if active_picker == "fzf" then
+    return require("easy-dotnet.picker._fzf").server_live(params, response)
+  else
+    -- live picker not yet implemented for telescope/snacks/basic
+    response(nil)
+  end
+end
+
 M.pick_sync = function(bufnr, options, title, autopick, apply_numeration)
   if autopick == nil then autopick = true end
   if apply_numeration == nil then apply_numeration = true end

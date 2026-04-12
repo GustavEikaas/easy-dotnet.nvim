@@ -598,6 +598,9 @@ M._test = {
     ["live-preview"] = {
       handle = function() require("easy-dotnet.picker.test_picker").test_live_preview() end,
     },
+    ["nuget-search"] = {
+      handle = function() require("easy-dotnet.picker.test_picker").test_nuget_search() end,
+    },
   },
 }
 
