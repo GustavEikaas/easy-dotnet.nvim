@@ -131,6 +131,8 @@ local handlers = {
   promptString = require("easy-dotnet.rpc.handlers.prompt_string"),
   promptSelection = require("easy-dotnet.rpc.handlers.prompt_selection"),
   promptMultiSelection = require("easy-dotnet.rpc.handlers.prompt_selections"),
+  ["picker/pick"] = require("easy-dotnet.rpc.handlers.picker.picker_handler").pick,
+  ["picker/live"] = require("easy-dotnet.rpc.handlers.picker.picker_handler").live,
   startDebugSession = require("easy-dotnet.rpc.handlers.start_debug_session"),
   terminateDebugSession = require("easy-dotnet.rpc.handlers.terminate_debug_session"),
   ---@deprecated we can remove this later when server is updated and we stopped using runCommand
