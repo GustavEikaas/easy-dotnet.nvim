@@ -262,6 +262,128 @@ end
 
 ---@param params table picker/pick params from server
 ---@param response fun(result: table|nil)
+M.server_live = function(params, response)
+  local rpc = require("easy-dotnet.rpc.rpc-client")
+
+  local responded = false
+  local function do_response(result)
+    if responded then return end
+    responded = true
+    response(result)
+  end
+
+  local function flatten_lines(lines)
+    local result = {}
+    for _, line in ipairs(lines) do
+      for _, l in ipairs(vim.split(line, "\n", { plain = true })) do
+        table.insert(result, l)
+      end
+    end
+    return result
+  end
+
+  local rpc_request_async = require("plenary.async").wrap(function(method, rpc_params, cb)
+    rpc.request(method, rpc_params, function(res) pcall(cb, res) end)
+  end, 3)
+
+  local function make_live_finder()
+    local callable = function(_, prompt, process_result, process_complete)
+      local res = rpc_request_async("picker/query", { guid = params.guid, query = prompt or "" })
+      local choices = res and res.result or {}
+
+      for _, choice in ipairs(choices) do
+        local entry = {
+          display = choice.display,
+          value = { id = choice.id, display = choice.display },
+          ordinal = choice.display,
+        }
+        if process_result(entry) then break end
+      end
+
+      process_complete()
+    end
+
+    return setmetatable({ close = function() end }, { __call = callable })
+  end
+
+  local current_preview_id = nil
+  local previewer_obj = nil
+  if params.preview then
+    previewer_obj = previewers.new_buffer_previewer({
+      title = params.prompt .. " Preview",
+      define_preview = function(self, entry, _status)
+        local bufnr = self.state.bufnr
+        local item_id = entry.value.id
+        current_preview_id = item_id
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "Loading..." })
+        rpc.request("picker/preview", { guid = params.guid, itemId = item_id }, function(res)
+          if current_preview_id ~= item_id then return end
+          if not vim.api.nvim_buf_is_valid(bufnr) then return end
+          local p = res and res.result
+          if not p then
+            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, { "(no preview)" })
+            return
+          end
+          if p.type == "File" then
+            local ok, lines = pcall(vim.fn.readfile, p.path)
+            if ok then
+              vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, flatten_lines(lines))
+              local ft = vim.filetype.match({ filename = p.path }) or ""
+              if ft ~= "" then vim.bo[bufnr].filetype = ft end
+            end
+          elseif p.type == "Text" then
+            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, flatten_lines(p.lines or {}))
+            if p.filetype then vim.bo[bufnr].filetype = p.filetype end
+          end
+        end)
+      end,
+    })
+  end
+
+  local function handle_selection(prompt_bufnr)
+    local curr_picker = action_state.get_current_picker(prompt_bufnr)
+    local multi_sel = params.multi and curr_picker:get_multi_selection() or {}
+    local single_sel = action_state.get_selected_entry()
+
+    local ids = {}
+    if #multi_sel > 0 then
+      for _, s in ipairs(multi_sel) do
+        table.insert(ids, s.value.id)
+      end
+    elseif single_sel then
+      table.insert(ids, single_sel.value.id)
+    end
+
+    do_response(#ids > 0 and { selectedIds = ids } or nil)
+    actions.close(prompt_bufnr)
+  end
+
+  local p = require("telescope.pickers").new({}, {
+    prompt_title = (params.multi and "[Multi] " or "") .. params.prompt,
+    finder = make_live_finder(),
+    previewer = previewer_obj,
+    sorter = conf.generic_sorter({}),
+    attach_mappings = function(_, map)
+      actions.select_default:replace(handle_selection)
+      map("n", "q", function(pb) actions.close(pb) end)
+      if not params.multi then
+        map("i", "<Tab>", function() end)
+        map("n", "<Tab>", function() end)
+      end
+      return true
+    end,
+  })
+  p:find()
+
+  if p.prompt_bufnr then
+    vim.api.nvim_create_autocmd("BufUnload", {
+      buffer = p.prompt_bufnr,
+      once = true,
+      callback = function() do_response(nil) end,
+    })
+  end
+end
+
 M.server_picker = function(params, response)
   local rpc = require("easy-dotnet.rpc.rpc-client")
 
