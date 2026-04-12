@@ -375,13 +375,11 @@ M.server_live = function(params, response)
   })
   p:find()
 
-  if p.prompt_bufnr then
-    vim.api.nvim_create_autocmd("BufUnload", {
-      buffer = p.prompt_bufnr,
-      once = true,
-      callback = function() do_response(nil) end,
-    })
-  end
+  if p.prompt_bufnr then vim.api.nvim_create_autocmd("BufUnload", {
+    buffer = p.prompt_bufnr,
+    once = true,
+    callback = function() do_response(nil) end,
+  }) end
 end
 
 M.server_picker = function(params, response)

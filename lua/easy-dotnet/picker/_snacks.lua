@@ -236,7 +236,7 @@ M.server_picker = function(params, response)
 
   local no_multi_keys = not params.multi and {
     input = { keys = { ["<Tab>"] = false, ["<S-Tab>"] = false } },
-    list  = { keys = { ["<Tab>"] = false, ["<S-Tab>"] = false } },
+    list = { keys = { ["<Tab>"] = false, ["<S-Tab>"] = false } },
   } or nil
 
   require("snacks").picker.pick(nil, {
@@ -306,39 +306,41 @@ M.server_live = function(params, response)
   end
 
   local current_preview_id = nil
-  local preview_fn = params.preview and function(ctx)
-    local item_id = ctx.item.item_id
-    if not item_id then return end
-    current_preview_id = item_id
-    local preview = ctx.preview
-    preview:set_lines({ "Loading…" })
-    rpc.request("picker/preview", { guid = params.guid, itemId = item_id }, function(res)
-      if current_preview_id ~= item_id then return end
-      if not preview.win:buf_valid() then return end
-      local result = res and res.result
-      if not result then
-        preview:set_lines({ "No preview available" })
-        return
+  local preview_fn = params.preview
+      and function(ctx)
+        local item_id = ctx.item.item_id
+        if not item_id then return end
+        current_preview_id = item_id
+        local preview = ctx.preview
+        preview:set_lines({ "Loading…" })
+        rpc.request("picker/preview", { guid = params.guid, itemId = item_id }, function(res)
+          if current_preview_id ~= item_id then return end
+          if not preview.win:buf_valid() then return end
+          local result = res and res.result
+          if not result then
+            preview:set_lines({ "No preview available" })
+            return
+          end
+          if result.type == "File" then
+            local ok, lines = pcall(vim.fn.readfile, result.path)
+            if ok then
+              preview:set_lines(lines)
+              local ft = vim.filetype.match({ filename = result.path }) or ""
+              if ft ~= "" then vim.bo[preview.win.buf].filetype = ft end
+            else
+              preview:set_lines({ "Could not read: " .. result.path })
+            end
+          elseif result.type == "Text" then
+            preview:set_lines(result.lines or {})
+            if result.filetype then vim.bo[preview.win.buf].filetype = result.filetype end
+          end
+        end)
       end
-      if result.type == "File" then
-        local ok, lines = pcall(vim.fn.readfile, result.path)
-        if ok then
-          preview:set_lines(lines)
-          local ft = vim.filetype.match({ filename = result.path }) or ""
-          if ft ~= "" then vim.bo[preview.win.buf].filetype = ft end
-        else
-          preview:set_lines({ "Could not read: " .. result.path })
-        end
-      elseif result.type == "Text" then
-        preview:set_lines(result.lines or {})
-        if result.filetype then vim.bo[preview.win.buf].filetype = result.filetype end
-      end
-    end)
-  end or nil
+    or nil
 
   local no_multi_keys = not params.multi and {
     input = { keys = { ["<Tab>"] = false, ["<S-Tab>"] = false } },
-    list  = { keys = { ["<Tab>"] = false, ["<S-Tab>"] = false } },
+    list = { keys = { ["<Tab>"] = false, ["<S-Tab>"] = false } },
   } or nil
 
   require("snacks").picker.pick(nil, {
@@ -368,6 +370,5 @@ M.server_live = function(params, response)
     on_close = function() do_response(nil) end,
   })
 end
-
 
 return M

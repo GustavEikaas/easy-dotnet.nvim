@@ -136,9 +136,7 @@ end
 
 ---@param params table picker/live params from server
 ---@param response fun(result: table|nil)
-M.server_live = function(_params, _response)
-  error("server_live is not supported for the basic picker")
-end
+M.server_live = function(_params, _response) error("server_live is not supported for the basic picker") end
 
 ---@param params table picker/pick params from server
 ---@param response fun(result: table|nil)
