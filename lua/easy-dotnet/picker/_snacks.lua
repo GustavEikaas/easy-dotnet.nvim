@@ -201,32 +201,36 @@ M.server_picker = function(params, response)
     table.insert(items, { text = c.display, item_id = c.id })
   end
 
+  local current_preview_id = nil
   local preview_fn = nil
   if params.preview then
     preview_fn = function(ctx)
-      local bufnr = ctx.buf
       local item_id = ctx.item.item_id
+      current_preview_id = item_id
+      local preview = ctx.preview
+      preview:set_lines({ "Loading…" })
       rpc.request("picker/preview", { guid = params.guid, itemId = item_id }, function(res)
-        vim.schedule(function()
-          if not vim.api.nvim_buf_is_valid(bufnr) then return end
-          local p = res.result
-          if not p then return end
-          vim.bo[bufnr].modifiable = true
-          if p.type == "File" then
-            local ok, lines = pcall(vim.fn.readfile, p.path)
-            if ok then
-              vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-              local ft = vim.filetype.match({ filename = p.path }) or ""
-              if ft ~= "" then vim.bo[bufnr].filetype = ft end
-            end
-          elseif p.type == "Text" then
-            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, p.lines or {})
-            if p.filetype then vim.bo[bufnr].filetype = p.filetype end
+        if current_preview_id ~= item_id then return end
+        if not preview.win:buf_valid() then return end
+        local result = res and res.result
+        if not result then
+          preview:set_lines({ "No preview available" })
+          return
+        end
+        if result.type == "File" then
+          local ok, lines = pcall(vim.fn.readfile, result.path)
+          if ok then
+            preview:set_lines(lines)
+            local ft = vim.filetype.match({ filename = result.path }) or ""
+            if ft ~= "" then vim.bo[preview.win.buf].filetype = ft end
+          else
+            preview:set_lines({ "Could not read: " .. result.path })
           end
-          vim.bo[bufnr].modifiable = false
-        end)
+        elseif result.type == "Text" then
+          preview:set_lines(result.lines or {})
+          if result.filetype then vim.bo[preview.win.buf].filetype = result.filetype end
+        end
       end)
-      return true
     end
   end
 
@@ -262,5 +266,108 @@ M.server_picker = function(params, response)
     on_close = function() do_response(nil) end,
   })
 end
+
+---@param params table picker/live params from server
+---@param response fun(result: table|nil)
+M.server_live = function(params, response)
+  local rpc = require("easy-dotnet.rpc.rpc-client")
+  local Async = require("snacks.picker.util.async")
+
+  local responded = false
+  local function do_response(result)
+    if responded then return end
+    responded = true
+    response(result)
+  end
+
+  local function finder(_, ctx)
+    return function(cb)
+      local self = Async.running()
+      local aborted = false
+
+      self:on("abort", function()
+        aborted = true
+        cb = function() end
+      end)
+
+      local query = (ctx.filter and ctx.filter.search) or ""
+      rpc.request("picker/query", { guid = params.guid, query = query }, function(res)
+        if not aborted then
+          local items = (res and not res.error) and res.result or {}
+          for _, item in ipairs(items) do
+            cb({ text = item.display, item_id = item.id })
+          end
+        end
+        self:resume()
+      end)
+
+      self:suspend()
+    end
+  end
+
+  local current_preview_id = nil
+  local preview_fn = params.preview and function(ctx)
+    local item_id = ctx.item.item_id
+    if not item_id then return end
+    current_preview_id = item_id
+    local preview = ctx.preview
+    preview:set_lines({ "Loading…" })
+    rpc.request("picker/preview", { guid = params.guid, itemId = item_id }, function(res)
+      if current_preview_id ~= item_id then return end
+      if not preview.win:buf_valid() then return end
+      local result = res and res.result
+      if not result then
+        preview:set_lines({ "No preview available" })
+        return
+      end
+      if result.type == "File" then
+        local ok, lines = pcall(vim.fn.readfile, result.path)
+        if ok then
+          preview:set_lines(lines)
+          local ft = vim.filetype.match({ filename = result.path }) or ""
+          if ft ~= "" then vim.bo[preview.win.buf].filetype = ft end
+        else
+          preview:set_lines({ "Could not read: " .. result.path })
+        end
+      elseif result.type == "Text" then
+        preview:set_lines(result.lines or {})
+        if result.filetype then vim.bo[preview.win.buf].filetype = result.filetype end
+      end
+    end)
+  end or nil
+
+  local no_multi_keys = not params.multi and {
+    input = { keys = { ["<Tab>"] = false, ["<S-Tab>"] = false } },
+    list  = { keys = { ["<Tab>"] = false, ["<S-Tab>"] = false } },
+  } or nil
+
+  require("snacks").picker.pick(nil, {
+    live = true,
+    title = (params.multi and "[Multi] " or "") .. params.prompt,
+    finder = finder,
+    format = "text",
+    preview = preview_fn,
+    win = no_multi_keys,
+    confirm = function(picker, item)
+      if params.multi then
+        local selected = picker.list.selected
+        local ids = {}
+        if selected and #selected > 0 then
+          for _, s in ipairs(selected) do
+            table.insert(ids, s.item_id)
+          end
+        else
+          table.insert(ids, item.item_id)
+        end
+        do_response({ selectedIds = ids })
+      else
+        do_response({ selectedIds = { item.item_id } })
+      end
+      picker:close()
+    end,
+    on_close = function() do_response(nil) end,
+  })
+end
+
 
 return M

@@ -131,8 +131,10 @@ M.server_live = function(params, response)
 
   if active_picker == "fzf" then
     return require("easy-dotnet.picker._fzf").server_live(params, response)
+  elseif active_picker == "snacks" then
+    return require("easy-dotnet.picker._snacks").server_live(params, response)
   else
-    -- live picker not yet implemented for telescope/snacks/basic
+    -- live picker not yet implemented for telescope/basic
     response(nil)
   end
 end

@@ -227,13 +227,7 @@ end
 local function flatten_lines(lines)
   local out = {}
   for _, line in ipairs(lines) do
-    if line:find("\n", 1, true) then
-      for part in (line .. "\n"):gmatch("([^\n]*)\n") do
-        table.insert(out, part)
-      end
-    else
-      table.insert(out, line)
-    end
+    vim.list_extend(out, vim.split(line, "\n", { plain = true }))
   end
   return out
 end
