@@ -134,4 +134,30 @@ M.pick_sync = function(bufnr, options, title, autopick)
   return selected
 end
 
+---@param params table picker/pick params from server
+---@param response fun(result: table|nil)
+M.server_picker = function(params, response)
+  local responded = false
+  local function do_response(result)
+    if responded then return end
+    responded = true
+    response(result)
+  end
+
+  local display_to_id = {}
+  local items = {}
+  for _, c in ipairs(params.choices) do
+    display_to_id[c.display] = c.id
+    table.insert(items, c.display)
+  end
+
+  vim.ui.select(items, { prompt = (params.multi and "[Multi] " or "") .. params.prompt }, function(choice)
+    if choice then
+      do_response({ selectedIds = { display_to_id[choice] } })
+    else
+      do_response(nil)
+    end
+  end)
+end
+
 return M

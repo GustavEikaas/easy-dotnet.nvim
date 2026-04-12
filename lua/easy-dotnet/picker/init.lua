@@ -112,6 +112,20 @@ M.multi_picker = function(options, on_select_cb, title, apply_numeration)
   end
 end
 
+M.server_picker = function(params, response)
+  local active_picker = get_active_picker()
+
+  if active_picker == "fzf" then
+    return require("easy-dotnet.picker._fzf").server_picker(params, response)
+  elseif active_picker == "telescope" then
+    return require("easy-dotnet.picker._telescope").server_picker(params, response)
+  elseif active_picker == "snacks" then
+    return require("easy-dotnet.picker._snacks").server_picker(params, response)
+  else
+    return require("easy-dotnet.picker._base").server_picker(params, response)
+  end
+end
+
 M.pick_sync = function(bufnr, options, title, autopick, apply_numeration)
   if autopick == nil then autopick = true end
   if apply_numeration == nil then apply_numeration = true end

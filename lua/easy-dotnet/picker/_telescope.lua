@@ -260,4 +260,97 @@ M.pick_sync = function(bufnr, options, title, autopick, apply_numeration)
   return selected
 end
 
+---@param params table picker/pick params from server
+---@param response fun(result: table|nil)
+M.server_picker = function(params, response)
+  local rpc = require("easy-dotnet.rpc.rpc-client")
+
+  local responded = false
+  local function do_response(result)
+    if responded then return end
+    responded = true
+    response(result)
+  end
+
+  local entries = {}
+  for _, c in ipairs(params.choices) do
+    table.insert(entries, { id = c.id, display = c.display })
+  end
+
+  local previewer_obj = nil
+  if params.preview then
+    previewer_obj = previewers.new_buffer_previewer({
+      title = params.prompt .. " Preview",
+      define_preview = function(self, entry, _status)
+        local bufnr = self.state.bufnr
+        local item_id = entry.value.id
+        rpc.request("picker/preview", { guid = params.guid, itemId = item_id }, function(res)
+          vim.schedule(function()
+            if not vim.api.nvim_buf_is_valid(bufnr) then return end
+            local p = res.result
+            if not p then return end
+            if p.type == "File" then
+              local ok, lines = pcall(vim.fn.readfile, p.path)
+              if ok then
+                vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+                local ft = vim.filetype.match({ filename = p.path }) or ""
+                if ft ~= "" then vim.bo[bufnr].filetype = ft end
+              end
+            elseif p.type == "Text" then
+              vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, p.lines or {})
+              if p.filetype then vim.bo[bufnr].filetype = p.filetype end
+            end
+          end)
+        end)
+      end,
+    })
+  end
+
+  local function handle_selection(prompt_bufnr)
+    local curr_picker = action_state.get_current_picker(prompt_bufnr)
+    local multi_sel = params.multi and curr_picker:get_multi_selection() or {}
+    local single_sel = action_state.get_selected_entry()
+
+    local ids = {}
+    if #multi_sel > 0 then
+      for _, s in ipairs(multi_sel) do
+        table.insert(ids, s.value.id)
+      end
+    elseif single_sel then
+      table.insert(ids, single_sel.value.id)
+    end
+
+    -- Respond before closing so BufUnload cancel is a no-op
+    do_response(#ids > 0 and { selectedIds = ids } or nil)
+    actions.close(prompt_bufnr)
+  end
+
+  local p = require("telescope.pickers").new({}, {
+    prompt_title = (params.multi and "[Multi] " or "") .. params.prompt,
+    finder = finders.new_table({
+      results = entries,
+      entry_maker = function(entry) return { display = entry.display, value = entry, ordinal = entry.display } end,
+    }),
+    previewer = previewer_obj,
+    sorter = conf.generic_sorter({}),
+    attach_mappings = function(_, map)
+      actions.select_default:replace(handle_selection)
+      map("n", "q", function(pb) actions.close(pb) end)
+      if not params.multi then
+        -- disable <Tab> toggle-selection so accidental tab doesn't mark entries
+        map("i", "<Tab>", function() end)
+        map("n", "<Tab>", function() end)
+      end
+      return true
+    end,
+  })
+  p:find()
+
+  if p.prompt_bufnr then vim.api.nvim_create_autocmd("BufUnload", {
+    buffer = p.prompt_bufnr,
+    once = true,
+    callback = function() do_response(nil) end,
+  }) end
+end
+
 return M

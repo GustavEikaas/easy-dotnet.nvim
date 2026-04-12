@@ -172,7 +172,7 @@ local function make_response(decoded)
     if err then
       message.error = type(err) == "table" and err or { code = -32603, message = tostring(err) }
     else
-      message.result = result
+      message.result = result ~= nil and result or vim.NIL
     end
 
     local full_message = encode_rpc_message(message)

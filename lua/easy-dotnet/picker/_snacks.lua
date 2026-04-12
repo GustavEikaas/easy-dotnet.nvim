@@ -184,4 +184,83 @@ M.pick_sync = function(options, title, autopick, apply_numeration)
   return selected
 end
 
+---@param params table picker/pick params from server
+---@param response fun(result: table|nil)
+M.server_picker = function(params, response)
+  local rpc = require("easy-dotnet.rpc.rpc-client")
+
+  local responded = false
+  local function do_response(result)
+    if responded then return end
+    responded = true
+    response(result)
+  end
+
+  local items = {}
+  for _, c in ipairs(params.choices) do
+    table.insert(items, { text = c.display, item_id = c.id })
+  end
+
+  local preview_fn = nil
+  if params.preview then
+    preview_fn = function(ctx)
+      local bufnr = ctx.buf
+      local item_id = ctx.item.item_id
+      rpc.request("picker/preview", { guid = params.guid, itemId = item_id }, function(res)
+        vim.schedule(function()
+          if not vim.api.nvim_buf_is_valid(bufnr) then return end
+          local p = res.result
+          if not p then return end
+          vim.bo[bufnr].modifiable = true
+          if p.type == "File" then
+            local ok, lines = pcall(vim.fn.readfile, p.path)
+            if ok then
+              vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+              local ft = vim.filetype.match({ filename = p.path }) or ""
+              if ft ~= "" then vim.bo[bufnr].filetype = ft end
+            end
+          elseif p.type == "Text" then
+            vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, p.lines or {})
+            if p.filetype then vim.bo[bufnr].filetype = p.filetype end
+          end
+          vim.bo[bufnr].modifiable = false
+        end)
+      end)
+      return true
+    end
+  end
+
+  local no_multi_keys = not params.multi and {
+    input = { keys = { ["<Tab>"] = false, ["<S-Tab>"] = false } },
+    list  = { keys = { ["<Tab>"] = false, ["<S-Tab>"] = false } },
+  } or nil
+
+  require("snacks").picker.pick(nil, {
+    items = items,
+    format = "text",
+    title = (params.multi and "[Multi] " or "") .. params.prompt,
+    layout = (not params.multi and not params.preview) and "select" or "default",
+    preview = preview_fn,
+    win = no_multi_keys,
+    confirm = function(picker, item)
+      if params.multi then
+        local selected = picker.list.selected
+        local ids = {}
+        if selected and #selected > 0 then
+          for _, s in ipairs(selected) do
+            table.insert(ids, s.item_id)
+          end
+        else
+          table.insert(ids, item.item_id)
+        end
+        do_response({ selectedIds = ids })
+      else
+        do_response({ selectedIds = { item.item_id } })
+      end
+      picker:close()
+    end,
+    on_close = function() do_response(nil) end,
+  })
+end
+
 return M

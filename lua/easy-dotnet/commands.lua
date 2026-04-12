@@ -583,4 +583,22 @@ M.lsp = {
   },
 }
 
+-- TODO: REMOVE BEFORE MERGE — picker debug/testing commands
+M._test = {
+  subcommands = {
+    picker = {
+      handle = function() require("easy-dotnet.picker.test_picker").test_picker() end,
+    },
+    ["picker-preview"] = {
+      handle = function() require("easy-dotnet.picker.test_picker").test_picker_preview() end,
+    },
+    ["multi-picker-preview"] = {
+      handle = function() require("easy-dotnet.picker.test_picker").test_multi_picker_preview() end,
+    },
+    ["live-preview"] = {
+      handle = function() require("easy-dotnet.picker.test_picker").test_live_preview() end,
+    },
+  },
+}
+
 return M

@@ -222,4 +222,105 @@ M.pick_sync = function(bufnr, options, title, autopick, apply_numeration)
   return selected
 end
 
+---Builds a fzf-lua builtin previewer that fetches preview content via
+---the picker/preview RPC endpoint. Runs populate_preview_buf inside
+---fzf-lua's own coroutine.wrap, so yield/resume is safe.
+---Uses _ctor so fzf-lua creates a proper instance via Object.__call,
+---preserving the full metatable chain to builtin.base.
+---guid and display_to_id are closed over as upvalues — no instance fields needed.
+---@param guid string scope GUID from server
+---@param display_to_id table<string, string>
+---@return table fzf-lua previewer class
+local function make_server_previewer(guid, display_to_id)
+  local builtin = require("fzf-lua.previewer.builtin")
+  local rpc = require("easy-dotnet.rpc.rpc-client")
+
+  local P = builtin.base:extend()
+
+  -- Use _ctor so fzf-lua instantiates via Object.__call(P, spec, opts),
+  -- producing a real instance with P as metatable and a clean chain to builtin.base.
+  P._ctor = function() return P end
+
+  function P:populate_preview_buf(entry_str)
+    if not self.win or not self.win:validate_preview() then return end
+
+    local item_id = display_to_id[entry_str]
+    if not item_id then return end
+
+    -- We are inside coroutine.wrap (fzf-lua's display_entry wraps us), so yield is safe.
+    local co = coroutine.running()
+    local result = nil
+
+    rpc.request("picker/preview", { guid = guid, itemId = item_id }, function(res)
+      result = res.result
+      vim.schedule(function() coroutine.resume(co) end)
+    end)
+
+    coroutine.yield()
+
+    if not self.win or not self.win:validate_preview() then return end
+    if not result then return end
+
+    local tmp_buf = self:get_tmp_buffer()
+
+    if result.type == "File" then
+      local ok, lines = pcall(vim.fn.readfile, result.path)
+      if ok then
+        vim.api.nvim_buf_set_lines(tmp_buf, 0, -1, false, lines)
+        local ft = vim.filetype.match({ filename = result.path }) or ""
+        if ft ~= "" then vim.bo[tmp_buf].filetype = ft end
+      else
+        vim.api.nvim_buf_set_lines(tmp_buf, 0, -1, false, { "Could not read: " .. result.path })
+      end
+    elseif result.type == "Text" then
+      vim.api.nvim_buf_set_lines(tmp_buf, 0, -1, false, result.lines or {})
+      if result.filetype then vim.bo[tmp_buf].filetype = result.filetype end
+    end
+
+    self:set_preview_buf(tmp_buf)
+  end
+
+  return P
+end
+
+---@param params table picker/pick params from server
+---@param response fun(result: table|nil)
+M.server_picker = function(params, response)
+  local responded = false
+  local function do_response(result)
+    if responded then return end
+    responded = true
+    response(result)
+  end
+
+  local display_to_id = {}
+  local items = {}
+  for _, c in ipairs(params.choices) do
+    display_to_id[c.display] = c.id
+    table.insert(items, c.display)
+  end
+
+  require("fzf-lua").fzf_exec(items, {
+    prompt = (params.multi and "[Multi] " or "") .. params.prompt .. " > ",
+    fzf_opts = params.multi and { ["--multi"] = "" } or {},
+    previewer = params.preview and make_server_previewer(params.guid, display_to_id) or nil,
+    actions = {
+      -- on_close fires synchronously before the action inside fzf-lua's core.
+      -- Using vim.schedule defers it past the action so it only triggers for
+      -- Ctrl+C (where the action is skipped entirely due to nil selected).
+      ["default"] = function(selected)
+        local ids = {}
+        for _, sel in ipairs(selected) do
+          local id = display_to_id[sel]
+          if id then table.insert(ids, id) end
+        end
+        do_response(#ids > 0 and { selectedIds = ids } or nil)
+      end,
+    },
+    winopts = {
+      on_close = function() vim.schedule(function() do_response(nil) end) end,
+    },
+  })
+end
+
 return M
