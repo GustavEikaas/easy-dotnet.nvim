@@ -8,7 +8,8 @@
 ---@field cancel fun(self: easy-dotnet.RPC.Client.TestRunner): boolean
 ---@field get_results fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb: fun(result: easy-dotnet.TestRunner.Results)): easy-dotnet.RPC.CallHandle
 ---@field get_build_errors fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string): easy-dotnet.RPC.CallHandle
----@field sync_file fun(self: easy-dotnet.RPC.Client.TestRunner, path: string, content: string, version: integer, cb: fun(result: easy-dotnet.TestRunner.SyncFileResult)): easy-dotnet.RPC.CallHandle
+---@field neotest_positions fun(self: easy-dotnet.RPC.Client.TestRunner, file_path: string, cb: fun(result: easy-dotnet.TestRunner.NeotestPosition[])): easy-dotnet.RPC.CallHandle
+---@field neotest_batch_results fun(self: easy-dotnet.RPC.Client.TestRunner, ids: string[], cb: fun(result: table<string, easy-dotnet.TestRunner.NeotestBatchResult>)): easy-dotnet.RPC.CallHandle
 
 ---@class easy-dotnet.TestRunner.OperationResult
 ---@field success boolean
@@ -45,6 +46,20 @@
 ---@field signatureLine integer
 ---@field bodyStartLine integer
 ---@field endLine integer
+
+---@class easy-dotnet.TestRunner.NeotestPosition
+---@field id string
+---@field name string
+---@field type string "file"|"namespace"|"test"
+---@field parentId string|nil
+---@field startLine integer|nil
+---@field endLine integer|nil
+
+---@class easy-dotnet.TestRunner.NeotestBatchResult
+---@field outcome string
+---@field errorMessage string[]|nil
+---@field failingFrame easy-dotnet.TestRunner.StackFrame|nil
+---@field stdout string[]|nil
 
 local M = {}
 M.__index = M
@@ -157,6 +172,34 @@ function M:get_build_errors(node_id)
     client = self._client,
     method = "testrunner/getBuildErrors",
     params = { id = node_id },
+  })()
+end
+
+--- testrunner/neotestPositions — fetch neotest-shaped position list for a file.
+--- Returns a flat list of nodes pre-filtered for neotest (no Subcase nodes,
+--- TheoryGroup mapped to "test"). Only the first TFM is returned (v1).
+---@param file_path string absolute file path
+---@param cb fun(result: easy-dotnet.TestRunner.NeotestPosition[])
+function M:neotest_positions(file_path, cb)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  return helper.create_rpc_call({
+    client = self._client,
+    method = "testrunner/neotestPositions",
+    params = { filePath = file_path },
+    cb = cb,
+  })()
+end
+
+--- testrunner/neotestBatchResults — bulk fetch test results for a list of node IDs.
+---@param ids string[] list of stable server node IDs
+---@param cb fun(result: table<string, easy-dotnet.TestRunner.NeotestBatchResult>)
+function M:neotest_batch_results(ids, cb)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  return helper.create_rpc_call({
+    client = self._client,
+    method = "testrunner/neotestBatchResults",
+    params = { ids = ids },
+    cb = cb,
   })()
 end
 

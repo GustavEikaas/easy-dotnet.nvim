@@ -92,6 +92,7 @@ M.handler = function(client, method, params)
         state.register(params.test)
         if params.test.filePath then buffer.attach(params.test.filePath, client) end
         render.refresh()
+        require("easy-dotnet.neotest.events").emit("registerTest", params.test)
       end)
     elseif method == "removeTest" then
       local state = require("easy-dotnet.test-runner.state")
@@ -114,6 +115,7 @@ M.handler = function(client, method, params)
         local node = state.nodes[params.id]
         if node then buffer.on_status_update(node) end
         render.refresh()
+        require("easy-dotnet.neotest.events").emit("updateStatus", params.id, params.status)
       end)
     elseif method == "refreshTestSigns" then
       local buffer = require("easy-dotnet.test-runner.buffer")
