@@ -315,6 +315,8 @@ local function source_generated_autocmd()
 end
 
 local function use_roslyn_fold()
+  local enabled = require("easy-dotnet.options").get_option("lsp").set_fold_expr
+  if not enabled then return end
   vim.wo[0].foldmethod = "expr"
   vim.wo[0].foldexpr = "v:lua.vim.lsp.foldexpr()"
 end
