@@ -6,7 +6,20 @@ local M = {}
 
 local active_server_finish_callbacks = {}
 
+--This maps to QuickFixRequestType enum
+local quickfix_handlers = {
+  require("easy-dotnet.quickfix.formatters.msbuild-formatter").get_formatter,
+}
+
 local function handle_quickfix_set(params, silent)
+  local is_array = params.quickFixRequestType == nil
+  local quickfixTextFunc
+
+  if not is_array then
+    local handler = quickfix_handlers[params.quickFixRequestType + 1]
+    if handler then quickfixTextFunc = handler() end
+  end
+
   require("easy-dotnet.test-runner.render").hide()
   local items = vim.tbl_map(
     function(value)
@@ -18,11 +31,12 @@ local function handle_quickfix_set(params, silent)
         type = value.type == 2 and "E" or value.type == 1 and "W" or "I",
       }
     end,
-    params
+    is_array and params or params.quickFixItems
   )
   vim.fn.setqflist({}, " ", {
     title = constants.server_quickfix_title,
     items = items,
+    quickfixtextfunc = quickfixTextFunc,
   })
   if not silent then vim.cmd("copen") end
 end
