@@ -4,8 +4,19 @@ return function(params, response, throw, _)
     return
   end
 
+  local client_versions = vim.lsp.util.buf_versions or {}
+
   for _, change in ipairs(params.documentChanges) do
-    if change.textDocument and change.textDocument.version == vim.NIL then change.textDocument.version = nil end
+    if change.textDocument and change.textDocument.uri then
+      local bufnr = vim.uri_to_bufnr(change.textDocument.uri)
+      local current_ver
+      if type(client_versions) == "function" then
+        current_ver = client_versions()[bufnr]
+      else
+        current_ver = client_versions[bufnr]
+      end
+      change.textDocument.version = current_ver or 0
+    end
   end
 
   local ok, err = pcall(vim.lsp.util.apply_workspace_edit, params, "utf-8")
@@ -18,13 +29,9 @@ return function(params, response, throw, _)
     local uri = change.textDocument and change.textDocument.uri
     if type(uri) == "string" then
       local bufnr = vim.uri_to_bufnr(uri)
-      if vim.api.nvim_buf_is_valid(bufnr) then
-        local write_ok, write_err = pcall(vim.api.nvim_buf_call, bufnr, function() vim.cmd("write") end)
-        if not write_ok then
-          throw({ code = -32603, message = tostring(write_err) })
-          return
-        end
-      end
+      if vim.api.nvim_buf_is_valid(bufnr) then vim.schedule(function()
+        pcall(vim.api.nvim_buf_call, bufnr, function() vim.cmd("silent! update") end)
+      end) end
     end
   end
 
