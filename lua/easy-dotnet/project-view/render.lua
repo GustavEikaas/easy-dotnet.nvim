@@ -116,17 +116,15 @@ end
 
 local function set_buffer_options()
   vim.api.nvim_win_set_height(M.win, M.height)
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
+  vim.api.nvim_set_option_value("modifiable", M.modifiable, { buf = M.buf })
   vim.api.nvim_buf_set_name(M.buf, M.buf_name)
-  vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
-  --Crashes on nvim 0.9.5??
-  -- vim.api.nvim_buf_set_option(M.buf, "cursorline", true)
+  vim.api.nvim_set_option_value("filetype", M.filetype, { buf = M.buf })
 end
 
 ---@param highlights easy-dotnet.Highlight[]
 local function apply_highlights(highlights)
   for _, value in ipairs(highlights) do
-    if value.highlight ~= nil then vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, value.index - 1, 0, -1) end
+    if value.highlight ~= nil then vim.hl.range(M.buf, ns_id, value.highlight, { value.index - 1, 0 }, { value.index - 1, -1 }) end
   end
 end
 
@@ -221,7 +219,7 @@ local function add_project_keymap()
   }
 end
 
-local function remove_project_keymap(_ref)
+local function remove_project_keymap()
   return {
     key = "r",
     handler = function()
@@ -258,7 +256,7 @@ local function stringify_project_header()
     table.insert(args, { "  None", "Question", { add_project_keymap() } })
   else
     for _, ref in ipairs(M.project_refs) do
-      table.insert(args, { string.format("  %s", vim.fs.basename(ref)), "Question", { remove_project_keymap(ref), add_project_keymap() } })
+      table.insert(args, { string.format("  %s", vim.fs.basename(ref)), "Question", { remove_project_keymap(), add_project_keymap() } })
     end
   end
 
@@ -284,10 +282,11 @@ end
 
 local function print_lines()
   vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
+
+  vim.api.nvim_set_option_value("modifiable", true, { buf = M.buf })
   local stringLines, highlights, keymaps = stringify()
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, stringLines)
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
+  vim.api.nvim_set_option_value("modifiable", M.modifiable, { buf = M.buf })
 
   if keymaps ~= nil then
     local keys = {}
@@ -398,7 +397,7 @@ function M.open()
   end
   local win_opts = get_default_win_opts()
   M.win = vim.api.nvim_open_win(M.buf, true, win_opts)
-  vim.api.nvim_buf_set_option(M.buf, "bufhidden", "hide")
+  vim.api.nvim_set_option_value("bufhidden", "hide", { buf = M.buf })
   return true
 end
 

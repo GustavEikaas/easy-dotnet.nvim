@@ -76,9 +76,9 @@ local function update_header(status, exit_code)
   local start_args = end_exec + 1
   local end_args = start_args + #display_args
 
-  vim.api.nvim_buf_add_highlight(state.header_buf, ns_id, icon_hl, 0, start_icon, end_icon)
-  vim.api.nvim_buf_add_highlight(state.header_buf, ns_id, "Title", 0, start_exec, end_exec)
-  vim.api.nvim_buf_add_highlight(state.header_buf, ns_id, "Comment", 0, start_args, end_args)
+  vim.hl.range(state.header_buf, ns_id, icon_hl, { 0, start_icon }, { 0, end_icon })
+  vim.hl.range(state.header_buf, ns_id, "Title", { 0, start_exec }, { 0, end_exec })
+  vim.hl.range(state.header_buf, ns_id, "Comment", { 0, start_args }, { 0, end_args })
 end
 
 local function create_header_win()
@@ -98,7 +98,7 @@ local function create_header_win()
     focusable = false,
     zindex = 100,
   })
-  vim.api.nvim_win_set_option(state.header_win, "winhighlight", "Normal:NormalFloat,FloatBorder:FloatBorder")
+  vim.api.nvim_set_option_value("winhighlight", "Normal:NormalFloat,FloatBorder:FloatBorder", { win = state.header_win })
 end
 
 return {

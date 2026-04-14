@@ -111,7 +111,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
 -- lazy.nvim
 {
   "GustavEikaas/easy-dotnet.nvim",
-  dependencies = { "nvim-lua/plenary.nvim", 'nvim-telescope/telescope.nvim', },
+  dependencies = { "nvim-lua/plenary.nvim", 'folke/snacks.nvim', },
   config = function()
     require("easy-dotnet").setup()
   end
@@ -125,7 +125,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
   "GustavEikaas/easy-dotnet.nvim",
   -- 'nvim-telescope/telescope.nvim' or 'ibhagwan/fzf-lua' or 'folke/snacks.nvim'
   -- are highly recommended for a better experience
-  dependencies = { "nvim-lua/plenary.nvim", 'mfussenegger/nvim-dap', 'nvim-telescope/telescope.nvim', },
+  dependencies = { "nvim-lua/plenary.nvim", 'mfussenegger/nvim-dap', 'folke/snacks.nvim', },
   config = function()
     local dotnet = require("easy-dotnet")
     -- Options are not required
@@ -138,6 +138,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
       external_terminal = nil,
       lsp = {
         enabled = true, -- Enable builtin roslyn lsp
+        set_fold_expr = true,
         preload_roslyn = true, -- Start loading roslyn before any buffer is opened
         roslynator_enabled = true, -- Automatically enable roslynator analyzer
         easy_dotnet_analyzer_enabled = true, -- Enable roslyn analyzer from easy-dotnet-server
@@ -222,8 +223,8 @@ Although not *required* by the plugin, it is highly recommended to install one o
       -- possible values are "telescope" | "fzf" | "snacks" | "basic"
       -- if no picker is specified, the plugin will determine
       -- the available one automatically with this priority:
-      -- telescope -> fzf -> snacks ->  basic
-      picker = "telescope",
+      --  snacks -> fzf -> telescope ->  basic
+      picker = "snacks",
       background_scanning = true,
       notifications = {
         --Set this to false if you have configured lualine to avoid double logging

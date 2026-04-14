@@ -314,9 +314,13 @@ local function source_generated_autocmd()
   })
 end
 
-local function use_roslyn_fold()
-  vim.wo[0].foldmethod = "expr"
-  vim.wo[0].foldexpr = "v:lua.vim.lsp.foldexpr()"
+local function use_roslyn_fold(bufnr)
+  local enabled = require("easy-dotnet.options").get_option("lsp").set_fold_expr
+  if not enabled then return end
+  for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
+    vim.wo[win][0].foldmethod = "expr"
+    vim.wo[win][0].foldexpr = "v:lua.vim.lsp.foldexpr()"
+  end
 end
 
 local function fix_indent_expression(buf)
@@ -413,8 +417,10 @@ function M.enable(opts)
     end,
     on_attach = function(client, buf)
       vim.b[buf].roslyn_buf_opened_at = now()
-      use_roslyn_fold()
-      fix_indent_expression(buf)
+      if vim.bo[buf].filetype == "cs" then
+        use_roslyn_fold(buf)
+        fix_indent_expression(buf)
+      end
       if require("easy-dotnet.options").get_option("lsp").auto_refresh_codelens then
         if vim.fn.has("nvim-0.12") == 1 then
           vim.lsp.codelens.enable(true, { bufnr = buf })

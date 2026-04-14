@@ -26,12 +26,12 @@ local function get_active_picker()
 
   -- if picker is not specified or specified picker is not available,
   -- automatically detect available picker
-  if pcall(require, "telescope") then
-    return "telescope"
+  if pcall(require, "snacks") then
+    return "snacks"
   elseif pcall(require, "fzf-lua") then
     return "fzf"
-  elseif pcall(require, "snacks") then
-    return "snacks"
+  elseif pcall(require, "telescope") then
+    return "telescope"
   else
     return "basic"
   end
