@@ -4,6 +4,10 @@ return function(params, response, throw, _)
     return
   end
 
+  for _, change in ipairs(params.documentChanges) do
+    if change.textDocument and change.textDocument.version == vim.NIL then change.textDocument.version = nil end
+  end
+
   local ok, err = pcall(vim.lsp.util.apply_workspace_edit, params, "utf-8")
   if not ok then
     throw({ code = -32603, message = tostring(err) })
