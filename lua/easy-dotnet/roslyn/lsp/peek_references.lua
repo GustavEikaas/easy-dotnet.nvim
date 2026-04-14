@@ -124,7 +124,7 @@ local function open_references_float(references)
 
     local ns = vim.api.nvim_create_namespace("peek_hl")
     vim.api.nvim_buf_clear_namespace(preview_buf, ns, 0, -1)
-    vim.api.nvim_buf_add_highlight(preview_buf, ns, "Visual", item.line - 1, 0, -1)
+    vim.hl.range(preview_buf, ns, "Visual", { item.line - 1, 0 }, { item.line - 1, -1 })
   end
 
   local function cycle(delta)

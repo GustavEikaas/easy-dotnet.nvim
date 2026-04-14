@@ -37,7 +37,7 @@ local function apply_highlights(window, lines)
   local ns = require("easy-dotnet.constants").ns_id
   local hi = require("easy-dotnet.constants").highlights.EasyDotnetDebuggerFloatVariable
   for i, _ in ipairs(lines) do
-    vim.api.nvim_buf_add_highlight(window.buf, ns, hi, i - 1, 0, -1)
+    vim.hl.range(window.buf, ns, hi, { i - 1, 0 }, { i - 1, -1 })
   end
 end
 
