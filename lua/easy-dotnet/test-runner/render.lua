@@ -124,7 +124,7 @@ local function render_header(frame)
   vim.api.nvim_set_option_value("modifiable", false, { buf = M.header_buf })
 
   for _, hl in ipairs(hls) do
-    vim.api.nvim_buf_add_highlight(M.header_buf, ns_header, hl[3], 0, hl[1], hl[2])
+    vim.hl.range(M.header_buf, ns_header, hl[3], { 0, hl[1] }, { 0, hl[2] })
   end
 end
 
@@ -171,7 +171,7 @@ local function render_footer(node)
   vim.api.nvim_set_option_value("modifiable", false, { buf = M.footer_buf })
 
   for _, h in ipairs(hls) do
-    vim.api.nvim_buf_add_highlight(M.footer_buf, ns_footer, h[3], 0, h[1], h[2])
+    vim.hl.range(M.footer_buf, ns_footer, h[3], { 0, h[1] }, { 0, h[2] })
   end
 end
 
@@ -526,7 +526,7 @@ function M.refresh()
   vim.api.nvim_set_option_value("modifiable", false, { buf = M.buf })
 
   for _, h in ipairs(highlights) do
-    vim.api.nvim_buf_add_highlight(M.buf, ns_id, h.hl, h.row, 0, -1)
+    vim.hl.range(M.buf, ns_id, h.hl, { h.row, 0 }, { h.row, -1 })
   end
 end
 
