@@ -349,14 +349,19 @@ function M.enable(opts)
 
   local settings = vim.tbl_deep_extend("force", default_roslyn_settings, opts.config.settings or {}, existing_config and existing_config.settings or {})
 
+  local diag_cap
+  if vim.fn.has("nvim-0.12") == 1 then
+    diag_cap = { relatedDocumentSupport = true }
+  else
+    diag_cap = { dynamicRegistration = true }
+  end
+
   local cap = vim.tbl_deep_extend("keep", existing_config and existing_config.capabilities or {}, {
     textDocument = {
       codeLens = {
         dynamicRegistration = true,
       },
-      diagnostic = {
-        dynamicRegistration = true,
-      },
+      diagnostic = diag_cap,
       foldingRange = {
         dynamicRegistration = false,
         lineFoldingOnly = true,
@@ -488,7 +493,7 @@ function M.enable(opts)
             M.solution_loaded[client.id] = true
           end, 2000)
         end
-        vim.defer_fn(function() refresh_diag(client) end, 500)
+        if vim.fn.has("nvim-0.12") == 0 then vim.defer_fn(function() refresh_diag(client) end, 500) end
       end,
       ["workspace/refreshSourceGeneratedDocument"] = function(_, _, ctx)
         local client = assert(vim.lsp.get_client_by_id(ctx.client_id))
