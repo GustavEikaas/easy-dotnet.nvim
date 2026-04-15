@@ -176,8 +176,7 @@ function M:get_build_errors(node_id)
 end
 
 --- testrunner/neotestPositions — fetch neotest-shaped position list for a file.
---- Returns a flat list of nodes pre-filtered for neotest (no Subcase nodes,
---- TheoryGroup mapped to "test"). Only the first TFM is returned (v1).
+--- Only the first TFM is returned (v1).
 ---@param file_path string absolute file path
 ---@param cb fun(result: easy-dotnet.TestRunner.NeotestPosition[])
 function M:neotest_positions(file_path, cb)

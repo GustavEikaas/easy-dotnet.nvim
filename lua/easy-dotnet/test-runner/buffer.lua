@@ -7,6 +7,11 @@ local ns_signs = vim.api.nvim_create_namespace("easy_dotnet_test_signs")
 local extmark_ids = {}
 local registered_bufs = {}
 
+local function neotest_integration()
+  local ok, opts = pcall(require, "easy-dotnet.options")
+  return ok and opts.get_option("test_runner").neotest_integration == true
+end
+
 local function norm(path)
   if not path then return nil end
   return vim.fs.normalize(path)
@@ -167,6 +172,7 @@ local function apply_sign_for_group(bufnr, sig_line, group, filepath)
 end
 
 function M.apply_signs(filepath)
+  if neotest_integration() then return end
   local bufnr = vim.fn.bufnr(filepath)
   if bufnr == -1 or not vim.api.nvim_buf_is_valid(bufnr) then return end
 
@@ -284,30 +290,34 @@ function M.attach(filepath, client)
 
   local bufnr = vim.fn.bufnr(filepath)
   if bufnr ~= -1 and vim.api.nvim_buf_is_valid(bufnr) then
-    M.apply_signs(filepath)
-    if not registered_bufs[bufnr] then
-      M.register_buf_keymaps(bufnr, client)
-      registered_bufs[bufnr] = true
+    if not neotest_integration() then
+      M.apply_signs(filepath)
+      if not registered_bufs[bufnr] then
+        M.register_buf_keymaps(bufnr, client)
+        registered_bufs[bufnr] = true
+      end
     end
   end
 
   if not registered_bufs[filepath] then
     registered_bufs[filepath] = true
 
-    vim.api.nvim_create_autocmd("BufReadPost", {
-      pattern = filepath,
-      callback = function(ev)
-        vim.schedule(function()
-          pcall(function()
-            M.apply_signs(filepath)
-            if not registered_bufs[ev.buf] then
-              M.register_buf_keymaps(ev.buf, client)
-              registered_bufs[ev.buf] = true
-            end
+    if not neotest_integration() then
+      vim.api.nvim_create_autocmd("BufReadPost", {
+        pattern = filepath,
+        callback = function(ev)
+          vim.schedule(function()
+            pcall(function()
+              M.apply_signs(filepath)
+              if not registered_bufs[ev.buf] then
+                M.register_buf_keymaps(ev.buf, client)
+                registered_bufs[ev.buf] = true
+              end
+            end)
           end)
-        end)
-      end,
-    })
+        end,
+      })
+    end
 
     local version = 0
 
@@ -342,6 +352,7 @@ function M.attach(filepath, client)
 end
 
 function M.on_status_update(node)
+  if neotest_integration() then return end
   vim.schedule(function()
     M.update_sign(node)
     local stype = node.status and node.status.type or nil
@@ -360,6 +371,7 @@ end
 
 --- @param project_id string|nil
 function M.refresh_signs(project_id)
+  if neotest_integration() then return end
   local candidates = {}
 
   for filepath in pairs(extmark_ids) do

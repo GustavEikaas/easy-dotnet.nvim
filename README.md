@@ -161,6 +161,8 @@ Although not *required* by the plugin, it is highly recommended to install one o
       test_runner = {
         auto_start_testrunner = true,
         hide_legend = false,
+        -- Set to true when using neotest to avoid duplicate signs and conflicting buffer keymaps. 
+        neotest_integration = false,
         ---@type "split" | "vsplit" | "float" | "buf"
         viewmode = "float",
         ---@type number|nil

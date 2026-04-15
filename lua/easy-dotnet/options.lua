@@ -68,6 +68,7 @@
 ---@field viewmode string
 ---@field vsplit_width number|nil
 ---@field vsplit_pos string|nil
+---@field neotest_integration boolean  -- when true: skips buffer signs and keymaps (neotest provides them)
 ---@field icons easy-dotnet.TestRunner.Icons
 ---@field mappings easy-dotnet.TestRunner.Mappings
 
@@ -102,6 +103,7 @@ local M = {
     test_runner = {
       auto_start_testrunner = true,
       hide_legend = false,
+      neotest_integration = false,
       viewmode = "float",
       vsplit_width = nil,
       vsplit_pos = nil,
