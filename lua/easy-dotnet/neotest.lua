@@ -110,6 +110,17 @@ function M.build_spec(args)
   if root.type == "file" then
     local first_child = args.tree:children()[1]
     node_id = first_child and first_child:data().id or root.id
+  elseif root.type == "dir" then
+    local state = require("easy-dotnet.test-runner.state")
+    local dir = vim.fn.resolve(root.id)
+    for _, node in pairs(state.nodes) do
+      if node.type and node.type.type == "Project" and node.filePath then
+        if vim.fn.resolve(vim.fn.fnamemodify(node.filePath, ":h")) == dir then
+          node_id = node.id
+          break
+        end
+      end
+    end
   end
 
   return {
