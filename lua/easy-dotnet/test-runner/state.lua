@@ -22,6 +22,8 @@
 ---@field isLoading boolean
 ---@field currentOperation string|nil
 ---@field overallStatus string
+---@field totalTests integer
+---@field totalRunning integer
 ---@field totalPassed integer
 ---@field totalFailed integer
 ---@field totalSkipped integer
@@ -38,6 +40,8 @@ M.runner_status = {
   isLoading = false,
   currentOperation = nil,
   overallStatus = "Idle",
+  totalTests = 0,
+  totalRunning = 0,
   totalPassed = 0,
   totalFailed = 0,
   totalSkipped = 0,
@@ -115,6 +119,8 @@ function M.clear()
     isLoading = false,
     currentOperation = nil,
     overallStatus = "Idle",
+    totalTests = 0,
+    totalRunning = 0,
     totalPassed = 0,
     totalFailed = 0,
     totalSkipped = 0,
