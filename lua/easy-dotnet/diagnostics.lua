@@ -84,7 +84,7 @@ function M.populate_diagnostics(diagnostics_response, filter_func)
   vim.notify(string.format("Populated %d diagnostics across %d files", total_count, filtered_count), vim.log.levels.INFO)
 
   local options = require("easy-dotnet.options").options
-  if options.diagnostics and options.diagnostics.setqflist then vim.diagnostic.setqflist() end
+  if options.diagnostics and options.diagnostics.setqflist then vim.diagnostic.setqflist({ namespace = ns }) end
 end
 
 return M
