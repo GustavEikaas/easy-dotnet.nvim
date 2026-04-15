@@ -138,7 +138,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
       external_terminal = nil,
       lsp = {
         enabled = true, -- Enable builtin roslyn lsp
-        set_fold_expr = true,
+        set_fold_expr = false,
         preload_roslyn = true, -- Start loading roslyn before any buffer is opened
         roslynator_enabled = true, -- Automatically enable roslynator analyzer
         easy_dotnet_analyzer_enabled = true, -- Enable roslyn analyzer from easy-dotnet-server
