@@ -47,9 +47,7 @@ local function build_right_counts(rs)
     byte_col = byte_col + #text
   end
 
-  if rs.totalRunning > 0 then
-    push(string.format("%s %d  ", ic.reload, rs.totalRunning), "EasyDotnetTestRunnerRunning")
-  end
+  if rs.totalRunning > 0 then push(string.format("%s %d  ", ic.reload, rs.totalRunning), "EasyDotnetTestRunnerRunning") end
   push(string.format("%s %d  ", ic.success, rs.totalPassed), "EasyDotnetTestRunnerPassed")
   push(string.format("%s %d  ", ic.failed, rs.totalFailed), "EasyDotnetTestRunnerFailed")
   push(string.format("%s %d  ", ic.skipped, rs.totalSkipped), "EasyDotnetTestRunnerSkipped")
