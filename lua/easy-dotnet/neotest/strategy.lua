@@ -7,7 +7,11 @@ return function(spec, _context)
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
   local ctx = run_context.begin_run(spec.context.node_id, spec.context.result_ids)
 
-  client.testrunner:run(spec.context.node_id, nil, "neotest")
+  if spec.context.debug then
+    client.testrunner:debug(spec.context.node_id, nil, "neotest")
+  else
+    client.testrunner:run(spec.context.node_id, nil, "neotest")
+  end
 
   return {
     result = function() return ctx.completion.wait() end,

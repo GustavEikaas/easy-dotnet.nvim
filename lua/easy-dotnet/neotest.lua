@@ -117,6 +117,7 @@ function M.build_spec(args)
     context = {
       node_id = node_id,
       result_ids = result_ids,
+      debug = args.strategy == "dap",
     },
     strategy = require("easy-dotnet.neotest.strategy"),
     stream = require("easy-dotnet.neotest.stream"),
