@@ -207,7 +207,7 @@ local M = {
     },
     lsp = {
       enabled = true,
-      set_fold_expr = true,
+      set_fold_expr = false,
       preload_roslyn = true,
       analyzer_assemblies = {},
       auto_refresh_codelens = true,
