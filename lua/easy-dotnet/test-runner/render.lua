@@ -47,6 +47,7 @@ local function build_right_counts(rs)
     byte_col = byte_col + #text
   end
 
+  if rs.totalRunning > 0 then push(string.format("%s %d  ", ic.reload, rs.totalRunning), "EasyDotnetTestRunnerRunning") end
   push(string.format("%s %d  ", ic.success, rs.totalPassed), "EasyDotnetTestRunnerPassed")
   push(string.format("%s %d  ", ic.failed, rs.totalFailed), "EasyDotnetTestRunnerFailed")
   push(string.format("%s %d  ", ic.skipped, rs.totalSkipped), "EasyDotnetTestRunnerSkipped")
@@ -87,7 +88,7 @@ local function build_header_row(rs, frame)
     if last_run_time then left_text = left_text .. "  " .. last_run_time end
   end
 
-  local empty_rs = { totalPassed = 0, totalFailed = 0, totalSkipped = 0, totalTests = 0 }
+  local empty_rs = { totalRunning = 0, totalPassed = 0, totalFailed = 0, totalSkipped = 0, totalTests = 0 }
   local right_text, right_hls, right_dw = build_right_counts(rs or empty_rs)
   local left_dw = vim.fn.strdisplaywidth(left_text)
 
