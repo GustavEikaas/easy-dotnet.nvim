@@ -47,6 +47,7 @@ local function build_right_counts(rs)
     byte_col = byte_col + #text
   end
 
+  if rs.totalRunning > 0 then push(string.format("%s %d  ", ic.reload, rs.totalRunning), "EasyDotnetTestRunnerRunning") end
   push(string.format("%s %d  ", ic.success, rs.totalPassed), "EasyDotnetTestRunnerPassed")
   push(string.format("%s %d  ", ic.failed, rs.totalFailed), "EasyDotnetTestRunnerFailed")
   push(string.format("%s %d  ", ic.skipped, rs.totalSkipped), "EasyDotnetTestRunnerSkipped")
@@ -87,7 +88,7 @@ local function build_header_row(rs, frame)
     if last_run_time then left_text = left_text .. "  " .. last_run_time end
   end
 
-  local empty_rs = { totalPassed = 0, totalFailed = 0, totalSkipped = 0, totalTests = 0 }
+  local empty_rs = { totalRunning = 0, totalPassed = 0, totalFailed = 0, totalSkipped = 0, totalTests = 0 }
   local right_text, right_hls, right_dw = build_right_counts(rs or empty_rs)
   local left_dw = vim.fn.strdisplaywidth(left_text)
 
@@ -317,6 +318,28 @@ local function open_footer_split()
   vim.api.nvim_set_current_win(M.win)
 end
 
+local function lock_aux_focus()
+  local group = vim.api.nvim_create_augroup("EasyDotnetTestRunnerAuxFocus", { clear = true })
+  local function create_redirect_autocmd(buf)
+    if not buf or not vim.api.nvim_buf_is_valid(buf) then return end
+    vim.api.nvim_create_autocmd("WinEnter", {
+      group = group,
+      buffer = buf,
+      callback = function()
+        if not M.win or not vim.api.nvim_win_is_valid(M.win) then return end
+        local current = vim.api.nvim_get_current_win()
+        local in_header = M.header_win and vim.api.nvim_win_is_valid(M.header_win) and current == M.header_win
+        local in_footer = M.footer_win and vim.api.nvim_win_is_valid(M.footer_win) and current == M.footer_win
+        if not in_header and not in_footer then return end
+        pcall(vim.api.nvim_set_current_win, M.win)
+      end,
+    })
+  end
+
+  create_redirect_autocmd(M.header_buf)
+  create_redirect_autocmd(M.footer_buf)
+end
+
 local function close_aux_wins()
   for _, w in ipairs({ M.header_win, M.footer_win }) do
     if w and vim.api.nvim_win_is_valid(w) then vim.api.nvim_win_close(w, true) end
@@ -359,6 +382,7 @@ function M.open(mode, options)
         spinner_stop()
         close_aux_wins()
         M.win = nil
+        pcall(vim.api.nvim_del_augroup_by_name, "EasyDotnetTestRunnerAuxFocus")
         pcall(vim.api.nvim_del_augroup_by_name, "EasyDotnetTestRunnerResize")
       end,
     })
@@ -374,6 +398,7 @@ function M.open(mode, options)
 
     open_header_split()
     if not M.options.hide_legend then open_footer_split() end
+    lock_aux_focus()
 
     vim.api.nvim_create_autocmd("WinClosed", {
       pattern = tostring(M.win),
@@ -382,6 +407,7 @@ function M.open(mode, options)
         spinner_stop()
         close_aux_wins()
         M.win = nil
+        pcall(vim.api.nvim_del_augroup_by_name, "EasyDotnetTestRunnerAuxFocus")
         pcall(vim.api.nvim_del_augroup_by_name, "EasyDotnetTestRunnerResize")
       end,
     })
@@ -411,6 +437,7 @@ end
 function M.hide()
   spinner_stop()
   close_aux_wins()
+  pcall(vim.api.nvim_del_augroup_by_name, "EasyDotnetTestRunnerAuxFocus")
   if M.win and vim.api.nvim_win_is_valid(M.win) then
     vim.api.nvim_win_close(M.win, false)
     M.win = nil
