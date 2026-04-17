@@ -4,14 +4,50 @@ M.name = "easy-dotnet"
 
 local function get_client() return require("easy-dotnet.rpc.rpc").global_rpc_client end
 
-local function is_test_runner_initialized()
+local function is_initialized()
   local ok, state = pcall(require, "easy-dotnet.test-runner.state")
   return ok and state.initialized == true
 end
 
+-- Shared future: first caller triggers init, all concurrent callers suspend on the
+-- same future and resume together once the server finishes initialization.
+-- neotest always calls is_test_file / discover_positions inside nio coroutines,
+-- so .wait() correctly yields without blocking the Neovim event loop.
+local _init_future = nil
+
+local function await_initialization()
+  if is_initialized() then return true end
+
+  if not _init_future then
+    _init_future = require("nio").control.future()
+    local sln = require("easy-dotnet.current_solution").try_get_selected_solution()
+    if not sln then
+      _init_future.set()
+    else
+      local client = get_client()
+      client:initialize(function()
+        client.testrunner:initialize(sln, function(result)
+          if result and result.success then
+            local ok, state = pcall(require, "easy-dotnet.test-runner.state")
+            if ok then state.initialized = true end
+          end
+          _init_future.set()
+        end)
+      end)
+    end
+  end
+
+  _init_future.wait()
+  return is_initialized()
+end
+
 ---@param _dir string
 ---@return string|nil
-function M.root(_dir) return require("easy-dotnet.current_solution").try_get_selected_solution() end
+function M.root(_dir)
+  local sln = require("easy-dotnet.current_solution").try_get_selected_solution()
+  if not sln then return nil end
+  return vim.fn.fnamemodify(sln, ":h")
+end
 
 ---@param name string
 ---@return boolean
@@ -21,8 +57,7 @@ function M.filter_dir(name, _rel_path, _root) return not vim.tbl_contains({ "bin
 ---@return boolean
 function M.is_test_file(file_path)
   if not vim.endswith(file_path, ".cs") then return false end
-  if not is_test_runner_initialized() then return false end
-
+  if not await_initialization() then return false end
   local state = require("easy-dotnet.test-runner.state")
   local norm = vim.fn.resolve(file_path)
   for _, node in pairs(state.nodes) do
@@ -34,7 +69,7 @@ end
 ---@param file_path string
 ---@return neotest.Tree|nil
 function M.discover_positions(file_path)
-  if not is_test_runner_initialized() then return nil end
+  if not await_initialization() then return nil end
 
   local nio = require("nio")
   local positions = nil
@@ -137,17 +172,5 @@ end
 
 ---@type fun(spec: neotest.RunSpec, result: neotest.StrategyResult, tree: neotest.Tree): table<string, neotest.Result>
 M.results = require("easy-dotnet.neotest.results")
-
-require("easy-dotnet.neotest.events").subscribe("registerTest", function(node)
-  if not node or not node.filePath then return end
-  local bufnr = vim.fn.bufnr(node.filePath)
-  if bufnr == -1 then return end
-  --TODO: hacky af
-  pcall(vim.api.nvim_exec_autocmds, "BufWritePost", {
-    buffer = bufnr,
-    group = "neotest.Client",
-    modeline = false,
-  })
-end)
 
 return M
