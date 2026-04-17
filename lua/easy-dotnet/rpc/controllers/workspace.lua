@@ -2,6 +2,7 @@
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
 ---@field run fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.RunOpts): easy-dotnet.RPC.CallHandle
 ---@field debug fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.DebugOpts): easy-dotnet.RPC.CallHandle
+---@field debug_attach fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.DebugAttachOpts): easy-dotnet.RPC.CallHandle
 ---@field watch fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.WatchOpts): easy-dotnet.RPC.CallHandle
 ---@field build fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.BuildOpts): easy-dotnet.RPC.CallHandle
 ---@field restore fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.RestoreOpts): easy-dotnet.RPC.CallHandle
@@ -21,6 +22,9 @@
 ---@field use_launch_profile boolean
 ---@field file_path string | nil
 ---@field cli_args string | nil
+---@field on_crash? fun(err: easy-dotnet.RPC.Error)
+
+---@class easy-dotnet.RPC.Client.Workspace.DebugAttachOpts
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 ---@class easy-dotnet.RPC.Client.Workspace.WatchOpts
@@ -218,6 +222,21 @@ function M:test_solution(opts)
       useDefault = false,
       testArgs = opts.test_args or vim.NIL,
     },
+    cb = nil,
+    on_crash = opts.on_crash,
+  })()
+end
+
+---@param opts easy-dotnet.RPC.Client.Workspace.DebugAttachOpts
+---@return easy-dotnet.RPC.CallHandle
+function M:debug_attach(opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+  return helper.create_rpc_call({
+    client = self._client,
+    job = nil,
+    method = "workspace/debug-attach",
+    params = { ["_"] = "" },
     cb = nil,
     on_crash = opts.on_crash,
   })()

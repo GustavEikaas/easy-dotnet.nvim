@@ -287,6 +287,7 @@ require("lualine").setup {
 | `dotnet.run_profile_default()` | `dotnet run --project <TS Default> --launch-profile <TS> <DArgs>` |
 ||  
 | `dotnet.debug_profile()`                        | ``                                                                                                       |
+| `dotnet.debug_attach()`                        | ``                                                                                                       |
 | `dotnet.debug()` | ``                                                                                                             |
 | `dotnet.debug_default()` | `` |
 | `dotnet.debug_profile_default()` | `` |
@@ -416,6 +417,7 @@ Dotnet run default
 Dotnet run profile
 Dotnet run profile default
 Dotnet debug
+Dotnet debug attach
 Dotnet debug default
 Dotnet debug profile
 Dotnet debug profile default
