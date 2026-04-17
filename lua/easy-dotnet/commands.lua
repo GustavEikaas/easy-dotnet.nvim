@@ -174,6 +174,14 @@ M.debug = {
         },
       },
     },
+    attach = {
+      handle = function(_, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function()
+          client.workspace:debug_attach({})
+        end)
+      end,
+    },
   },
 }
 
