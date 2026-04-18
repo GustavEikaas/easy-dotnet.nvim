@@ -141,7 +141,7 @@ M.handler = function(client, method, params)
         render.refresh()
       end)
     elseif method == "upgradeWizard/initialized" then
-      local state  = require("easy-dotnet.package-upgrade.state")
+      local state = require("easy-dotnet.package-upgrade.state")
       local render = require("easy-dotnet.package-upgrade.render")
       if not params or not params.candidates then return end
       vim.schedule(function()
@@ -150,7 +150,7 @@ M.handler = function(client, method, params)
         render.refresh()
       end)
     elseif method == "upgradeWizard/status" then
-      local state  = require("easy-dotnet.package-upgrade.state")
+      local state = require("easy-dotnet.package-upgrade.state")
       local render = require("easy-dotnet.package-upgrade.render")
       if not params then return end
       vim.schedule(function()
@@ -158,7 +158,7 @@ M.handler = function(client, method, params)
         render.refresh()
       end)
     elseif method == "upgradeWizard/progress" then
-      local state  = require("easy-dotnet.package-upgrade.state")
+      local state = require("easy-dotnet.package-upgrade.state")
       local render = require("easy-dotnet.package-upgrade.render")
       if not params then return end
       vim.schedule(function()
@@ -166,7 +166,7 @@ M.handler = function(client, method, params)
         render.refresh()
       end)
     elseif method == "upgradeWizard/result" then
-      local state  = require("easy-dotnet.package-upgrade.state")
+      local state = require("easy-dotnet.package-upgrade.state")
       local render = require("easy-dotnet.package-upgrade.render")
       if not params then return end
       vim.schedule(function()

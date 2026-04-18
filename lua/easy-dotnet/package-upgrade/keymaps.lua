@@ -1,4 +1,4 @@
-local state  = require("easy-dotnet.package-upgrade.state")
+local state = require("easy-dotnet.package-upgrade.state")
 local render = require("easy-dotnet.package-upgrade.render")
 local logger = require("easy-dotnet.logger")
 
@@ -10,9 +10,7 @@ local M = {}
 function M.register(buf, client, options)
   local km = options.mappings or {}
 
-  local function map(key, desc, fn)
-    vim.keymap.set("n", key, fn, { buffer = buf, desc = desc, noremap = true, silent = true })
-  end
+  local function map(key, desc, fn) vim.keymap.set("n", key, fn, { buffer = buf, desc = desc, noremap = true, silent = true }) end
 
   map(km.toggle_selection and km.toggle_selection.lhs or "<Space>", "Toggle upgrade selection", function()
     local pkg = render.pkg_at_cursor()
@@ -44,14 +42,13 @@ function M.register(buf, client, options)
     local selections = {}
     for _, c in ipairs(state.candidates) do
       if state.selection[c.packageId] then
-        local target = state.version_overrides[c.packageId]
-            or (state.mode == "safe" and c.latestSafeVersion or c.latestVersion)
+        local target = state.version_overrides[c.packageId] or (state.mode == "safe" and c.latestSafeVersion or c.latestVersion)
         table.insert(selections, {
-          packageId          = c.packageId,
-          targetVersion      = target,
-          affectedProjects   = c.affectedProjects,
+          packageId = c.packageId,
+          targetVersion = target,
+          affectedProjects = c.affectedProjects,
           isCentrallyManaged = c.isCentrallyManaged,
-          currentVersion     = c.currentVersion,
+          currentVersion = c.currentVersion,
         })
       end
     end
@@ -67,7 +64,10 @@ function M.register(buf, client, options)
     if not pkg or not state.result then return end
     local has_error = false
     for _, item in ipairs(state.result.failed) do
-      if item.packageId == pkg.packageId then has_error = true; break end
+      if item.packageId == pkg.packageId then
+        has_error = true
+        break
+      end
     end
     if not has_error then return end
     if state.focused_error_pkg == pkg.packageId then
@@ -83,7 +83,7 @@ function M.register(buf, client, options)
     local pkg = render.pkg_at_cursor()
     if not pkg then return end
     local target = state.mode == "safe" and pkg.latestSafeVersion or pkg.latestVersion
-    local key    = pkg.packageId .. "|" .. target
+    local key = pkg.packageId .. "|" .. target
     state.focused_pkg = pkg.packageId
     state.focused_error_pkg = nil
     if state.changelog_cache[key] then
@@ -127,7 +127,7 @@ function M.register(buf, client, options)
     end)
   end)
 
-  map(km.close and km.close.lhs or "q",     "Close upgrade wizard", function() render.hide() end)
+  map(km.close and km.close.lhs or "q", "Close upgrade wizard", function() render.hide() end)
   map("<Esc>", "Close upgrade wizard", function() render.hide() end)
 end
 

@@ -74,7 +74,10 @@ function M.auto_select_safe()
   M.selection = {}
   local has_safe = false
   for _, c in ipairs(M.candidates) do
-    if c.upgradeSeverity ~= "Major" then has_safe = true; break end
+    if c.upgradeSeverity ~= "Major" then
+      has_safe = true
+      break
+    end
   end
   -- If everything is a major bump, default to latest so the list isn't empty
   M.mode = has_safe and "safe" or "latest"
