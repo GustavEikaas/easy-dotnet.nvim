@@ -243,8 +243,8 @@ M.server_picker = function(params, response)
     items = items,
     format = "text",
     title = (params.multi and "[Multi] " or "") .. params.prompt,
-    layout = (not params.multi and not params.preview) and "select" or "default",
-    preview = preview_fn,
+    layout = not params.preview and "select" or "default",
+    preview = preview_fn or function(ctx) ctx.preview:reset() end,
     win = no_multi_keys,
     confirm = function(picker, item)
       if params.multi then
