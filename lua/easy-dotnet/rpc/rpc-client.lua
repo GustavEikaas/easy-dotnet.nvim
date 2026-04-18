@@ -77,6 +77,7 @@ local M = {
 ---| "nuget/get-package-versions"
 ---| "nuget/search-packages"
 ---| "nuget/list-sources"
+---| "nuget/add-package"
 ---| "test/discover"
 ---| "test/run"
 ---| "outdated/packages"
