@@ -7,7 +7,6 @@
 ---@field nuget_get_package_versions fun(self: easy-dotnet.RPC.Client.Nuget, packageId: string, sources?: string[], include_prerelease?: boolean, cb?: fun(res: string[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request a NuGet restore
 ---@field nuget_push fun(self: easy-dotnet.RPC.Client.Nuget, packages: string[], source: string, cb?: fun(success: boolean), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request a NuGet restore
 ---@field nuget_list_sources fun(self: easy-dotnet.RPC.Client.Nuget, cb?: fun(res: easy-dotnet.Nuget.SourceResponse[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Enumerate configured NuGet sources
----@field nuget_add_package fun(self: easy-dotnet.RPC.Client.Nuget, project_path?: string, include_prerelease?: boolean, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Server-orchestrated add package workflow
 
 local M = {}
 M.__index = M
@@ -138,28 +137,6 @@ function M:nuget_list_sources(cb, opts)
     params = {},
     cb = cb,
     on_yield = nil,
-    on_crash = opts.on_crash,
-  })()
-end
-
----@param project_path? string Optional .csproj path; if set, skips project picker
----@param include_prerelease? boolean Include pre-release packages and versions (default: false)
----@param cb? fun() Optional callback on completion
----@param opts? easy-dotnet.RPC.CallOpts
----@return easy-dotnet.RPC.CallHandle
-function M:nuget_add_package(project_path, include_prerelease, cb, opts)
-  local helper = require("easy-dotnet.rpc.dotnet-client")
-  opts = opts or {}
-  include_prerelease = include_prerelease or false
-  return helper.create_rpc_call({
-    client = self._client,
-    job = nil,
-    method = "nuget/add-package",
-    params = {
-      projectPath = project_path or vim.NIL,
-      includePrerelease = include_prerelease,
-    },
-    cb = cb,
     on_crash = opts.on_crash,
   })()
 end

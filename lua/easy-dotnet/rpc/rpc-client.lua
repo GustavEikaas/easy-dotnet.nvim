@@ -78,6 +78,8 @@ local M = {
 ---| "nuget/search-packages"
 ---| "nuget/list-sources"
 ---| "nuget/add-package"
+---| "nuget/remove-package"
+---| "nuget/list-installed"
 ---| "test/discover"
 ---| "test/run"
 ---| "outdated/packages"

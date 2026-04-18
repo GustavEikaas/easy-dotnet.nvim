@@ -71,13 +71,12 @@ local function discover_package_references(project)
   local finished = M.append_job("Discovering package references")
 
   client:initialize(function()
-    local tfm = project.msbuild_props and project.msbuild_props.targetFramework or vim.NIL
-    client.msbuild:msbuild_list_package_reference(project.path, tfm, function(res)
-      if #res == 0 then
+    client.package_manager:list_installed(project.path, function(res)
+      if not res or #res == 0 then
         M.package_refs = nil
       else
-        ---@param value easy-dotnet.MSBuild.PackageReference
-        local package_refs = vim.tbl_map(function(value) return string.format("%s@%s", value.id, value.resolvedVersion) end, res)
+        ---@param value easy-dotnet.Nuget.InstalledPackageReference
+        local package_refs = vim.tbl_map(function(value) return string.format("%s@%s", value.id, value.version) end, res)
         M.package_refs = package_refs
       end
       finished()
@@ -175,19 +174,15 @@ local function remove_package_keymap(ref)
     --TODO: customize keybindings
     key = "r",
     handler = function()
-      local cleanup = M.append_job("Removing package " .. ref)
-      local package_name = ref:match("^(.-)@")
-      vim.fn.jobstart(string.format("dotnet remove %s package %s ", M.project.path, package_name), {
-        on_exit = function(_, code)
+      local package_id = ref:match("^(.-)@")
+      if not package_id then return end
+      local cleanup = M.append_job("Removing " .. package_id)
+      client:initialize(function()
+        client.package_manager:remove(M.project.path, { package_id }, function()
           cleanup()
-          if code ~= 0 then
-            logger.error("Command failed")
-          else
-            logger.info("Package removed " .. package_name)
-            dotnet_restore(M.project, function() discover_package_references(M.project) end)
-          end
-        end,
-      })
+          discover_package_references(M.project)
+        end)
+      end)
     end,
   }
 end
