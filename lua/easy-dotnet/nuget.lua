@@ -4,7 +4,7 @@ local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 
 ---@param project_path string | nil
 ---@param allow_prerelease boolean | nil
-M.search_nuget = function(project_path, allow_prerelease)
+M.add_package = function(project_path, allow_prerelease)
   allow_prerelease = allow_prerelease or false
   client:initialize(function() client.package_manager:add(project_path, allow_prerelease) end)
 end

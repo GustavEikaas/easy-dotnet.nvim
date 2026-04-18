@@ -191,7 +191,7 @@ local function add_package_keymap()
   return {
     key = "a",
     handler = function()
-      require("easy-dotnet.nuget").search_nuget(M.project.path)
+      require("easy-dotnet.nuget").add_package(M.project.path)
       vim.api.nvim_set_current_win(M.win)
       discover_package_references(M.project)
     end,
