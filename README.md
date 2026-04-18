@@ -542,6 +542,55 @@ When a run is triggered from the buffer the method or class flashes to confirm i
 <img width="1228" height="578" alt="test flash confirm" src="https://github.com/user-attachments/assets/bcb8377a-577f-4808-a20e-1c90f884d9d4" />
 <img width="1885" height="1044" alt="floating stacktrace from buffer" src="https://github.com/user-attachments/assets/109fdfdd-d93b-400e-a4e0-8ebf41ff9312" />
 
+## NuGet Upgrade Wizard
+
+Interactively upgrade NuGet packages across your solution. Each upgrade is validated by running a restore — if the restore fails the change is reverted and the package is marked as failed.
+
+Open with `:Dotnet packages upgrade`.
+
+### Features
+
+- Analyzes all projects in the solution for outdated packages
+- Safe mode (non-breaking) and latest mode (including major bumps)
+- Per-package restore validation — confirms the upgrade actually compiles
+- Automatic revert on restore failure
+- Changelog peek via GitHub Releases
+- Central Package Management (CPM) aware
+
+### Keymaps
+
+| Key | Action |
+|-----|--------|
+| `<Space>` | Toggle selection for package under cursor |
+| `a` | Select all safe (non-major) packages |
+| `A` | Select all packages including major bumps |
+| `X` | Clear all selections |
+| `u` | Apply selected upgrades |
+| `K` | Peek changelog for package under cursor |
+| `e` | Show restore error for failed package |
+| `m` | Toggle safe / latest mode |
+| `v` | Pin a specific version from picker |
+| `q` | Close wizard |
+
+All keymaps are configurable:
+
+```lua
+package_upgrade = {
+  mappings = {
+    toggle_selection = { lhs = "<Space>", desc = "toggle package selection" },
+    select_all_safe  = { lhs = "a",       desc = "select all safe (non-major) packages" },
+    select_all       = { lhs = "A",       desc = "select all packages including major" },
+    clear_selection  = { lhs = "X",       desc = "clear all selections" },
+    apply            = { lhs = "u",       desc = "apply selected upgrades" },
+    changelog        = { lhs = "K",       desc = "peek changelog for package under cursor" },
+    errors           = { lhs = "e",       desc = "peek restore errors for failed package" },
+    toggle_mode      = { lhs = "m",       desc = "toggle safe/latest mode" },
+    override_version = { lhs = "v",       desc = "pin a specific version from picker" },
+    close            = { lhs = "q",       desc = "close upgrade wizard" },
+  },
+},
+```
+
 ## Project view
 
 Get a comprehensive overview of a project's dependencies, and easily manage NuGet packages and project references.
