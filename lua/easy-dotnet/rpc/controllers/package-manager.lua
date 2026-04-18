@@ -2,7 +2,8 @@
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
 ---@field add fun(self: easy-dotnet.RPC.Client.PackageManager, project_path?: string, include_prerelease?: boolean, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field remove fun(self: easy-dotnet.RPC.Client.PackageManager, project_path?: string, package_ids?: string[], cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
----@field list_installed fun(self: easy-dotnet.RPC.Client.PackageManager, project_path: string, cb?: fun(res: easy-dotnet.PackageManager.InstalledPackageReference[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+---@diagnostic disable-next-line: doc-field-no-class
+---@field list_installed fun (self: easy-dotnet.RPC.Client.PackageManager, project_path: string, cb?: fun(res: easy-dotnet.PackageManager.InstalledPackageReference[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 
 ---@class easy-dotnet.PackageManager.InstalledPackageReference
 ---@field id string
