@@ -6,9 +6,7 @@ local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 ---@param allow_prerelease boolean | nil
 M.search_nuget = function(project_path, allow_prerelease)
   allow_prerelease = allow_prerelease or false
-  client:initialize(function()
-    client.package_manager:add(project_path, allow_prerelease)
-  end)
+  client:initialize(function() client.package_manager:add(project_path, allow_prerelease) end)
 end
 
 M.get_nuget_sources_async = function()
@@ -23,9 +21,7 @@ end
 
 ---@param project_path string | nil
 M.remove_nuget = function(project_path)
-  client:initialize(function()
-    client.package_manager:remove(project_path)
-  end)
+  client:initialize(function() client.package_manager:remove(project_path) end)
 end
 
 return M
