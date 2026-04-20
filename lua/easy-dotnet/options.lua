@@ -1,6 +1,7 @@
 ---@class easy-dotnet.Options
 ---@field external_terminal easy-dotnet.ExternalTerminal|nil
 ---@field test_runner easy-dotnet.TestRunner.Options
+---@field package_upgrade easy-dotnet.PackageUpgrade.Options
 ---@field lsp easy-dotnet.LspOpts
 ---@field csproj_mappings boolean
 ---@field fsproj_mappings boolean
@@ -64,6 +65,21 @@
 ---@class easy-dotnet.Keymap
 ---@field lhs string
 ---@field desc string
+
+---@class easy-dotnet.PackageUpgrade.Mappings
+---@field toggle_selection easy-dotnet.Keymap
+---@field select_all_safe easy-dotnet.Keymap
+---@field select_all easy-dotnet.Keymap
+---@field clear_selection easy-dotnet.Keymap
+---@field apply easy-dotnet.Keymap
+---@field changelog easy-dotnet.Keymap
+---@field errors easy-dotnet.Keymap
+---@field toggle_mode easy-dotnet.Keymap
+---@field override_version easy-dotnet.Keymap
+---@field close easy-dotnet.Keymap
+
+---@class easy-dotnet.PackageUpgrade.Options
+---@field mappings easy-dotnet.PackageUpgrade.Mappings
 
 ---@class easy-dotnet.TestRunner.Options
 ---@field viewmode string
@@ -137,6 +153,21 @@ local M = {
         close = { lhs = "q", desc = "close testrunner" },
         refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" },
         cancel = { lhs = "<C-c>", desc = "cancel in-flight operation" },
+      },
+    },
+    ---@type easy-dotnet.PackageUpgrade.Options
+    package_upgrade = {
+      mappings = {
+        toggle_selection = { lhs = "<Space>", desc = "toggle package selection" },
+        select_all_safe = { lhs = "a", desc = "select all safe (non-major) packages" },
+        select_all = { lhs = "A", desc = "select all packages including major" },
+        clear_selection = { lhs = "X", desc = "clear all selections" },
+        apply = { lhs = "u", desc = "apply selected upgrades" },
+        changelog = { lhs = "K", desc = "peek changelog for package under cursor" },
+        errors = { lhs = "e", desc = "peek restore errors for failed package" },
+        toggle_mode = { lhs = "m", desc = "toggle safe/latest mode" },
+        override_version = { lhs = "v", desc = "pin a specific version from picker" },
+        close = { lhs = "q", desc = "close upgrade wizard" },
       },
     },
     csproj_mappings = true,

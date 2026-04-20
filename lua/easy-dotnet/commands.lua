@@ -264,6 +264,14 @@ M.push = {
   passthrough = false,
 }
 
+M.packages = {
+  subcommands = {
+    upgrade = {
+      handle = function() require("easy-dotnet.package-upgrade").open() end,
+    },
+  },
+}
+
 M.add = {
   subcommands = {
     package = {
