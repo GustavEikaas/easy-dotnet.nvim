@@ -22,7 +22,6 @@ local M = {
   pipe_path = nil,
   is_negotiating = false,
   log_history = {},
-  log_buf_nr = nil,
   ---@diagnostic disable-next-line: assign-type-mismatch
   start = nil,
   ---@diagnostic disable-next-line: assign-type-mismatch
@@ -35,20 +34,8 @@ local M = {
 
 local function append_log(prefix, line)
   if line and line ~= "" then
-    local formatted_line = prefix .. line
-    table.insert(M.log_history, formatted_line)
-    -- Cap the log history to the last 5000 lines
+    table.insert(M.log_history, prefix .. line)
     if #M.log_history > 5000 then table.remove(M.log_history, 1) end
-
-    if M.log_buf_nr and vim.api.nvim_buf_is_valid(M.log_buf_nr) then
-      vim.schedule(function()
-        if vim.api.nvim_buf_is_valid(M.log_buf_nr) then
-          vim.bo[M.log_buf_nr].modifiable = true
-          vim.api.nvim_buf_set_lines(M.log_buf_nr, -1, -1, false, { formatted_line })
-          vim.bo[M.log_buf_nr].modifiable = false
-        end
-      end)
-    end
   end
 end
 
@@ -141,27 +128,46 @@ function M.stop()
   end
 end
 
-function M.dump_logs()
-  if #M.log_history == 0 then
-    vim.notify("No logs captured for dotnet server yet.", vim.log.levels.WARN)
+local function render_logs(name, lines)
+  if not lines or #lines == 0 then
+    vim.notify("No logs captured yet.", vim.log.levels.WARN)
     return
   end
-
-  if M.log_buf_nr and vim.api.nvim_buf_is_valid(M.log_buf_nr) then
-    vim.notify("Log buffer is already open!", vim.log.levels.INFO)
-    return
-  end
-
   local buf = vim.api.nvim_create_buf(false, true)
-  M.log_buf_nr = buf
-  vim.api.nvim_buf_set_name(buf, "DotnetServerLogs_" .. tostring(os.time()))
-  vim.api.nvim_buf_set_lines(buf, 0, -1, false, M.log_history)
+  vim.api.nvim_buf_set_name(buf, name .. "_" .. tostring(os.time()))
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
   vim.bo[buf].modifiable = false
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].filetype = "log"
   vim.cmd("vsplit")
   vim.api.nvim_win_set_buf(0, buf)
   vim.cmd("normal! G")
+end
+
+function M.dump_logs()
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  client:initialize(function()
+    client.server:server_log_dump(function(lines)
+      vim.schedule(function() render_logs("DotnetServerLogs", lines or {}) end)
+    end)
+  end)
+end
+
+function M.dump_buildserver_logs()
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  client:initialize(function()
+    client.server:server_log_dump_build_server(function(lines)
+      vim.schedule(function() render_logs("DotnetBuildServerLogs", lines or {}) end)
+    end)
+  end)
+end
+
+function M.dump_stdout_logs()
+  if #M.log_history == 0 then
+    vim.notify("No stdout captured for dotnet server yet.", vim.log.levels.WARN)
+    return
+  end
+  render_logs("DotnetServerStdout", M.log_history)
 end
 
 function M.get_state()
