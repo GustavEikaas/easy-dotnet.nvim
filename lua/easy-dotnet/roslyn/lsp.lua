@@ -271,9 +271,13 @@ local function populate_source_generated_buffer(client, buf, file)
   }
 
   local function handler(err, result)
+    if not result or type(result) ~= "table" then return end
     if result.resultId == vim.b[buf].resultId then return end
     assert(not err, vim.inspect(err))
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(result.text or "", "\r?\n"))
+    local text = result.text
+    if text == vim.NIL or type(text) ~= "string" then text = "" end
+    text = text:gsub("\r\n", "\n")
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(text, "\n", { plain = true }))
     vim.b[buf].resultId = result.resultId
     vim.lsp.buf_attach_client(buf, client.id)
     vim.bo[buf].filetype = "cs"
