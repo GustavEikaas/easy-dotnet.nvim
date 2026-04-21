@@ -128,11 +128,16 @@ function M.stop()
   end
 end
 
-local function render_logs(name, lines)
-  if not lines or #lines == 0 then
+local function render_logs(name, dirty_lines)
+  if not dirty_lines or #dirty_lines == 0 then
     vim.notify("No logs captured yet.", vim.log.levels.WARN)
     return
   end
+  local lines = vim.tbl_map(function(line)
+    if type(line) ~= "string" then return tostring(line) end
+    local clean = (line:gsub("\n", " "):gsub("\r", ""))
+    return clean
+  end, dirty_lines)
   local buf = vim.api.nvim_create_buf(false, true)
   vim.api.nvim_buf_set_name(buf, name .. "_" .. tostring(os.time()))
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
