@@ -123,6 +123,7 @@ end
 ---@field testrunner easy-dotnet.RPC.Client.TestRunner
 ---@field template_engine easy-dotnet.RPC.Client.TemplateEngine
 ---@field nuget easy-dotnet.RPC.Client.Nuget
+---@field package_manager easy-dotnet.RPC.Client.PackageManager
 ---@field roslyn easy-dotnet.RPC.Client.Roslyn
 ---@field test easy-dotnet.RPC.Client.Test
 -- luacheck: no max line length
@@ -157,6 +158,7 @@ function M:new()
   instance.template_engine = require("easy-dotnet.rpc.controllers.template").new(client)
   instance.entity_framework = require("easy-dotnet.rpc.controllers.entity-framework").new(client)
   instance.nuget = require("easy-dotnet.rpc.controllers.nuget").new(client)
+  instance.package_manager = require("easy-dotnet.rpc.controllers.package-manager").new(client)
   instance.roslyn = require("easy-dotnet.rpc.controllers.roslyn").new(client)
   instance.lsp = require("easy-dotnet.rpc.controllers.lsp").new(client)
   instance.test = require("easy-dotnet.rpc.controllers.test").new(client)
