@@ -545,6 +545,28 @@ M._server = {
     },
     logdump = {
       handle = function() require("easy-dotnet.rpc.server").dump_logs() end,
+      subcommands = {
+        buildserver = {
+          handle = function() require("easy-dotnet.rpc.server").dump_buildserver_logs() end,
+        },
+        stdout = {
+          handle = function() require("easy-dotnet.rpc.server").dump_stdout_logs() end,
+        },
+      },
+    },
+    loglevel = {
+      passthrough = true,
+      handle = function(args)
+        local level = type(args) == "string" and args or (args and args[1])
+        if not level or level == "" then
+          vim.notify("Usage: Dotnet _server loglevel <off|error|warning|information|verbose>", vim.log.levels.WARN)
+          return
+        end
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function()
+          client.server:server_set_log_level(level, function() vim.notify("Log level set to " .. level, vim.log.levels.INFO) end)
+        end)
+      end,
     },
   },
 }
