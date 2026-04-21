@@ -1,8 +1,5 @@
-local actions = require("easy-dotnet.actions")
-local debug = require("easy-dotnet.debugger")
 local constants = require("easy-dotnet.constants")
 local commands = require("easy-dotnet.commands")
-local polyfills = require("easy-dotnet.polyfills")
 local logger = require("easy-dotnet.logger")
 local job = require("easy-dotnet.ui-modules.jobs")
 local current_solution = require("easy-dotnet.current_solution")
@@ -27,24 +24,24 @@ local function wrap(callback)
   end
 end
 local function collect_commands_with_handles(parent, prefix)
-  return polyfills.iter(parent):fold({}, function(command_handles, name, command)
+  return vim.iter(parent):fold({}, function(command_handles, name, command)
     local full_command = prefix and (prefix .. "_" .. name) or name
 
     if command.handle then command_handles[full_command] = command.handle end
 
-    if command.subcommands then polyfills.iter(collect_commands_with_handles(command.subcommands, full_command)):each(function(sub_name, sub_handle) command_handles[sub_name] = sub_handle end) end
+    if command.subcommands then vim.iter(collect_commands_with_handles(command.subcommands, full_command)):each(function(sub_name, sub_handle) command_handles[sub_name] = sub_handle end) end
 
     return command_handles
   end)
 end
 
 local function collect_commands(parent, prefix)
-  return polyfills.iter(parent):fold({}, function(cmds, name, command)
+  return vim.iter(parent):fold({}, function(cmds, name, command)
     local full_command = prefix and (prefix .. " " .. name) or name
 
     if command.handle then table.insert(cmds, full_command) end
 
-    if command.subcommands then polyfills.iter(collect_commands(command.subcommands, full_command)):each(function(sub) table.insert(cmds, sub) end) end
+    if command.subcommands then vim.iter(collect_commands(command.subcommands, full_command)):each(function(sub) table.insert(cmds, sub) end) end
 
     return cmds
   end)
@@ -109,26 +106,10 @@ end
 
 vim.api.nvim_create_autocmd("ColorScheme", { callback = define_highlights })
 
-local register_legacy_functions = function()
-  ---Deprecated prefer dotnet.test instead
-  ---@deprecated prefer dotnet.test instead
-  M.test_project = function() require("easy-dotnet.commands").test.handle({}, require("easy-dotnet.options").options) end
-
-  ---@deprecated I suspect this is not used as the testrunner seems to be mainly used, if this were to live on it should sync with testrunner
-  M.watch_tests = function() actions.test_watcher(require("easy-dotnet.options").options.test_runner.icons) end
-
-  ---Deprecated prefer dotnet.run instead
-  ---@deprecated prefer dotnet.run instead
-  M.run_with_profile = function(use_default)
-    wrap(function() actions.run_with_profile(require("easy-dotnet.options").options.terminal, use_default == nil and false or use_default) end)()
-  end
-end
-
 local function auto_register_dap(merged_opts)
   if merged_opts.debugger.auto_register_dap == true then
     local success, dap = pcall(require, "dap")
     if not success then return end
-    local dotnet = require("easy-dotnet")
 
     local debugger_conf = dap.configurations["cs"] or {}
 
@@ -137,7 +118,10 @@ local function auto_register_dap(merged_opts)
         type = constants.debug_adapter_name,
         name = constants.debug_adapter_name,
         request = "attach",
-        port = dotnet.prepare_debugger,
+        port = function()
+          vim.schedule(function() vim.cmd("Dotnet debug profile") end)
+          return dap.ABORT
+        end,
         console = merged_opts.debugger.console,
       },
     })
@@ -164,7 +148,7 @@ local function auto_register_dap(merged_opts)
 end
 
 ---@return table<string>
-local function split_by_whitespace(str) return str and polyfills.iter(str:gmatch("%S+")):totable() or {} end
+local function split_by_whitespace(str) return str and vim.iter(str:gmatch("%S+")):totable() or {} end
 
 local function traverse_subcommands(args, parent)
   if next(args) then
@@ -179,7 +163,7 @@ local function traverse_subcommands(args, parent)
   elseif parent.handle then
     parent.handle(args, require("easy-dotnet.options").options)
   else
-    local required = polyfills.tbl_keys(parent.subcommands)
+    local required = vim.tbl_keys(parent.subcommands)
     print("Missing required argument " .. vim.inspect(required))
   end
 end
@@ -201,7 +185,7 @@ local function complete_command(arg_lead, cmdline)
   if not args then return all_commands end
   local pre_arg_lead = args:match("^(.*)" .. arg_lead .. "$")
 
-  local matches = polyfills
+  local matches = vim
     .iter(all_commands)
     :map(function(command)
       if pre_arg_lead ~= "" and pre_arg_lead ~= nil then
@@ -316,16 +300,14 @@ M.setup = function(opts)
     end)
   end
 
-  polyfills.iter(collect_commands_with_handles(commands)):each(function(name, handle)
+  vim.iter(collect_commands_with_handles(commands)):each(function(name, handle)
     M[name] = wrap(function(args, options) handle(args, options or require("easy-dotnet.options").options) end)
   end)
-
-  register_legacy_functions()
 
   if merged_opts.lsp.enabled == true then
     local lsp = require("easy-dotnet.roslyn.lsp")
     lsp.enable(merged_opts.lsp)
-    lsp.preload_roslyn(merged_opts.lsp)
+    if merged_opts.background_scanning then lsp.preload_roslyn(merged_opts.lsp) end
   end
   if merged_opts.projx_lsp.enabled == true then require("easy-dotnet.projx.lsp").enable() end
   wrap(auto_register_dap)(merged_opts)
@@ -335,8 +317,6 @@ M.setup = function(opts)
 end
 
 M.create_new_item = wrap(function(...) require("easy-dotnet.actions.new").create_new_item(...) end)
-
-M.prepare_debugger = debug.prepare_debugger
 
 M.try_get_selected_solution = function()
   local file = require("easy-dotnet.parsers.sln-parse").try_get_selected_solution_file()

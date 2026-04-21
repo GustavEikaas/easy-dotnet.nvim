@@ -222,4 +222,171 @@ M.pick_sync = function(bufnr, options, title, autopick, apply_numeration)
   return selected
 end
 
+---@param lines string[]
+---@return string[]
+local function flatten_lines(lines)
+  local out = {}
+  for _, line in ipairs(lines) do
+    vim.list_extend(out, vim.split(line, "\n", { plain = true }))
+  end
+  return out
+end
+
+---@param guid string scope GUID from server
+---@param display_to_id table<string, string>
+---@return table fzf-lua previewer class
+local function make_server_previewer(guid, display_to_id)
+  local builtin = require("fzf-lua.previewer.builtin")
+  local rpc = require("easy-dotnet.rpc.rpc-client")
+
+  local P = builtin.base:extend()
+
+  P._ctor = function() return P end
+
+  local current_item = nil
+
+  function P:populate_preview_buf(entry_str)
+    if not self.win or not self.win:validate_preview() then return end
+
+    current_item = entry_str
+
+    local item_id = display_to_id[entry_str]
+    if not item_id then
+      local tmp = self:get_tmp_buffer()
+      vim.api.nvim_buf_set_lines(tmp, 0, -1, false, { "No preview available" })
+      self:set_preview_buf(tmp)
+      return
+    end
+
+    local loading_buf = self:get_tmp_buffer()
+    vim.api.nvim_buf_set_lines(loading_buf, 0, -1, false, { "Loading…" })
+    self:set_preview_buf(loading_buf)
+
+    local previewer = self
+    rpc.request("picker/preview", { guid = guid, itemId = item_id }, function(res)
+      if current_item ~= entry_str then return end
+      if not previewer.win or not previewer.win:validate_preview() then return end
+
+      local result = res and res.result
+      local tmp_buf = previewer:get_tmp_buffer()
+
+      if not result then
+        vim.api.nvim_buf_set_lines(tmp_buf, 0, -1, false, { "No preview available" })
+        previewer:set_preview_buf(tmp_buf)
+        return
+      end
+
+      if result.type == "File" then
+        local ok, lines = pcall(vim.fn.readfile, result.path)
+        if ok then
+          vim.api.nvim_buf_set_lines(tmp_buf, 0, -1, false, flatten_lines(lines))
+          local ft = vim.filetype.match({ filename = result.path }) or ""
+          if ft ~= "" then vim.bo[tmp_buf].filetype = ft end
+        else
+          vim.api.nvim_buf_set_lines(tmp_buf, 0, -1, false, { "Could not read: " .. result.path })
+        end
+      elseif result.type == "Text" then
+        vim.api.nvim_buf_set_lines(tmp_buf, 0, -1, false, flatten_lines(result.lines or {}))
+        if result.filetype then vim.bo[tmp_buf].filetype = result.filetype end
+      end
+
+      previewer:set_preview_buf(tmp_buf)
+    end)
+  end
+
+  return P
+end
+
+---@param params table picker/live params from server
+---@param response fun(result: table|nil)
+M.server_live = function(params, response)
+  local responded = false
+  local function do_response(result)
+    if responded then return end
+    responded = true
+    response(result)
+  end
+
+  local display_to_id = {}
+  local rpc = require("easy-dotnet.rpc.rpc-client")
+
+  require("fzf-lua").fzf_live(function(query)
+    return coroutine.wrap(function(add_item, finished)
+      local co = coroutine.running()
+      local items = nil
+
+      rpc.request("picker/query", { guid = params.guid, query = query[1] or "" }, function(res)
+        items = (res and not res.error) and res.result or {}
+        vim.schedule(function() coroutine.resume(co) end)
+      end)
+
+      coroutine.yield()
+
+      for _, item in ipairs(items) do
+        display_to_id[item.display] = item.id
+        add_item(item.display)
+      end
+      finished()
+    end)
+  end, {
+    prompt = (params.multi and "[Multi] " or "") .. params.prompt .. " > ",
+    fzf_opts = params.multi and { ["--multi"] = "" } or {},
+    previewer = params.preview and make_server_previewer(params.guid, display_to_id) or nil,
+    actions = {
+      ["default"] = function(selected)
+        local ids = {}
+        for _, sel in ipairs(selected) do
+          local id = display_to_id[sel]
+          if id then table.insert(ids, id) end
+        end
+        do_response(#ids > 0 and { selectedIds = ids } or nil)
+      end,
+    },
+    winopts = {
+      on_close = function()
+        vim.schedule(function() do_response(nil) end)
+      end,
+    },
+  })
+end
+
+---@param params table picker/pick params from server
+---@param response fun(result: table|nil)
+M.server_picker = function(params, response)
+  local responded = false
+  local function do_response(result)
+    if responded then return end
+    responded = true
+    response(result)
+  end
+
+  local display_to_id = {}
+  local items = {}
+  for _, c in ipairs(params.choices) do
+    display_to_id[c.display] = c.id
+    table.insert(items, c.display)
+  end
+
+  require("fzf-lua").fzf_exec(items, {
+    prompt = (params.multi and "[Multi] " or "") .. params.prompt .. " > ",
+    fzf_opts = params.multi and { ["--multi"] = "" } or {},
+    previewer = params.preview and make_server_previewer(params.guid, display_to_id) or nil,
+    actions = {
+      ["default"] = function(selected)
+        local ids = {}
+        for _, sel in ipairs(selected) do
+          local id = display_to_id[sel]
+          if id then table.insert(ids, id) end
+        end
+        do_response(#ids > 0 and { selectedIds = ids } or nil)
+      end,
+    },
+    winopts = {
+      on_close = function()
+        vim.schedule(function() do_response(nil) end)
+      end,
+    },
+  })
+end
+
 return M

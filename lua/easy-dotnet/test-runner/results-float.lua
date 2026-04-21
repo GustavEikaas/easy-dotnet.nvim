@@ -11,7 +11,7 @@ local function jump_to(file, line, close_wins)
   if line then
     pcall(vim.api.nvim_win_set_cursor, 0, { line, 0 })
     vim.cmd("normal! zz")
-    vim.api.nvim_buf_add_highlight(0, ns_id, "EasyDotnetTestRunnerFailed", line - 1, 0, -1)
+    vim.hl.range(0, ns_id, "EasyDotnetTestRunnerFailed", { line - 1, 0 }, { line - 1, -1 })
   end
 end
 
@@ -104,7 +104,7 @@ local function open_from_buffer(node, result, refocus)
   end
 
   for _, hl in ipairs(highlights) do
-    vim.api.nvim_buf_add_highlight(float.buf, ns_id, hl[2], hl[1], 0, -1)
+    vim.hl.range(float.buf, ns_id, hl[2], { hl[1], 0 }, { hl[1], -1 })
   end
 
   attach_frame_jump(float.buf, float.win, frame_map, { float.win })
@@ -158,7 +158,7 @@ local function open_from_runner(node, result, refocus)
   end
 
   for _, hl in ipairs(highlights) do
-    vim.api.nvim_buf_add_highlight(detail_float.buf, ns_id, hl[2], hl[1], 0, -1)
+    vim.hl.range(detail_float.buf, ns_id, hl[2], { hl[1], 0 }, { hl[1], -1 })
   end
 
   local close_wins = { detail_float.win, file_float and file_float.win or nil }
@@ -180,8 +180,17 @@ local function open_from_runner(node, result, refocus)
       line = math.max(1, math.min(line, max))
       vim.api.nvim_win_set_cursor(file_float.win, { line, 0 })
       vim.api.nvim_win_call(file_float.win, function() vim.cmd("normal! zz") end)
-      vim.api.nvim_buf_add_highlight(file_float.buf, ns_id, "EasyDotnetTestRunnerFailed", line - 1, 0, -1)
+      vim.hl.range(file_float.buf, ns_id, "EasyDotnetTestRunnerFailed", { line - 1, 0 }, { line - 1, -1 })
     end
+  end
+end
+
+-- Strip trailing \r from .NET \r\n line endings that survive the RPC \n split.
+-- Without this, Neovim renders the leftover \r as ^M in float buffers.
+local function strip_cr(lines)
+  if not lines then return end
+  for i, line in ipairs(lines) do
+    lines[i] = line:gsub("\r", "")
   end
 end
 
@@ -189,6 +198,14 @@ end
 ---@param result easy-dotnet.TestRunner.Results   from testrunner/getResults
 ---@param opts?  { source: "buffer"|"runner" }    defaults to "runner"
 function M.open(node, result, opts)
+  strip_cr(result.errorMessage)
+  strip_cr(result.stdout)
+  if result.frames then
+    for _, frame in ipairs(result.frames) do
+      if frame.originalText then frame.originalText = frame.originalText:gsub("\r", "") end
+    end
+  end
+
   local source = opts and opts.source or "runner"
   local render = require("easy-dotnet.test-runner.render")
   local refocus = function()

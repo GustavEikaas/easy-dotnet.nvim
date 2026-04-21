@@ -118,19 +118,23 @@ end
 ---@field stop fun(self: easy-dotnet.RPC.Client.Dotnet, cb: fun()): nil # Stops the dotnet server
 ---@field restart fun(self: easy-dotnet.RPC.Client.Dotnet, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
 ---@field msbuild easy-dotnet.RPC.Client.MsBuild
----@field debugger easy-dotnet.RPC.Client.Debugger
 ---@field lsp easy-dotnet.RPC.Client.Lsp
 ---@field entity_framework easy-dotnet.RPC.Client.EntityFramework
 ---@field testrunner easy-dotnet.RPC.Client.TestRunner
 ---@field template_engine easy-dotnet.RPC.Client.TemplateEngine
----@field launch_profiles easy-dotnet.RPC.Client.LaunchProfiles
 ---@field nuget easy-dotnet.RPC.Client.Nuget
+---@field package_manager easy-dotnet.RPC.Client.PackageManager
 ---@field roslyn easy-dotnet.RPC.Client.Roslyn
 ---@field test easy-dotnet.RPC.Client.Test
 -- luacheck: no max line length
+---@field workspace easy-dotnet.RPC.Client.Workspace
+---@field project_reference easy-dotnet.RPC.Client.ProjectReference
+---@field server easy-dotnet.RPC.Client.Server
 ---@field secrets_init fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.RPC.ProjectUserSecretsInitResponse), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request adding package
 -- luacheck: no max line length
 ---@field solution_list_projects fun(self: easy-dotnet.RPC.Client.Dotnet, solution_file_path: string, cb?: fun(res: easy-dotnet.Server.SolutionFileProjectResponse[]), include_non_existing?: boolean, opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+---@field solution_add_project fun(self: easy-dotnet.RPC.Client.Dotnet, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+---@field solution_remove_project fun(self: easy-dotnet.RPC.Client.Dotnet, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field outdated_packages fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.Nuget.OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
 ---@field ef fun(self: easy-dotnet.RPC.Client.Dotnet): integer | false
 ---@field get_state fun(self: easy-dotnet.RPC.Client.Dotnet): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
@@ -153,13 +157,15 @@ function M:new()
   instance.msbuild = require("easy-dotnet.rpc.controllers.msbuild").new(client)
   instance.testrunner = require("easy-dotnet.rpc.controllers.testrunner").new(client)
   instance.template_engine = require("easy-dotnet.rpc.controllers.template").new(client)
-  instance.launch_profiles = require("easy-dotnet.rpc.controllers.launch-profiles").new(client)
   instance.entity_framework = require("easy-dotnet.rpc.controllers.entity-framework").new(client)
   instance.nuget = require("easy-dotnet.rpc.controllers.nuget").new(client)
+  instance.package_manager = require("easy-dotnet.rpc.controllers.package-manager").new(client)
   instance.roslyn = require("easy-dotnet.rpc.controllers.roslyn").new(client)
-  instance.debugger = require("easy-dotnet.rpc.controllers.debugger").new(client)
   instance.lsp = require("easy-dotnet.rpc.controllers.lsp").new(client)
   instance.test = require("easy-dotnet.rpc.controllers.test").new(client)
+  instance.workspace = require("easy-dotnet.rpc.controllers.workspace").new(client)
+  instance.project_reference = require("easy-dotnet.rpc.controllers.project-reference").new(client)
+  instance.server = require("easy-dotnet.rpc.controllers.server").new(client)
   return instance
 end
 
@@ -332,6 +338,28 @@ function M:solution_list_projects(solution_file_path, cb, include_non_existing, 
     on_crash = opts.on_crash,
     method = "solution/list-projects",
     params = { solutionFilePath = solution_file_path },
+  })()
+end
+
+function M:solution_add_project(cb, opts)
+  opts = opts or {}
+  return M.create_rpc_call({
+    client = self._client,
+    cb = cb,
+    on_crash = opts.on_crash,
+    method = "solution/add-project",
+    params = {},
+  })()
+end
+
+function M:solution_remove_project(cb, opts)
+  opts = opts or {}
+  return M.create_rpc_call({
+    client = self._client,
+    cb = cb,
+    on_crash = opts.on_crash,
+    method = "solution/remove-project",
+    params = {},
   })()
 end
 

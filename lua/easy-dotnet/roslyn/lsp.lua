@@ -275,9 +275,13 @@ local function populate_source_generated_buffer(client, buf, file)
   }
 
   local function handler(err, result)
+    if not result or type(result) ~= "table" then return end
     if result.resultId == vim.b[buf].resultId then return end
     assert(not err, vim.inspect(err))
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(result.text or "", "\r?\n"))
+    local text = result.text
+    if text == vim.NIL or type(text) ~= "string" then text = "" end
+    text = text:gsub("\r\n", "\n")
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(text, "\n", { plain = true }))
     vim.b[buf].resultId = result.resultId
     vim.lsp.buf_attach_client(buf, client.id)
     vim.bo[buf].filetype = "cs"
@@ -318,6 +322,19 @@ local function source_generated_autocmd()
   })
 end
 
+local function use_roslyn_fold(bufnr)
+  local enabled = require("easy-dotnet.options").get_option("lsp").set_fold_expr
+  if not enabled then return end
+  for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
+    vim.wo[win][0].foldmethod = "expr"
+    vim.wo[win][0].foldexpr = "v:lua.vim.lsp.foldexpr()"
+  end
+end
+
+local function fix_indent_expression(buf)
+  if vim.api.nvim_buf_is_valid(buf) then vim.bo[buf].indentexpr = "GetCSIndent(v:lnum)" end
+end
+
 ---@param opts easy-dotnet.LspOpts
 function M.enable(opts)
   if vim.fn.has("nvim-0.11") == 0 then
@@ -356,6 +373,10 @@ function M.enable(opts)
       },
       diagnostic = {
         dynamicRegistration = true,
+      },
+      foldingRange = {
+        dynamicRegistration = false,
+        lineFoldingOnly = true,
       },
     },
     workspace = {
@@ -413,12 +434,24 @@ function M.enable(opts)
     end,
     on_attach = function(client, buf)
       vim.b[buf].roslyn_buf_opened_at = now()
+      if vim.bo[buf].filetype == "cs" then
+        use_roslyn_fold(buf)
+        fix_indent_expression(buf)
+      end
       if require("easy-dotnet.options").get_option("lsp").auto_refresh_codelens then
-        vim.lsp.codelens.refresh()
-        vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
-          buffer = buf,
-          callback = vim.lsp.codelens.refresh,
-        })
+        if vim.fn.has("nvim-0.12") == 1 then
+          vim.lsp.codelens.enable(true, { bufnr = buf })
+          vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
+            buffer = buf,
+            callback = function() vim.lsp.codelens.enable(true, { bufnr = buf }) end,
+          })
+        else
+          vim.lsp.codelens.refresh()
+          vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
+            buffer = buf,
+            callback = vim.lsp.codelens.refresh,
+          })
+        end
       end
       if vim.bo[buf].filetype == "cs" then check_project_context(client, buf) end
     end,

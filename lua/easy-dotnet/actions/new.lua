@@ -173,23 +173,21 @@ local function show_confirmation_ui(initial_name, initial_path, param_definition
     local ns_id = vim.api.nvim_create_namespace("DotnetNewUI")
     vim.api.nvim_buf_clear_namespace(buf, ns_id, 0, -1)
 
-    vim.api.nvim_buf_add_highlight(buf, ns_id, "Title", 0, 0, -1)
-
-    vim.api.nvim_buf_add_highlight(buf, ns_id, "Keyword", 3, 0, 15)
-    vim.api.nvim_buf_add_highlight(buf, ns_id, "String", 3, 16, -1)
-
-    vim.api.nvim_buf_add_highlight(buf, ns_id, "Keyword", 4, 0, 15)
-    vim.api.nvim_buf_add_highlight(buf, ns_id, "String", 4, 16, -1)
+    vim.hl.range(buf, ns_id, "Title", { 0, 0 }, { 0, -1 })
+    vim.hl.range(buf, ns_id, "Keyword", { 3, 0 }, { 3, 15 })
+    vim.hl.range(buf, ns_id, "String", { 3, 16 }, { 3, -1 })
+    vim.hl.range(buf, ns_id, "Keyword", { 4, 0 }, { 4, 15 })
+    vim.hl.range(buf, ns_id, "String", { 4, 16 }, { 4, -1 })
 
     local count = #lines
-    vim.api.nvim_buf_add_highlight(buf, ns_id, "String", count - 2, 0, -1)
-    vim.api.nvim_buf_add_highlight(buf, ns_id, "Comment", count - 1, 0, -1)
+    vim.hl.range(buf, ns_id, "String", { count - 2, 0 }, { count - 2, -1 })
+    vim.hl.range(buf, ns_id, "Comment", { count - 1, 0 }, { count - 1, -1 })
 
     for _, data in pairs(action_map) do
       if type(data) == "table" and data.hl then
         local h = data.hl
-        vim.api.nvim_buf_add_highlight(buf, ns_id, "Identifier", h.row, h.name_range[1], h.name_range[2])
-        vim.api.nvim_buf_add_highlight(buf, ns_id, "String", h.row, h.val_range[1], h.val_range[2])
+        vim.hl.range(buf, ns_id, "Identifier", { h.row, h.name_range[1] }, { h.row, h.name_range[2] })
+        vim.hl.range(buf, ns_id, "String", { h.row, h.val_range[1] }, { h.row, h.val_range[2] })
       end
     end
 

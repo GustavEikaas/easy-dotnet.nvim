@@ -1,5 +1,4 @@
 local ns_id = require("easy-dotnet.constants").ns_id
-local polyfills = require("easy-dotnet.polyfills")
 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
 local logger = require("easy-dotnet.logger")
 
@@ -72,13 +71,12 @@ local function discover_package_references(project)
   local finished = M.append_job("Discovering package references")
 
   client:initialize(function()
-    local tfm = project.msbuild_props and project.msbuild_props.targetFramework or vim.NIL
-    client.msbuild:msbuild_list_package_reference(project.path, tfm, function(res)
-      if #res == 0 then
+    client.package_manager:list_installed(project.path, function(res)
+      if not res or #res == 0 then
         M.package_refs = nil
       else
-        ---@param value easy-dotnet.MSBuild.PackageReference
-        local package_refs = vim.tbl_map(function(value) return string.format("%s@%s", value.id, value.resolvedVersion) end, res)
+        ---@param value easy-dotnet.Nuget.InstalledPackageReference
+        local package_refs = vim.tbl_map(function(value) return string.format("%s@%s", value.id, value.version) end, res)
         M.package_refs = package_refs
       end
       finished()
@@ -96,7 +94,7 @@ function M.append_job(id)
 
   local on_job_finished_callback = function()
     job.completed = true
-    local is_all_finished = polyfills.iter(M.jobs):all(function(s) return s.completed end)
+    local is_all_finished = vim.iter(M.jobs):all(function(s) return s.completed end)
     if is_all_finished == true then M.jobs = {} end
     M.refresh()
   end
@@ -117,17 +115,15 @@ end
 
 local function set_buffer_options()
   vim.api.nvim_win_set_height(M.win, M.height)
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
+  vim.api.nvim_set_option_value("modifiable", M.modifiable, { buf = M.buf })
   vim.api.nvim_buf_set_name(M.buf, M.buf_name)
-  vim.api.nvim_buf_set_option(M.buf, "filetype", M.filetype)
-  --Crashes on nvim 0.9.5??
-  -- vim.api.nvim_buf_set_option(M.buf, "cursorline", true)
+  vim.api.nvim_set_option_value("filetype", M.filetype, { buf = M.buf })
 end
 
 ---@param highlights easy-dotnet.Highlight[]
 local function apply_highlights(highlights)
   for _, value in ipairs(highlights) do
-    if value.highlight ~= nil then vim.api.nvim_buf_add_highlight(M.buf, ns_id, value.highlight, value.index - 1, 0, -1) end
+    if value.highlight ~= nil then vim.hl.range(M.buf, ns_id, value.highlight, { value.index - 1, 0 }, { value.index - 1, -1 }) end
   end
 end
 
@@ -178,19 +174,15 @@ local function remove_package_keymap(ref)
     --TODO: customize keybindings
     key = "r",
     handler = function()
-      local cleanup = M.append_job("Removing package " .. ref)
-      local package_name = ref:match("^(.-)@")
-      vim.fn.jobstart(string.format("dotnet remove %s package %s ", M.project.path, package_name), {
-        on_exit = function(_, code)
+      local package_id = ref:match("^(.-)@")
+      if not package_id then return end
+      local cleanup = M.append_job("Removing " .. package_id)
+      client:initialize(function()
+        client.package_manager:remove(M.project.path, { package_id }, function()
           cleanup()
-          if code ~= 0 then
-            logger.error("Command failed")
-          else
-            logger.info("Package removed " .. package_name)
-            dotnet_restore(M.project, function() discover_package_references(M.project) end)
-          end
-        end,
-      })
+          discover_package_references(M.project)
+        end)
+      end)
     end,
   }
 end
@@ -199,7 +191,7 @@ local function add_package_keymap()
   return {
     key = "a",
     handler = function()
-      require("easy-dotnet.nuget").search_nuget(M.project.path)
+      require("easy-dotnet.nuget").add_package(M.project.path)
       vim.api.nvim_set_current_win(M.win)
       discover_package_references(M.project)
     end,
@@ -210,37 +202,29 @@ local function add_project_keymap()
   return {
     key = "a",
     handler = function()
-      --HACK: fix this
-      local cleanup = nil
-      local add = M.project.language == "csharp" and require("easy-dotnet.csproj-mappings").add_project_reference or require("easy-dotnet.fsproj-mappings").add_project_reference
-      local res = add(M.project.path, function()
-        if cleanup then cleanup() end
-        vim.api.nvim_set_current_win(M.win)
-        discover_project_references(M.project)
+      local cleanup = M.append_job("Adding project reference")
+      client:initialize(function()
+        client.project_reference:add_project_reference(M.project.path, function()
+          cleanup()
+          vim.api.nvim_set_current_win(M.win)
+          discover_project_references(M.project)
+        end)
       end)
-      if res ~= false then cleanup = M.append_job("Adding project reference") end
     end,
   }
 end
 
-local function remove_project_keymap(ref)
+local function remove_project_keymap()
   return {
     key = "r",
     handler = function()
       local cleanup = M.append_job("Removing project reference")
-      coroutine.wrap(function()
-        client:initialize(function()
-          client.msbuild:msbuild_remove_project_reference(M.project.path, ref, function(res)
-            cleanup()
-            if res == false then
-              logger.error("Command failed")
-            else
-              logger.info("Project removed " .. ref)
-              discover_project_references(M.project)
-            end
-          end)
+      client:initialize(function()
+        client.project_reference:remove_project_reference(M.project.path, function()
+          cleanup()
+          discover_project_references(M.project)
         end)
-      end)()
+      end)
     end,
   }
 end
@@ -267,7 +251,7 @@ local function stringify_project_header()
     table.insert(args, { "  None", "Question", { add_project_keymap() } })
   else
     for _, ref in ipairs(M.project_refs) do
-      table.insert(args, { string.format("  %s", vim.fs.basename(ref)), "Question", { remove_project_keymap(ref), add_project_keymap() } })
+      table.insert(args, { string.format("  %s", vim.fs.basename(ref)), "Question", { remove_project_keymap(), add_project_keymap() } })
     end
   end
 
@@ -293,10 +277,11 @@ end
 
 local function print_lines()
   vim.api.nvim_buf_clear_namespace(M.buf, ns_id, 0, -1)
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", true)
+
+  vim.api.nvim_set_option_value("modifiable", true, { buf = M.buf })
   local stringLines, highlights, keymaps = stringify()
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, stringLines)
-  vim.api.nvim_buf_set_option(M.buf, "modifiable", M.modifiable)
+  vim.api.nvim_set_option_value("modifiable", M.modifiable, { buf = M.buf })
 
   if keymaps ~= nil then
     local keys = {}
@@ -407,7 +392,7 @@ function M.open()
   end
   local win_opts = get_default_win_opts()
   M.win = vim.api.nvim_open_win(M.buf, true, win_opts)
-  vim.api.nvim_buf_set_option(M.buf, "bufhidden", "hide")
+  vim.api.nvim_set_option_value("bufhidden", "hide", { buf = M.buf })
   return true
 end
 

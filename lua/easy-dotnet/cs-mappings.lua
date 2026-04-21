@@ -42,13 +42,13 @@ local function auto_bootstrap_namespace(bufnr, mode)
   })
 
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-  local on_finished = function()
-    vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1)
-    vim.cmd("checktime")
-  end
 
-  local from_json = function(clipboard) client.roslyn:roslyn_bootstrap_file_json(curr_file, clipboard, mode == "file_scoped", on_finished) end
-  local default = function() client.roslyn:roslyn_bootstrap_file(curr_file, type_keyword, mode == "file_scoped", on_finished) end
+  local clear_virtual_text = function() vim.api.nvim_buf_clear_namespace(bufnr, ns, 0, -1) end
+
+  local opts = { on_crash = function(_) clear_virtual_text() end }
+
+  local from_json = function(clipboard) client.roslyn:roslyn_bootstrap_file_json_v2(curr_file, clipboard, mode == "file_scoped", clear_virtual_text, opts) end
+  local default = function() client.roslyn:roslyn_bootstrap_file_v2(curr_file, type_keyword, mode == "file_scoped", clear_virtual_text, opts) end
 
   client:initialize(function()
     local opt = require("easy-dotnet.options").get_option("auto_bootstrap_namespace")

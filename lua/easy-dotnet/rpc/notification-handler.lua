@@ -6,6 +6,27 @@ local M = {}
 
 local active_server_finish_callbacks = {}
 
+local function handle_quickfix_set(params, silent)
+  require("easy-dotnet.test-runner.render").hide()
+  local items = vim.tbl_map(
+    function(value)
+      return {
+        filename = value.fileName,
+        lnum = value.lineNumber,
+        col = value.columnNumber,
+        text = value.text,
+        type = value.type == 2 and "E" or value.type == 1 and "W" or "I",
+      }
+    end,
+    params
+  )
+  vim.fn.setqflist({}, " ", {
+    title = constants.server_quickfix_title,
+    items = items,
+  })
+  if not silent then vim.cmd("copen") end
+end
+
 ---@param client easy-dotnet.RPC.Client.Dotnet
 local function nuget_restore_handler(client, target_path) client.nuget:nuget_restore(target_path) end
 
@@ -52,25 +73,9 @@ M.handler = function(client, method, params)
     elseif method == "displayMessage" then
       logger.info(params.message)
     elseif method == "quickfix/set" then
-      require("easy-dotnet.test-runner.render").hide()
-      local items = vim.tbl_map(
-        function(value)
-          return {
-            filename = value.fileName,
-            lnum = value.lineNumber,
-            col = value.columnNumber,
-            text = value.text,
-            type = value.type == 2 and "E" or value.type == 1 and "W" or "I",
-          }
-        end,
-        params
-      )
-
-      vim.fn.setqflist({}, " ", {
-        title = constants.server_quickfix_title,
-        items = items,
-      })
-      vim.cmd("copen")
+      handle_quickfix_set(params, false)
+    elseif method == "quickfix/set-silent" then
+      handle_quickfix_set(params, true)
     elseif method == "quickfix/close" then
       local info = vim.fn.getqflist({ title = 1 })
       local our_qf = info.title == constants.server_quickfix_title

@@ -20,23 +20,22 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 
 # Table of Contents
 
-1. [Easy-dotnet.nvim](#easy-dotnet.nvim)
-2. [Simplifying .NET development in Neovim](#simplifying-.net-development-in-neovim)
-3. [Motivation](#motivation)
-4. [Features](#features)
-5. [Requirements](#requirements)
-6. [Setup](#setup)
+1. [Simplifying .NET development in Neovim](#simplifying-net-development-in-neovim)
+2. [Motivation](#motivation)
+3. [Features](#features)
+4. [Requirements](#requirements)
+5. [Setup](#setup)
    - [Without options](#without-options)
    - [With options](#with-options)
    - [Lualine config](#lualine-config)
-7. [Commands](#commands)
+6. [Commands](#commands)
    - [Lua functions](#lua-functions)
    - [Vim commands](#vim-commands)
-8. [Testrunner](#testrunner)
+7. [Roslyn LSP](#roslyn-lsp)
+8. [Test runner](#test-runner)
    - [Keymaps](#keymaps)
    - [Debugging tests](#debugging-tests)
-   - [Running tests from buffer](#running-tests-directly-from-buffer)
-   - [Debugging tests from buffer](#debugging-tests-directly-from-buffer)
+   - [Running tests from buffer](#running-tests-from-buffer)
 9. [Project view](#project-view)
    - [Features](#features-1)
    - [Keymaps](#keymaps-1)
@@ -47,24 +46,25 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 11. [Outdated](#outdated)
 12. [Add](#add)
     - [Add package](#add-package)
-13. [.NET Framework](#.net-framework)
-    - [Requirements](#requirements-1)
-14. [Project mappings](#project-mappings)
+13. [Project mappings](#project-mappings)
     - [Add reference](#add-reference)
     - [Package autocomplete](#package-autocomplete)
+14. [.NET Framework](#net-framework)
+    - [Requirements](#requirements-1)
 15. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
     - [Integrating with neo-tree](#integrating-with-neo-tree)
-    - [Integrating with mini.files](#integrating-with-mini-files)
-    - [Integrating with snacks.explorer](#integrating-with-snacks-explorer)
+    - [Integrating with mini files](#integrating-with-mini-files)
+    - [Integrating with snacks explorer](#integrating-with-snacks-explorer)
 16. [EntityFramework](#entityframework)
+    - [Requirements](#requirements-2)
     - [Database](#database)
     - [Migrations](#migrations)
 17. [Language injections](#language-injections)
     - [Showcase](#showcase)
-    - [Requirements](#requirements-2)
+    - [Requirements](#requirements-3)
     - [Support matrix](#support-matrix)
 18. [Nvim-dap configuration](#nvim-dap-configuration)
 19. [Troubleshooting](#troubleshooting)
@@ -111,7 +111,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
 -- lazy.nvim
 {
   "GustavEikaas/easy-dotnet.nvim",
-  dependencies = { "nvim-lua/plenary.nvim", 'nvim-telescope/telescope.nvim', },
+  dependencies = { "nvim-lua/plenary.nvim", 'folke/snacks.nvim', },
   config = function()
     require("easy-dotnet").setup()
   end
@@ -125,7 +125,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
   "GustavEikaas/easy-dotnet.nvim",
   -- 'nvim-telescope/telescope.nvim' or 'ibhagwan/fzf-lua' or 'folke/snacks.nvim'
   -- are highly recommended for a better experience
-  dependencies = { "nvim-lua/plenary.nvim", 'mfussenegger/nvim-dap', 'nvim-telescope/telescope.nvim', },
+  dependencies = { "nvim-lua/plenary.nvim", 'mfussenegger/nvim-dap', 'folke/snacks.nvim', },
   config = function()
     local dotnet = require("easy-dotnet")
     -- Options are not required
@@ -138,6 +138,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
       external_terminal = nil,
       lsp = {
         enabled = true, -- Enable builtin roslyn lsp
+        set_fold_expr = false,
         preload_roslyn = true, -- Start loading roslyn before any buffer is opened
         roslynator_enabled = true, -- Automatically enable roslynator analyzer
         easy_dotnet_analyzer_enabled = true, -- Enable roslyn analyzer from easy-dotnet-server
@@ -182,6 +183,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
         },
         mappings = {
           run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
+          run_all_tests_from_buffer = { lhs = "<leader>t", desc = "Run all tests in file" },
           get_build_errors = { lhs = "<leader>e", desc = "get build errors" },
           peek_stack_trace_from_buffer = { lhs = "<leader>p", desc = "peek stack trace from buffer" },
           debug_test_from_buffer = { lhs = "<leader>d", desc = "run test from buffer" },
@@ -203,21 +205,6 @@ Although not *required* by the plugin, it is highly recommended to install one o
           prefix = "sln" -- "sln" | "none"
         }
       },
-      ---@param action "test" | "restore" | "build" | "run"
-      terminal = function(path, action, args)
-        args = args or ""
-        local commands = {
-          run = function() return string.format("dotnet run --project %s %s", path, args) end,
-          test = function() return string.format("dotnet test %s %s", path, args) end,
-          restore = function() return string.format("dotnet restore %s %s", path, args) end,
-          build = function() return string.format("dotnet build %s %s", path, args) end,
-          watch = function() return string.format("dotnet watch --project %s %s", path, args) end,
-        }
-        local command = commands[action]()
-        if require("easy-dotnet.extensions").isWindows() == true then command = command .. "\r" end
-        vim.cmd("vsplit")
-        vim.cmd("term " .. command)
-      end,
       csproj_mappings = true,
       fsproj_mappings = true,
       auto_bootstrap_namespace = {
@@ -237,8 +224,8 @@ Although not *required* by the plugin, it is highly recommended to install one o
       -- possible values are "telescope" | "fzf" | "snacks" | "basic"
       -- if no picker is specified, the plugin will determine
       -- the available one automatically with this priority:
-      -- telescope -> fzf -> snacks ->  basic
-      picker = "telescope",
+      --  snacks -> fzf -> telescope ->  basic
+      picker = "snacks",
       background_scanning = true,
       notifications = {
         --Set this to false if you have configured lualine to avoid double logging
@@ -301,6 +288,7 @@ require("lualine").setup {
 | `dotnet.run_profile_default()` | `dotnet run --project <TS Default> --launch-profile <TS> <DArgs>` |
 ||  
 | `dotnet.debug_profile()`                        | ``                                                                                                       |
+| `dotnet.debug_attach()`                        | ``                                                                                                       |
 | `dotnet.debug()` | ``                                                                                                             |
 | `dotnet.debug_default()` | `` |
 | `dotnet.debug_profile_default()` | `` |
@@ -430,6 +418,7 @@ Dotnet run default
 Dotnet run profile
 Dotnet run profile default
 Dotnet debug
+Dotnet debug attach
 Dotnet debug default
 Dotnet debug profile
 Dotnet debug profile default

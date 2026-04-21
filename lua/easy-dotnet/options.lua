@@ -19,6 +19,7 @@
 
 ---@class easy-dotnet.LspOpts
 ---@field enabled boolean                -- Whether the LSP is enabled
+---@field set_fold_expr boolean
 ---@field preload_roslyn boolean
 ---@field analyzer_assemblies string[]|nil -- Optional list of analyzer DLLs
 ---@field easy_dotnet_analyzer_enabled boolean -- Whether built-in easy-dotnet roslyn analyzer is enabled
@@ -44,6 +45,7 @@
 
 ---@class easy-dotnet.TestRunner.Mappings
 ---@field run_test_from_buffer easy-dotnet.Keymap
+---@field run_all_tests_from_buffer easy-dotnet.Keymap
 ---@field get_build_errors easy-dotnet.Keymap
 ---@field peek_stack_trace_from_buffer easy-dotnet.Keymap
 ---@field debug_test_from_buffer easy-dotnet.Keymap
@@ -94,23 +96,6 @@ local M = {
     },
     -- Optional configuration for external terminals (matches nvim-dap structure)
     external_terminal = nil,
-    ---@param path string
-    ---@param action "test"|"restore"|"build"|"run"|"watch"
-    ---@param args string
-    terminal = function(path, action, args, ctx)
-      args = args or ""
-      local commands = {
-        run = function() return string.format("%s %s", ctx.cmd, args) end,
-        test = function() return string.format("%s %s", ctx.cmd, args) end,
-        restore = function() return string.format("%s %s", ctx.cmd, args) end,
-        build = function() return string.format("%s %s", ctx.cmd, args) end,
-        watch = function() return string.format("dotnet watch --project %s %s", path, args) end,
-      }
-      local command = commands[action]()
-      if require("easy-dotnet.extensions").isWindows() == true then command = command .. "\r" end
-      vim.cmd("vsplit")
-      vim.cmd("term " .. command)
-    end,
     secrets = {
       path = get_secret_path,
     },
@@ -137,6 +122,7 @@ local M = {
       },
       mappings = {
         run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
+        run_all_tests_from_buffer = { lhs = "<leader>t", desc = "Run all tests in file" },
         get_build_errors = { lhs = "<leader>e", desc = "get build errors" },
         peek_stack_trace_from_buffer = { lhs = "<leader>p", desc = "peek stack trace from buffer" },
         debug_test_from_buffer = { lhs = "<leader>d", desc = "run test from buffer" },
@@ -204,6 +190,7 @@ local M = {
     },
     lsp = {
       enabled = true,
+      set_fold_expr = false,
       preload_roslyn = true,
       analyzer_assemblies = {},
       auto_refresh_codelens = true,

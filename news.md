@@ -2,6 +2,30 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## External terminal window reuse ([#336](https://github.com/GustavEikaas/easy-dotnet-server/pull/336))
+When using `options.external_terminal`, running and debugging will spawn a completely separate window like Kitty or Windows Terminal. This is great and provides an easy way to see stdout from your application. Unfortunately, when your app exits, this window is orphaned. Depending on your config, one of 2 things will happen. The terminal window closes, causing you to miss crash logs if any. The window lingers, but it has lost its relationship with easy-dotnet, so when you start a new debug session a completely new window will be spawned. GustavEikaas/easy-dotnet-server#336 fixes this and ensures that terminal windows will be reused no matter which terminal emulator you use.
+
+## Workspace run and debug moved to the server ([#858](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/858))
+
+`:Dotnet run` and `:Dotnet debug` have now been moved fully into the C# server, similar to the test runner rewrite.
+This also improves support for running and debugging file-based apps. Debugging file-based apps was not possible at all previously.
+It now uses the newer managed terminal flow instead of the older user-provided `options.terminal` path.
+CLI arg passthrough when debugging has also been improved, so `:Dotnet debug --abc` will pass `--abc` to the debuggee.
+
+### What this means for you
+
+Run and debug should now behave more consistently, and the server has much better heuristics for deciding whether something should be treated as a project or as a file-based app.
+
+If you want debugging in a separate window, you can use the `external_terminal` option.
+
+```lua 
+dotnet.setup({
+    -- Some examples
+    -- local windows_term = { command = "wt", args = { "-w", "-1", "nt", "--" } }
+    -- local linux_term = { command = "kitty", args = { "--hold", "--" } }
+    external_terminal = nil,
+})
+
 ## Test Runner v2 ([#838](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/838))
 
 The test runner has been completely rewritten. The old implementation was almost entirely Lua, which made it very hard to refactor or improve without introducing regressions. Moving it to the C# server (as discussed in [#809](https://github.com/GustavEikaas/easy-dotnet.nvim/issues/809)) brings strong typing, proper testability, and a much cleaner boundary between UI and business logic. The Lua side is now a thin UI layer the server handles everything else.

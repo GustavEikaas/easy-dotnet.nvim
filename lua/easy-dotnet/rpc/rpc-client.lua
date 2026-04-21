@@ -65,24 +65,33 @@ local M = {
 ---| "msbuild/list-project-reference"
 ---| "msbuild/add-project-reference"
 ---| "msbuild/remove-project-reference"
+---| "msbuild/add-project-reference-interactive"
+---| "msbuild/remove-project-reference-interactive"
 ---| "user-secrets/init"
 ---| "msbuild/project-properties"
 ---| "msbuild/add-package-reference"
 ---| "solution/list-projects"
+---| "solution/add-project"
+---| "solution/remove-project"
 ---| "nuget/push"
 ---| "nuget/get-package-versions"
 ---| "nuget/search-packages"
 ---| "nuget/list-sources"
+---| "nuget/add-package"
+---| "nuget/remove-package"
+---| "nuget/list-installed"
 ---| "test/discover"
 ---| "test/run"
 ---| "outdated/packages"
----| "roslyn/bootstrap-file"
+---| "roslyn/bootstrap-file-v2"
 ---| "roslyn/scope-variables"
 ---| "roslyn/get-workspace-diagnostics"
----| "json-code-gen"
+---| "json-code-gen-v2"
 ---| "template/list"
 ---| "template/parameters"
 ---| "template/instantiate"
+---| "workspace/run"
+---| "workspace/debug"
 ---| "$/enumerator/next"
 
 local connection = nil
@@ -119,11 +128,14 @@ end
 local handlers = {
   ["testrunner/isVisible"] = require("easy-dotnet.rpc.handlers.is_test_runner_visible"),
   openBuffer = require("easy-dotnet.rpc.handlers.open_buffer"),
+  applyWorkspaceEdit = require("easy-dotnet.rpc.handlers.apply_workspace_edit"),
   setBreakpoint = require("easy-dotnet.rpc.handlers.set_breakpoint"),
   promptConfirm = require("easy-dotnet.rpc.handlers.prompt_confirm"),
   promptString = require("easy-dotnet.rpc.handlers.prompt_string"),
   promptSelection = require("easy-dotnet.rpc.handlers.prompt_selection"),
   promptMultiSelection = require("easy-dotnet.rpc.handlers.prompt_selections"),
+  ["picker/pick"] = require("easy-dotnet.rpc.handlers.picker.picker_handler").pick,
+  ["picker/live"] = require("easy-dotnet.rpc.handlers.picker.picker_handler").live,
   startDebugSession = require("easy-dotnet.rpc.handlers.start_debug_session"),
   terminateDebugSession = require("easy-dotnet.rpc.handlers.terminate_debug_session"),
   ---@deprecated we can remove this later when server is updated and we stopped using runCommand
@@ -163,7 +175,7 @@ local function make_response(decoded)
     if err then
       message.error = type(err) == "table" and err or { code = -32603, message = tostring(err) }
     else
-      message.result = result
+      message.result = result ~= nil and result or vim.NIL
     end
 
     local full_message = encode_rpc_message(message)

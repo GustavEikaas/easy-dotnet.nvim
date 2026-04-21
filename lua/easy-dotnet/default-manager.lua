@@ -1,4 +1,3 @@
-local polyfills = require("easy-dotnet.polyfills")
 ---@class easy-dotnet.DefaultProfile
 ---@field project string
 ---@field profile string
@@ -16,14 +15,13 @@ local polyfills = require("easy-dotnet.polyfills")
 
 local M = {}
 
----@alias easy-dotnet.TaskType "build" | "test" | "run" | "launch-profile" | "view" | "watch"
+---@alias easy-dotnet.TaskType "build" | "test" | "run" | "view" | "watch"
 
 ---Gets the property name for the given type.
 ---@param type easy-dotnet.TaskType
 ---@return string
 local function get_property(type)
-  if not (type == "build" or type == "test" or type == "run" or type == "launch-profile" or type == "view" or type == "watch") then error("Expected build, test or run received " .. type) end
-  if type == "launch-profile" then return "default_profile" end
+  if not (type == "build" or type == "test" or type == "run" or type == "view" or type == "watch") then error("Expected build, test or run received " .. type) end
   return string.format("default_%s_project", type)
 end
 
@@ -42,7 +40,7 @@ end
 function M.try_get_cache_file(solution_file_path)
   local sln_name = vim.fs.basename(solution_file_path)
   local dir = get_or_create_cache_dir()
-  local file = polyfills.fs.joinpath(dir, sln_name .. ".json")
+  local file = vim.fs.joinpath(dir, sln_name .. ".json")
   if file_exists(file) then return file end
 end
 
@@ -50,7 +48,7 @@ local function get_or_create_cache_file(solution_file_path)
   local sln_name = vim.fs.basename(solution_file_path)
   local file_utils = require("easy-dotnet.file-utils")
   local dir = get_or_create_cache_dir()
-  local file = polyfills.fs.joinpath(dir, sln_name .. ".json")
+  local file = vim.fs.joinpath(dir, sln_name .. ".json")
   file_utils.ensure_json_file_exists(file)
 
   local _, decoded = pcall(vim.fn.json_decode, vim.fn.readfile(file))
@@ -168,38 +166,6 @@ M.set_default_project = function(project, solution_file_path, type)
   file.decoded[get_property(type)] = project_to_persist(project)
   local file_utils = require("easy-dotnet.file-utils")
   file_utils.overwrite_file(file.file, vim.fn.json_encode(file.decoded))
-end
-
----@param project easy-dotnet.Project.Project
----@param solution_file_path string
----@param profile string
-M.set_default_launch_profile = function(project, solution_file_path, profile)
-  local file = get_or_create_cache_file(solution_file_path)
-
-  --TODO: send project.path and profile name to server
-  if file.decoded == nil then file.decoded = {} end
-
-  ---@type easy-dotnet.DefaultProfile
-  local default_profile = {
-    project = project.name,
-    profile = profile,
-  }
-
-  file.decoded[get_property("launch-profile")] = default_profile
-  local file_utils = require("easy-dotnet.file-utils")
-  file_utils.overwrite_file(file.file, vim.fn.json_encode(file.decoded))
-end
-
----@param solution_file_path string
----@param project easy-dotnet.Project.Project
----@return easy-dotnet.DefaultProfile | nil
-M.get_default_launch_profile = function(solution_file_path, project)
-  local file = get_or_create_cache_file(solution_file_path)
-  local default_profile = file.decoded.default_profile
-
-  if default_profile and project.name == default_profile.project then return default_profile end
-
-  return nil
 end
 
 return M

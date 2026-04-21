@@ -40,19 +40,67 @@ local actions = require("easy-dotnet.actions")
 ---This entire object is exposed, any change to this will possibly be a breaking change, tread carefully
 ---@type easy-dotnet.Command
 M.run = {
-  handle = function(args, options) actions.run(options.terminal, false, passthrough_dotnet_cli_args_handler(args)) end,
+  handle = function(args, _)
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+    client:initialize(
+      function()
+        client.workspace:run({
+          use_default = false,
+          use_launch_profile = false,
+          file_path = vim.api.nvim_buf_get_name(0),
+          cli_args = passthrough_dotnet_cli_args_handler(args),
+        })
+      end
+    )
+  end,
   passthrough = true,
   subcommands = {
     default = {
-      handle = function(args, options) actions.run(options.terminal, true, passthrough_dotnet_cli_args_handler(args)) end,
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(
+          function()
+            client.workspace:run({
+              use_default = true,
+              use_launch_profile = false,
+              file_path = vim.api.nvim_buf_get_name(0),
+              cli_args = passthrough_dotnet_cli_args_handler(args),
+            })
+          end
+        )
+      end,
       passthrough = true,
     },
     profile = {
-      handle = function(args, options) actions.run_with_profile(options.terminal, false, passthrough_dotnet_cli_args_handler(args)) end,
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(
+          function()
+            client.workspace:run({
+              use_default = false,
+              use_launch_profile = true,
+              file_path = vim.api.nvim_buf_get_name(0),
+              cli_args = passthrough_dotnet_cli_args_handler(args),
+            })
+          end
+        )
+      end,
       passthrough = true,
       subcommands = {
         default = {
-          handle = function(args, options) actions.run_with_profile(options.terminal, true, passthrough_dotnet_cli_args_handler(args)) end,
+          handle = function(args, _)
+            local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+            client:initialize(
+              function()
+                client.workspace:run({
+                  use_default = true,
+                  use_launch_profile = true,
+                  file_path = vim.api.nvim_buf_get_name(0),
+                  cli_args = passthrough_dotnet_cli_args_handler(args),
+                })
+              end
+            )
+          end,
           passthrough = true,
         },
       },
@@ -61,22 +109,76 @@ M.run = {
 }
 
 M.debug = {
-  handle = function(args, options) actions.run(options.terminal, false, passthrough_dotnet_cli_args_handler(args), true) end,
+  handle = function(args, _)
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+    client:initialize(
+      function()
+        client.workspace:debug({
+          use_default = false,
+          use_launch_profile = false,
+          file_path = vim.api.nvim_buf_get_name(0),
+          cli_args = passthrough_dotnet_cli_args_handler(args),
+        })
+      end
+    )
+  end,
   passthrough = true,
   subcommands = {
     default = {
-      handle = function(args, options) actions.run(options.terminal, true, passthrough_dotnet_cli_args_handler(args), true) end,
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(
+          function()
+            client.workspace:debug({
+              use_default = true,
+              use_launch_profile = false,
+              file_path = vim.api.nvim_buf_get_name(0),
+              cli_args = passthrough_dotnet_cli_args_handler(args),
+            })
+          end
+        )
+      end,
       passthrough = true,
     },
     profile = {
-      handle = function(args, options) actions.run_with_profile(options.terminal, false, passthrough_dotnet_cli_args_handler(args), true) end,
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(
+          function()
+            client.workspace:debug({
+              use_default = false,
+              use_launch_profile = true,
+              file_path = vim.api.nvim_buf_get_name(0),
+              cli_args = passthrough_dotnet_cli_args_handler(args),
+            })
+          end
+        )
+      end,
       passthrough = true,
       subcommands = {
         default = {
-          handle = function(args, options) actions.run_with_profile(options.terminal, true, passthrough_dotnet_cli_args_handler(args), true) end,
+          handle = function(args, _)
+            local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+            client:initialize(
+              function()
+                client.workspace:debug({
+                  use_default = true,
+                  use_launch_profile = true,
+                  file_path = vim.api.nvim_buf_get_name(0),
+                  cli_args = passthrough_dotnet_cli_args_handler(args),
+                })
+              end
+            )
+          end,
           passthrough = true,
         },
       },
+    },
+    attach = {
+      handle = function(_, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client.workspace:debug_attach({}) end)
+      end,
     },
   },
 }
@@ -105,11 +207,35 @@ M._cached_files = {
 }
 
 M.watch = {
-  handle = function(args, options) actions.watch(options.terminal, false, passthrough_dotnet_cli_args_handler(args)) end,
+  handle = function(args, _)
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+    client:initialize(
+      function()
+        client.workspace:watch({
+          use_default = false,
+          use_launch_profile = false,
+          file_path = vim.api.nvim_buf_get_name(0),
+          cli_args = passthrough_dotnet_cli_args_handler(args),
+        })
+      end
+    )
+  end,
   passthrough = true,
   subcommands = {
     default = {
-      handle = function(args, options) actions.watch(options.terminal, true, passthrough_dotnet_cli_args_handler(args)) end,
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(
+          function()
+            client.workspace:watch({
+              use_default = true,
+              use_launch_profile = false,
+              file_path = vim.api.nvim_buf_get_name(0),
+              cli_args = passthrough_dotnet_cli_args_handler(args),
+            })
+          end
+        )
+      end,
       passthrough = true,
     },
   },
@@ -141,12 +267,12 @@ M.push = {
 M.add = {
   subcommands = {
     package = {
-      handle = function() require("easy-dotnet.nuget").search_nuget(nil, false) end,
+      handle = function() require("easy-dotnet.nuget").add_package(nil, false) end,
       passthrough = true,
       subcommands = {
         prerelease = {
           passthrough = true,
-          handle = function() require("easy-dotnet.nuget").search_nuget(nil, true) end,
+          handle = function() require("easy-dotnet.nuget").add_package(nil, true) end,
         },
       },
     },
@@ -169,15 +295,24 @@ M.secrets = {
 }
 
 M.test = {
-  handle = function(args, options) actions.test(options.terminal, false, passthrough_dotnet_cli_args_handler(args)) end,
+  handle = function(args, _)
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+    client:initialize(function() client.workspace:test({ use_default = false, test_args = passthrough_dotnet_cli_args_handler(args) }) end)
+  end,
   passthrough = true,
   subcommands = {
     default = {
-      handle = function(args, options) actions.test(options.terminal, true, passthrough_dotnet_cli_args_handler(args)) end,
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client.workspace:test({ use_default = true, test_args = passthrough_dotnet_cli_args_handler(args) }) end)
+      end,
       passthrough = true,
     },
     solution = {
-      handle = function(args, options) actions.test_solution(options.terminal, passthrough_dotnet_cli_args_handler(args)) end,
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client.workspace:test_solution({ use_default = false, test_args = passthrough_dotnet_cli_args_handler(args) }) end)
+      end,
       passthrough = true,
     },
     ["run-settings"] = {
@@ -194,43 +329,55 @@ M.test = {
 }
 
 M.restore = {
-  handle = function(args, options) actions.restore(options.terminal, stringify_args(args)) end,
+  handle = function(args, _)
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+    client:initialize(function() client.workspace:restore({ restore_args = passthrough_dotnet_cli_args_handler(args) }) end)
+  end,
   passthrough = true,
 }
 
 M.build = {
-  handle = function(args, options)
-    local terminal = options and options.terminal or nil
-    actions.build(terminal, false, passthrough_dotnet_cli_args_handler(args))
+  handle = function(args, _)
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+    client:initialize(function() client.workspace:build({ use_default = false, use_terminal = true, build_args = passthrough_dotnet_cli_args_handler(args) }) end)
   end,
   passthrough = true,
   subcommands = {
     quickfix = {
-      handle = function(args) actions.build_quickfix(false, passthrough_dotnet_cli_args_handler(args)) end,
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client.workspace:build({ use_default = false, use_terminal = false, build_args = passthrough_dotnet_cli_args_handler(args) }) end)
+      end,
       passthrough = true,
     },
     solution = {
-      handle = function(args, options)
-        local terminal = options and options.terminal or nil
-        actions.build_solution(terminal, passthrough_dotnet_cli_args_handler(args))
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client.workspace:build_solution({ use_terminal = true, build_args = passthrough_dotnet_cli_args_handler(args) }) end)
       end,
       passthrough = true,
       subcommands = {
         quickfix = {
-          handle = function(args) actions.build_solution_quickfix(passthrough_dotnet_cli_args_handler(args)) end,
+          handle = function(args, _)
+            local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+            client:initialize(function() client.workspace:build_solution({ use_terminal = false, build_args = passthrough_dotnet_cli_args_handler(args) }) end)
+          end,
           passthrough = true,
         },
       },
     },
     default = {
-      handle = function(args, options)
-        local terminal = options and options.terminal or nil
-        actions.build(terminal, true, passthrough_dotnet_cli_args_handler(args))
+      handle = function(args, _)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client.workspace:build({ use_default = true, use_terminal = true, build_args = passthrough_dotnet_cli_args_handler(args) }) end)
       end,
       passthrough = true,
       subcommands = {
         quickfix = {
-          handle = function(args) actions.build_quickfix(true, passthrough_dotnet_cli_args_handler(args)) end,
+          handle = function(args, _)
+            local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+            client:initialize(function() client.workspace:build({ use_default = true, use_terminal = false, build_args = passthrough_dotnet_cli_args_handler(args) }) end)
+          end,
           passthrough = true,
         },
       },
@@ -284,24 +431,14 @@ M.solution = {
     },
     add = {
       handle = function()
-        current_solution.get_or_pick_solution(function(solution_path)
-          if not solution_path then
-            logger.info("No solutions found")
-            return
-          end
-          require("easy-dotnet.parsers.sln-parse").add_project_to_solution(solution_path)
-        end)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client:solution_add_project() end)
       end,
     },
     remove = {
       handle = function()
-        current_solution.get_or_pick_solution(function(solution_path)
-          if not solution_path then
-            logger.info("No solutions found")
-            return
-          end
-          require("easy-dotnet.parsers.sln-parse").remove_project_from_solution(solution_path)
-        end)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client:solution_remove_project() end)
       end,
     },
   },
@@ -408,6 +545,28 @@ M._server = {
     },
     logdump = {
       handle = function() require("easy-dotnet.rpc.server").dump_logs() end,
+      subcommands = {
+        buildserver = {
+          handle = function() require("easy-dotnet.rpc.server").dump_buildserver_logs() end,
+        },
+        stdout = {
+          handle = function() require("easy-dotnet.rpc.server").dump_stdout_logs() end,
+        },
+      },
+    },
+    loglevel = {
+      passthrough = true,
+      handle = function(args)
+        local level = type(args) == "string" and args or (args and args[1])
+        if not level or level == "" then
+          vim.notify("Usage: Dotnet _server loglevel <off|error|warning|information|verbose>", vim.log.levels.WARN)
+          return
+        end
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function()
+          client.server:server_set_log_level(level, function() vim.notify("Log level set to " .. level, vim.log.levels.INFO) end)
+        end)
+      end,
     },
   },
 }
