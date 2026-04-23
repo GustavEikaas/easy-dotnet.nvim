@@ -609,6 +609,13 @@ M.lsp = {
       handle = function() require("easy-dotnet.roslyn.lsp").stop() end,
     },
   },
+
 }
+
+M.generatetest = {
+  handle = function() require("easy-dotnet.actions.generate-test").generate_test() end,
+}
+
+
 
 return M
