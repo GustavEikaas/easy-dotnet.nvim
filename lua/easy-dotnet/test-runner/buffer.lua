@@ -345,10 +345,7 @@ function M.attach(filepath, client)
           end
 
           state.traverse_all(function(node)
-            if norm(node.filePath) == norm(filepath) and not live_ids[node.id]
-                and not (node.type and node.type.type == "ProbableTest") then
-              state.remove(node.id)
-            end
+            if norm(node.filePath) == norm(filepath) and not live_ids[node.id] and not (node.type and node.type.type == "ProbableTest") then state.remove(node.id) end
           end)
 
           M.apply_signs(filepath)
