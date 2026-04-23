@@ -46,7 +46,7 @@ local function nodes_for_file(filepath)
     if
       norm(node.filePath) == npath
       and node.type
-      and (node.type.type == "TestMethod" or node.type.type == "Subcase" or node.type.type == "TheoryGroup" or node.type.type == "TestClass")
+      and (node.type.type == "TestMethod" or node.type.type == "Subcase" or node.type.type == "TheoryGroup" or node.type.type == "TestClass" or node.type.type == "ProbableTest")
       and node.signatureLine ~= nil
     then
       table.insert(result, node)
@@ -134,6 +134,7 @@ local sign_text_for = {
   Skipped = function(icons) return (icons.skipped or "") .. " " end,
   Running = function(icons) return (icons.reload or "") .. " " end,
   Debugging = function(icons) return (icons.reload or "") .. " " end,
+  ProbableTest = function(icons) return (icons.test or "󰙨") .. " " end,
 }
 local sign_hl_for = {
   Passed = "EasyDotnetTestRunnerPassed",
@@ -141,11 +142,24 @@ local sign_hl_for = {
   Skipped = "EasyDotnetTestRunnerSkipped",
   Running = "EasyDotnetTestRunnerRunning",
   Debugging = "EasyDotnetTestRunnerRunning",
+  ProbableTest = "EasyDotnetTestRunnerProbable",
 }
 
 local function resolve_sign(nodes)
   local icons = get_icons()
   local stype = aggregate_status(nodes)
+  -- If no status is set and the group is entirely probable nodes, use the
+  -- ProbableTest sign so they render with a distinct dim highlight.
+  if not stype then
+    local all_probable = true
+    for _, n in ipairs(nodes) do
+      if not (n.type and n.type.type == "ProbableTest") then
+        all_probable = false
+        break
+      end
+    end
+    if all_probable then stype = "ProbableTest" end
+  end
   local text = stype and sign_text_for[stype] and sign_text_for[stype](icons) or (icons.test or "󰙨") .. " "
   local hl = sign_hl_for[stype] or "EasyDotnetTestRunnerTest"
   return text, hl
@@ -331,7 +345,10 @@ function M.attach(filepath, client)
           end
 
           state.traverse_all(function(node)
-            if norm(node.filePath) == norm(filepath) and not live_ids[node.id] then state.remove(node.id) end
+            if norm(node.filePath) == norm(filepath) and not live_ids[node.id]
+                and not (node.type and node.type.type == "ProbableTest") then
+              state.remove(node.id)
+            end
           end)
 
           M.apply_signs(filepath)
