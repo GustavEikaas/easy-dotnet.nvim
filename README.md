@@ -242,6 +242,12 @@ Although not *required* by the plugin, it is highly recommended to install one o
         default_severity = "error",
         setqflist = false,
       },
+      outdated = {
+        mappings = {
+          upgrade = { lhs = "<leader>pu", desc = "upgrade package under cursor" },
+          upgrade_all = { lhs = "<leader>pa", desc = "upgrade all outdated packages" },
+        },
+      },
     })
 
     -- Example command
@@ -616,6 +622,15 @@ Supports the following filetypes
 - Directory.Packages.props
 - Packages.props
 - Directory.Build.props
+
+After running `Dotnet outdated`, buffer-local keymaps are registered to upgrade packages in place
+(replaces the `Version="..."` attribute with the latest version and removes the virtual text).
+Both keymaps are configurable via `outdated.mappings`:
+
+| Default     | Action                                       |
+| ----------- | -------------------------------------------- |
+| `<leader>pu` | Upgrade the outdated package under the cursor |
+| `<leader>pa` | Upgrade all outdated packages in the buffer   |
 
 
 ![image](https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113)

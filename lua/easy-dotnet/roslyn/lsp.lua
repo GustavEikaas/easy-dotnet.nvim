@@ -263,6 +263,8 @@ end
 
 ---@param client vim.lsp.Client
 local function populate_source_generated_buffer(client, buf, file)
+  if not vim.api.nvim_buf_is_valid(buf) then return end
+
   local params = {
     resultId = vim.b[buf].resultId,
     textDocument = {
@@ -271,6 +273,7 @@ local function populate_source_generated_buffer(client, buf, file)
   }
 
   local function handler(err, result)
+    if not vim.api.nvim_buf_is_valid(buf) then return end
     if not result or type(result) ~= "table" then return end
     if result.resultId == vim.b[buf].resultId then return end
     assert(not err, vim.inspect(err))
@@ -498,8 +501,10 @@ function M.enable(opts)
         local client = assert(vim.lsp.get_client_by_id(ctx.client_id))
 
         for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-          local uri = vim.api.nvim_buf_get_name(buf)
-          if vim.api.nvim_buf_get_name(buf):match("^roslyn%-source%-generated://") then populate_source_generated_buffer(client, buf, uri) end
+          if vim.api.nvim_buf_is_loaded(buf) then
+            local ok, uri = pcall(vim.api.nvim_buf_get_name, buf)
+            if ok and uri:match("^roslyn%-source%-generated://") then populate_source_generated_buffer(client, buf, uri) end
+          end
         end
       end,
     },

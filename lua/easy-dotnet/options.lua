@@ -21,6 +21,7 @@
 ---@field picker easy-dotnet.PickerType
 ---@field notifications easy-dotnet.Notifications
 ---@field diagnostics easy-dotnet.DiagnosticsOptions
+---@field outdated easy-dotnet.Outdated.Options
 
 ---@class easy-dotnet.ExternalTerminal
 ---@field command string
@@ -220,6 +221,12 @@ local M = {
     diagnostics = {
       default_severity = "error",
       setqflist = false,
+    },
+    outdated = {
+      mappings = {
+        upgrade = { lhs = "<leader>pu", desc = "upgrade package under cursor" },
+        upgrade_all = { lhs = "<leader>pa", desc = "upgrade all outdated packages" },
+      },
     },
   },
 }
