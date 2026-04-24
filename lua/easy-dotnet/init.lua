@@ -331,4 +331,9 @@ M.package_completion_source = require("easy-dotnet.csproj-mappings").package_com
 
 M.diagnostics = require("easy-dotnet.actions.diagnostics")
 
+M.lualine = {
+  jobs = require("easy-dotnet.ui-modules.jobs").lualine,
+  active_project = require("easy-dotnet.active-project").lualine,
+}
+
 return M
