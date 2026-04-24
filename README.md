@@ -265,12 +265,15 @@ Although not *required* by the plugin, it is highly recommended to install one o
 
 ### Lualine config
 ```lua
-local job_indicator = { require("easy-dotnet.ui-modules.jobs").lualine }
+local dotnet = require("easy-dotnet")
 
 require("lualine").setup {
   sections = {
     -- ...
-    lualine_a = { "mode", job_indicator },
+    lualine_a = { "mode", dotnet.lualine.jobs },
+    -- Shows the default startup project and its launch profile (if any),
+    -- pushed by the server whenever it changes.
+    lualine_x = { dotnet.lualine.active_project },
     -- ...
   },
 }
