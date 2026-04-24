@@ -469,6 +469,7 @@ local function node_pre_icon(node_type)
     TheoryGroup = icons.package,
     TestMethod = icons.test,
     Subcase = icons.test,
+    ProbableTest = icons.test,
   })[node_type] or "?"
 end
 
@@ -512,6 +513,7 @@ local function render_node(node, depth)
       TheoryGroup = "EasyDotnetTestRunnerTest",
       TestMethod = "EasyDotnetTestRunnerTest",
       Subcase = "EasyDotnetTestRunnerSubcase",
+      ProbableTest = "EasyDotnetTestRunnerProbable",
     })[ntype]
   end
 
