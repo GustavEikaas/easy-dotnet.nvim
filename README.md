@@ -133,6 +133,13 @@ Although not *required* by the plugin, it is highly recommended to install one o
      managed_terminal = {
        auto_hide = true, -- auto hides terminal if exit code is 0
        auto_hide_delay = 1000, -- delay before auto hiding, 0 = instant
+       mappings = {
+         next_tab       = { lhs = "<Tab>",   desc = "Next terminal tab" },
+         prev_tab       = { lhs = "<S-Tab>", desc = "Previous terminal tab" },
+         new_terminal   = { lhs = "+",       desc = "New user terminal" },
+         close_terminal = { lhs = "X",       desc = "Close current terminal tab" },
+         hide_panel     = { lhs = "q",       desc = "Hide terminal panel" },
+       },
      },
       -- Optional configuration for external terminals (matches nvim-dap structure)
       external_terminal = nil,
@@ -464,6 +471,9 @@ Dotnet solution select <path>
 Dotnet solution add
 Dotnet solution remove
 Dotnet outdated
+Dotnet terminal toggle
+Dotnet terminal show
+Dotnet terminal hide
 Dotnet diagnostic
 Dotnet diagnostic errors
 Dotnet diagnostic warnings
