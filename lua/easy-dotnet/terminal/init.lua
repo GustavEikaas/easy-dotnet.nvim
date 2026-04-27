@@ -1,96 +1,119 @@
----@class easy-dotnet.Terminal.State
----@field buf integer|nil
----@field win integer|nil
----@field header_buf integer|nil
----@field header_win integer|nil
----@field job_id integer|nil
----@field timer any|nil
----@field last_status string|nil  "running"|"finished"
----@field last_exit_code integer|nil
----@field exec_name string|nil
----@field full_args string|nil
+local manager = require("easy-dotnet.terminal.manager")
+local Tab = require("easy-dotnet.terminal.tab")
 
----@type easy-dotnet.Terminal.State
-local state = {
-  buf = nil,
-  win = nil,
-  header_buf = nil,
-  header_win = nil,
-  job_id = nil,
-  timer = nil,
-  last_status = nil,
-  last_exit_code = nil,
-  exec_name = nil,
-  full_args = nil,
-}
+local M = {}
 
-local M = { state = state }
+local panel_height = 15
+
+local function apply_panel_keymaps(buf)
+  local km = require("easy-dotnet.options").get_option("managed_terminal").mappings or {}
+  local opts = { nowait = true, silent = true, buffer = buf }
+
+  vim.keymap.set("n", km.next_tab and km.next_tab.lhs or "<Tab>", function()
+    local tabs = manager.get_all()
+    for i, tab in ipairs(tabs) do
+      if tab.id == manager.active_id then
+        local next = tabs[i + 1] or tabs[1]
+        manager.set_active(next.id)
+        return
+      end
+    end
+  end, vim.tbl_extend("force", opts, { desc = km.next_tab and km.next_tab.desc or "Next terminal tab" }))
+
+  vim.keymap.set("n", km.prev_tab and km.prev_tab.lhs or "<S-Tab>", function()
+    local tabs = manager.get_all()
+    for i, tab in ipairs(tabs) do
+      if tab.id == manager.active_id then
+        local prev = tabs[i - 1] or tabs[#tabs]
+        manager.set_active(prev.id)
+        return
+      end
+    end
+  end, vim.tbl_extend("force", opts, { desc = km.prev_tab and km.prev_tab.desc or "Previous terminal tab" }))
+
+  vim.keymap.set("n", km.new_terminal and km.new_terminal.lhs or "+", function()
+    local new_tab = manager.new_user_terminal()
+    manager.set_active(new_tab.id)
+    require("easy-dotnet.terminal.tabline").ensure_timer()
+  end, vim.tbl_extend("force", opts, { desc = km.new_terminal and km.new_terminal.desc or "New user terminal" }))
+
+  vim.keymap.set("n", km.close_terminal and km.close_terminal.lhs or "X", function()
+    if manager.active_id then manager.remove(manager.active_id) end
+  end, vim.tbl_extend("force", opts, { desc = km.close_terminal and km.close_terminal.desc or "Close terminal tab" }))
+
+  vim.keymap.set("n", km.hide_panel and km.hide_panel.lhs or "q", function() M.hide() end, vim.tbl_extend("force", opts, { desc = km.hide_panel and km.hide_panel.desc or "Hide terminal panel" }))
+end
+
+local function setup_panel_window(win)
+  manager.panel_win = win
+  vim.w[win].easy_dotnet_terminal = true
+
+  manager._on_tab_activated = function(tab) apply_panel_keymaps(tab.buf) end
+end
 
 function M.show()
-  local header = require("easy-dotnet.terminal.header")
-  if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
-    vim.notify("easy-dotnet: no terminal session yet", vim.log.levels.WARN)
+  if manager.panel_win and vim.api.nvim_win_is_valid(manager.panel_win) then
+    vim.api.nvim_set_current_win(manager.panel_win)
     return
   end
 
-  if state.win and vim.api.nvim_win_is_valid(state.win) then
-    vim.api.nvim_set_current_win(state.win)
-    return
+  if #manager.get_all() == 0 then
+    local tab = manager.new_user_terminal()
+    manager.active_id = tab.id
   end
 
-  vim.cmd("split")
-  state.win = vim.api.nvim_get_current_win()
-  vim.w[state.win].easy_dotnet_terminal = true
-  vim.api.nvim_win_set_buf(state.win, state.buf)
-  vim.cmd("normal! G")
+  vim.cmd("botright split")
+  local win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_height(win, panel_height)
+
+  local active = manager.active_id and manager.get(manager.active_id)
+  if active then
+    Tab.ensure_buf(active)
+    vim.api.nvim_win_set_buf(win, active.buf)
+    vim.cmd("normal! G")
+  end
+
+  setup_panel_window(win)
+
+  if active then apply_panel_keymaps(active.buf) end
+
+  require("easy-dotnet.terminal.tabline").create(win)
 
   vim.api.nvim_create_autocmd("WinClosed", {
-    pattern = tostring(state.win),
-    callback = function()
-      state.win = nil
-      header.cleanup_header()
-    end,
+    pattern = tostring(win),
     once = true,
+    callback = function()
+      if manager.panel_win and vim.api.nvim_win_is_valid(manager.panel_win) then panel_height = vim.api.nvim_win_get_height(manager.panel_win) end
+      manager.panel_win = nil
+      require("easy-dotnet.terminal.tabline").destroy()
+    end,
   })
-
-  header.create_header_win()
-
-  if state.last_status then header.update_header(state.last_status, state.last_exit_code) end
-
-  if state.job_id then
-    if state.timer then
-      state.timer:stop()
-      if not state.timer:is_closing() then state.timer:close() end
-    end
-    local timer = vim.loop.new_timer()
-    state.timer = timer
-    timer:start(
-      0,
-      100,
-      vim.schedule_wrap(function()
-        local codes = vim.fn.jobwait({ state.job_id }, 0)
-        if codes[1] == -1 then
-          header.update_header("running")
-        else
-          timer:stop()
-          if not timer:is_closing() then timer:close() end
-        end
-      end)
-    )
-  end
 end
 
 function M.hide()
-  if not state.win or not vim.api.nvim_win_is_valid(state.win) then return end
-  vim.api.nvim_win_close(state.win, false)
+  if manager.panel_win and vim.api.nvim_win_is_valid(manager.panel_win) then vim.api.nvim_win_close(manager.panel_win, false) end
 end
 
 function M.toggle()
-  if state.win and vim.api.nvim_win_is_valid(state.win) then
+  if manager.panel_win and vim.api.nvim_win_is_valid(manager.panel_win) then
     M.hide()
   else
     M.show()
   end
+end
+
+---Switch the active tab to the given slot id, showing the panel if needed.
+---@param slot_id string
+function M.switch(slot_id)
+  manager.set_active(slot_id)
+  M.show()
+end
+
+function M.new_user_terminal()
+  local tab = manager.new_user_terminal()
+  manager.set_active(tab.id)
+  M.show()
+  require("easy-dotnet.terminal.tabline").ensure_timer()
 end
 
 return M

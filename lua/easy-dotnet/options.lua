@@ -1,3 +1,15 @@
+---@class easy-dotnet.ManagedTerminal.Mappings
+---@field next_tab easy-dotnet.Keymap
+---@field prev_tab easy-dotnet.Keymap
+---@field new_terminal easy-dotnet.Keymap
+---@field close_terminal easy-dotnet.Keymap
+---@field hide_panel easy-dotnet.Keymap
+
+---@class easy-dotnet.ManagedTerminal
+---@field auto_hide boolean
+---@field auto_hide_delay integer
+---@field mappings easy-dotnet.ManagedTerminal.Mappings
+
 ---@class easy-dotnet.Options
 ---@field external_terminal easy-dotnet.ExternalTerminal|nil
 ---@field test_runner easy-dotnet.TestRunner.Options
@@ -94,6 +106,13 @@ local M = {
     managed_terminal = {
       auto_hide = true,
       auto_hide_delay = 1000,
+      mappings = {
+        next_tab = { lhs = "<Tab>", desc = "Next terminal tab" },
+        prev_tab = { lhs = "<S-Tab>", desc = "Previous terminal tab" },
+        new_terminal = { lhs = "+", desc = "New user terminal" },
+        close_terminal = { lhs = "X", desc = "Close current terminal tab" },
+        hide_panel = { lhs = "q", desc = "Hide terminal panel" },
+      },
     },
     -- Optional configuration for external terminals (matches nvim-dap structure)
     external_terminal = nil,
