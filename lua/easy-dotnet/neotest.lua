@@ -16,6 +16,9 @@ end
 local _init_future = nil
 
 local function await_initialization()
+  -- Switch to main loop
+  require("nio").scheduler()
+
   if is_initialized() then return true end
 
   if not _init_future then
