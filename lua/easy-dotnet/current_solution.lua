@@ -154,6 +154,10 @@ end
 ---@return string? solution_path Absolute path to the solution file
 function M.try_get_selected_solution() return try_get_solution_path() end
 
+--- Prompts user to pick a solution from available options
+---@param cb fun(solution_path: string?)
+function M.pick_solution(cb) pick_solution(cb) end
+
 --- Gets existing solution or prompts user to pick one
 ---@param cb fun(solution_path: string | nil) Callback with selected solution path or nil if cancelled
 function M.get_or_pick_solution(cb)

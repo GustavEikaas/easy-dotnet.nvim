@@ -2,6 +2,40 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## Multi-terminal panel ([#872](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/872))
+
+The managed terminal has been replaced with a multi-tab panel. Instead of a single scratch buffer, the panel now hosts named tabs — one per running job — and you can open as many personal shell tabs as you like.
+
+### Getting a terminal
+
+```vim
+:Dotnet terminal toggle
+:Dotnet terminal show
+:Dotnet terminal hide
+```
+
+A floating tab-bar sits above the panel showing every open tab, its status icon, and the command being run.
+
+### Ownership context
+
+Tabs are either **server-owned** or **user-owned**.
+
+**Server-owned tabs** are created automatically whenever the server starts a job (`:Dotnet run`, restore, build output, etc.). Each job gets its own named slot so concurrent jobs never overwrite each other. When a server-owned job exits with code 0, the panel auto-hides after the configured delay (controlled by `managed_terminal.auto_hide` and `managed_terminal.auto_hide_delay`).
+
+**User-owned tabs** are plain `$SHELL` sessions you open yourself by pressing `+` inside the panel. They are never auto-hidden and survive across multiple server jobs.
+
+### Panel keymaps (configurable)
+
+| Key | Action |
+|-----|--------|
+| `<Tab>` | Next tab |
+| `<S-Tab>` | Previous tab |
+| `+` | New user terminal tab |
+| `X` | Close current tab |
+| `q` | Hide panel |
+
+All of these can be remapped — see the `managed_terminal.mappings` configuration below.
+
 ## External terminal window reuse ([#336](https://github.com/GustavEikaas/easy-dotnet-server/pull/336))
 When using `options.external_terminal`, running and debugging will spawn a completely separate window like Kitty or Windows Terminal. This is great and provides an easy way to see stdout from your application. Unfortunately, when your app exits, this window is orphaned. Depending on your config, one of 2 things will happen. The terminal window closes, causing you to miss crash logs if any. The window lingers, but it has lost its relationship with easy-dotnet, so when you start a new debug session a completely new window will be spawned. GustavEikaas/easy-dotnet-server#336 fixes this and ensures that terminal windows will be reused no matter which terminal emulator you use.
 

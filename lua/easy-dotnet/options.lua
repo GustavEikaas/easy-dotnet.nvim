@@ -1,3 +1,15 @@
+---@class easy-dotnet.ManagedTerminal.Mappings
+---@field next_tab easy-dotnet.Keymap
+---@field prev_tab easy-dotnet.Keymap
+---@field new_terminal easy-dotnet.Keymap
+---@field close_terminal easy-dotnet.Keymap
+---@field hide_panel easy-dotnet.Keymap
+
+---@class easy-dotnet.ManagedTerminal
+---@field auto_hide boolean
+---@field auto_hide_delay integer
+---@field mappings easy-dotnet.ManagedTerminal.Mappings
+
 ---@class easy-dotnet.Options
 ---@field external_terminal easy-dotnet.ExternalTerminal|nil
 ---@field test_runner easy-dotnet.TestRunner.Options
@@ -9,6 +21,7 @@
 ---@field picker easy-dotnet.PickerType
 ---@field notifications easy-dotnet.Notifications
 ---@field diagnostics easy-dotnet.DiagnosticsOptions
+---@field outdated easy-dotnet.Outdated.Options
 
 ---@class easy-dotnet.ExternalTerminal
 ---@field command string
@@ -45,6 +58,7 @@
 
 ---@class easy-dotnet.TestRunner.Mappings
 ---@field run_test_from_buffer easy-dotnet.Keymap
+---@field run_all_tests_from_buffer easy-dotnet.Keymap
 ---@field get_build_errors easy-dotnet.Keymap
 ---@field peek_stack_trace_from_buffer easy-dotnet.Keymap
 ---@field debug_test_from_buffer easy-dotnet.Keymap
@@ -93,6 +107,13 @@ local M = {
     managed_terminal = {
       auto_hide = true,
       auto_hide_delay = 1000,
+      mappings = {
+        next_tab = { lhs = "<Tab>", desc = "Next terminal tab" },
+        prev_tab = { lhs = "<S-Tab>", desc = "Previous terminal tab" },
+        new_terminal = { lhs = "+", desc = "New user terminal" },
+        close_terminal = { lhs = "X", desc = "Close current terminal tab" },
+        hide_panel = { lhs = "q", desc = "Hide terminal panel" },
+      },
     },
     -- Optional configuration for external terminals (matches nvim-dap structure)
     external_terminal = nil,
@@ -123,6 +144,7 @@ local M = {
       },
       mappings = {
         run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
+        run_all_tests_from_buffer = { lhs = "<leader>t", desc = "Run all tests in file" },
         get_build_errors = { lhs = "<leader>e", desc = "get build errors" },
         peek_stack_trace_from_buffer = { lhs = "<leader>p", desc = "peek stack trace from buffer" },
         debug_test_from_buffer = { lhs = "<leader>d", desc = "run test from buffer" },
@@ -201,6 +223,12 @@ local M = {
     diagnostics = {
       default_severity = "error",
       setqflist = false,
+    },
+    outdated = {
+      mappings = {
+        upgrade = { lhs = "<leader>pu", desc = "upgrade package under cursor" },
+        upgrade_all = { lhs = "<leader>pa", desc = "upgrade all outdated packages" },
+      },
     },
   },
 }

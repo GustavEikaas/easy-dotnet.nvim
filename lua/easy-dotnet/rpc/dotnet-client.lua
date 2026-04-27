@@ -123,11 +123,13 @@ end
 ---@field testrunner easy-dotnet.RPC.Client.TestRunner
 ---@field template_engine easy-dotnet.RPC.Client.TemplateEngine
 ---@field nuget easy-dotnet.RPC.Client.Nuget
+---@field package_manager easy-dotnet.RPC.Client.PackageManager
 ---@field roslyn easy-dotnet.RPC.Client.Roslyn
 ---@field test easy-dotnet.RPC.Client.Test
 -- luacheck: no max line length
 ---@field workspace easy-dotnet.RPC.Client.Workspace
 ---@field project_reference easy-dotnet.RPC.Client.ProjectReference
+---@field server easy-dotnet.RPC.Client.Server
 ---@field secrets_init fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.RPC.ProjectUserSecretsInitResponse), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request adding package
 -- luacheck: no max line length
 ---@field solution_list_projects fun(self: easy-dotnet.RPC.Client.Dotnet, solution_file_path: string, cb?: fun(res: easy-dotnet.Server.SolutionFileProjectResponse[]), include_non_existing?: boolean, opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
@@ -157,11 +159,13 @@ function M:new()
   instance.template_engine = require("easy-dotnet.rpc.controllers.template").new(client)
   instance.entity_framework = require("easy-dotnet.rpc.controllers.entity-framework").new(client)
   instance.nuget = require("easy-dotnet.rpc.controllers.nuget").new(client)
+  instance.package_manager = require("easy-dotnet.rpc.controllers.package-manager").new(client)
   instance.roslyn = require("easy-dotnet.rpc.controllers.roslyn").new(client)
   instance.lsp = require("easy-dotnet.rpc.controllers.lsp").new(client)
   instance.test = require("easy-dotnet.rpc.controllers.test").new(client)
   instance.workspace = require("easy-dotnet.rpc.controllers.workspace").new(client)
   instance.project_reference = require("easy-dotnet.rpc.controllers.project-reference").new(client)
+  instance.server = require("easy-dotnet.rpc.controllers.server").new(client)
   return instance
 end
 

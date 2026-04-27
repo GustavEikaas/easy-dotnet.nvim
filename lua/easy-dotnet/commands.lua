@@ -267,12 +267,12 @@ M.push = {
 M.add = {
   subcommands = {
     package = {
-      handle = function() require("easy-dotnet.nuget").search_nuget(nil, false) end,
+      handle = function() require("easy-dotnet.nuget").add_package(nil, false) end,
       passthrough = true,
       subcommands = {
         prerelease = {
           passthrough = true,
-          handle = function() require("easy-dotnet.nuget").search_nuget(nil, true) end,
+          handle = function() require("easy-dotnet.nuget").add_package(nil, true) end,
         },
       },
     },
@@ -423,9 +423,17 @@ M.solution = {
   subcommands = {
     select = {
       handle = function(args)
-        local path = type(args) == "string" and args or args[1]
-        current_solution.set_solution(path)
-        logger.info(string.format("Selected solution: %s", vim.fs.basename(path)))
+        local path = type(args) == "string" and args or (type(args) == "table" and args[1] or nil)
+        if path then
+          current_solution.set_solution(path)
+          logger.info(string.format("Selected solution: %s", vim.fs.basename(path)))
+          return
+        end
+        current_solution.pick_solution(function(picked)
+          if not picked then return end
+          current_solution.set_solution(picked)
+          logger.info(string.format("Selected solution: %s", vim.fs.basename(picked)))
+        end)
       end,
       passthrough = true,
     },
@@ -545,6 +553,28 @@ M._server = {
     },
     logdump = {
       handle = function() require("easy-dotnet.rpc.server").dump_logs() end,
+      subcommands = {
+        buildserver = {
+          handle = function() require("easy-dotnet.rpc.server").dump_buildserver_logs() end,
+        },
+        stdout = {
+          handle = function() require("easy-dotnet.rpc.server").dump_stdout_logs() end,
+        },
+      },
+    },
+    loglevel = {
+      passthrough = true,
+      handle = function(args)
+        local level = type(args) == "string" and args or (args and args[1])
+        if not level or level == "" then
+          vim.notify("Usage: Dotnet _server loglevel <off|error|warning|information|verbose>", vim.log.levels.WARN)
+          return
+        end
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function()
+          client.server:server_set_log_level(level, function() vim.notify("Log level set to " .. level, vim.log.levels.INFO) end)
+        end)
+      end,
     },
   },
 }
