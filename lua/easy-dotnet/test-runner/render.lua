@@ -353,6 +353,9 @@ function M.open(mode, options)
   M.options = options or M.options
   M.viewmode = mode
 
+  local term_mgr = require("easy-dotnet.terminal.manager")
+  if term_mgr.panel_win and vim.api.nvim_win_is_valid(term_mgr.panel_win) then require("easy-dotnet.terminal").hide() end
+
   if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
     M.buf = make_scratch_buf("Test Runner")
     vim.api.nvim_buf_set_name(M.buf, "Test Runner")
