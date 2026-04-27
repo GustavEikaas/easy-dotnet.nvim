@@ -7,9 +7,7 @@ local timer = nil
 
 local M = {}
 
-local function is_server_running(tab)
-  return tab.owned_by == "server" and tab.last_status == "running"
-end
+local function is_server_running(tab) return tab.owned_by == "server" and tab.last_status == "running" end
 
 local function any_server_running()
   for _, tab in ipairs(manager.get_all()) do
@@ -22,8 +20,7 @@ local function tab_icon(tab)
   if is_server_running(tab) then
     return "▶", "DiagnosticInfo"
   elseif tab.last_status == "finished" then
-    return tab.last_exit_code == 0 and "✓" or "✗",
-           tab.last_exit_code == 0 and "String" or "ErrorMsg"
+    return tab.last_exit_code == 0 and "✓" or "✗", tab.last_exit_code == 0 and "String" or "ErrorMsg"
   else
     return "●", "Comment"
   end
@@ -33,8 +30,7 @@ local function header_icon(tab)
   if is_server_running(tab) then
     return spinner_frames[spinner_idx], "DiagnosticInfo"
   elseif tab.last_status == "finished" then
-    return tab.last_exit_code == 0 and "✓" or "✗",
-           tab.last_exit_code == 0 and "String" or "ErrorMsg"
+    return tab.last_exit_code == 0 and "✓" or "✗", tab.last_exit_code == 0 and "String" or "ErrorMsg"
   else
     return "●", "Comment"
   end
@@ -53,7 +49,10 @@ local function sync_position()
   if not row then return end
   vim.api.nvim_win_set_config(manager.tabline_win, {
     relative = "editor",
-    row = row, col = col, width = width, height = 2,
+    row = row,
+    col = col,
+    width = width,
+    height = 2,
   })
 end
 
@@ -75,10 +74,10 @@ function M.render()
     local piece = string.format(" %s %s ", icon, tab.label)
     tabline_str = tabline_str .. piece
     segments[#segments + 1] = {
-      start     = seg_start,
-      icon_end  = seg_start + 1 + #icon,
+      start = seg_start,
+      icon_end = seg_start + 1 + #icon,
       label_end = seg_start + #piece - 1,
-      icon_hl   = icon_hl,
+      icon_hl = icon_hl,
       is_active = tab.id == manager.active_id,
     }
   end
@@ -97,12 +96,12 @@ function M.render()
     header_str = string.rep(" ", pad) .. string.format("%s %s %s", icon, exec, args)
     header_segs = {
       icon_hl = icon_hl,
-      icon_s  = pad,
-      icon_e  = pad + #icon,
-      exec_s  = pad + #icon + 1,
-      exec_e  = pad + #icon + 1 + #exec,
-      args_s  = pad + #icon + 1 + #exec + 1,
-      args_e  = pad + #icon + 1 + #exec + 1 + #args,
+      icon_s = pad,
+      icon_e = pad + #icon,
+      exec_s = pad + #icon + 1,
+      exec_e = pad + #icon + 1 + #exec,
+      args_s = pad + #icon + 1 + #exec + 1,
+      args_e = pad + #icon + 1 + #exec + 1 + #args,
     }
   end
 
@@ -112,15 +111,15 @@ function M.render()
 
   for _, seg in ipairs(segments) do
     local base_hl = seg.is_active and "TabLineSel" or "TabLine"
-    vim.api.nvim_buf_add_highlight(manager.tabline_buf, ns_id, base_hl,     0, seg.start,      seg.label_end + 1)
-    vim.api.nvim_buf_add_highlight(manager.tabline_buf, ns_id, seg.icon_hl, 0, seg.start + 1,  seg.icon_end)
+    vim.api.nvim_buf_add_highlight(manager.tabline_buf, ns_id, base_hl, 0, seg.start, seg.label_end + 1)
+    vim.api.nvim_buf_add_highlight(manager.tabline_buf, ns_id, seg.icon_hl, 0, seg.start + 1, seg.icon_end)
   end
   vim.api.nvim_buf_add_highlight(manager.tabline_buf, ns_id, "Special", 0, plus_start, plus_start + 4)
 
   if header_segs then
     vim.api.nvim_buf_add_highlight(manager.tabline_buf, ns_id, header_segs.icon_hl, 1, header_segs.icon_s, header_segs.icon_e)
-    vim.api.nvim_buf_add_highlight(manager.tabline_buf, ns_id, "Title",             1, header_segs.exec_s, header_segs.exec_e)
-    vim.api.nvim_buf_add_highlight(manager.tabline_buf, ns_id, "Comment",           1, header_segs.args_s, header_segs.args_e)
+    vim.api.nvim_buf_add_highlight(manager.tabline_buf, ns_id, "Title", 1, header_segs.exec_s, header_segs.exec_e)
+    vim.api.nvim_buf_add_highlight(manager.tabline_buf, ns_id, "Comment", 1, header_segs.args_s, header_segs.args_e)
   end
 
   vim.api.nvim_buf_set_option(manager.tabline_buf, "modifiable", false)
@@ -129,11 +128,15 @@ end
 local function start_timer()
   if timer then return end
   timer = vim.loop.new_timer()
-  timer:start(0, 100, vim.schedule_wrap(function()
-    spinner_idx = (spinner_idx % #spinner_frames) + 1
-    M.render()
-    if not any_server_running() then M.stop_timer() end
-  end))
+  timer:start(
+    0,
+    100,
+    vim.schedule_wrap(function()
+      spinner_idx = (spinner_idx % #spinner_frames) + 1
+      M.render()
+      if not any_server_running() then M.stop_timer() end
+    end)
+  )
 end
 
 function M.stop_timer()
@@ -155,20 +158,18 @@ function M.create(panel_win)
     vim.api.nvim_buf_set_option(manager.tabline_buf, "modifiable", false)
   end
 
-  if manager.tabline_win and vim.api.nvim_win_is_valid(manager.tabline_win) then
-    vim.api.nvim_win_close(manager.tabline_win, true)
-  end
+  if manager.tabline_win and vim.api.nvim_win_is_valid(manager.tabline_win) then vim.api.nvim_win_close(manager.tabline_win, true) end
 
   local row, col, width = get_panel_screen_pos()
   manager.tabline_win = vim.api.nvim_open_win(manager.tabline_buf, false, {
-    relative  = "editor",
-    row       = row,
-    col       = col,
-    width     = width,
-    height    = 2,
-    style     = "minimal",
+    relative = "editor",
+    row = row,
+    col = col,
+    width = width,
+    height = 2,
+    style = "minimal",
     focusable = false,
-    zindex    = 101,
+    zindex = 101,
   })
   vim.api.nvim_win_set_option(manager.tabline_win, "winhighlight", "Normal:TabLineFill,FloatBorder:TabLineFill")
 
@@ -188,9 +189,7 @@ end
 function M.destroy()
   M.stop_timer()
   pcall(vim.api.nvim_del_augroup_by_name, "EasyDotnetOverlaySync")
-  if manager.tabline_win and vim.api.nvim_win_is_valid(manager.tabline_win) then
-    vim.api.nvim_win_close(manager.tabline_win, true)
-  end
+  if manager.tabline_win and vim.api.nvim_win_is_valid(manager.tabline_win) then vim.api.nvim_win_close(manager.tabline_win, true) end
   manager.tabline_win = nil
 end
 
