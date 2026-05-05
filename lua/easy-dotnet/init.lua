@@ -112,6 +112,13 @@ local function auto_register_dap(merged_opts)
     local success, dap = pcall(require, "dap")
     if not success then return end
 
+    local preview_keymap = merged_opts.debugger.mappings and merged_opts.debugger.mappings.preview_json
+    if preview_keymap and preview_keymap.lhs and preview_keymap.lhs ~= "" then
+      vim.keymap.set("n", preview_keymap.lhs, function()
+        require("easy-dotnet.netcoredbg.json-preview").preview_under_cursor()
+      end, { desc = preview_keymap.desc, silent = true })
+    end
+
     local debugger_conf = dap.configurations["cs"] or {}
 
     vim.list_extend(debugger_conf, {

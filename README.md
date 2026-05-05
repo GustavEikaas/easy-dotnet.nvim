@@ -165,6 +165,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
         auto_register_dap = true,
         mappings = {
           open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
+          preview_json = { lhs = "<leader>dpj", desc = "preview variable json" },
         },
       },
       ---@type TestRunnerOptions
@@ -1066,3 +1067,4 @@ Check out [setup guide](./docs/server-development.md)
 <a href="https://github.com/GustavEikaas/easy-dotnet.nvim/graphs/contributors">
 <img src="https://contrib.rocks/image?repo=GustavEikaas/easy-dotnet.nvim" />
 </a>
+

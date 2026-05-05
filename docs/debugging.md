@@ -13,6 +13,7 @@ This guide describes how to integrate .NET Core debugging in Neovim using nvim-d
     * [CPU/MEM Performance Widgets](#cpumem-performance-widgets)
 
 ## Debugging
+
 To start debugging do the following. Ensure you have configured the code below
 
 Dont start the project before doing this, debugger has to start it for you
@@ -50,6 +51,9 @@ return {
     vim.keymap.set("n", "<leader>dr", dap.repl.toggle, { desc = "Toggle DAP REPL" })
     vim.keymap.set("n", "<leader>dj", dap.down, { desc = "Go down stack frame" })
     vim.keymap.set("n", "<leader>dk", dap.up, { desc = "Go up stack frame" })
+    vim.keymap.set("n", "<leader>dpj", function()
+      require("easy-dotnet.netcoredbg.json-preview").preview_under_cursor()
+    end, { desc = "Preview variable json" })
 
     end
 }
@@ -92,6 +96,7 @@ dap.defaults.fallback.external_terminal = {
 ## Programmatic Debugging
 
 You can bind a key just like `<F5>` / Run in Visual Studio that triggers debugging for the default project or a selected profile.
+
 ```lua
 vim.keymap.set("n", "<C-p>", function()
   vim.cmd "Dotnet debug default profile"
@@ -103,13 +108,14 @@ end, { nowait = true, desc = "Start debugging" })
 easy-dotnet.nvim provides real-time performance monitoring during debug sessions through two custom dapui widgets: `easy-dotnet_cpu` and `easy-dotnet_mem`. These widgets display live CPU usage (percentage) and memory consumption (bytes) of your debugged application.
 
 ### Features
-- **CPU Widget**: Shows real-time CPU percentage utilization
-- **Memory Widget**: Displays current memory usage in bytes
-- **Live Updates**: Automatically refreshes during active debug sessions
+* **CPU Widget**: Shows real-time CPU percentage utilization
+* **Memory Widget**: Displays current memory usage in bytes
+* **Live Updates**: Automatically refreshes during active debug sessions
 
 ### Configuration Example
 
 Add the widgets to your dapui layout configuration:
+
 ```lua
 local dapui = require("dapui")
 
