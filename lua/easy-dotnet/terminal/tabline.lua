@@ -7,6 +7,8 @@ local timer = nil
 
 local M = {}
 
+M._click_regions = { tabs = {}, plus = nil }
+
 local function is_server_running(tab) return tab.owned_by == "server" and tab.last_status == "running" end
 
 local function any_server_running()
@@ -68,6 +70,7 @@ function M.render()
 
   local tabline_str = ""
   local segments = {}
+  local click_tabs = {}
   for _, tab in ipairs(tabs) do
     local icon, icon_hl = tab_icon(tab)
     local seg_start = #tabline_str
@@ -80,9 +83,12 @@ function M.render()
       icon_hl = icon_hl,
       is_active = tab.id == manager.active_id,
     }
+    click_tabs[#click_tabs + 1] = { id = tab.id, s = seg_start, e = seg_start + #piece - 1 }
   end
   local plus_start = #tabline_str
   tabline_str = tabline_str .. " [+]"
+  M._click_regions.tabs = click_tabs
+  M._click_regions.plus = { s = plus_start, e = plus_start + 3 }
 
   local header_str = ""
   local header_segs = nil
@@ -149,6 +155,59 @@ end
 
 function M.ensure_timer() start_timer() end
 
+local function refocus_panel()
+  if manager.panel_win and vim.api.nvim_win_is_valid(manager.panel_win) then vim.api.nvim_set_current_win(manager.panel_win) end
+end
+
+local function find_clicked_tab(col)
+  for _, r in ipairs(M._click_regions.tabs) do
+    if col >= r.s and col <= r.e then return r.id end
+  end
+end
+
+local function in_plus(col)
+  local p = M._click_regions.plus
+  return p and col >= p.s and col <= p.e
+end
+
+local function on_left_click()
+  local pos = vim.fn.getmousepos()
+  if pos.winid ~= manager.tabline_win then return end
+  if pos.line ~= 1 then
+    refocus_panel()
+    return
+  end
+  local col = pos.column - 1
+  local id = find_clicked_tab(col)
+  if id then
+    manager.set_active(id)
+  elseif in_plus(col) then
+    local new_tab = manager.new_user_terminal()
+    manager.set_active(new_tab.id)
+    M.ensure_timer()
+  end
+  refocus_panel()
+end
+
+local function on_middle_click()
+  local pos = vim.fn.getmousepos()
+  if pos.winid ~= manager.tabline_win then return end
+  if pos.line == 1 then
+    local col = pos.column - 1
+    local id = find_clicked_tab(col)
+    if id then manager.remove(id) end
+  end
+  refocus_panel()
+end
+
+function M._attach_mouse_keymaps()
+  if not manager.tabline_buf or not vim.api.nvim_buf_is_valid(manager.tabline_buf) then return end
+  local opts = { nowait = true, silent = true, buffer = manager.tabline_buf }
+  vim.keymap.set("n", "<LeftMouse>", on_left_click, opts)
+  vim.keymap.set("n", "<2-LeftMouse>", on_left_click, opts)
+  vim.keymap.set("n", "<MiddleMouse>", on_middle_click, opts)
+end
+
 function M.create(panel_win)
   manager.panel_win = panel_win
 
@@ -168,10 +227,13 @@ function M.create(panel_win)
     width = width,
     height = 2,
     style = "minimal",
-    focusable = false,
+    focusable = true,
     zindex = 101,
   })
   vim.api.nvim_win_set_option(manager.tabline_win, "winhighlight", "Normal:TabLineFill,FloatBorder:TabLineFill")
+  vim.api.nvim_win_set_option(manager.tabline_win, "cursorline", false)
+
+  M._attach_mouse_keymaps()
 
   vim.api.nvim_create_autocmd({ "WinResized", "VimResized" }, {
     group = vim.api.nvim_create_augroup("EasyDotnetOverlaySync", { clear = true }),
