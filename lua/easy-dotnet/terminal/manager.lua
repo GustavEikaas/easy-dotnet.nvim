@@ -129,8 +129,7 @@ function M.new_user_terminal()
         vim.schedule(function()
           tab.last_status = "finished"
           tab.last_exit_code = exit_code
-          local ok_tl, tabline = pcall(require, "easy-dotnet.terminal.tabline")
-          if ok_tl then tabline.render() end
+          M.remove(tab.id)
         end)
       end,
     })
