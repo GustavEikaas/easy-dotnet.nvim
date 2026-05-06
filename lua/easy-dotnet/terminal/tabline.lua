@@ -201,11 +201,34 @@ local function on_middle_click()
 end
 
 function M._attach_mouse_keymaps()
-  if not manager.tabline_buf or not vim.api.nvim_buf_is_valid(manager.tabline_buf) then return end
-  local opts = { nowait = true, silent = true, buffer = manager.tabline_buf }
-  vim.keymap.set("n", "<LeftMouse>", on_left_click, opts)
-  vim.keymap.set("n", "<2-LeftMouse>", on_left_click, opts)
-  vim.keymap.set("n", "<MiddleMouse>", on_middle_click, opts)
+  local function in_tabline()
+    local pos = vim.fn.getmousepos()
+    return manager.tabline_win and pos.winid == manager.tabline_win
+  end
+
+  vim.keymap.set("n", "<LeftMouse>", function()
+    if in_tabline() then
+      vim.schedule(on_left_click)
+      return ""
+    end
+    return "<LeftMouse>"
+  end, { expr = true, replace_keycodes = true, silent = true, desc = "EasyDotnet terminal tabline click" })
+
+  vim.keymap.set("n", "<2-LeftMouse>", function()
+    if in_tabline() then
+      vim.schedule(on_left_click)
+      return ""
+    end
+    return "<2-LeftMouse>"
+  end, { expr = true, replace_keycodes = true, silent = true })
+
+  vim.keymap.set("n", "<MiddleMouse>", function()
+    if in_tabline() then
+      vim.schedule(on_middle_click)
+      return ""
+    end
+    return "<MiddleMouse>"
+  end, { expr = true, replace_keycodes = true, silent = true })
 end
 
 function M.create(panel_win)
@@ -251,6 +274,9 @@ end
 function M.destroy()
   M.stop_timer()
   pcall(vim.api.nvim_del_augroup_by_name, "EasyDotnetOverlaySync")
+  pcall(vim.keymap.del, "n", "<LeftMouse>")
+  pcall(vim.keymap.del, "n", "<2-LeftMouse>")
+  pcall(vim.keymap.del, "n", "<MiddleMouse>")
   if manager.tabline_win and vim.api.nvim_win_is_valid(manager.tabline_win) then vim.api.nvim_win_close(manager.tabline_win, true) end
   manager.tabline_win = nil
 end
