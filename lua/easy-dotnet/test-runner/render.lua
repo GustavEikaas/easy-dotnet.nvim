@@ -348,6 +348,14 @@ local function close_aux_wins()
   M.footer_win = nil
 end
 
+local function disable_gutter(win)
+  vim.wo[win].number = false
+  vim.wo[win].relativenumber = false
+  vim.wo[win].signcolumn = "no"
+  vim.wo[win].foldcolumn = "0"
+  pcall(vim.api.nvim_set_option_value, "statuscolumn", "", { win = win })
+end
+
 ---@param mode "float"|"split"|"vsplit"
 function M.open(mode, options)
   M.options = options or M.options
@@ -374,6 +382,7 @@ function M.open(mode, options)
       border = "rounded",
       focusable = true,
     })
+    disable_gutter(M.win)
 
     vim.api.nvim_create_autocmd("WinClosed", {
       pattern = tostring(M.win),
@@ -395,6 +404,7 @@ function M.open(mode, options)
     end
     M.win = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_buf(M.win, M.buf)
+    disable_gutter(M.win)
 
     open_header_split()
     if not M.options.hide_legend then open_footer_split() end
