@@ -500,7 +500,7 @@ local function get_status_icon(stype)
 end
 
 local function render_node(node, depth)
-  local indent = string.rep(" ", depth * 2)
+  local indent = string.rep(" ", depth)
   local ntype = node.type and node.type.type or ""
   local pre = node_pre_icon(ntype)
 
