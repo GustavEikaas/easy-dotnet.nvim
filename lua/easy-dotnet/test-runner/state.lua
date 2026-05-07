@@ -61,7 +61,7 @@ function M.register(node)
   if existing then
     node.expanded = existing.expanded
   else
-    node.expanded = node_type == "Solution" or node_type == "Project"
+    node.expanded = node_type == "Solution"
   end
 
   node.status = existing and existing.status or nil
