@@ -346,6 +346,10 @@ function M.enable(opts)
   if opts.roslynator_enabled then table.insert(cmd, "--roslynator") end
   if opts.easy_dotnet_analyzer_enabled then table.insert(cmd, "--easy-dotnet-analyzer") end
 
+  -- opts.analyzer_assemblies = {
+  --   "/home/gustav/repo/easy-dotnet-server/EasyDotnet.RoslynLanguageServices/bin/Debug/net8.0/EasyDotnet.RoslynLanguageServices.dll",
+  -- }
+
   if opts.analyzer_assemblies then
     for _, dll in ipairs(opts.analyzer_assemblies) do
       table.insert(cmd, "--analyzer")

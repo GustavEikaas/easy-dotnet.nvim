@@ -271,6 +271,9 @@ Although not *required* by the plugin, it is highly recommended to install one o
 ```
 
 ### Lualine config
+
+#### Simple components
+
 ```lua
 local dotnet = require("easy-dotnet")
 
@@ -282,6 +285,34 @@ require("lualine").setup {
     -- pushed by the server whenever it changes.
     lualine_x = { dotnet.lualine.active_project },
     -- ...
+  },
+}
+```
+
+#### Dynamic run/stop component
+
+A single component that adapts to running state:
+
+- **Idle:** `ProjectName ▶ ` — left-click runs, right-click debugs
+- **Running:** `■ ProjectName` (red) — click stops
+
+```lua
+local dotnet = require("easy-dotnet")
+
+require("lualine").setup {
+  sections = {
+    lualine_x = {
+      dotnet.lualine.jobs,
+      {
+        dotnet.lualine.run_status,
+        on_click = dotnet.lualine.run_status_click,
+        color = function()
+          if require("easy-dotnet.running-sessions").is_running() then
+            return { fg = "#f38ba8" } -- red while running
+          end
+        end,
+      },
+    },
   },
 }
 ```

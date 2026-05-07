@@ -334,6 +334,21 @@ M.diagnostics = require("easy-dotnet.actions.diagnostics")
 M.lualine = {
   jobs = require("easy-dotnet.ui-modules.jobs").lualine,
   active_project = require("easy-dotnet.active-project").lualine,
+  running_sessions = require("easy-dotnet.running-sessions").lualine,
+  run_status = require("easy-dotnet.running-sessions").run_status,
+  run_status_click = require("easy-dotnet.running-sessions").run_status_click,
 }
+
+function M.run_default()
+  require("easy-dotnet.rpc.rpc").global_rpc_client.workspace:run({ use_default = true, use_launch_profile = true })
+end
+
+function M.debug_default()
+  require("easy-dotnet.rpc.rpc").global_rpc_client.workspace:debug({ use_default = true, use_launch_profile = true })
+end
+
+function M.stop()
+  require("easy-dotnet.rpc.rpc").global_rpc_client.workspace:stop()
+end
 
 return M
