@@ -271,6 +271,9 @@ Although not *required* by the plugin, it is highly recommended to install one o
 ```
 
 ### Lualine config
+
+#### Simple components
+
 ```lua
 local dotnet = require("easy-dotnet")
 
@@ -282,6 +285,33 @@ require("lualine").setup {
     -- pushed by the server whenever it changes.
     lualine_x = { dotnet.lualine.active_project },
     -- ...
+  },
+}
+```
+
+#### Dynamic run/stop component
+
+A single component that adapts to running state:
+
+- **Idle:** ` ProjectName` — left-click runs, right-click debugs
+- **Running:** ` ProjectName` (green) — process alive, no debugger attached
+- **Debugging:** ` ProjectName` (orange) — debugger attached
+
+Uses three [Codicons](https://www.nerdfonts.com/) (requires Nerd Font): `nf-cod-debug_start`, `nf-cod-debug_stop`, `nf-cod-debug`.
+
+```lua
+local dotnet = require("easy-dotnet")
+
+require("lualine").setup {
+  sections = {
+    lualine_x = {
+      dotnet.lualine.jobs,
+      {
+        dotnet.lualine.run_status,
+        color    = dotnet.lualine.run_status_color,
+        on_click = dotnet.lualine.run_status_click,
+      },
+    },
   },
 }
 ```
