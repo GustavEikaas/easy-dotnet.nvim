@@ -32,7 +32,7 @@ function M.run_status()
   if #M.projects > 0 then return "■ " .. table.concat(M.projects, ", ") end
   local name = active.lualine()
   if name == "" then return "" end
-  return name .. " ▶ "
+  return " ▶ " .. name
 end
 
 --- on_click handler for the run_status component.
@@ -44,9 +44,9 @@ function M.run_status_click(_clicks, button)
   if #M.projects > 0 then
     dotnet.stop()
   elseif button == "r" then
-    dotnet.debug_default()
+    dotnet.debug_profile_default()
   else
-    dotnet.run_default()
+    dotnet.run_profile_default()
   end
 end
 
