@@ -7,14 +7,10 @@ local M = {
 }
 
 ---@param params { projects: string[] } | nil
-function M.set(params)
-  M.projects = params and params.projects or {}
-end
+function M.set(params) M.projects = params and params.projects or {} end
 
 ---@return boolean
-function M.is_running()
-  return #M.projects > 0
-end
+function M.is_running() return #M.projects > 0 end
 
 --- Lualine component: shows "■ name" when running, empty string when idle.
 ---@return string
@@ -33,9 +29,7 @@ end
 ---@return string
 function M.run_status()
   local active = require("easy-dotnet.active-project")
-  if #M.projects > 0 then
-    return "■ " .. table.concat(M.projects, ", ")
-  end
+  if #M.projects > 0 then return "■ " .. table.concat(M.projects, ", ") end
   local name = active.lualine()
   if name == "" then return "" end
   return name .. " ▶ "

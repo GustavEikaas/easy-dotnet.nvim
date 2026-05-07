@@ -69,9 +69,7 @@ M.handler = function(client, method, params)
     elseif method == "activeProject/changed" then
       require("easy-dotnet.active-project").set(params)
     elseif method == "runningProcesses/changed" then
-      vim.schedule(function()
-        require("easy-dotnet.running-sessions").set(params)
-      end)
+      vim.schedule(function() require("easy-dotnet.running-sessions").set(params) end)
     elseif method == "displayError" then
       logger.error(params.message)
     elseif method == "displayWarning" then
