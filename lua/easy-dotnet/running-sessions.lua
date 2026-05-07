@@ -11,7 +11,7 @@ local ICON_RUNNING = "" -- nf-cod-debug_stop
 local ICON_DEBUG = "" -- nf-cod-debug
 
 local COLOR_RUNNING = { fg = "#1e1e2e", bg = "#a6e3a1", bold = true } -- green badge
-local COLOR_DEBUG   = { fg = "#1e1e2e", bg = "#fab387", bold = true } -- orange badge
+local COLOR_DEBUG = { fg = "#1e1e2e", bg = "#fab387", bold = true } -- orange badge
 
 ---@type easy-dotnet.RunningSessionState
 local M = {
@@ -40,7 +40,7 @@ end
 function M.run_status_color()
   local s = state()
   if s == "debugging" then return COLOR_DEBUG end
-  if s == "running"   then return COLOR_RUNNING end
+  if s == "running" then return COLOR_RUNNING end
   return nil
 end
 
