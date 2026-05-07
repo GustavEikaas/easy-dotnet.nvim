@@ -423,9 +423,17 @@ M.solution = {
   subcommands = {
     select = {
       handle = function(args)
-        local path = type(args) == "string" and args or args[1]
-        current_solution.set_solution(path)
-        logger.info(string.format("Selected solution: %s", vim.fs.basename(path)))
+        local path = type(args) == "string" and args or (type(args) == "table" and args[1] or nil)
+        if path then
+          current_solution.set_solution(path)
+          logger.info(string.format("Selected solution: %s", vim.fs.basename(path)))
+          return
+        end
+        current_solution.pick_solution(function(picked)
+          if not picked then return end
+          current_solution.set_solution(picked)
+          logger.info(string.format("Selected solution: %s", vim.fs.basename(picked)))
+        end)
       end,
       passthrough = true,
     },

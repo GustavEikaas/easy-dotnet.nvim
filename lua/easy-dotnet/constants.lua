@@ -25,6 +25,7 @@ M.highlights = {
   EasyDotnetTestRunnerPassed = "EasyDotnetTestRunnerPassed",
   EasyDotnetTestRunnerFailed = "EasyDotnetTestRunnerFailed",
   EasyDotnetTestRunnerRunning = "EasyDotnetTestRunnerRunning",
+  EasyDotnetTestRunnerProbable = "EasyDotnetTestRunnerProbable",
   --
   EasyDotnetDebuggerFloatVariable = "EasyDotnetDebuggerFloatVariable",
   EasyDotnetDebuggerVirtualException = "EasyDotnetDebuggerVirtualException",

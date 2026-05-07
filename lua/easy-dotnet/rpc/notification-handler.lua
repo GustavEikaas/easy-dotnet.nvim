@@ -66,6 +66,8 @@ M.handler = function(client, method, params)
     elseif method == "project/changed" then
       csproj_parse.invalidate(params.projectPath)
       csproj_parse.get_project_from_project_file(params.projectPath)
+    elseif method == "activeProject/changed" then
+      require("easy-dotnet.active-project").set(params)
     elseif method == "displayError" then
       logger.error(params.message)
     elseif method == "displayWarning" then

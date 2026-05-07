@@ -80,6 +80,7 @@ local function define_highlights()
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerPassed, { link = "DiagnosticOk" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerFailed, { link = "DiagnosticError" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerProbable, { link = "Comment" })
   --Debugger
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerFloatVariable, { link = "Question" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerVirtualVariable, { link = "Question" })
@@ -329,5 +330,10 @@ end
 M.package_completion_source = require("easy-dotnet.csproj-mappings").package_completion_cmp
 
 M.diagnostics = require("easy-dotnet.actions.diagnostics")
+
+M.lualine = {
+  jobs = require("easy-dotnet.ui-modules.jobs").lualine,
+  active_project = require("easy-dotnet.active-project").lualine,
+}
 
 return M

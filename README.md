@@ -133,6 +133,13 @@ Although not *required* by the plugin, it is highly recommended to install one o
      managed_terminal = {
        auto_hide = true, -- auto hides terminal if exit code is 0
        auto_hide_delay = 1000, -- delay before auto hiding, 0 = instant
+       mappings = {
+         next_tab       = { lhs = "<Tab>",   desc = "Next terminal tab" },
+         prev_tab       = { lhs = "<S-Tab>", desc = "Previous terminal tab" },
+         new_terminal   = { lhs = "+",       desc = "New user terminal" },
+         close_terminal = { lhs = "X",       desc = "Close current terminal tab" },
+         hide_panel     = { lhs = "q",       desc = "Hide terminal panel" },
+       },
      },
       -- Optional configuration for external terminals (matches nvim-dap structure)
       external_terminal = nil,
@@ -242,6 +249,12 @@ Although not *required* by the plugin, it is highly recommended to install one o
         default_severity = "error",
         setqflist = false,
       },
+      outdated = {
+        mappings = {
+          upgrade = { lhs = "<leader>pu", desc = "upgrade package under cursor" },
+          upgrade_all = { lhs = "<leader>pa", desc = "upgrade all outdated packages" },
+        },
+      },
     })
 
     -- Example command
@@ -259,12 +272,15 @@ Although not *required* by the plugin, it is highly recommended to install one o
 
 ### Lualine config
 ```lua
-local job_indicator = { require("easy-dotnet.ui-modules.jobs").lualine }
+local dotnet = require("easy-dotnet")
 
 require("lualine").setup {
   sections = {
     -- ...
-    lualine_a = { "mode", job_indicator },
+    lualine_a = { "mode", dotnet.lualine.jobs },
+    -- Shows the default startup project and its launch profile (if any),
+    -- pushed by the server whenever it changes.
+    lualine_x = { dotnet.lualine.active_project },
     -- ...
   },
 }
@@ -455,6 +471,9 @@ Dotnet solution select <path>
 Dotnet solution add
 Dotnet solution remove
 Dotnet outdated
+Dotnet terminal toggle
+Dotnet terminal show
+Dotnet terminal hide
 Dotnet diagnostic
 Dotnet diagnostic errors
 Dotnet diagnostic warnings
@@ -616,6 +635,15 @@ Supports the following filetypes
 - Directory.Packages.props
 - Packages.props
 - Directory.Build.props
+
+After running `Dotnet outdated`, buffer-local keymaps are registered to upgrade packages in place
+(replaces the `Version="..."` attribute with the latest version and removes the virtual text).
+Both keymaps are configurable via `outdated.mappings`:
+
+| Default     | Action                                       |
+| ----------- | -------------------------------------------- |
+| `<leader>pu` | Upgrade the outdated package under the cursor |
+| `<leader>pa` | Upgrade all outdated packages in the buffer   |
 
 
 ![image](https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113)
