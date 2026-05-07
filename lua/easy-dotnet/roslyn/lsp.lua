@@ -257,9 +257,7 @@ local function register_file_rename_tracking(client, buf)
   vim.api.nvim_create_autocmd("BufFilePre", {
     group = group,
     buffer = buf,
-    callback = function()
-      vim.b[buf].easy_dotnet_old_name = vim.api.nvim_buf_get_name(buf)
-    end,
+    callback = function() vim.b[buf].easy_dotnet_old_name = vim.api.nvim_buf_get_name(buf) end,
   })
 
   vim.api.nvim_create_autocmd("BufFilePost", {
