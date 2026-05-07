@@ -293,8 +293,11 @@ require("lualine").setup {
 
 A single component that adapts to running state:
 
-- **Idle:** `ProjectName ▶ ` — left-click runs, right-click debugs
-- **Running:** `■ ProjectName` (red) — click stops
+- **Idle:** ` ProjectName` — left-click runs, right-click debugs
+- **Running:** ` ProjectName` (green) — process alive, no debugger attached
+- **Debugging:** ` ProjectName` (orange) — debugger attached
+
+Uses three [Codicons](https://www.nerdfonts.com/) (requires Nerd Font): `nf-cod-debug_start`, `nf-cod-debug_stop`, `nf-cod-debug`.
 
 ```lua
 local dotnet = require("easy-dotnet")
@@ -305,12 +308,8 @@ require("lualine").setup {
       dotnet.lualine.jobs,
       {
         dotnet.lualine.run_status,
+        color    = dotnet.lualine.run_status_color,
         on_click = dotnet.lualine.run_status_click,
-        color = function()
-          if require("easy-dotnet.running-sessions").is_running() then
-            return { fg = "#f38ba8" } -- red while running
-          end
-        end,
       },
     },
   },

@@ -336,6 +336,7 @@ M.lualine = {
   active_project = require("easy-dotnet.active-project").lualine,
   running_sessions = require("easy-dotnet.running-sessions").lualine,
   run_status = require("easy-dotnet.running-sessions").run_status,
+  run_status_color = require("easy-dotnet.running-sessions").run_status_color,
   run_status_click = require("easy-dotnet.running-sessions").run_status_click,
 }
 
