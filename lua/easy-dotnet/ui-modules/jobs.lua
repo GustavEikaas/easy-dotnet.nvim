@@ -30,7 +30,7 @@
 ---@field default_timeout integer
 ---@field register_listener fun(listener: easy-dotnet.Job.LifecycleListener): fun() Registers a listener and returns a function to remove it.
 ---@field notify_listeners fun(event: easy-dotnet.Job.Event): (fun(event: easy-dotnet.Job.Event)?)[] Calls all registered listeners with a job event and returns their optional finish callbacks.
----@field lualine fun(): string Returns a string representing current job state, intended for statusline display.
+---@field lualine fun(min_display_length?: number): string Returns a string representing current job state, intended for statusline display.
 ---@field update_server_job fun(token, new_name): boolean
 
 --- A listener receives a JobEvent on "started"
@@ -48,6 +48,7 @@ local M = {
   listeners = {},
   finished_job = nil,
   finished_job_time = nil,
+  finished_job_duration = nil,
   _clear_timer = nil,
   -- 60 seconds
   default_timeout = 60000,
@@ -59,6 +60,7 @@ local M = {
 function M.register_job(job)
   if job.is_server_job and not job.server_token then error("Server jobs must provide a server_token") end
   job.timeout = job.timeout or M.default_timeout
+  local started_at = vim.loop.now()
   local index = #M.jobs + 1
   M.jobs[index] = job
   local on_finished = M.notify_listeners({ event = "started", job = job })
@@ -72,8 +74,10 @@ function M.register_job(job)
         M.jobs = vim.tbl_filter(function(x) return x ~= job end, M.jobs)
         local msg = string.format("%s (timed out)", job.name)
         local level = vim.log.levels.WARN
+        local finished_at = vim.loop.now()
         M.finished_job = msg
-        M.finished_job_time = vim.loop.now()
+        M.finished_job_time = finished_at
+        M.finished_job_duration = finished_at - started_at
         M.job_counter = M.job_counter + 1
 
         for _, value in ipairs(on_finished) do
@@ -105,8 +109,10 @@ function M.register_job(job)
     local is_error = success == false
     local msg = is_error and (job.on_error_text or job.name) or (job.on_success_text or job.name)
     local level = is_error and vim.log.levels.ERROR or vim.log.levels.INFO
+    local finished_at = vim.loop.now()
     M.finished_job = msg
-    M.finished_job_time = vim.loop.now()
+    M.finished_job_time = finished_at
+    M.finished_job_duration = finished_at - started_at
     M.job_counter = M.job_counter + 1
     for _, value in ipairs(on_finished) do
       value({ event = "finished", success = success, job = job, result = { msg = msg, level = level, stack_trace = error } })
@@ -129,14 +135,20 @@ function M.notify_listeners(event)
   return vim.iter(M.listeners):map(function(listener) return listener(event) end):totable()
 end
 
-function M.lualine()
+---@param min_display_length? number Minimum seconds total a job should be visible in lualine (default: 5).
+function M.lualine(min_display_length)
+  local min_display_ms = (min_display_length or 5) * 1000
   local total_jobs = #M.jobs
 
   if total_jobs == 0 and M.finished_job and M.finished_job_time then
     local elapsed = vim.loop.now() - M.finished_job_time
-    if elapsed > 5000 then
+    local finished_duration = M.finished_job_duration or 0
+    local cleanup_after_ms = math.max(0, min_display_ms - finished_duration)
+
+    if elapsed >= cleanup_after_ms then
       M.finished_job = nil
       M.finished_job_time = nil
+      M.finished_job_duration = nil
     end
   end
 
