@@ -329,9 +329,7 @@ local function get_visual_selection()
   return line:sub(start_col, end_col)
 end
 
-local function name_input_sync(default)
-  return vim.fn.input({ prompt = "Enter name:", default = default or "" })
-end
+local function name_input_sync(default) return vim.fn.input({ prompt = "Enter name:", default = default or "" }) end
 
 ---@param path string
 ---@param cb function | nil
