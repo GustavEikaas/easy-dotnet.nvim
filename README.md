@@ -36,42 +36,45 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
    - [Keymaps](#keymaps)
    - [Debugging tests](#debugging-tests)
    - [Running tests from buffer](#running-tests-from-buffer)
-9. [Project view](#project-view)
-   - [Features](#features-1)
-   - [Keymaps](#keymaps-1)
-10. [Workspace Diagnostics](#workspace-diagnostics)
+9. [Neotest](#neotest)
+   - [Requirements](#requirements-1)
+   - [Setup](#setup-1)
+10. [Project view](#project-view)
+    - [Features](#features-1)
+    - [Keymaps](#keymaps-1)
+11. [Workspace Diagnostics](#workspace-diagnostics)
     - [Commands](#commands-1)
     - [Configuration](#configuration)
     - [Features](#features-2)
-11. [Outdated](#outdated)
-12. [Add](#add)
+12. [Outdated](#outdated)
+13. [Add](#add)
     - [Add package](#add-package)
-13. [Project mappings](#project-mappings)
+14. [Project mappings](#project-mappings)
     - [Add reference](#add-reference)
     - [Package autocomplete](#package-autocomplete)
-14. [.NET Framework](#net-framework)
-    - [Requirements](#requirements-1)
-15. [New](#new)
+15. [.NET Framework](#net-framework)
+    - [Requirements](#requirements-2)
+16. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
     - [Integrating with neo-tree](#integrating-with-neo-tree)
     - [Integrating with mini files](#integrating-with-mini-files)
     - [Integrating with snacks explorer](#integrating-with-snacks-explorer)
-16. [EntityFramework](#entityframework)
-    - [Requirements](#requirements-2)
+17. [EntityFramework](#entityframework)
+    - [Requirements](#requirements-3)
     - [Database](#database)
     - [Migrations](#migrations)
-17. [Language injections](#language-injections)
+18. [Language injections](#language-injections)
     - [Showcase](#showcase)
-    - [Requirements](#requirements-3)
+    - [Requirements](#requirements-4)
     - [Support matrix](#support-matrix)
-18. [Nvim-dap configuration](#nvim-dap-configuration)
-19. [Troubleshooting](#troubleshooting)
-20. [Highlight groups](#highlight-groups)
-21. [Local Development](#local-development)
-22. [Star History](#star-history)
-23. [Contributors](#contributors)
+19. [Nvim-dap configuration](#nvim-dap-configuration)
+20. [Troubleshooting](#troubleshooting)
+21. [Highlight groups](#highlight-groups)
+22. [Local Development](#local-development)
+23. [Star History](#star-history)
+24. [Contributors](#contributors)
 
 ## Features
 
@@ -593,6 +596,71 @@ When a run is triggered from the buffer the method or class flashes to confirm i
 <img width="1238" height="575" alt="test signs" src="https://github.com/user-attachments/assets/9e6e2d96-b389-4b35-b2a1-c8392ffdbcba" />
 <img width="1228" height="578" alt="test flash confirm" src="https://github.com/user-attachments/assets/bcb8377a-577f-4808-a20e-1c90f884d9d4" />
 <img width="1885" height="1044" alt="floating stacktrace from buffer" src="https://github.com/user-attachments/assets/109fdfdd-d93b-400e-a4e0-8ebf41ff9312" />
+
+## Neotest
+
+easy-dotnet ships a built-in [neotest](https://github.com/nvim-neotest/neotest) adapter. It reuses the same test runner state that powers the built-in test runner window, so no extra discovery step is needed.
+
+### Requirements
+
+- [nvim-neotest/neotest](https://github.com/nvim-neotest/neotest)
+
+### Setup
+
+**1. Enable `neotest_integration` in easy-dotnet**
+
+This disables the built-in buffer signs and keymaps so neotest can manage them instead:
+
+```lua
+require("easy-dotnet").setup({
+  test_runner = {
+    neotest_integration = true,
+  },
+})
+```
+
+**2. Register the adapter with neotest**
+
+```lua
+require("neotest").setup({
+  adapters = {
+    require("easy-dotnet.neotest"),
+  },
+})
+```
+
+#### lazy.nvim example
+
+```lua
+{
+  "nvim-neotest/neotest",
+  dependencies = {
+    "nvim-lua/nvim-nio",
+    "nvim-lua/plenary.nvim",
+    "antoinemadec/FixCursorHold.nvim",
+    "nvim-treesitter/nvim-treesitter",
+    "GustavEikaas/easy-dotnet.nvim",
+  },
+  config = function()
+    require("neotest").setup({
+      adapters = {
+        require("easy-dotnet.neotest"),
+      },
+    })
+  end,
+},
+-- Make sure easy-dotnet is configured with neotest_integration = true
+{
+  "GustavEikaas/easy-dotnet.nvim",
+  config = function()
+    require("easy-dotnet").setup({
+      test_runner = {
+        neotest_integration = true,
+      },
+    })
+  end,
+}
+```
 
 ## Project view
 
