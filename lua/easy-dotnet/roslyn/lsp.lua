@@ -249,6 +249,46 @@ local default_roslyn_settings = {
   },
 }
 
+---@param client vim.lsp.Client
+---@param buf integer
+local function register_file_rename_tracking(client, buf)
+  local group = vim.api.nvim_create_augroup(string.format("easy-dotnet-roslyn-rename-%d-%d", client.id, buf), { clear = true })
+
+  vim.api.nvim_create_autocmd("BufFilePre", {
+    group = group,
+    buffer = buf,
+    callback = function() vim.b[buf].easy_dotnet_old_name = vim.api.nvim_buf_get_name(buf) end,
+  })
+
+  vim.api.nvim_create_autocmd("BufFilePost", {
+    group = group,
+    buffer = buf,
+    callback = function()
+      local old_name = vim.b[buf].easy_dotnet_old_name
+      vim.b[buf].easy_dotnet_old_name = nil
+
+      local new_name = vim.api.nvim_buf_get_name(buf)
+      if not old_name or old_name == "" or new_name == "" or old_name == new_name then return end
+
+      client:notify("workspace/didRenameFiles", {
+        files = {
+          {
+            oldUri = vim.uri_from_fname(old_name),
+            newUri = vim.uri_from_fname(new_name),
+          },
+        },
+      })
+
+      client:notify("workspace/didChangeWatchedFiles", {
+        changes = {
+          { uri = vim.uri_from_fname(old_name), type = 3 },
+          { uri = vim.uri_from_fname(new_name), type = 1 },
+        },
+      })
+    end,
+  })
+end
+
 ---@param opts easy-dotnet.LspOpts
 function M.preload_roslyn(opts)
   local sln = current_solution.try_get_selected_solution()
@@ -373,6 +413,10 @@ function M.enable(opts)
       didChangeWatchedFiles = {
         dynamicRegistration = true,
       },
+      fileOperations = {
+        didRename = true,
+        willRename = true,
+      },
     },
   })
 
@@ -424,6 +468,7 @@ function M.enable(opts)
     end,
     on_attach = function(client, buf)
       vim.b[buf].roslyn_buf_opened_at = now()
+      register_file_rename_tracking(client, buf)
       if vim.bo[buf].filetype == "cs" then
         use_roslyn_fold(buf)
         fix_indent_expression(buf)
