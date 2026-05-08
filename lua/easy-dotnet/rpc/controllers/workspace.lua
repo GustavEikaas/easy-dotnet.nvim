@@ -9,6 +9,7 @@
 ---@field build_solution fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.BuildSolutionOpts): easy-dotnet.RPC.CallHandle
 ---@field test fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.TestOpts): easy-dotnet.RPC.CallHandle
 ---@field test_solution fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.TestOpts): easy-dotnet.RPC.CallHandle
+---@field stop fun(self: easy-dotnet.RPC.Client.Workspace, opts?: easy-dotnet.RPC.Client.Workspace.StopOpts): easy-dotnet.RPC.CallHandle
 
 ---@class easy-dotnet.RPC.Client.Workspace.RunOpts
 ---@field use_default boolean
@@ -25,6 +26,9 @@
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 ---@class easy-dotnet.RPC.Client.Workspace.DebugAttachOpts
+---@field on_crash? fun(err: easy-dotnet.RPC.Error)
+
+---@class easy-dotnet.RPC.Client.Workspace.StopOpts
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 ---@class easy-dotnet.RPC.Client.Workspace.WatchOpts
@@ -236,6 +240,21 @@ function M:debug_attach(opts)
     client = self._client,
     job = nil,
     method = "workspace/debug-attach",
+    params = { ["_"] = "" },
+    cb = nil,
+    on_crash = opts.on_crash,
+  })()
+end
+
+---@param opts? easy-dotnet.RPC.Client.Workspace.StopOpts
+---@return easy-dotnet.RPC.CallHandle
+function M:stop(opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+  return helper.create_rpc_call({
+    client = self._client,
+    job = nil,
+    method = "workspace/stop",
     params = { ["_"] = "" },
     cb = nil,
     on_crash = opts.on_crash,

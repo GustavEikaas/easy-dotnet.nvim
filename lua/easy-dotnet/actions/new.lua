@@ -315,7 +315,21 @@ function M.new()
   end)
 end
 
-local function name_input_sync() return vim.fn.input("Enter name:") end
+local function get_visual_selection()
+  local start_pos = vim.fn.getpos("'<")
+  local end_pos = vim.fn.getpos("'>")
+  local start_line, start_col = start_pos[2], start_pos[3]
+  local end_line, end_col = end_pos[2], end_pos[3]
+
+  if start_line == 0 or start_line ~= end_line then return nil end
+
+  local line = vim.api.nvim_buf_get_lines(0, start_line - 1, start_line, false)[1]
+  if not line then return nil end
+
+  return line:sub(start_col, end_col)
+end
+
+local function name_input_sync(default) return vim.fn.input({ prompt = "Enter name:", default = default or "" }) end
 
 ---@param path string
 ---@param cb function | nil
@@ -356,7 +370,7 @@ M.create_new_item = function(path, cb)
   if template.predefined_file_name ~= nil then
     file_name = template.predefined_file_name
   else
-    local name = name_input_sync()
+    local name = name_input_sync(get_visual_selection())
     if not name or name:match("^%s*$") then
       logger.error("No name provided")
       return

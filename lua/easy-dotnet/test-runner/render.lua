@@ -348,10 +348,21 @@ local function close_aux_wins()
   M.footer_win = nil
 end
 
+local function disable_gutter(win)
+  vim.wo[win].number = false
+  vim.wo[win].relativenumber = false
+  vim.wo[win].signcolumn = "no"
+  vim.wo[win].foldcolumn = "0"
+  pcall(vim.api.nvim_set_option_value, "statuscolumn", "", { win = win })
+end
+
 ---@param mode "float"|"split"|"vsplit"
 function M.open(mode, options)
   M.options = options or M.options
   M.viewmode = mode
+
+  local term_mgr = require("easy-dotnet.terminal.manager")
+  if term_mgr.panel_win and vim.api.nvim_win_is_valid(term_mgr.panel_win) then require("easy-dotnet.terminal").hide() end
 
   if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then
     M.buf = make_scratch_buf("Test Runner")
@@ -374,6 +385,7 @@ function M.open(mode, options)
       border = "rounded",
       focusable = true,
     })
+    disable_gutter(M.win)
 
     vim.api.nvim_create_autocmd("WinClosed", {
       pattern = tostring(M.win),
@@ -395,6 +407,7 @@ function M.open(mode, options)
     end
     M.win = vim.api.nvim_get_current_win()
     vim.api.nvim_win_set_buf(M.win, M.buf)
+    disable_gutter(M.win)
 
     open_header_split()
     if not M.options.hide_legend then open_footer_split() end
@@ -491,7 +504,7 @@ local function get_status_icon(stype)
 end
 
 local function render_node(node, depth)
-  local indent = string.rep(" ", depth * 2)
+  local indent = string.rep(" ", depth + 1)
   local ntype = node.type and node.type.type or ""
   local pre = node_pre_icon(ntype)
 

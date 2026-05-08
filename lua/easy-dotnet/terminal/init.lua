@@ -57,6 +57,9 @@ function M.show()
     return
   end
 
+  local tr = require("easy-dotnet.test-runner.render")
+  if tr.win and vim.api.nvim_win_is_valid(tr.win) then tr.hide() end
+
   if #manager.get_all() == 0 then
     local tab = manager.new_user_terminal()
     manager.active_id = tab.id
