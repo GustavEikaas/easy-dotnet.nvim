@@ -280,7 +280,7 @@ M.setup = function(opts)
     else
       print("Invalid subcommand:", command)
     end
-  end, { nargs = "?", complete = complete_command })
+  end, { nargs = "?", complete = complete_command, range = true })
 
   if merged_opts.csproj_mappings == true then require("easy-dotnet.csproj-mappings").attach_mappings() end
 
