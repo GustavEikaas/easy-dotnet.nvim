@@ -27,6 +27,7 @@ function M.enable()
       local buf_path = vim.api.nvim_buf_get_name(buf_nr)
       if buf_path:match("^%a+://") then return cb(nil) end
       if vim.fn.filereadable(buf_path) == 0 then return cb(nil) end
+      if not buf_path:match("%.csproj$") then return cb(nil) end
       local root_dir = vim.fs.dirname(buf_path)
       cb(root_dir)
     end,
