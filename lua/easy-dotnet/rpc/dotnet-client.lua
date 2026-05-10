@@ -2,14 +2,6 @@ local jobs = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
 local current_solution = require("easy-dotnet.current_solution")
 
-local function dump_to_file(obj, filepath)
-  local serialized = vim.inspect(obj)
-  local f = io.open(filepath, "w")
-  if not f then error("Could not open file: " .. filepath) end
-  f:write(serialized)
-  f:close()
-end
-
 ---@type easy-dotnet.RPC.Client.Dotnet
 local M = {}
 M.__index = M
@@ -20,14 +12,6 @@ M.__index = M
 function M.handle_rpc_error(response)
   if response.error then
     vim.schedule(function() vim.notify(string.format("[RPC Error %s]: %s", response.error.code, response.error.message), vim.log.levels.ERROR) end)
-
-    if response.error.data then
-      local file = vim.fs.normalize(os.tmpname())
-      dump_to_file(response, file)
-      logger.error("Crash dump written at " .. file)
-      return true
-    end
-
     return true
   end
   return false
