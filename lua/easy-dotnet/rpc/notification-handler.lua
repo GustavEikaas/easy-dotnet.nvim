@@ -70,6 +70,15 @@ M.handler = function(client, method, params)
       require("easy-dotnet.active-project").set(params)
     elseif method == "runningProcesses/changed" then
       vim.schedule(function() require("easy-dotnet.running-sessions").set(params) end)
+    elseif method == "profiler/sql-queries" then
+      vim.schedule(function() require("easy-dotnet.profiler.sql").apply_buckets(params and params.buckets or {}) end)
+    elseif method == "profiler/state" then
+      vim.schedule(function()
+        local state = params and params.state or "?"
+        local msg = params and params.message
+        logger.info(string.format("Profiler %s%s", state, msg and (": " .. msg) or ""))
+        if state == "stopped" then require("easy-dotnet.profiler.sql").clear() end
+      end)
     elseif method == "displayError" then
       logger.error(params.message)
     elseif method == "displayWarning" then

@@ -290,6 +290,8 @@ M.setup = function(opts)
 
   if merged_opts.enable_filetypes == true then require("easy-dotnet.filetypes").enable_filetypes() end
 
+  require("easy-dotnet.buffer-sync").attach()
+
   if merged_opts.notifications.handler then
     job.register_listener(merged_opts.notifications.handler)
   else

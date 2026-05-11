@@ -58,16 +58,17 @@ function M.start(cb)
   local log_level = require("easy-dotnet.options").get_option("server").log_level
 
   local args = { "dotnet-easydotnet" }
-  if type(log_level) == "string" then
-    table.insert(args, "--logLevel")
-    table.insert(args, log_level)
-  end
+  -- if type(log_level) == "string" then
+  table.insert(args, "--logLevel")
+  table.insert(args, "verbose")
+  -- end
 
   local handle = vim.fn.jobstart(args, {
     stdout_buffered = false,
     on_stdout = function(_, data, _)
       if not data then return end
 
+      -- vim.print(data)
       for _, line in ipairs(data) do
         append_log("[STDOUT] ", line)
         if line:find(server_ready_prefix, 1, true) then
