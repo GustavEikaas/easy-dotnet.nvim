@@ -2,6 +2,30 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## Neotest support ([#389](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/389))
+
+One of the oldest feature requests ([#298](https://github.com/GustavEikaas/easy-dotnet.nvim/issues/298), raised Mar 29, 2025) has finally landed. easy-dotnet now ships with a built-in [neotest](https://github.com/nvim-neotest/neotest) adapter. It piggybacks on the existing test runner RPC server, so both VSTest and MTP adapters are supported — no separate discovery or build step is needed.
+
+To enable it, pass the adapter to your neotest setup:
+
+```lua
+require("neotest").setup({
+  adapters = {
+    require("easy-dotnet").neotest(),
+  },
+})
+```
+
+If you prefer neotest's buffer signs and keymaps, set `neotest_integration = true` to prevent the built-in test runner from overwriting them:
+
+```lua
+dotnet.setup({
+  test_runner = {
+    neotest_integration = true,
+  },
+})
+```
+
 ## Multi-terminal panel ([#872](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/872))
 
 The managed terminal has been replaced with a multi-tab panel. Instead of a single scratch buffer, the panel now hosts named tabs — one per running job — and you can open as many personal shell tabs as you like.
