@@ -498,7 +498,10 @@ M.ef = {
           end,
         },
         list = {
-          handle = function() require("easy-dotnet.ef-core.migration").list_migrations() end,
+          handle = function()
+            local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+            client:initialize(function() client.entity_framework:migration_list() end)
+          end,
         },
       },
     },
