@@ -82,21 +82,7 @@ M.migration_picker = function(opts, migration)
 end
 
 --- Generates a secret preview for fzf-lua
----@param entry table
----@param get_secret_path function
----@param readFile function
----@return table
-local function secrets_preview(entry, get_secret_path, readFile)
-  if not entry or not entry.secrets then return { "Secrets file does not exist", "<CR> to create" } end
-  local content = readFile(get_secret_path(entry.secrets))
-  if content ~= nil then
-    return content
-  else
-    return { "Secrets file could not be read" }
-  end
-end
-
-M.preview_picker = function(_, options, on_select_cb, title, get_secret_path, readFile)
+M.preview_picker = function(_, options, on_select_cb, title)
   -- Auto pick if only one option present
   if #options == 1 then
     on_select_cb(options[1])
@@ -109,24 +95,13 @@ M.preview_picker = function(_, options, on_select_cb, title, get_secret_path, re
     if not option.display or not option.path then error("Invalid entry detected") end
     table.insert(entries, option.display)
     metadata[option.display] = {
-      secrets = option.secrets,
       path = option.path,
       runnable = option.runnable,
     }
   end
 
-  -- Define the preview function for fzf-lua
-  local preview_fn = function(entry)
-    local display_name = entry[1]
-    if not display_name or display_name == "" then return { "Invalid entry display" } end
-    local entry_data = metadata[display_name]
-    if entry_data == nil then return { "No metadata found for entry" } end
-    return secrets_preview(entry_data, get_secret_path, readFile)
-  end
-
   require("fzf-lua").fzf_exec(entries, {
     prompt = title .. "> ",
-    preview = preview_fn,
     actions = {
       ["default"] = function(selected)
         local entry_meta = metadata[selected[1]]

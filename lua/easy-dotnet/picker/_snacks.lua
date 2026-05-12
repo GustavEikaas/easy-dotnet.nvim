@@ -78,23 +78,11 @@ M.migration_picker = function(opts, migrations)
   })
 end
 
-local function get_preview_text(option, get_secret_path, read_file)
-  if not option or not option.secrets then return "Secrets file does not exist\n<CR> to create" end
-  local content = read_file(get_secret_path(option.secrets))
-  if content ~= nil then
-    return table.concat(content, "\n")
-  else
-    return "Secrets file could not be read"
-  end
-end
-
 ---@generic T
 ---@param options table<T>
 ---@param on_select_cb function
 ---@param title string | nil
----@param get_secret_path function
----@param read_content function
-M.preview_picker = function(options, on_select_cb, title, get_secret_path, read_content)
+M.preview_picker = function(options, on_select_cb, title)
   if #options == 0 then error("No options provided, minimum 1 is required") end
 
   -- Auto pick if only one option present
@@ -108,17 +96,12 @@ M.preview_picker = function(options, on_select_cb, title, get_secret_path, read_
     table.insert(picker_items, {
       text = option.display,
       option = option,
-      preview = {
-        text = get_preview_text(option, get_secret_path, read_content),
-        ft = "json",
-      },
     })
   end
 
   require("snacks").picker.pick(nil, {
     items = picker_items,
     format = "text",
-    preview = "preview",
     title = title,
     confirm = function(picker, item)
       picker:close()

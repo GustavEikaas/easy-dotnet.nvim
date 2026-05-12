@@ -67,7 +67,7 @@ local M = {
 ---| "msbuild/remove-project-reference"
 ---| "msbuild/add-project-reference-interactive"
 ---| "msbuild/remove-project-reference-interactive"
----| "user-secrets/init"
+---| "user-secrets/open"
 ---| "msbuild/project-properties"
 ---| "msbuild/add-package-reference"
 ---| "solution/list-projects"
