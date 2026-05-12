@@ -261,7 +261,7 @@ function M:pack(opts)
     client = self._client,
     job = nil,
     method = "workspace/pack",
-    params = { filePath = opts.file_path or vim.NIL },
+    params = { ["_"] = "" },
     cb = nil,
     on_crash = opts.on_crash,
   })()
@@ -276,7 +276,7 @@ function M:pack_and_push(opts)
     client = self._client,
     job = nil,
     method = "workspace/pack-and-push",
-    params = { filePath = opts.file_path or vim.NIL },
+    params = { ["_"] = "" },
     cb = nil,
     on_crash = opts.on_crash,
   })()
