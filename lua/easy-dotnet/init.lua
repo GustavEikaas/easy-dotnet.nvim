@@ -332,9 +332,8 @@ M.package_completion_source = require("easy-dotnet.csproj-mappings").package_com
 M.diagnostics = require("easy-dotnet.actions.diagnostics")
 
 M.lualine = {
-  jobs = require("easy-dotnet.ui-modules.jobs").lualine,
-  active_project = require("easy-dotnet.active-project").lualine,
-  running_sessions = require("easy-dotnet.running-sessions").lualine,
+  jobs = function() return require("easy-dotnet.ui-modules.jobs").lualine() end,
+  active_project = function() return require("easy-dotnet.active-project").lualine() end,
   run_status = require("easy-dotnet.running-sessions").run_status,
   run_status_color = require("easy-dotnet.running-sessions").run_status_color,
   run_status_click = require("easy-dotnet.running-sessions").run_status_click,
