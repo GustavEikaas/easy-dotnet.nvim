@@ -172,22 +172,23 @@ local function parse_dapui_variable_line(line)
     is_scope = false,
     indent = #indent,
     name = scope_name,
-    icon = icon,
   }
 end
 
-local function build_expression_from_dapui_scopes_buffer()
-  local buf = vim.api.nvim_get_current_buf()
+local function is_dapui_scopes_buffer(buf)
   local name = vim.api.nvim_buf_get_name(buf)
   local filetype = vim.bo[buf].filetype
   local buftype = vim.bo[buf].buftype
 
-  local is_dapui_scope = name:find("DAP Scopes", 1, true)
+  return name:find("DAP Scopes", 1, true)
     or filetype == "dapui_scopes"
     or filetype == "dapui"
     or (buftype == "nofile" and name:lower():find("scopes", 1, true))
+end
 
-  if not is_dapui_scope then
+local function build_expression_from_dapui_scopes_buffer()
+  local buf = vim.api.nvim_get_current_buf()
+  if not is_dapui_scopes_buffer(buf) then
     return nil
   end
 
@@ -224,16 +225,7 @@ end
 
 local function get_dapui_scopes_cursor_value()
   local buf = vim.api.nvim_get_current_buf()
-  local name = vim.api.nvim_buf_get_name(buf)
-  local filetype = vim.bo[buf].filetype
-  local buftype = vim.bo[buf].buftype
-
-  local is_dapui_scope = name:find("DAP Scopes", 1, true)
-    or filetype == "dapui_scopes"
-    or filetype == "dapui"
-    or (buftype == "nofile" and name:lower():find("scopes", 1, true))
-
-  if not is_dapui_scope then
+  if not is_dapui_scopes_buffer(buf) then
     return nil
   end
 
@@ -447,6 +439,16 @@ local function build_preview_payload(text, filetype)
   return pretty, (filetype or pretty_ft)
 end
 
+local function open_converted_preview(text, response)
+  local converted = require("easy-dotnet.netcoredbg.preview_converters").convert(text, response)
+  local preview_text, preview_filetype = build_preview_payload(converted.text, converted.filetype)
+  open_preview_float(preview_text, {
+    filetype = preview_filetype,
+    title = converted.title,
+  })
+  return converted, preview_filetype
+end
+
 function M.register_converter(converter)
   require("easy-dotnet.netcoredbg.preview_converters").register(converter)
 end
@@ -511,6 +513,7 @@ function M.preview_variable(selected_var, frame_id)
           filetype = fallback_ft
         end
       end
+
       open_preview_float(text, {
         filetype = filetype,
         title = converted.title,
@@ -559,27 +562,17 @@ function M.preview_under_cursor()
     end)
     return
   elseif dap_item and dap_item.value ~= nil then
-    local converted = require("easy-dotnet.netcoredbg.preview_converters").convert(tostring(dap_item.value), {
+    open_converted_preview(tostring(dap_item.value), {
       type = dap_item.type,
       result = tostring(dap_item.value),
-    })
-    local text, filetype = build_preview_payload(converted.text, converted.filetype)
-    open_preview_float(text, {
-      filetype = filetype,
-      title = converted.title,
     })
     return
   end
 
   local scopes_value = get_dapui_scopes_cursor_value()
   if scopes_value then
-    local converted = require("easy-dotnet.netcoredbg.preview_converters").convert(scopes_value, {
+    open_converted_preview(scopes_value, {
       result = scopes_value,
-    })
-    local text, filetype = build_preview_payload(converted.text, converted.filetype)
-    open_preview_float(text, {
-      filetype = filetype,
-      title = converted.title,
     })
     return
   end
@@ -605,12 +598,7 @@ function M.preview_under_cursor()
         return
       end
 
-      local converted = require("easy-dotnet.netcoredbg.preview_converters").convert(resp.result, resp)
-      local text, filetype = build_preview_payload(converted.text, converted.filetype)
-      open_preview_float(text, {
-        filetype = filetype,
-        title = converted.title,
-      })
+      open_converted_preview(resp.result, resp)
     end)
   end)
 end
