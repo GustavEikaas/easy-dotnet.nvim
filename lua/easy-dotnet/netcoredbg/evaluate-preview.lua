@@ -434,23 +434,23 @@ function M.preview_under_cursor()
   end
 
   local dap_item = get_dap_item_under_cursor()
-  if dap_item and dap_item.variablesReference and dap_item.variablesReference > 0 then
-    preview_variable_tree(session, dap_item)
-    return
-  end
 
+  -- this is for previewing dap floating widget props
   if dap_item and dap_item.value ~= nil then
     open_converted_preview(tostring(dap_item.value), { type = dap_item.type, result = tostring(dap_item.value) })
     return
   end
 
+  -- this is for previewing dap scopes view items
   local scopes_value = get_dapui_scopes_cursor_value()
   if scopes_value then
     open_converted_preview(scopes_value, { result = scopes_value })
     return
   end
 
+  -- this is for previewing directly from the code
   local expression = get_expression_from_cursor({ no_prompt = true })
+
   if not expression then
     vim.notify("No expression found", vim.log.levels.WARN)
     return
