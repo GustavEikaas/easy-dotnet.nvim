@@ -51,9 +51,9 @@ return {
     vim.keymap.set("n", "<leader>dr", dap.repl.toggle, { desc = "Toggle DAP REPL" })
     vim.keymap.set("n", "<leader>dj", dap.down, { desc = "Go down stack frame" })
     vim.keymap.set("n", "<leader>dk", dap.up, { desc = "Go up stack frame" })
-    vim.keymap.set("n", "<leader>dpj", function()
-      require("easy-dotnet.netcoredbg.json-preview").preview_under_cursor()
-    end, { desc = "Preview variable json" })
+    vim.keymap.set("n", "<leader>dpe", function()
+      require("easy-dotnet.netcoredbg.evaluate-preview").preview_under_cursor()
+    end, { desc = "Preview evaluated expression" })
 
     end
 }
@@ -138,3 +138,49 @@ dapui.setup {
 The widgets integrate seamlessly into your debug UI, providing at-a-glance performance metrics:
 
 <img width="1152" height="810" alt="image" src="https://github.com/user-attachments/assets/70ebc04d-921e-4ed2-aa98-c642885b56ff" />
+
+## Evaluate Preview
+
+`easy-dotnet` can preview any evaluated expression under your cursor in a float. By default, this preview shows the debugger result as-is.
+
+### Default Mapping
+
+```lua
+require("easy-dotnet").setup({
+  debugger = {
+    mappings = {
+      preview_evaluate = { lhs = "<leader>dpe", desc = "preview evaluated expression" },
+    },
+  },
+})
+```
+
+### Registering Preview Converters
+
+You can provide `debugger.preview_converters` to transform preview text for specific types.
+
+```lua
+require("easy-dotnet").setup({
+  debugger = {
+    preview_converters = {
+      {
+        satisfies_type = function(var_type)
+          return var_type == "My.Namespace.Type"
+        end,
+        convert = function(result, response)
+          return {
+            text = result,
+            filetype = "txt",
+            title = " My Type Preview ",
+          }
+        end,
+      },
+    },
+  },
+})
+```
+
+Each converter must expose:
+
+- `satisfies_type(var_type, response) -> boolean`
+- `convert(result, response) -> string | { text: string, filetype?: string, title?: string }`

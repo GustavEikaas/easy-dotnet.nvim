@@ -31,37 +31,20 @@ local function get_expression_from_cursor()
   return expression
 end
 
-local function to_pretty_json_or_text(text)
-  local ok, decoded = pcall(vim.json.decode, text)
-  if ok and type(decoded) == "table" then
-    return vim.json.encode(decoded, { indent = "  " })
-  end
-
-  if ok and type(decoded) == "string" then
-    local ok_inner, decoded_inner = pcall(vim.json.decode, decoded)
-    if ok_inner and type(decoded_inner) == "table" then
-      return vim.json.encode(decoded_inner, { indent = "  " })
-    end
-
-    return decoded
-  end
-
-  return text
-end
-
 local function close_window_if_valid(win)
   if vim.api.nvim_win_is_valid(win) then
     vim.api.nvim_win_close(win, true)
   end
 end
 
-local function open_preview_float(text)
+local function open_preview_float(text, opts)
+  opts = opts or {}
   local buf = vim.api.nvim_create_buf(false, true)
   vim.bo[buf].buftype = "nofile"
   vim.bo[buf].bufhidden = "wipe"
   vim.bo[buf].swapfile = false
   vim.bo[buf].modifiable = true
-  vim.bo[buf].filetype = "json"
+  vim.bo[buf].filetype = opts.filetype or "txt"
 
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(text, "\n", { plain = true }))
   vim.bo[buf].modifiable = false
@@ -79,7 +62,7 @@ local function open_preview_float(text)
     col = col,
     style = "minimal",
     border = "rounded",
-    title = " JSON Preview ",
+    title = opts.title or " Evaluate Preview ",
     title_pos = "center",
   })
 
@@ -88,6 +71,14 @@ local function open_preview_float(text)
 
   vim.keymap.set("n", "q", function() close_window_if_valid(win) end, { buffer = buf, silent = true })
   vim.keymap.set("n", "<Esc>", function() close_window_if_valid(win) end, { buffer = buf, silent = true })
+end
+
+function M.register_converter(converter)
+  require("easy-dotnet.netcoredbg.preview_converters").register(converter)
+end
+
+function M.set_converters(converters)
+  require("easy-dotnet.netcoredbg.preview_converters").set(converters)
 end
 
 function M.preview_under_cursor()
@@ -115,9 +106,12 @@ function M.preview_under_cursor()
         return
       end
 
-      local text = to_pretty_json_or_text(resp.result)
-      text = text:gsub("\\r\\n", "\n"):gsub("\\n", "\n")
-      open_preview_float(text)
+      local converted = require("easy-dotnet.netcoredbg.preview_converters").convert(resp.result, resp)
+      local text = converted.text:gsub("\\r\\n", "\n"):gsub("\\n", "\n")
+      open_preview_float(text, {
+        filetype = converted.filetype,
+        title = converted.title,
+      })
     end)
   end)
 end

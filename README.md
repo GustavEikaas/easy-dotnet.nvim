@@ -1,9 +1,10 @@
 [![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&size=32&pause=1000&width=435&lines=easy-dotnet.nvim)](https://git.io/typing-svg)
 <a href="https://dotfyle.com/plugins/GustavEikaas/easy-dotnet.nvim">
-	<img src="https://dotfyle.com/plugins/GustavEikaas/easy-dotnet.nvim/shield?style=flat" />
+ <img src="https://dotfyle.com/plugins/GustavEikaas/easy-dotnet.nvim/shield?style=flat" />
 </a>
 
 ## Simplifying .NET development in Neovim
+
 Are you a .NET developer looking to harness the power of Neovim for your daily coding tasks? Look no further! easy-dotnet.nvim is here to streamline your workflow and make .NET development in Neovim a breeze.
 
 >[!IMPORTANT]
@@ -14,8 +15,8 @@ Are you a .NET developer looking to harness the power of Neovim for your daily c
 > 📰 **Stay updated:** Major updates and new features are announced in [`news.md`](./news.md).  
 > Give it a read periodically to stay in sync with the latest capabilities!
 
-
 ## Motivation
+
 As a developer transitioning from Rider to Neovim, I found myself missing the simplicity of running projects with just a single button click. Tired of typing out lengthy terminal commands for common tasks like running, testing, and managing user secrets, I decided to create easy-dotnet.nvim. This plugin aims to bridge the gap between the convenience of IDEs like Rider and the flexibility of Neovim.
 
 # Table of Contents
@@ -99,17 +100,18 @@ syntax highlighting for injected languages (sql, json and xml) based on comments
 - [EasyDotnet](https://www.nuget.org/packages/EasyDotnet) `dotnet tool install -g EasyDotnet`
 
 Although not *required* by the plugin, it is highly recommended to install one of:
+
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim)
 - [fzf-lua](https://github.com/ibhagwan/fzf-lua)
 - [snacks.nvim](https://github.com/folke/snacks.nvim)
 
 ## Setup
 
-
 >[!IMPORTANT]
 >Remember to also setup the cmp source for autocomplete
 
 ### Without options
+
 ```lua
 -- lazy.nvim
 {
@@ -122,6 +124,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
 ```
 
 ### With options
+
 ```lua
 -- lazy.nvim
 {
@@ -165,7 +168,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
         auto_register_dap = true,
         mappings = {
           open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
-          preview_json = { lhs = "<leader>dpj", desc = "preview variable json" },
+          preview_evaluate = { lhs = "<leader>dpe", desc = "preview evaluated expression" },
         },
       },
       ---@type TestRunnerOptions
@@ -299,9 +302,9 @@ require("lualine").setup {
 
 A single component that adapts to running state:
 
-- **Idle:** ` ProjectName` — left-click runs, right-click debugs
-- **Running:** ` ProjectName` (green) — process alive, no debugger attached
-- **Debugging:** ` ProjectName` (orange) — debugger attached
+- **Idle:** `ProjectName` — left-click runs, right-click debugs
+- **Running:** `ProjectName` (green) — process alive, no debugger attached
+- **Debugging:** `ProjectName` (orange) — debugger attached
 
 Uses three [Codicons](https://www.nerdfonts.com/) (requires Nerd Font): `nf-cod-debug_start`, `nf-cod-debug_stop`, `nf-cod-debug`.
 
@@ -327,9 +330,10 @@ require("lualine").setup {
 ### Lua functions
 
 **Legend**
+
 - `<TS>` -> Telescope selector
 - `<DArgs>` -> Dotnet args (e.g `--no-build`, `--configuration release`). Always optional
-- `<TS Default>` -> Telescope selector but persists the selection for all future use 
+- `<TS Default>` -> Telescope selector but persists the selection for all future use
 - `<sln>` -> Solution file (in some cases .csproj or .fsproj is used as fallback if no .sln file exists)
 
 | **Function**                                   | **Description**                                                                                              |
@@ -455,9 +459,11 @@ diagnostics.get_workspace_diagnostics("warning")
 ```
 
 ### Vim commands
+
 ```
 Run :Dotnet in nvim to list all commands
 ```
+
 ```
 Dotnet lsp start
 Dotnet lsp restart
@@ -580,8 +586,6 @@ The test runner starts automatically when the server starts and runs discovery s
 
 Use `<leader>d` on any node in the runner to start a debug session. Breakpoints must be set manually before starting the session.
 
-
-
 ### Running tests from buffer
 
 Gutter signs appear automatically on test methods and classes once discovery has completed.
@@ -670,6 +674,7 @@ Get a comprehensive overview of a project's dependencies, and easily manage NuGe
 ![image](https://github.com/user-attachments/assets/2e0e2e25-0a2b-4864-bc3b-64b4048967e5)
 
 ### Features
+
 - **Project Details**: View project name, solution, language, and target version.
 - **Project References**:
   - View project references.
@@ -682,11 +687,13 @@ Get a comprehensive overview of a project's dependencies, and easily manage NuGe
 
 Keymaps are region-specific and work based on context (e.g., when hovering over a project/package or its header):
 
-#### Project References:
+#### Project References
+
 - `a`: Add project reference.
 - `r`: Remove project reference.
 
-#### Package References:
+#### Package References
+
 - `a`: Add package reference.
 - `r`: Remove package reference.
 - `<C-b>`: View package in browser.
@@ -746,7 +753,6 @@ Both keymaps are configurable via `outdated.mappings`:
 | `<leader>pu` | Upgrade the outdated package under the cursor |
 | `<leader>pa` | Upgrade all outdated packages in the buffer   |
 
-
 ![image](https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113)
 
 ## Add
@@ -786,6 +792,7 @@ This will trigger autocomplete for `<PackageReference Include="<cmp-trigger>" Ve
 ```
 
 #### Using Blink.cmp
+
 ```lua
 return {
   "saghen/blink.cmp",
@@ -817,25 +824,28 @@ return {
 
 ![image](https://github.com/user-attachments/assets/2b59735f-941e-44d2-93cf-76b13ac3e76f)
 
-
 ## .NET Framework
+
 Basic support for .NET framework has been achieved. This means basic functionality like `build/run/test/test-runner` should work. If you find something not working feel free to file an issue.
 
 ### Requirements
+
 - `choco install nuget.commandline`
 - Visual studio installation
 - `options.server.use_visual_studio == true`
 
 ## New
+
 Create dotnet templates as with `dotnet new <templatename>`
 Try it out by running `Dotnet new`
 
 ### Project
-https://github.com/user-attachments/assets/aa067c17-3611-4490-afc8-41d98a526729
+<https://github.com/user-attachments/assets/aa067c17-3611-4490-afc8-41d98a526729>
 
 ### Configuration file
 
 If a configuration file is selected it will
+
 1. Create the configuration file and place it next to your solution file. (solution files and gitignore files are placed in cwd)
 
 ### Integrating with nvim-tree
@@ -861,6 +871,7 @@ Adding the following configuration to your nvim-tree will allow for creating fil
 ```
 
 ### Integrating with neo-tree
+
 Adding the following configuration to your neo-tree will allow for creating files using dotnet templates
 
 ```lua
@@ -952,30 +963,33 @@ Adding the following autocmd to your config will allow for creating files using 
 ```
 
 ## EntityFramework
-Common EntityFramework commands have been added mainly to reduce the overhead of writing `--project .. --startup-project ..`. 
+
+Common EntityFramework commands have been added mainly to reduce the overhead of writing `--project .. --startup-project ..`.
 
 ### Requirements
+
 This functionality relies on dotnet-ef tool, install using `dotnet tool install --global dotnet-ef`
 
 ### Database
+
 - `Dotnet ef database update`
 - `Dotnet ef database update pick` --allows to pick which migration to apply
 - `Dotnet ef database drop`
 
 ### Migrations
+
 - `Dotnet ef migrations add <name>`
 - `Dotnet ef migrations remove`
 - `Dotnet ef migrations list`
 
-
 ## Language injections
 
-[Rider-like](https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments) 
+[Rider-like](https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments)
 syntax highlighting for injected languages (sql, json and xml) based on comments.
 
 Just add single-line comment like `//language=json` before string to start using this.
 
-### Showcase 
+### Showcase
 
 Language injection with raw json string as an example.
 
@@ -983,7 +997,7 @@ Language injection with raw json string as an example.
 
 ### Requirements
 
-This functionality is based on [Treesitter](https://github.com/nvim-treesitter/nvim-treesitter) 
+This functionality is based on [Treesitter](https://github.com/nvim-treesitter/nvim-treesitter)
 and parsers for `sql`, `json` and `xml`, so make sure you have these parsers installed: `:TSInstall sql json xml`.
 
 ### Support matrix
@@ -1064,7 +1078,7 @@ Check out [setup guide](./docs/server-development.md)
 </picture>
 
 ## Contributors
+
 <a href="https://github.com/GustavEikaas/easy-dotnet.nvim/graphs/contributors">
 <img src="https://contrib.rocks/image?repo=GustavEikaas/easy-dotnet.nvim" />
 </a>
-

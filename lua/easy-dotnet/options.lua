@@ -185,8 +185,9 @@ local M = {
     debugger = {
       mappings = {
         open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
-        preview_json = { lhs = "<leader>dpj", desc = "preview variable json" },
+        preview_evaluate = { lhs = "<leader>dpe", desc = "preview evaluated expression" },
       },
+      preview_converters = {},
       console = "integratedTerminal", --externalTerminal
       bin_path = nil,
       apply_value_converters = true,
