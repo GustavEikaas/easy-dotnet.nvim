@@ -10,6 +10,12 @@
 ---@field test fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.TestOpts): easy-dotnet.RPC.CallHandle
 ---@field test_solution fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.TestOpts): easy-dotnet.RPC.CallHandle
 ---@field stop fun(self: easy-dotnet.RPC.Client.Workspace, opts?: easy-dotnet.RPC.Client.Workspace.StopOpts): easy-dotnet.RPC.CallHandle
+---@field pack fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.PackOpts): easy-dotnet.RPC.CallHandle
+---@field pack_and_push fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.PackOpts): easy-dotnet.RPC.CallHandle
+
+---@class easy-dotnet.RPC.Client.Workspace.PackOpts
+---@field file_path string | nil
+---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 ---@class easy-dotnet.RPC.Client.Workspace.RunOpts
 ---@field use_default boolean
@@ -240,6 +246,36 @@ function M:debug_attach(opts)
     client = self._client,
     job = nil,
     method = "workspace/debug-attach",
+    params = { ["_"] = "" },
+    cb = nil,
+    on_crash = opts.on_crash,
+  })()
+end
+
+---@param opts easy-dotnet.RPC.Client.Workspace.PackOpts
+---@return easy-dotnet.RPC.CallHandle
+function M:pack(opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+  return helper.create_rpc_call({
+    client = self._client,
+    job = nil,
+    method = "workspace/pack",
+    params = { ["_"] = "" },
+    cb = nil,
+    on_crash = opts.on_crash,
+  })()
+end
+
+---@param opts easy-dotnet.RPC.Client.Workspace.PackOpts
+---@return easy-dotnet.RPC.CallHandle
+function M:pack_and_push(opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+  return helper.create_rpc_call({
+    client = self._client,
+    job = nil,
+    method = "workspace/pack-and-push",
     params = { ["_"] = "" },
     cb = nil,
     on_crash = opts.on_crash,

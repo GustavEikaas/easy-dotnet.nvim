@@ -5,8 +5,6 @@
 ---@field nuget_search fun(self: easy-dotnet.RPC.Client.Nuget, searchTerm: string, sources?: string[], cb?: fun(res: easy-dotnet.Nuget.PackageMetadata[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request a NuGet restore
 -- luacheck: no max line length
 ---@field nuget_get_package_versions fun(self: easy-dotnet.RPC.Client.Nuget, packageId: string, sources?: string[], include_prerelease?: boolean, cb?: fun(res: string[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request a NuGet restore
----@field nuget_push fun(self: easy-dotnet.RPC.Client.Nuget, packages: string[], source: string, cb?: fun(success: boolean), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request a NuGet restore
----@field nuget_list_sources fun(self: easy-dotnet.RPC.Client.Nuget, cb?: fun(res: easy-dotnet.Nuget.SourceResponse[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Enumerate configured NuGet sources
 
 local M = {}
 M.__index = M
@@ -18,19 +16,6 @@ function M.new(client)
   local self = setmetatable({}, M)
   self._client = client
   return self
-end
-
-function M:nuget_push(packages, source, cb, opts)
-  local helper = require("easy-dotnet.rpc.dotnet-client")
-  opts = opts or {}
-  return helper.create_rpc_call({
-    client = self._client,
-    job = { name = "Pushing packages", on_error_text = "Failed to push packages", on_success_text = "Packages pushed to " .. source },
-    cb = cb,
-    on_crash = opts.on_crash,
-    method = "nuget/push",
-    params = { packagePaths = packages, source = source },
-  })()
 end
 
 ---@class easy-dotnet.Nuget.RestoreResult
@@ -115,26 +100,6 @@ function M:nuget_get_package_versions(package, sources, include_prerelease, cb, 
     job = { name = "Getting versions for " .. package, on_error_text = string.format("Failed to get versions for %s", package) },
     method = "nuget/get-package-versions",
     params = { packageId = package, includePrerelease = include_prerelease, sources = sources },
-    cb = cb,
-    on_yield = nil,
-    on_crash = opts.on_crash,
-  })()
-end
-
----@class easy-dotnet.Nuget.SourceResponse
----@field name string        # Display name of the NuGet source
----@field uri string         # Source URI or file path
----@field isLocal boolean    # True if the source is a local file path, false if remote (HTTP, etc.)
-
-function M:nuget_list_sources(cb, opts)
-  local helper = require("easy-dotnet.rpc.dotnet-client")
-  opts = opts or {}
-
-  return helper.create_enumerate_rpc_call({
-    client = self._client,
-    job = nil,
-    method = "nuget/list-sources",
-    params = {},
     cb = cb,
     on_yield = nil,
     on_crash = opts.on_crash,
