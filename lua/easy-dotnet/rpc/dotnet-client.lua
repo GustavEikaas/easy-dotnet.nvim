@@ -114,8 +114,7 @@ end
 ---@field workspace easy-dotnet.RPC.Client.Workspace
 ---@field project_reference easy-dotnet.RPC.Client.ProjectReference
 ---@field server easy-dotnet.RPC.Client.Server
----@field secrets_init fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.RPC.ProjectUserSecretsInitResponse), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request adding package
--- luacheck: no max line length
+---@field secrets easy-dotnet.RPC.Client.Secrets
 ---@field solution_list_projects fun(self: easy-dotnet.RPC.Client.Dotnet, solution_file_path: string, cb?: fun(res: easy-dotnet.Server.SolutionFileProjectResponse[]), include_non_existing?: boolean, opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field solution_add_project fun(self: easy-dotnet.RPC.Client.Dotnet, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field solution_remove_project fun(self: easy-dotnet.RPC.Client.Dotnet, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
@@ -150,6 +149,7 @@ function M:new()
   instance.workspace = require("easy-dotnet.rpc.controllers.workspace").new(client)
   instance.project_reference = require("easy-dotnet.rpc.controllers.project-reference").new(client)
   instance.server = require("easy-dotnet.rpc.controllers.server").new(client)
+  instance.secrets = require("easy-dotnet.rpc.controllers.secrets").new(client)
   return instance
 end
 
@@ -344,22 +344,6 @@ function M:solution_remove_project(cb, opts)
     on_crash = opts.on_crash,
     method = "solution/remove-project",
     params = {},
-  })()
-end
-
----@class easy-dotnet.RPC.ProjectUserSecretsInitResponse
----@field id string
----@field filePath string
-
-function M:secrets_init(project_path, cb, opts)
-  opts = opts or {}
-  return M.create_rpc_call({
-    client = self._client,
-    job = nil,
-    cb = cb,
-    on_crash = opts.on_crash,
-    method = "user-secrets/init",
-    params = { projectPath = project_path },
   })()
 end
 

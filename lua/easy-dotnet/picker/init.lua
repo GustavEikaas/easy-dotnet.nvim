@@ -65,15 +65,15 @@ M.migration_picker = function(opts, migration)
   end
 end
 
-M.preview_picker = function(bufnr, options, on_select_cb, title, previewer, get_secret_path, readFile)
+M.preview_picker = function(bufnr, options, on_select_cb, title, previewer)
   local active_picker = get_active_picker()
 
   if active_picker == "fzf" then
-    return require("easy-dotnet.picker._fzf").preview_picker(bufnr, options, on_select_cb, title, get_secret_path, readFile)
+    return require("easy-dotnet.picker._fzf").preview_picker(bufnr, options, on_select_cb, title)
   elseif active_picker == "telescope" then
     return require("easy-dotnet.picker._telescope").preview_picker(bufnr, options, on_select_cb, title, previewer)
   elseif active_picker == "snacks" then
-    return require("easy-dotnet.picker._snacks").preview_picker(options, on_select_cb, title, get_secret_path, readFile)
+    return require("easy-dotnet.picker._snacks").preview_picker(options, on_select_cb, title)
   else
     return require("easy-dotnet.picker._base").preview_picker(bufnr, options, on_select_cb, title, previewer)
   end

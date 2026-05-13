@@ -38,7 +38,6 @@ local M = {}
 ---@field name string
 ---@field version string | nil
 ---@field runnable boolean
----@field secrets string | nil
 ---@field get_dll_path function
 ---@field isTestProject boolean
 ---@field isNugetPackage boolean
@@ -164,7 +163,6 @@ M.get_project_from_project_file = function(project_file_path)
     local is_test_platform_project = msbuild_props.isTestingPlatformApplication
     local is_win_project = string.lower(msbuild_props.outputType) == "winexe"
     local is_nuget_package = msbuild_props.generatePackageOnBuild or msbuild_props.isPackable
-    local maybe_secret_guid = msbuild_props.userSecretsId
     local version = msbuild_props.version
 
     if version then display = display .. "@" .. version end
@@ -177,7 +175,6 @@ M.get_project_from_project_file = function(project_file_path)
 
     if is_test_project then display = display .. " 󰙨" end
     if is_nuget_package then display = display .. " " end
-    if maybe_secret_guid then display = display .. " " end
     if is_web_project then display = display .. " 󱂛" end
     if is_console_project then display = display .. " 󰆍" end
     if is_worker_project then display = display .. " " end
@@ -191,7 +188,6 @@ M.get_project_from_project_file = function(project_file_path)
       name = name,
       version = version,
       runnable = is_web_project or is_worker_project or is_console_project or is_win_project or msbuild_props.useIISExpress,
-      secrets = maybe_secret_guid,
       --TODO: consolidate method and property, support multi target frameworks where targetPath would be nil
       get_dll_path = function()
         if msbuild_props.isMultiTarget then logger.error("Calling get_dll_path on the root definition of a multi target project is invalid") end

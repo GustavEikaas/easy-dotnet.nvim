@@ -288,9 +288,9 @@ M.remove = {
 }
 
 M.secrets = {
-  handle = function(_, options)
-    local secrets = require("easy-dotnet.secrets")
-    secrets.edit_secrets_picker(options.secrets.path)
+  handle = function(_, _)
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+    client:initialize(function() client.secrets:open() end)
   end,
 }
 
