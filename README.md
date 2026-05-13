@@ -365,7 +365,7 @@ require("lualine").setup {
 | `dotnet.watch_default()` | `dotnet watch --project <TS Default> <DArgs>` |
 ||
 | `dotnet.restore()` | `dotnet restore <sln> <Dargs>` |
-| `dotnet.clean()`                              | `dotnet clean <sln> <DArgs>`                                                                          |
+| `dotnet.clean()`                              | `dotnet clean <pick target>`                                                                           |
 ||
 | `dotnet.remove_package()`                              | |
 | `dotnet.add_package()`                              | |

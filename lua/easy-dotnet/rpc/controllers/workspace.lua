@@ -5,6 +5,7 @@
 ---@field debug_attach fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.DebugAttachOpts): easy-dotnet.RPC.CallHandle
 ---@field watch fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.WatchOpts): easy-dotnet.RPC.CallHandle
 ---@field build fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.BuildOpts): easy-dotnet.RPC.CallHandle
+---@field clean fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.CleanOpts): easy-dotnet.RPC.CallHandle
 ---@field restore fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.RestoreOpts): easy-dotnet.RPC.CallHandle
 ---@field build_solution fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.BuildSolutionOpts): easy-dotnet.RPC.CallHandle
 ---@field test fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.TestOpts): easy-dotnet.RPC.CallHandle
@@ -53,6 +54,9 @@
 ---@class easy-dotnet.RPC.Client.Workspace.BuildSolutionOpts
 ---@field use_terminal boolean
 ---@field build_args string | nil
+---@field on_crash? fun(err: easy-dotnet.RPC.Error)
+
+---@class easy-dotnet.RPC.Client.Workspace.CleanOpts
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 ---@class easy-dotnet.RPC.Client.Workspace.RestoreOpts
@@ -179,6 +183,21 @@ function M:build_solution(opts)
       useTerminal = opts.use_terminal or false,
       buildArgs = opts.build_args or vim.NIL,
     },
+    cb = nil,
+    on_crash = opts.on_crash,
+  })()
+end
+
+---@param opts easy-dotnet.RPC.Client.Workspace.CleanOpts
+---@return easy-dotnet.RPC.CallHandle
+function M:clean(opts)
+  local helper = require("easy-dotnet.rpc.dotnet-client")
+  opts = opts or {}
+  return helper.create_rpc_call({
+    client = self._client,
+    job = nil,
+    method = "workspace/clean",
+    params = { ["_"] = "" },
     cb = nil,
     on_crash = opts.on_crash,
   })()
