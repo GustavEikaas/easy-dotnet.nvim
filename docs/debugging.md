@@ -24,6 +24,8 @@ Dont start the project before doing this, debugger has to start it for you
 5. Wait for breakpoint to be hit
 6. You can now `<F10>` step over, `<F11>` step into, `<F5>` continue and more (see code)
 
+In the DAP REPL, assignment expressions like `x = 5` reassign the variable in the current stack frame.
+
 ## Configuration
 
 ```lua
