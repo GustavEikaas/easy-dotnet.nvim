@@ -402,8 +402,11 @@ M.outdated = {
 }
 
 M.clean = {
-  handle = function(args) require("easy-dotnet.actions.clean").clean_solution(stringify_args(args)) end,
-  passthrough = true,
+  handle = function(_, _)
+    local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+    client:initialize(function() client.workspace:clean({}) end)
+  end,
+  passthrough = false,
 }
 
 M.new = {
