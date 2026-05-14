@@ -34,28 +34,18 @@ end
 ---@class easy-dotnet.Project.Properties
 ---@field projectName string
 ---@field language string
----@field outputPath? string
 ---@field outputType? string
----@field targetExt? string
----@field assemblyName? string
 ---@field targetFramework? string
 ---@field targetFrameworks? string[]
 ---@field isTestProject boolean
+---@field isTestingPlatformApplication boolean
 ---@field isWebProject boolean
 ---@field isWorkerProject boolean
----@field userSecretsId? string
----@field testingPlatformDotnetTestSupport boolean
 ---@field targetPath? string
 ---@field generatePackageOnBuild boolean
 ---@field isPackable boolean
----@field langVersion? string
----@field rootNamespace? string
----@field packageId? string
----@field nugetVersion? string
 ---@field version? string
----@field packageOutputPath? string
 ---@field isMultiTarget boolean
----@field isNetFramework boolean
 ---@field useIISExpress boolean
 
 ---@class easy-dotnet.MSBuild.QueryPropertiesRequest

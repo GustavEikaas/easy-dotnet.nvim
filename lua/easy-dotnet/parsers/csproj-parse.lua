@@ -4,29 +4,21 @@ local logger = require("easy-dotnet.logger")
 local M = {}
 
 ---@class easy-dotnet.MSBuild.Properties
----@field outputPath string | nil Normalized path to the build output directory (e.g., "bin/Debug/net9.0/")
+---@field projectName string
+---@field language "csharp" | "fsharp" | "unknown"
 ---@field outputType string | nil Type of output, typically "Exe" or "Library"
----@field targetExt string | nil File extension of the built output (e.g., ".dll")
----@field assemblyName string | nil The name of the resulting assembly
 ---@field targetFramework string | nil The target framework moniker (e.g., "net9.0")
 ---@field targetFrameworks string[] | nil The target framework list [net9.0,net8.0]
 ---@field isTestProject boolean Whether the project is a test project ("true"/"false")
 ---@field isTestingPlatformApplication boolean Whether the project is a Microsoft.Testing.Platform test project
----@field userSecretsId string | nil The GUID used for User Secrets configuration
----@field testingPlatformDotnetTestSupport boolean Custom property, likely used by test tooling
 ---@field targetPath string | nil Full path to the built output artifact
 ---@field version string | nil TargetVersion without net (e.g '8.0')
----@field isMultiTarget boolean Does it target multiple versions
----@field packageId string | nil Nuget package id
 ---@field generatePackageOnBuild boolean Whether to generate nuget package on build
 ---@field isPackable boolean is nuget package
----@field nugetVersion string | nil nuget package version
+---@field isMultiTarget boolean Does it target multiple versions
 ---@field isWebProject boolean
 ---@field isWorkerProject boolean
----@field isNetFramework boolean
 ---@field useIISExpress boolean
----@field projectName string
----@field language "csharp" \ "fsharp" \ "unknown"
 
 ---@class easy-dotnet.Project.Project
 ---@field language "csharp" | "fsharp"
