@@ -1,5 +1,5 @@
 ---@class easy-dotnet.TestRunner.NodeStatus
----@field type string e.g. "Idle"|"Running"|"Passed"|"Failed"|"Skipped"|"Building"|"Discovering"|"Cancelled"
+---@field type string e.g. "Idle"|"Running"|"Passed"|"Failed"|"Skipped"|"Inconclusive"|"Building"|"Discovering"|"Cancelled"
 ---@field durationDisplay? string
 ---@field errorMessage? string[]
 
@@ -28,6 +28,7 @@
 ---@field totalFailed integer
 ---@field totalSkipped integer
 ---@field totalCancelled integer
+---@field totalInconclusive integer
 
 local M = {}
 
@@ -46,6 +47,7 @@ M.runner_status = {
   totalFailed = 0,
   totalSkipped = 0,
   totalCancelled = 0,
+  totalInconclusive = 0,
 }
 
 M.root_id = nil
@@ -125,6 +127,7 @@ function M.clear()
     totalFailed = 0,
     totalSkipped = 0,
     totalCancelled = 0,
+    totalInconclusive = 0,
   }
 end
 

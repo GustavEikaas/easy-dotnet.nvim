@@ -8,6 +8,7 @@ local TERMINAL_TYPES = {
   Failed = true,
   Faulted = true,
   Skipped = true,
+  Inconclusive = true,
   Cancelled = true,
   BuildFailed = true,
 }

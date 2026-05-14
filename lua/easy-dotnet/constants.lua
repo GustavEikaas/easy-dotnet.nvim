@@ -24,6 +24,7 @@ M.highlights = {
   EasyDotnetTestRunnerPackage = "EasyDotnetTestRunnerPackage",
   EasyDotnetTestRunnerPassed = "EasyDotnetTestRunnerPassed",
   EasyDotnetTestRunnerFailed = "EasyDotnetTestRunnerFailed",
+  EasyDotnetTestRunnerInconclusive = "EasyDotnetTestRunnerInconclusive",
   EasyDotnetTestRunnerRunning = "EasyDotnetTestRunnerRunning",
   EasyDotnetTestRunnerProbable = "EasyDotnetTestRunnerProbable",
   --
