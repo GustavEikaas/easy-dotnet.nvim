@@ -27,9 +27,6 @@ local M = {}
 ---@field useIISExpress boolean
 ---@field projectName string
 ---@field language "csharp" \ "fsharp" \ "unknown"
----@field runCommand string
----@field buildCommand string
----@field testCommand string
 
 ---@class easy-dotnet.Project.Project
 ---@field language "csharp" | "fsharp"
