@@ -113,6 +113,13 @@ local function auto_register_dap(merged_opts)
     local success, dap = pcall(require, "dap")
     if not success then return end
 
+    local preview_keymap = merged_opts.debugger.mappings and merged_opts.debugger.mappings.preview_evaluate
+    if preview_keymap and preview_keymap.lhs and preview_keymap.lhs ~= "" then
+      vim.keymap.set("n", preview_keymap.lhs, function()
+        require("easy-dotnet.netcoredbg.evaluate-preview").preview_under_cursor()
+      end, { desc = preview_keymap.desc, silent = true })
+    end
+
     local debugger_conf = dap.configurations["cs"] or {}
 
     vim.list_extend(debugger_conf, {
@@ -147,6 +154,17 @@ local function auto_register_dap(merged_opts)
       end,
     }
   end
+end
+
+local function setup_preview_converters(merged_opts)
+  local preview_converter_api = require("easy-dotnet.netcoredbg.preview_converters")
+  local preview_converters = {}
+
+  if merged_opts.debugger.preview_converters ~= nil then
+    vim.list_extend(preview_converters, merged_opts.debugger.preview_converters)
+  end
+
+  preview_converter_api.set(preview_converters)
 end
 
 ---@return table<string>
@@ -312,6 +330,7 @@ M.setup = function(opts)
     if merged_opts.background_scanning then lsp.preload_roslyn(merged_opts.lsp) end
   end
   if merged_opts.projx_lsp.enabled == true then require("easy-dotnet.projx.lsp").enable() end
+  setup_preview_converters(merged_opts)
   wrap(auto_register_dap)(merged_opts)
   wrap(background_scanning)(merged_opts)
   wrap(auto_start_testrunner)()

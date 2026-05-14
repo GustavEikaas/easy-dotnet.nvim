@@ -45,6 +45,8 @@ local function redraw(window)
   state.line_to_var = {}
   state.lines = build_lines(state.root_vars)
   window:write_buf(state.lines)
+  vim.b[window.buf].easy_dotnet_debugger_float_line_to_var = state.line_to_var
+  vim.b[window.buf].easy_dotnet_debugger_float_frame_id = state.current_frame_id
   apply_highlights(window, state.lines)
 end
 
@@ -147,6 +149,19 @@ function M.show(varlist, frame_id)
 
   vim.keymap.set("n", "<CR>", function() M.toggle_under_cursor(float) end, { buffer = float.buf, noremap = true, silent = true })
 
+  local preview_map = require("easy-dotnet.options").options.debugger.mappings.preview_evaluate
+  if preview_map and preview_map.lhs and preview_map.lhs ~= "" then
+    vim.keymap.set("n", preview_map.lhs, function()
+      local var = M.get_var_under_cursor()
+      if not var then
+        vim.notify("No variable under cursor", vim.log.levels.WARN)
+        return
+      end
+
+      require("easy-dotnet.netcoredbg.evaluate-preview").preview_variable(var, state.current_frame_id)
+    end, { buffer = float.buf, noremap = true, silent = true, desc = preview_map.desc })
+  end
+
   return float
 end
 
@@ -155,6 +170,50 @@ function M.close()
     M._current_window:close()
     M._current_window = nil
   end
+end
+
+function M.get_var_under_cursor()
+  if not M._current_window then
+    return nil
+  end
+
+  local current_buf = vim.api.nvim_get_current_buf()
+  if current_buf ~= M._current_window.buf then
+    return nil
+  end
+
+  local line = vim.api.nvim_win_get_cursor(0)[1]
+  return state.line_to_var[line]
+end
+
+function M.get_current_frame_id()
+  if not M._current_window then
+    return nil
+  end
+
+  local current_buf = vim.api.nvim_get_current_buf()
+  if current_buf ~= M._current_window.buf then
+    return nil
+  end
+
+  return state.current_frame_id
+end
+
+function M.get_var_from_active_viewer_window()
+  if not M._current_window or not vim.api.nvim_win_is_valid(M._current_window.win) then
+    return nil
+  end
+
+  local line = vim.api.nvim_win_get_cursor(M._current_window.win)[1]
+  return state.line_to_var[line]
+end
+
+function M.get_current_frame_id_from_active_viewer_window()
+  if not M._current_window or not vim.api.nvim_win_is_valid(M._current_window.win) then
+    return nil
+  end
+
+  return state.current_frame_id
 end
 
 return M
