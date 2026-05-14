@@ -24,6 +24,7 @@ local spinner = {
 
 local last_run_time = nil
 local was_loading = false
+local refresh_pending = false
 
 local action_display = {
   Run = "Run",
@@ -534,6 +535,8 @@ local function render_node(node, depth)
 end
 
 function M.refresh()
+  refresh_pending = false
+
   if not M.buf or not vim.api.nvim_buf_is_valid(M.buf) then return end
 
   local rs = state.runner_status
@@ -570,6 +573,12 @@ function M.refresh()
   for _, h in ipairs(highlights) do
     vim.hl.range(M.buf, ns_id, h.hl, { h.row, 0 }, { h.row, -1 })
   end
+end
+
+function M.schedule_refresh()
+  if refresh_pending then return end
+  refresh_pending = true
+  vim.schedule(function() M.refresh() end)
 end
 
 function M.node_at_cursor()
