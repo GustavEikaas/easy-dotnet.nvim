@@ -57,7 +57,6 @@ local M = {
 ---| "initialize"
 ---| "debugger/start"
 ---| "lsp/start"
----| "msbuild/build"
 ---| "launch-profiles"
 ---| "nuget/restore"
 ---| "msbuild/pack"
