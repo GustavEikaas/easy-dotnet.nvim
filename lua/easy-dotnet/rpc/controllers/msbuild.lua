@@ -57,9 +57,6 @@ end
 ---@field isMultiTarget boolean
 ---@field isNetFramework boolean
 ---@field useIISExpress boolean
----@field runCommand string
----@field buildCommand string
----@field testCommand string
 
 ---@class easy-dotnet.MSBuild.QueryPropertiesRequest
 ---@field targetPath string
