@@ -52,9 +52,7 @@ local function build_right_counts(rs)
   push(string.format("%s %d  ", ic.success, rs.totalPassed), "EasyDotnetTestRunnerPassed")
   push(string.format("%s %d  ", ic.failed, rs.totalFailed), "EasyDotnetTestRunnerFailed")
   push(string.format("%s %d  ", ic.skipped, rs.totalSkipped), "EasyDotnetTestRunnerSkipped")
-  if (rs.totalInconclusive or 0) > 0 then
-    push(string.format("%s %d  ", ic.inconclusive or ic.skipped, rs.totalInconclusive), "EasyDotnetTestRunnerInconclusive")
-  end
+  if (rs.totalInconclusive or 0) > 0 then push(string.format("%s %d  ", ic.inconclusive or ic.skipped, rs.totalInconclusive), "EasyDotnetTestRunnerInconclusive") end
   push(string.format("%d tests", rs.totalTests or 0), "Comment")
 
   local text = table.concat(parts)
