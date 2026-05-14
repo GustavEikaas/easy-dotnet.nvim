@@ -118,7 +118,7 @@ M.handler = function(client, method, params)
         state.update_status(params.id, params.status, params.availableActions)
         local node = state.nodes[params.id]
         if node then buffer.on_status_update(node) end
-        render.refresh()
+        render.schedule_refresh()
         require("easy-dotnet.neotest.events").emit("updateStatus", params.id, params.status)
       end)
     elseif method == "refreshTestSigns" then
@@ -131,20 +131,26 @@ M.handler = function(client, method, params)
       if not params then return end
       vim.schedule(function()
         state.update_runner_status(params)
-        render.refresh()
+        render.schedule_refresh()
       end)
     elseif method == "updateStatusBatch" then
       local state = require("easy-dotnet.test-runner.state")
       local render = require("easy-dotnet.test-runner.render")
       local buffer = require("easy-dotnet.test-runner.buffer")
+      local events = require("easy-dotnet.neotest.events")
       if not params or not params.updates then return end
       vim.schedule(function()
+        local affected_files = {}
         for _, update in ipairs(params.updates) do
           state.update_status(update.id, update.status, update.availableActions)
           local node = state.nodes[update.id]
-          if node then buffer.on_status_update(node) end
+          if node and node.filePath then affected_files[node.filePath] = true end
+          events.emit("updateStatus", update.id, update.status)
         end
-        render.refresh()
+        for file in pairs(affected_files) do
+          buffer.apply_signs(file)
+        end
+        render.schedule_refresh()
       end)
     else
       vim.print("Unknown server notification " .. method)
