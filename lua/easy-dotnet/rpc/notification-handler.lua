@@ -28,9 +28,6 @@ local function handle_quickfix_set(params, silent)
 end
 
 ---@param client easy-dotnet.RPC.Client.Dotnet
-local function nuget_restore_handler(client, target_path) client.nuget:nuget_restore(target_path) end
-
----@param client easy-dotnet.RPC.Client.Dotnet
 M.handler = function(client, method, params)
   coroutine.wrap(function()
     if method == "$/progress" then
@@ -58,9 +55,6 @@ M.handler = function(client, method, params)
           active_server_finish_callbacks[token] = nil
         end
       end
-    elseif method == "request/restore" then
-      logger.info("Server requested restore for " .. vim.fs.basename(params.targetPath))
-      nuget_restore_handler(client, params.targetPath)
     elseif method == "_server/update-available" then
       logger.info(string.format("easy-dotnet-server %s update available, update using `:Dotnet _server update`", params.updateType))
     elseif method == "project/changed" then
