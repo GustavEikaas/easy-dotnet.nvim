@@ -82,7 +82,7 @@ local function group_nodes_by_line(filepath)
 end
 
 local function aggregate_status(nodes)
-  local order = { Running = 4, Debugging = 4, Failed = 3, Skipped = 2, Passed = 1 }
+  local order = { Running = 4, Debugging = 4, Failed = 3, Inconclusive = 2, Skipped = 2, Passed = 1 }
   local best = nil
   local best_rank = 0
   for _, node in ipairs(nodes) do
@@ -136,6 +136,7 @@ end
 local sign_text_for = {
   Passed = function(icons) return (icons.passed or "") .. " " end,
   Failed = function(icons) return (icons.failed or "") .. " " end,
+  Inconclusive = function(icons) return (icons.inconclusive or icons.skipped or "") .. " " end,
   Skipped = function(icons) return (icons.skipped or "") .. " " end,
   Running = function(icons) return (icons.reload or "") .. " " end,
   Debugging = function(icons) return (icons.reload or "") .. " " end,
@@ -144,6 +145,7 @@ local sign_text_for = {
 local sign_hl_for = {
   Passed = "EasyDotnetTestRunnerPassed",
   Failed = "EasyDotnetTestRunnerFailed",
+  Inconclusive = "EasyDotnetTestRunnerInconclusive",
   Skipped = "EasyDotnetTestRunnerSkipped",
   Running = "EasyDotnetTestRunnerRunning",
   Debugging = "EasyDotnetTestRunnerRunning",

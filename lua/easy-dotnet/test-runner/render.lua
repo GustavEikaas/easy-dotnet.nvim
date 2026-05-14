@@ -52,6 +52,7 @@ local function build_right_counts(rs)
   push(string.format("%s %d  ", ic.success, rs.totalPassed), "EasyDotnetTestRunnerPassed")
   push(string.format("%s %d  ", ic.failed, rs.totalFailed), "EasyDotnetTestRunnerFailed")
   push(string.format("%s %d  ", ic.skipped, rs.totalSkipped), "EasyDotnetTestRunnerSkipped")
+  if (rs.totalInconclusive or 0) > 0 then push(string.format("%s %d  ", ic.inconclusive or ic.skipped, rs.totalInconclusive), "EasyDotnetTestRunnerInconclusive") end
   push(string.format("%d tests", rs.totalTests or 0), "Comment")
 
   local text = table.concat(parts)
@@ -81,6 +82,8 @@ local function build_header_row(rs, frame)
         left_hl = "Comment"
       elseif shown == "Failed" then
         left_hl = "EasyDotnetTestRunnerFailed"
+      elseif shown == "Inconclusive" then
+        left_hl = "EasyDotnetTestRunnerInconclusive"
       else
         left_hl = "EasyDotnetTestRunnerPassed"
       end
@@ -89,7 +92,7 @@ local function build_header_row(rs, frame)
     if last_run_time then left_text = left_text .. "  " .. last_run_time end
   end
 
-  local empty_rs = { totalRunning = 0, totalPassed = 0, totalFailed = 0, totalSkipped = 0, totalTests = 0 }
+  local empty_rs = { totalRunning = 0, totalPassed = 0, totalFailed = 0, totalSkipped = 0, totalInconclusive = 0, totalTests = 0 }
   local right_text, right_hls, right_dw = build_right_counts(rs or empty_rs)
   local left_dw = vim.fn.strdisplaywidth(left_text)
 
@@ -461,6 +464,7 @@ end
 local status_highlights = {
   Passed = "EasyDotnetTestRunnerPassed",
   Failed = "EasyDotnetTestRunnerFailed",
+  Inconclusive = "EasyDotnetTestRunnerInconclusive",
   Skipped = "EasyDotnetTestRunnerSkipped",
   Running = "EasyDotnetTestRunnerRunning",
   Debugging = "EasyDotnetTestRunnerRunning",
@@ -491,6 +495,7 @@ local function get_status_icon(stype)
   local icons = M.options.icons
   return ({
     Failed = " " .. icons.failed,
+    Inconclusive = " " .. (icons.inconclusive or icons.skipped),
     Skipped = " " .. icons.skipped,
     Cancelled = " " .. icons.failed,
     NotRun = " " .. icons.build_failed,

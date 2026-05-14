@@ -5,6 +5,8 @@ local OUTCOME_MAP = {
   failed = "failed",
   faulted = "failed",
   skipped = "skipped",
+  none = "skipped",
+  inconclusive = "skipped",
   cancelled = "skipped",
   buildfailed = "failed",
 }

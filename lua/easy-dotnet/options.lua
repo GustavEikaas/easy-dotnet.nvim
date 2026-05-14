@@ -46,6 +46,7 @@
 ---@class easy-dotnet.TestRunner.Icons
 ---@field passed string
 ---@field skipped string
+---@field inconclusive string|nil
 ---@field failed string
 ---@field success string
 ---@field reload string

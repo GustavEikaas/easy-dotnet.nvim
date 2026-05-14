@@ -5,6 +5,7 @@ local TERMINAL_STATUSES = {
   Failed = "failed",
   Faulted = "failed",
   Skipped = "skipped",
+  Inconclusive = "skipped",
   Cancelled = "skipped",
   BuildFailed = "failed",
 }
