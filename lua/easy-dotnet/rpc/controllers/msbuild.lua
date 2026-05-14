@@ -1,5 +1,3 @@
-local jobs = require("easy-dotnet.ui-modules.jobs")
-
 ---@class easy-dotnet.RPC.Client.MsBuild
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
 -- luacheck: no max line length
@@ -12,7 +10,6 @@ local jobs = require("easy-dotnet.ui-modules.jobs")
 ---@field msbuild_add_project_reference fun(self: easy-dotnet.RPC.Client.MsBuild, projectPath: string, targetPath: string, cb?: fun(success: boolean), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request project references
 -- luacheck: no max line length
 ---@field msbuild_remove_project_reference fun(self: easy-dotnet.RPC.Client.MsBuild, projectPath: string, targetPath: string, cb?: fun(success: boolean), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request project references
----@field msbuild_build fun(self: easy-dotnet.RPC.Client.MsBuild, request: easy-dotnet.MSBuild.BuildRequest, cb?: fun(res: easy-dotnet.MSBuild.BuildResult), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request msbuild
 
 local M = {}
 M.__index = M
@@ -108,65 +105,6 @@ function M:msbuild_remove_project_reference(projectPath, targetPath, cb, opts)
     on_crash = opts.on_crash,
     method = "msbuild/remove-project-reference",
     params = { projectPath = projectPath, targetPath = targetPath },
-  })()
-end
-
----@class easy-dotnet.MSBuild.BuildRequest
----@field targetPath string
----@field targetFramework? string
----@field configuration? string
----@field buildArgs? string
-
----@class easy-dotnet.MSBuild.Diagnostic
----@field code string
----@field columnNumber integer
----@field filePath string
----@field lineNumber integer
----@field message string
----@field type "error" | "warning"
----@field project string | nil
-
----@class easy-dotnet.MSBuild.BuildResult
----@field errors easy-dotnet.MSBuild.Diagnostic[]
----@field warnings easy-dotnet.MSBuild.Diagnostic[]
----@field success boolean
-
-function M:msbuild_build(request, cb, opts)
-  local helper = require("easy-dotnet.rpc.dotnet-client")
-  opts = opts or {}
-  local finished = jobs.register_job({ name = "Building...", on_error_text = "Build failed", on_success_text = "Built successfully", timeout = -1 })
-  return helper.create_rpc_call({
-    client = self._client,
-    job = nil,
-    cb = function(result)
-      local pending = 2
-
-      local function done()
-        if pending == 0 then
-          finished(result.success)
-          if cb then cb(result) end
-        end
-      end
-
-      if result.warnings and result.warnings.token then
-        self._client:request_property_enumerate(result.warnings.token, nil, function(warnings)
-          result.warnings = warnings
-          pending = pending - 1
-          done()
-        end)
-      end
-
-      if result.errors and result.errors.token then
-        self._client:request_property_enumerate(result.errors.token, nil, function(errors)
-          result.errors = errors
-          pending = pending - 1
-          done()
-        end)
-      end
-    end,
-    on_crash = opts.on_crash,
-    method = "msbuild/build",
-    params = { request = request },
   })()
 end
 
