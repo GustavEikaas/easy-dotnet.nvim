@@ -105,10 +105,6 @@ Although not *required* by the plugin, it is highly recommended to install one o
 
 ## Setup
 
-
->[!IMPORTANT]
->Remember to also setup the cmp source for autocomplete
-
 ### Without options
 ```lua
 -- lazy.nvim
@@ -771,46 +767,10 @@ Key mappings are available automatically within `.csproj` and `.fsproj` files
 
 ### Package autocomplete
 
-When editing package references inside a .csproject file it is possible to enable autocomplete.
-This will trigger autocomplete for `<PackageReference Include="<cmp-trigger>" Version="<cmp-trigger>" />`
+Package autocomplete in `.csproj` files is provided by the ProjX LSP, which is enabled by default.
+This triggers autocomplete for `<PackageReference Include="<lsp-trigger>" Version="<lsp-trigger>" />`.
 
-#### Using nvim-cmp
-
-```lua
-    cmp.register_source("easy-dotnet", require("easy-dotnet").package_completion_source)
-    ...
-    sources = cmp.config.sources({
-        { name = 'nvim_lsp'    },
-        { name = 'easy-dotnet' },
-        ...
-    }),
-    ...
-```
-
-#### Using Blink.cmp
-```lua
-return {
-  "saghen/blink.cmp",
-  version = "*",
-  config = function()
-    require("blink.cmp").setup {
-      fuzzy = { implementation = "prefer_rust_with_warning" },
-      sources = {
-        default = { "lsp", "easy-dotnet", "path" },
-        providers = {
-          ["easy-dotnet"] = {
-            name = "easy-dotnet",
-            enabled = true,
-            module = "easy-dotnet.completion.blink",
-            score_offset = 10000,
-            async = true,
-          },
-        },
-      },
-    }
-  end,
-}
-```
+Older configurations that manually register the `easy-dotnet` source with `nvim-cmp` or `blink.cmp` should be removed.
 
 ![image](https://github.com/user-attachments/assets/81809aa8-704b-4481-9445-3985ddef6c98)
 

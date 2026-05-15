@@ -2,6 +2,18 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## ProjX LSP enabled by default
+
+easy-dotnet now enables the ProjX LSP by default for `.csproj` files. Package autocomplete for `PackageReference` entries is provided through normal LSP completion, so manual completion-source setup is no longer needed.
+
+### Upgrade notes
+
+If you previously registered the `easy-dotnet` completion source manually, remove it from your completion setup:
+
+- `cmp.register_source("easy-dotnet", require("easy-dotnet").package_completion_source)`
+- `easy-dotnet` entries in `nvim-cmp` sources
+- `easy-dotnet.completion.blink` providers in `blink.cmp`
+
 ## Neotest support ([#389](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/389))
 
 One of the oldest feature requests ([#298](https://github.com/GustavEikaas/easy-dotnet.nvim/issues/298), raised Mar 29, 2025) has finally landed. easy-dotnet now ships with a built-in [neotest](https://github.com/nvim-neotest/neotest) adapter. It piggybacks on the existing test runner RPC server, so both VSTest and MTP adapters are supported — no separate discovery or build step is needed.
@@ -465,4 +477,3 @@ choco install nuget.commandline
 ```lua
 options.server.use_visual_studio = true
 ```
-
