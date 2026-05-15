@@ -472,7 +472,7 @@ local status_highlights = {
   BuildFailed = "EasyDotnetTestRunnerFailed",
   NotRun = "EasyDotnetTestRunnerFailed",
   Discovering = "EasyDotnetTestRunnerRunning",
-  Queued = "Comment",
+  Queued = "EasyDotnetTestRunnerQueued",
   Cancelling = "EasyDotnetTestRunnerRunning",
   Cancelled = "Comment",
 }

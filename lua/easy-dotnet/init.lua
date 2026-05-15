@@ -81,6 +81,7 @@ local function define_highlights()
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerFailed, { link = "DiagnosticError" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerInconclusive, { link = "DiagnosticHint" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerQueued, { link = "Comment" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerProbable, { link = "Comment" })
   --Debugger
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerFloatVariable, { link = "Question" })

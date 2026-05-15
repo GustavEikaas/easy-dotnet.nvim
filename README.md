@@ -1039,6 +1039,7 @@ Check out [debugging-setup](./docs/debugging.md) for a full walkthrough of debug
 | **EasyDotnetTestRunnerPassed** | *DiagnosticOk* |
 | **EasyDotnetTestRunnerFailed** | *DiagnosticError* |
 | **EasyDotnetTestRunnerRunning** | *DiagnosticWarn* |
+| **EasyDotnetTestRunnerQueued** | *Comment* |
 | **EasyDotnetDebuggerFloatVariable** | *Question* |
 | **EasyDotnetDebuggerVirtualVariable** | *Question* |
 | **EasyDotnetDebuggerVirtualException** | *DiagnosticError* |
