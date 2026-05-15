@@ -1,5 +1,5 @@
 ---@class easy-dotnet.TestRunner.NodeStatus
----@field type string e.g. "Idle"|"Running"|"Passed"|"Failed"|"Skipped"|"Inconclusive"|"Building"|"Discovering"|"Cancelled"
+---@field type string e.g. "Idle"|"Queued"|"Running"|"Debugging"|"Passed"|"Failed"|"Faulted"|"Skipped"|"Inconclusive"|"Building"|"Discovering"|"BuildFailed"|"Cancelling"|"Cancelled"
 ---@field durationDisplay? string
 ---@field errorMessage? string[]
 
