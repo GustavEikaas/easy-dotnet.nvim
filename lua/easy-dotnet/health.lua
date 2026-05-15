@@ -95,7 +95,7 @@ local function check_cmp()
     if type(cmp.get_registered_sources) == "function" then
       for _, value in ipairs(cmp.get_registered_sources()) do
         if value.name == "easy-dotnet" then
-          vim.health.ok("cmp source configured correctly")
+          vim.health.warn("cmp source configured, use projx_lsp instead")
           return
         end
       end
@@ -105,12 +105,10 @@ local function check_cmp()
   if pcall(require, "blink.cmp.config") then
     local blink_config = require("blink.cmp.config")
     if blink_config.sources.providers["easy-dotnet"] then
-      vim.health.ok("cmp source configured correctly")
+      vim.health.warn("cmp source configured, use projx_lsp instead")
       return
     end
   end
-
-  vim.health.warn("cmp source not configured", { "https://github.com/GustavEikaas/easy-dotnet.nvim?tab=readme-ov-file#package-autocomplete" })
 end
 
 local function os_info()

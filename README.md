@@ -146,6 +146,9 @@ Although not *required* by the plugin, it is highly recommended to install one o
      },
       -- Optional configuration for external terminals (matches nvim-dap structure)
       external_terminal = nil,
+      projx_lsp = {
+        enabled = true,
+      },
       lsp = {
         enabled = true, -- Enable builtin roslyn lsp
         set_fold_expr = false,
