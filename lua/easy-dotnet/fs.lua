@@ -106,9 +106,13 @@ function M.find_upward_first_async(start_dir, opts)
 
   local function visit(dir)
     list_dir_matches(dir, patterns, function(matches)
-      if #matches > 0 then return vim.schedule(function() on_done(matches[1]) end) end
+      if #matches > 0 then
+        return vim.schedule(function() on_done(matches[1]) end)
+      end
       local parent = vim.fs.dirname(dir)
-      if not parent or parent == dir then return vim.schedule(function() on_done(nil) end) end
+      if not parent or parent == dir then
+        return vim.schedule(function() on_done(nil) end)
+      end
       visit(parent)
     end)
   end
@@ -134,7 +138,9 @@ function M.find_upward_collect_async(start_dir, opts)
       end
       local at_stop = stop_at and vim.fs.normalize(dir) == stop_at
       local parent = vim.fs.dirname(dir)
-      if at_stop or not parent or parent == dir then return vim.schedule(function() on_done(results) end) end
+      if at_stop or not parent or parent == dir then
+        return vim.schedule(function() on_done(results) end)
+      end
       visit(parent)
     end)
   end
