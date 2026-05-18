@@ -81,6 +81,8 @@ M.handler = function(client, method, params)
         vim.fn.setqflist({})
         vim.cmd("cclose")
       end
+    elseif method == "solution/projects-loaded" then
+      vim.notify("Solution loaded")
     elseif method == "registerTest" then
       local state = require("easy-dotnet.test-runner.state")
       local render = require("easy-dotnet.test-runner.render")
