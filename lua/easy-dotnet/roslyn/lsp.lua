@@ -148,14 +148,25 @@ function M.find_project_or_solution(bufnr, cb)
       end
     end
 
-    local project = root_finder.find_csproj_from_file(buf_path)
+    local co = coroutine.running()
+    local function await(fn)
+      local result
+      fn(function(r)
+        result = r
+        coroutine.resume(co)
+      end)
+      coroutine.yield()
+      return result
+    end
+
+    local project = await(function(done) root_finder.find_csproj_from_file(buf_path, done) end)
 
     if not project then
       cb(vim.fs.dirname(buf_path))
       return
     end
 
-    local sln = root_finder.find_solutions_from_file(project)
+    local sln = await(function(done) root_finder.find_solutions_from_file(project, done) end)
 
     if vim.tbl_isempty(sln) then
       cb(vim.fs.dirname(project))

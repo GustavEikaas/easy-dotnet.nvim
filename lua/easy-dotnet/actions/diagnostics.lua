@@ -35,42 +35,43 @@ function M.get_workspace_diagnostics(severity_filter)
   local include_warnings = get_severity_params(severity_filter)
 
   rpc.global_rpc_client:initialize(function()
-    local projects = parsers.sln_parser.find_project_files()
-    local solutions = parsers.sln_parser.get_solutions()
+    parsers.sln_parser.find_project_files(function(projects)
+      parsers.sln_parser.get_solutions(function(solutions)
+        local all_items = {}
 
-    local all_items = {}
+        -- Add solutions first to prioritize them in the picker
+        for _, solution in ipairs(solutions) do
+          table.insert(all_items, {
+            display = "Solution: " .. vim.fn.fnamemodify(solution, ":t"),
+            value = solution,
+            type = "solution",
+          })
+        end
 
-    -- Add solutions first to prioritize them in the picker
-    for _, solution in ipairs(solutions) do
-      table.insert(all_items, {
-        display = "Solution: " .. vim.fn.fnamemodify(solution, ":t"),
-        value = solution,
-        type = "solution",
-      })
-    end
+        for _, project in ipairs(projects) do
+          table.insert(all_items, {
+            display = "Project: " .. vim.fn.fnamemodify(project, ":t"),
+            value = project,
+            type = "project",
+          })
+        end
 
-    for _, project in ipairs(projects) do
-      table.insert(all_items, {
-        display = "Project: " .. vim.fn.fnamemodify(project, ":t"),
-        value = project,
-        type = "project",
-      })
-    end
+        if #all_items == 0 then
+          vim.notify("No .csproj or .sln files found in the workspace", vim.log.levels.WARN)
+          return
+        end
 
-    if #all_items == 0 then
-      vim.notify("No .csproj or .sln files found in the workspace", vim.log.levels.WARN)
-      return
-    end
-
-    if #all_items == 1 then
-      local selected = all_items[1]
-      execute_diagnostics_request(selected, include_warnings)
-    else
-      local picker = require("easy-dotnet.picker")
-      picker.picker(nil, all_items, function(selected)
-        if selected then execute_diagnostics_request(selected, include_warnings) end
-      end, "Select project or solution for diagnostics:")
-    end
+        if #all_items == 1 then
+          local selected = all_items[1]
+          execute_diagnostics_request(selected, include_warnings)
+        else
+          local picker = require("easy-dotnet.picker")
+          picker.picker(nil, all_items, function(selected)
+            if selected then execute_diagnostics_request(selected, include_warnings) end
+          end, "Select project or solution for diagnostics:")
+        end
+      end)
+    end)
   end)
 end
 
