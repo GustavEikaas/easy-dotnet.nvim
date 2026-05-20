@@ -2,11 +2,6 @@
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
 ---@field add fun(self: easy-dotnet.RPC.Client.PackageManager, project_path?: string, include_prerelease?: boolean, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field remove fun(self: easy-dotnet.RPC.Client.PackageManager, project_path?: string, package_ids?: string[], cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
----@field list_installed fun (self: easy-dotnet.RPC.Client.PackageManager, project_path: string, cb?: fun(res: easy-dotnet.PackageManager.InstalledPackageReference[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
-
----@class easy-dotnet.PackageManager.InstalledPackageReference
----@field id string
----@field version string
 
 local M = {}
 M.__index = M
@@ -57,23 +52,6 @@ function M:remove(project_path, package_ids, cb, opts)
       projectPath = project_path or vim.NIL,
       packageIds = package_ids or vim.NIL,
     },
-    cb = cb,
-    on_crash = opts.on_crash,
-  })()
-end
-
----@param project_path string
----@param cb? fun(res: easy-dotnet.PackageManager.InstalledPackageReference[])
----@param opts? easy-dotnet.RPC.CallOpts
----@return easy-dotnet.RPC.CallHandle
-function M:list_installed(project_path, cb, opts)
-  local helper = require("easy-dotnet.rpc.dotnet-client")
-  opts = opts or {}
-  return helper.create_rpc_call({
-    client = self._client,
-    job = nil,
-    method = "nuget/list-installed",
-    params = { projectPath = project_path },
     cb = cb,
     on_crash = opts.on_crash,
   })()

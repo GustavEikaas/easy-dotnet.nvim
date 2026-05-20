@@ -1,10 +1,11 @@
 local jobs = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
-local csproj_parse = require("easy-dotnet.parsers.csproj-parse")
 local constants = require("easy-dotnet.constants")
 local M = {}
 
 local active_server_finish_callbacks = {}
+
+local function handle_project_changed() end
 
 local function handle_quickfix_set(params, silent)
   require("easy-dotnet.test-runner.render").hide()
@@ -58,8 +59,7 @@ M.handler = function(client, method, params)
     elseif method == "_server/update-available" then
       logger.info(string.format("easy-dotnet-server %s update available, update using `:Dotnet _server update`", params.updateType))
     elseif method == "project/changed" then
-      csproj_parse.invalidate(params.projectPath)
-      csproj_parse.get_project_from_project_file(params.projectPath)
+      handle_project_changed()
     elseif method == "activeProject/changed" then
       require("easy-dotnet.active-project").set(params)
     elseif method == "runningProcesses/changed" then

@@ -2,7 +2,7 @@ local M = {}
 
 local rpc = require("easy-dotnet.rpc.rpc")
 local diagnostics = require("easy-dotnet.diagnostics")
-local parsers = require("easy-dotnet.parsers")
+local sln_parser = require("easy-dotnet.parsers.sln-parse")
 
 local function get_default_filter()
   return function(filename) return (filename:match("%.cs$") or filename:match("%.fs$")) and not filename:match("/obj/") and not filename:match("/bin/") end
@@ -35,8 +35,8 @@ function M.get_workspace_diagnostics(severity_filter)
   local include_warnings = get_severity_params(severity_filter)
 
   rpc.global_rpc_client:initialize(function()
-    parsers.sln_parser.find_project_files(function(projects)
-      parsers.sln_parser.get_solutions(function(solutions)
+    sln_parser.find_project_files(function(projects)
+      sln_parser.get_solutions(function(solutions)
         local all_items = {}
 
         -- Add solutions first to prioritize them in the picker

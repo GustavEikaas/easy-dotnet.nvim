@@ -1,6 +1,5 @@
 ---@class easy-dotnet.RPC.Client.Nuget
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
----@field nuget_restore fun(self: easy-dotnet.RPC.Client.Nuget, targetPath: string, cb?: fun(res: easy-dotnet.MSBuild.BuildResult), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request a NuGet restore
 -- luacheck: no max line length
 ---@field nuget_search fun(self: easy-dotnet.RPC.Client.Nuget, searchTerm: string, sources?: string[], cb?: fun(res: easy-dotnet.Nuget.PackageMetadata[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle # Request a NuGet restore
 -- luacheck: no max line length
@@ -16,48 +15,6 @@ function M.new(client)
   local self = setmetatable({}, M)
   self._client = client
   return self
-end
-
----@class easy-dotnet.Nuget.RestoreResult
----@field errors easy-dotnet.MSBuild.Diagnostic[]
----@field warnings easy-dotnet.MSBuild.Diagnostic[]
----@field success boolean
-
-function M:nuget_restore(targetPath, cb, opts)
-  local helper = require("easy-dotnet.rpc.dotnet-client")
-  opts = opts or {}
-  return helper.create_rpc_call({
-    client = self._client,
-    job = { name = "Restoring packages...", on_error_text = "Failed to restore nuget packages", on_success_text = "Nuget packages restored" },
-    cb = function(result)
-      local pending = 2
-
-      local function done()
-        if pending == 0 then
-          if cb then cb(result) end
-        end
-      end
-
-      if result.warnings and result.warnings.token then
-        self._client:request_property_enumerate(result.warnings.token, nil, function(warnings)
-          result.warnings = warnings
-          pending = pending - 1
-          done()
-        end)
-      end
-
-      if result.errors and result.errors.token then
-        self._client:request_property_enumerate(result.errors.token, nil, function(errors)
-          result.errors = errors
-          pending = pending - 1
-          done()
-        end)
-      end
-    end,
-    on_crash = opts.on_crash,
-    method = "nuget/restore",
-    params = { targetPath = targetPath },
-  })()
 end
 
 ---@class easy-dotnet.Nuget.PackageMetadata
