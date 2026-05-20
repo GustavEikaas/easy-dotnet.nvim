@@ -3,17 +3,19 @@ local cache = require("easy-dotnet.modules.file-cache")
 local current_solution = require("easy-dotnet.current_solution")
 local M = {}
 
-M.find_project_files = function()
-  local csfiles = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.csproj$", depth = 3 })
-  local fsfiles = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.fsproj$", depth = 3 })
-  local normalized = {}
-  for _, value in ipairs(csfiles) do
-    table.insert(normalized, vim.fs.normalize(value))
-  end
-  for _, value in ipairs(fsfiles) do
-    table.insert(normalized, vim.fs.normalize(value))
-  end
-  return normalized
+---@param cb fun(paths: string[])
+M.find_project_files = function(cb)
+  require("easy-dotnet.fs").find_async(".", {
+    match = "%.[cf]sproj$",
+    depth = 3,
+    on_done = function(paths)
+      local normalized = {}
+      for _, value in ipairs(paths) do
+        table.insert(normalized, vim.fs.normalize(value))
+      end
+      cb(normalized)
+    end,
+  })
 end
 
 ---Parses a .sln file and returns a flattened list of DotnetProject objects,
@@ -127,10 +129,13 @@ function M.get_projects_from_sln(solution_file_path, filter_fn)
   return projects
 end
 
----@return table<string>
-function M.get_solutions()
-  local sln_files = require("plenary.scandir").scan_dir({ "." }, { search_pattern = "%.slnx?$", depth = 2 })
-  return sln_files
+---@param cb fun(paths: string[])
+function M.get_solutions(cb)
+  require("easy-dotnet.fs").find_async(".", {
+    match = "%.slnx?$",
+    depth = 2,
+    on_done = cb,
+  })
 end
 
 M.try_get_selected_solution_file = function() return current_solution.try_get_selected_solution() end

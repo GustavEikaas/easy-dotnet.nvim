@@ -204,15 +204,10 @@ local function complete_command(arg_lead, cmdline)
 end
 
 local function get_solutions_async(cb)
-  local scan = require("plenary.scandir")
-  scan.scan_dir_async(".", {
-    respect_gitignore = true,
-    search_pattern = "%.slnx?$",
+  require("easy-dotnet.fs").find_async(".", {
+    match = "%.slnx?$",
     depth = 2,
-    silent = true,
-    on_exit = function(output)
-      vim.schedule(function() wrap(cb)(output) end)
-    end,
+    on_done = function(output) wrap(cb)(output) end,
   })
 end
 
