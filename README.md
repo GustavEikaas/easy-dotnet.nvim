@@ -39,42 +39,39 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 9. [Neotest](#neotest)
    - [Requirements](#requirements-1)
    - [Setup](#setup-1)
-10. [Project view](#project-view)
-    - [Features](#features-1)
-    - [Keymaps](#keymaps-1)
-11. [Workspace Diagnostics](#workspace-diagnostics)
+10. [Workspace Diagnostics](#workspace-diagnostics)
     - [Commands](#commands-1)
     - [Configuration](#configuration)
-    - [Features](#features-2)
-12. [Outdated](#outdated)
-13. [Add](#add)
+    - [Features](#features-1)
+11. [Outdated](#outdated)
+12. [Add](#add)
     - [Add package](#add-package)
-14. [Project mappings](#project-mappings)
+13. [Project mappings](#project-mappings)
     - [Add reference](#add-reference)
     - [Package autocomplete](#package-autocomplete)
-15. [.NET Framework](#net-framework)
+14. [.NET Framework](#net-framework)
     - [Requirements](#requirements-2)
-16. [New](#new)
+15. [New](#new)
     - [Project](#project)
     - [Configuration file](#configuration-file)
     - [Integrating with nvim-tree](#integrating-with-nvim-tree)
     - [Integrating with neo-tree](#integrating-with-neo-tree)
     - [Integrating with mini files](#integrating-with-mini-files)
     - [Integrating with snacks explorer](#integrating-with-snacks-explorer)
-17. [EntityFramework](#entityframework)
+16. [EntityFramework](#entityframework)
     - [Requirements](#requirements-3)
     - [Database](#database)
     - [Migrations](#migrations)
-18. [Language injections](#language-injections)
+17. [Language injections](#language-injections)
     - [Showcase](#showcase)
     - [Requirements](#requirements-4)
     - [Support matrix](#support-matrix)
-19. [Nvim-dap configuration](#nvim-dap-configuration)
-20. [Troubleshooting](#troubleshooting)
-21. [Highlight groups](#highlight-groups)
-22. [Local Development](#local-development)
-23. [Star History](#star-history)
-24. [Contributors](#contributors)
+18. [Nvim-dap configuration](#nvim-dap-configuration)
+19. [Troubleshooting](#troubleshooting)
+20. [Highlight groups](#highlight-groups)
+21. [Local Development](#local-development)
+22. [Star History](#star-history)
+23. [Contributors](#contributors)
 
 ## Features
 
@@ -237,7 +234,6 @@ Although not *required* by the plugin, it is highly recommended to install one o
       -- the available one automatically with this priority:
       --  snacks -> fzf -> telescope ->  basic
       picker = "snacks",
-      background_scanning = true,
       notifications = {
         --Set this to false if you have configured lualine to avoid double logging
         handler = function(start_event)
@@ -349,10 +345,6 @@ require("lualine").setup {
 | `dotnet.build_quickfix()` | `dotnet build <TS> <DArgs>` and opens build errors in the quickfix list |
 | `dotnet.build_default()` | `dotnet build <TS Default> <DArgs>` |
 | `dotnet.build_default_quickfix()` | `dotnet build <TS Default> <DArgs>` and opens build errors in the quickfix list |
-||
-| `dotnet.project_view()` | Opens the project view |
-| `dotnet.project_view_default()` | Opens the project view for your default project |
-||
 | `dotnet.pack()` | `dotnet pack -c release` |
 | `dotnet.push()` | `dotnet pack and push` |
 ||
@@ -433,8 +425,6 @@ dotnet.build_solution_quickfix()
 dotnet.build_quickfix()                 
 dotnet.build_default()                 
 dotnet.build_default_quickfix()       
-dotnet.project_view()
-dotnet.project_view_default()
 dotnet.pack()                           
 dotnet.push()                           
 dotnet.run()
@@ -486,8 +476,6 @@ Dotnet build default quickfix
 Dotnet add package
 Dotnet add package prerelease
 Dotnet remove package
-Dotnet project view
-Dotnet project view default
 Dotnet pack
 Dotnet push
 Dotnet ef database update
@@ -515,7 +503,6 @@ checkhealth easy-dotnet
 
 -- Internal 
 Dotnet reset -- Deletes all persisted files
-Dotnet _cached_files -- Preview picker for persisted files
 Dotnet _server restart
 Dotnet _server update
 Dotnet _server stop
@@ -660,34 +647,6 @@ require("neotest").setup({
   end,
 }
 ```
-
-## Project view
-
-Get a comprehensive overview of a project's dependencies, and easily manage NuGet packages and project references.
-
-![image](https://github.com/user-attachments/assets/2e0e2e25-0a2b-4864-bc3b-64b4048967e5)
-
-### Features
-- **Project Details**: View project name, solution, language, and target version.
-- **Project References**:
-  - View project references.
-  - Add or remove project references.
-- **NuGet Packages**:
-  - View package references.
-  - Add or remove NuGet package references.
-
-### Keymaps
-
-Keymaps are region-specific and work based on context (e.g., when hovering over a project/package or its header):
-
-#### Project References:
-- `a`: Add project reference.
-- `r`: Remove project reference.
-
-#### Package References:
-- `a`: Add package reference.
-- `r`: Remove package reference.
-- `<C-b>`: View package in browser.
 
 ## Workspace Diagnostics
 

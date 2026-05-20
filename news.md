@@ -2,6 +2,19 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## Project view removed ([easy-dotnet-server#399](https://github.com/GustavEikaas/easy-dotnet-server/issues/399))
+
+The project view has been removed. ProjX LSP now owns the project-file experience, so keeping a separate Lua view for package and project-reference management no longer made sense.
+
+### Breaking changes
+
+- Removed `dotnet.project_view()` and `dotnet.project_view_default()`.
+- Removed `:Dotnet project view` and `:Dotnet project view default`.
+- Removed the old persisted project-selection cache and the internal `:Dotnet _cached_files` preview command.
+- Removed the `background_scanning` option and the startup `.sln` project preload. Roslyn preload remains controlled by `lsp.preload_roslyn`.
+
+Project references can still be added from `.csproj` and `.fsproj` buffers through the existing project-file mappings, and package operations remain available through `:Dotnet add package` / `:Dotnet remove package` and ProjX LSP completion.
+
 ## ProjX LSP enabled by default
 
 easy-dotnet now enables the ProjX LSP by default for `.csproj` files. Package autocomplete for `PackageReference` entries is provided through normal LSP completion, so manual completion-source setup is no longer needed.

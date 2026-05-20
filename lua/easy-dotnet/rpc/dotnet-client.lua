@@ -1,5 +1,4 @@
 local jobs = require("easy-dotnet.ui-modules.jobs")
-local logger = require("easy-dotnet.logger")
 local current_solution = require("easy-dotnet.current_solution")
 
 ---@type easy-dotnet.RPC.Client.Dotnet
@@ -93,7 +92,6 @@ end
 
 ---@class easy-dotnet.RPC.Client.Dotnet
 ---@field new fun(self: easy-dotnet.RPC.Client.Dotnet): easy-dotnet.RPC.Client.Dotnet # Constructor
----@field initialized_msbuild_path string
 ---@field has_lsp boolean
 ---@field supports_single_file_execution boolean
 ---@field _client easy-dotnet.RPC.StreamJsonRpc # Underlying StreamJsonRpc client used for communication
@@ -101,7 +99,6 @@ end
 ---@field initialize fun(self: easy-dotnet.RPC.Client.Dotnet, cb: fun()): nil # Starts the dotnet server and connects the JSON-RPC client
 ---@field stop fun(self: easy-dotnet.RPC.Client.Dotnet, cb: fun()): nil # Stops the dotnet server
 ---@field restart fun(self: easy-dotnet.RPC.Client.Dotnet, cb: fun()): nil # Restarts the dotnet server and connects the JSON-RPC client
----@field msbuild easy-dotnet.RPC.Client.MsBuild
 ---@field lsp easy-dotnet.RPC.Client.Lsp
 ---@field entity_framework easy-dotnet.RPC.Client.EntityFramework
 ---@field testrunner easy-dotnet.RPC.Client.TestRunner
@@ -115,7 +112,6 @@ end
 ---@field project_reference easy-dotnet.RPC.Client.ProjectReference
 ---@field server easy-dotnet.RPC.Client.Server
 ---@field secrets easy-dotnet.RPC.Client.Secrets
----@field solution_list_projects fun(self: easy-dotnet.RPC.Client.Dotnet, solution_file_path: string, cb?: fun(res: easy-dotnet.Server.SolutionFileProjectResponse[]), include_non_existing?: boolean, opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field solution_add_project fun(self: easy-dotnet.RPC.Client.Dotnet, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field solution_remove_project fun(self: easy-dotnet.RPC.Client.Dotnet, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field outdated_packages fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.Nuget.OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
@@ -137,7 +133,6 @@ function M:new()
   instance._init_callbacks = {}
   instance._initializing = false
   instance._initialized = false
-  instance.msbuild = require("easy-dotnet.rpc.controllers.msbuild").new(client)
   instance.testrunner = require("easy-dotnet.rpc.controllers.testrunner").new(client)
   instance.template_engine = require("easy-dotnet.rpc.controllers.template").new(client)
   instance.entity_framework = require("easy-dotnet.rpc.controllers.entity-framework").new(client)
@@ -222,7 +217,6 @@ function M:initialize(cb)
           self._client.routes = routes
           M.has_lsp = has_lsp(result.serverInfo.version)
 
-          M.initialized_msbuild_path = result.toolPaths.msBuildPath
           M.supports_single_file_execution = result.capabilities.supportsSingleFileExecution or false
 
           self._initializing = false
@@ -288,41 +282,6 @@ function M:_initialize(cb, opts)
       end
     )
   end)()
-end
-
----@class easy-dotnet.Server.SolutionFileProjectResponse
----@field projectName string
----@field absolutePath string
-
-local function is_loadable_project(path)
-  local e = vim.fn.fnamemodify(path, ":e")
-  local known = { "csproj", "fsproj" }
-  return vim.tbl_contains(known, e)
-end
-
-function M:solution_list_projects(solution_file_path, cb, include_non_existing, opts)
-  include_non_existing = include_non_existing or false
-  opts = opts or {}
-  return M.create_rpc_call({
-    client = self._client,
-    job = nil,
-    cb = function(res)
-      local basename_solution = vim.fs.basename(solution_file_path)
-
-      vim.iter(res):each(function(project)
-        local ok = vim.fn.filereadable(project.absolutePath) == 1
-        if not ok then logger.warn(string.format("%s references non existent project %s", basename_solution, vim.fs.basename(project.absolutePath))) end
-      end)
-
-      local filtered_projects = include_non_existing and res
-        or vim.iter(res):filter(function(project) return vim.fn.filereadable(project.absolutePath) == 1 and is_loadable_project(project.absolutePath) end):totable()
-
-      cb(filtered_projects)
-    end,
-    on_crash = opts.on_crash,
-    method = "solution/list-projects",
-    params = { solutionFilePath = solution_file_path },
-  })()
 end
 
 function M:solution_add_project(cb, opts)

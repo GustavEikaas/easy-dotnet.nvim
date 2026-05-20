@@ -203,30 +203,7 @@ local function complete_command(arg_lead, cmdline)
   return matches
 end
 
-local function get_solutions_async(cb)
-  require("easy-dotnet.fs").find_async(".", {
-    match = "%.slnx?$",
-    depth = 2,
-    on_done = function(output) wrap(cb)(output) end,
-  })
-end
-
 local function auto_start_testrunner() require("easy-dotnet.test-runner").auto_start() end
-
-local function background_scanning(merged_opts)
-  if merged_opts.background_scanning then
-    --prewarm msbuild properties
-    local selected_solution = current_solution.try_get_selected_solution()
-    if selected_solution then
-      require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(selected_solution)
-    else
-      get_solutions_async(function(slns)
-        if #slns ~= 1 then return end
-        require("easy-dotnet.parsers.sln-parse").get_projects_from_sln_async(slns[1])
-      end)
-    end
-  end
-end
 
 local is_installed = constants.get_data_directory() .. "/easy_dotnet_installed"
 
@@ -305,11 +282,10 @@ M.setup = function(opts)
   if merged_opts.lsp.enabled == true then
     local lsp = require("easy-dotnet.roslyn.lsp")
     lsp.enable(merged_opts.lsp)
-    if merged_opts.background_scanning then lsp.preload_roslyn(merged_opts.lsp) end
+    lsp.preload_roslyn(merged_opts.lsp)
   end
   if merged_opts.projx_lsp.enabled == true then require("easy-dotnet.projx.lsp").enable() end
   wrap(auto_register_dap)(merged_opts)
-  wrap(background_scanning)(merged_opts)
   wrap(auto_start_testrunner)()
   wrap(auto_install_easy_dotnet)()
 end
@@ -317,7 +293,7 @@ end
 M.create_new_item = wrap(function(...) require("easy-dotnet.actions.new").create_new_item(...) end)
 
 M.try_get_selected_solution = function()
-  local file = require("easy-dotnet.parsers.sln-parse").try_get_selected_solution_file()
+  local file = current_solution.try_get_selected_solution()
   return {
     basename = vim.fs.basename(file),
     path = file,
