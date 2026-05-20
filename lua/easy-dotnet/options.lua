@@ -172,8 +172,6 @@ local M = {
     -- if nil, will auto-detect available pickers in order: telescope -> fzf -> basic
     ---@type easy-dotnet.PickerType
     picker = nil,
-    --For performance reasons this will query msbuild properties as soon as vim starts
-    background_scanning = true,
     notifications = {
       --Set this to false if you have configured lualine to avoid double logging
       handler = function(start_event)
