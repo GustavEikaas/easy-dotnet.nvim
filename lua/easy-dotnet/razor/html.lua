@@ -10,6 +10,7 @@ local M = {
 
 local virtual_suffix = "__virtual.html"
 local virtual_scheme = "razor-html"
+local log_file = vim.fs.joinpath(vim.fn.stdpath("state"), "easy-dotnet", "razor.log")
 
 local forwarded_methods = {
   "textDocument/codeAction",
@@ -55,6 +56,13 @@ local function warn_once(key, message)
   if M.warned[key] then return end
   M.warned[key] = true
   logger.warn(message)
+end
+
+local function append_log(message)
+  if type(message) ~= "string" or message == "" then return end
+  vim.fn.mkdir(vim.fs.dirname(log_file), "p")
+  local timestamp = os.date("%Y-%m-%d %H:%M:%S")
+  vim.fn.writefile({ string.format("%s %s", timestamp, message) }, log_file, "a")
 end
 
 local function command_available(cmd)
@@ -251,46 +259,9 @@ local function forwarded_request(method)
   end
 end
 
-function M.request(root_dir, razor_uri, method, params, handler, bufnr)
-  if not is_enabled() then return false, nil end
-
-  local doc = get_document(razor_uri)
-  if not doc then return false, nil end
-
-  local client = ensure_client(root_dir)
-  if not client then return false, nil end
-  if not wait_until_initialized(client, get_opts().request_timeout or 5000) then return false, nil end
-
-  local request = vim.deepcopy(params or {})
-  rewrite_text_document(request, doc.uri)
-
-  local success, request_id = client:request(method, request, handler, bufnr)
-  if not success then return false, nil end
-  return true, request_id
-end
-
-function M.request_rpc(root_dir, method, params, callback, notify_reply_callback)
-  local razor_uri = vim.tbl_get(params or {}, "textDocument", "uri")
-  local doc = get_document(razor_uri)
-  if not doc then return false, nil end
-
-  local client = ensure_client(root_dir)
-  if not client then return false, nil end
-  if not wait_until_initialized(client, get_opts().request_timeout or 5000) then return false, nil end
-
-  local request = vim.deepcopy(params or {})
-  rewrite_text_document(request, doc.uri)
-
-  local success, request_id = client.rpc.request(method, request, callback, notify_reply_callback)
-  if not success then return false, nil end
-  return true, request_id
-end
-
-function M.attach(client, buf)
+function M.attach(client)
   M.roslyn_roots[client.id] = client.root_dir
-
-  local html_client = ensure_client(client.root_dir)
-  if html_client and not html_client:is_stopped() then vim.lsp.buf_attach_client(buf, html_client.id) end
+  ensure_client(client.root_dir)
 end
 
 function M.handle_update_html(_, params, ctx)
@@ -307,7 +278,7 @@ end
 
 function M.register_razor_close(client, buf)
   M.roslyn_roots[client.id] = client.root_dir
-  M.attach(client, buf)
+  M.attach(client)
 
   local group = vim.api.nvim_create_augroup(string.format("easy-dotnet-razor-close-%d-%d", client.id, buf), { clear = true })
   vim.api.nvim_create_autocmd({ "BufUnload", "BufDelete", "BufWipeout" }, {
@@ -340,7 +311,7 @@ function M.handlers()
   local handlers = {
     ["razor/updateHtml"] = M.handle_update_html,
     ["razor/log"] = function(_, params)
-      if params and params.message then logger.info("[razor] " .. params.message) end
+      if params and params.message then append_log("[razor] " .. params.message) end
       return vim.NIL
     end,
   }
@@ -351,5 +322,7 @@ function M.handlers()
 
   return handlers
 end
+
+function M.log_file() return log_file end
 
 return M

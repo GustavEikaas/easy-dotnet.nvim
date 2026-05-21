@@ -579,6 +579,17 @@ M.lsp = {
     stop = {
       handle = function() require("easy-dotnet.roslyn.lsp").stop() end,
     },
+    log = {
+      subcommands = {
+        razor = {
+          handle = function()
+            local log_file = require("easy-dotnet.razor.html").log_file()
+            vim.fn.mkdir(vim.fs.dirname(log_file), "p")
+            vim.cmd.edit(vim.fn.fnameescape(log_file))
+          end,
+        },
+      },
+    },
   },
 }
 
