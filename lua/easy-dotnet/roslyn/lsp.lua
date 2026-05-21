@@ -4,6 +4,7 @@ local root_finder = require("easy-dotnet.roslyn.root_finder")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local current_solution = require("easy-dotnet.current_solution")
+local razor_definition = require("easy-dotnet.razor.definition")
 local razor_html = require("easy-dotnet.razor.html")
 
 local M = {
@@ -273,29 +274,14 @@ local function is_unsupported_razor_method(method)
   return method:match("^textDocument/semanticTokens") ~= nil
     or method == "textDocument/diagnostic"
     or method == "textDocument/codeLens"
-    or method == "textDocument/completion"
     or method == "textDocument/declaration"
-    or method == "textDocument/definition"
     or method == "textDocument/documentHighlight"
-    or method == "textDocument/hover"
-    or method == "textDocument/implementation"
-    or method == "textDocument/references"
-    or method == "textDocument/signatureHelp"
     or method == "textDocument/typeDefinition"
 end
 
-local function is_delegated_razor_method(method) return method == "textDocument/completion" end
+local function is_delegated_razor_method(method) return method == "textDocument/documentHighlight" end
 
-local function is_empty_razor_method(method)
-  return method == "textDocument/declaration"
-    or method == "textDocument/definition"
-    or method == "textDocument/documentHighlight"
-    or method == "textDocument/hover"
-    or method == "textDocument/implementation"
-    or method == "textDocument/references"
-    or method == "textDocument/signatureHelp"
-    or method == "textDocument/typeDefinition"
-end
+local function is_empty_razor_method(method) return method == "textDocument/declaration" or method == "textDocument/documentHighlight" or method == "textDocument/typeDefinition" end
 
 local function empty_razor_response(method)
   if method == "textDocument/hover" then return nil end
@@ -303,6 +289,8 @@ local function empty_razor_response(method)
   if method == "textDocument/signatureHelp" then return { signatures = {}, activeSignature = nil, activeParameter = nil } end
   return {}
 end
+
+local function is_razor_definition_method(method) return method == "textDocument/definition" end
 
 local function is_razor_buffer(bufnr)
   bufnr = tonumber(bufnr)
@@ -328,6 +316,17 @@ local function install_razor_request_guard(client)
   local rpc_request = client.rpc and client.rpc.request
   if rpc_request then
     client.rpc.request = function(method, params, callback, notify_reply_callback)
+      if is_razor_definition_method(method) and is_razor_params(params) then
+        local result = razor_definition.resolve(client.root_dir, params)
+        if result ~= nil then
+          if callback then vim.schedule(function()
+            callback(nil, result, nil)
+            if notify_reply_callback then notify_reply_callback(nil) end
+          end) end
+          return true, nil
+        end
+      end
+
       if is_unsupported_razor_method(method) and is_razor_params(params) then
         if is_delegated_razor_method(method) then
           local success = razor_html.request_rpc(client.root_dir, method, params, callback, notify_reply_callback)
@@ -348,6 +347,27 @@ local function install_razor_request_guard(client)
 
   local request = client.request
   client.request = function(self, method, params, handler, bufnr)
+    if is_razor_definition_method(method) and (is_razor_buffer(bufnr) or is_razor_params(params)) then
+      local result = razor_definition.resolve(self.root_dir, params)
+      if result ~= nil then
+        local resolved_bufnr = vim._resolve_bufnr(bufnr)
+        if handler then
+          vim.schedule(
+            function()
+              handler(nil, result, {
+                method = method,
+                client_id = self.id,
+                request_id = nil,
+                bufnr = resolved_bufnr,
+                params = params,
+              })
+            end
+          )
+        end
+        return true, nil
+      end
+    end
+
     if is_unsupported_razor_method(method) and (is_razor_buffer(bufnr) or is_razor_params(params)) then
       local resolved_bufnr = vim._resolve_bufnr(bufnr)
 
@@ -377,6 +397,7 @@ local function install_razor_request_guard(client)
   local supports_method = client.supports_method
   client.supports_method = function(self, method, bufnr)
     local resolved_bufnr = type(bufnr) == "table" and bufnr.bufnr or bufnr
+    if is_razor_definition_method(method) and is_razor_buffer(resolved_bufnr) then return true end
     if is_delegated_razor_method(method) and is_razor_buffer(resolved_bufnr) then return true end
     if is_empty_razor_method(method) and is_razor_buffer(resolved_bufnr) then return true end
     if is_unsupported_razor_method(method) and is_razor_buffer(resolved_bufnr) then return false end
@@ -387,6 +408,11 @@ end
 local default_roslyn_settings = {
   ["csharp|code_lens"] = {
     dotnet_enable_tests_code_lens = false,
+  },
+  razor = {
+    language_server = {
+      cohosting_enabled = true,
+    },
   },
 }
 
@@ -641,6 +667,7 @@ function M.enable(opts)
       end
     end,
     on_exit = function(code, _, client_id)
+      razor_definition.clear_cache()
       razor_html.stop_for_roslyn_client(client_id)
       M.state[client_id] = nil
       M.watcher_registered[client_id] = nil

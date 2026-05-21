@@ -29,6 +29,16 @@ local forwarded_methods = {
   "textDocument/signatureHelp",
 }
 
+local nil_forwarded_responses = {
+  ["textDocument/hover"] = true,
+  ["textDocument/signatureHelp"] = true,
+}
+
+local function empty_forwarded_response(method)
+  if nil_forwarded_responses[method] then return vim.NIL end
+  return {}
+end
+
 local function get_opts()
   local lsp = require("easy-dotnet.options").get_option("lsp") or {}
   return ((lsp.razor or {}).html or {})
@@ -211,26 +221,32 @@ local function rewrite_text_document(value, uri)
 end
 
 local function forwarded_request(method)
-  return function(_, params, ctx)
-    if not is_enabled() then return vim.NIL end
+  return function(err, params, ctx, config)
+    if not (params and params.textDocument and params.textDocument.uri and params.checksum and params.request) then
+      local handler = vim.lsp.handlers[ctx.method]
+      if handler then return handler(err, params, ctx, config) end
+      return nil
+    end
+
+    if not is_enabled() then return empty_forwarded_response(method) end
 
     local roslyn = vim.lsp.get_client_by_id(ctx.client_id)
     local root_dir = roslyn and roslyn.root_dir or vim.fn.getcwd()
     local client = ensure_client(root_dir)
-    if not client then return vim.NIL end
-    if not wait_until_initialized(client, get_opts().request_timeout or 5000) then return vim.NIL end
+    if not client then return empty_forwarded_response(method) end
+    if not wait_until_initialized(client, get_opts().request_timeout or 5000) then return empty_forwarded_response(method) end
 
     local razor_uri = params and params.textDocument and params.textDocument.uri
     local doc = get_document(razor_uri)
-    if not doc then return vim.NIL end
-    if params.checksum and doc.checksum and params.checksum ~= doc.checksum then return vim.NIL end
+    if not doc then return empty_forwarded_response(method) end
+    if params.checksum and doc.checksum and params.checksum ~= doc.checksum then return empty_forwarded_response(method) end
 
     local request = vim.deepcopy(params.request or {})
     rewrite_text_document(request, doc.uri)
 
     local timeout = get_opts().request_timeout or 5000
     local response = client:request_sync(method, request, timeout)
-    if not response or response.err or response.result == nil then return vim.NIL end
+    if not response or response.err or response.result == nil then return empty_forwarded_response(method) end
     return response.result
   end
 end
