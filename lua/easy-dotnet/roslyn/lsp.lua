@@ -4,6 +4,7 @@ local root_finder = require("easy-dotnet.roslyn.root_finder")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local current_solution = require("easy-dotnet.current_solution")
+local razor_html = require("easy-dotnet.razor.html")
 
 local M = {
   state = {},
@@ -18,7 +19,7 @@ function M.start()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_loaded(bufnr) then
       local ft = vim.bo[bufnr].filetype
-      if ft == "cs" then vim.api.nvim_exec_autocmds("FileType", {
+      if ft == "cs" or ft == "razor" then vim.api.nvim_exec_autocmds("FileType", {
         buffer = bufnr,
       }) end
     end
@@ -254,6 +255,135 @@ local function refresh_diag(client)
   client:notify("textDocument/didChange", params)
 end
 
+---@param bufnr number
+---@param client vim.lsp.Client
+local function disable_semantic_tokens(bufnr, client)
+  if not (vim.api.nvim_buf_is_valid(bufnr) and client and client.id) then return end
+
+  if vim.lsp.semantic_tokens and vim.lsp.semantic_tokens.enable then
+    vim.lsp.semantic_tokens.enable(false, { bufnr = bufnr })
+    return
+  end
+
+  if vim.lsp.semantic_tokens and vim.lsp.semantic_tokens.stop then vim.lsp.semantic_tokens.stop(bufnr, client.id) end
+end
+
+local function is_unsupported_razor_method(method)
+  if type(method) ~= "string" then return false end
+  return method:match("^textDocument/semanticTokens") ~= nil
+    or method == "textDocument/diagnostic"
+    or method == "textDocument/codeLens"
+    or method == "textDocument/completion"
+    or method == "textDocument/declaration"
+    or method == "textDocument/definition"
+    or method == "textDocument/documentHighlight"
+    or method == "textDocument/hover"
+    or method == "textDocument/implementation"
+    or method == "textDocument/references"
+    or method == "textDocument/signatureHelp"
+    or method == "textDocument/typeDefinition"
+end
+
+local function is_delegated_razor_method(method) return method == "textDocument/completion" end
+
+local function is_empty_razor_method(method)
+  return method == "textDocument/declaration"
+    or method == "textDocument/definition"
+    or method == "textDocument/documentHighlight"
+    or method == "textDocument/hover"
+    or method == "textDocument/implementation"
+    or method == "textDocument/references"
+    or method == "textDocument/signatureHelp"
+    or method == "textDocument/typeDefinition"
+end
+
+local function empty_razor_response(method)
+  if method == "textDocument/hover" then return nil end
+  if method == "textDocument/completion" then return { isIncomplete = false, items = {} } end
+  if method == "textDocument/signatureHelp" then return { signatures = {}, activeSignature = nil, activeParameter = nil } end
+  return {}
+end
+
+local function is_razor_buffer(bufnr)
+  bufnr = tonumber(bufnr)
+  return bufnr and vim.api.nvim_buf_is_valid(bufnr) and vim.bo[bufnr].filetype == "razor"
+end
+
+local function is_razor_params(params)
+  local uri = vim.tbl_get(params or {}, "textDocument", "uri")
+  if type(uri) ~= "string" then return false end
+
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(bufnr) and vim.api.nvim_buf_is_loaded(bufnr) and vim.uri_from_bufnr(bufnr) == uri then return is_razor_buffer(bufnr) end
+  end
+
+  return false
+end
+
+---@param client vim.lsp.Client
+local function install_razor_request_guard(client)
+  if client._easy_dotnet_razor_request_guard then return end
+  client._easy_dotnet_razor_request_guard = true
+
+  local rpc_request = client.rpc and client.rpc.request
+  if rpc_request then
+    client.rpc.request = function(method, params, callback, notify_reply_callback)
+      if is_unsupported_razor_method(method) and is_razor_params(params) then
+        if is_delegated_razor_method(method) then
+          local success = razor_html.request_rpc(client.root_dir, method, params, callback, notify_reply_callback)
+          if success then return true, nil end
+        end
+
+        if is_empty_razor_method(method) and callback then
+          vim.schedule(function()
+            callback(nil, empty_razor_response(method), nil)
+            if notify_reply_callback then notify_reply_callback(nil) end
+          end)
+        end
+        return is_empty_razor_method(method) or is_delegated_razor_method(method), nil
+      end
+      return rpc_request(method, params, callback, notify_reply_callback)
+    end
+  end
+
+  local request = client.request
+  client.request = function(self, method, params, handler, bufnr)
+    if is_unsupported_razor_method(method) and (is_razor_buffer(bufnr) or is_razor_params(params)) then
+      local resolved_bufnr = vim._resolve_bufnr(bufnr)
+
+      if is_delegated_razor_method(method) then
+        local success = razor_html.request(self.root_dir, vim.tbl_get(params or {}, "textDocument", "uri"), method, params, handler, resolved_bufnr)
+        if success then return true, nil end
+      end
+
+      if (is_empty_razor_method(method) or is_delegated_razor_method(method)) and handler then
+        vim.schedule(
+          function()
+            handler(nil, empty_razor_response(method), {
+              method = method,
+              client_id = self.id,
+              request_id = nil,
+              bufnr = resolved_bufnr,
+              params = params,
+            })
+          end
+        )
+      end
+      return is_empty_razor_method(method) or is_delegated_razor_method(method), nil
+    end
+    return request(self, method, params, handler, bufnr)
+  end
+
+  local supports_method = client.supports_method
+  client.supports_method = function(self, method, bufnr)
+    local resolved_bufnr = type(bufnr) == "table" and bufnr.bufnr or bufnr
+    if is_delegated_razor_method(method) and is_razor_buffer(resolved_bufnr) then return true end
+    if is_empty_razor_method(method) and is_razor_buffer(resolved_bufnr) then return true end
+    if is_unsupported_razor_method(method) and is_razor_buffer(resolved_bufnr) then return false end
+    return supports_method(self, method, bufnr)
+  end
+end
+
 local default_roslyn_settings = {
   ["csharp|code_lens"] = {
     dotnet_enable_tests_code_lens = false,
@@ -393,6 +523,7 @@ function M.enable(opts)
   end
   source_generated_autocmd()
   local cmd = { "dotnet-easydotnet", "roslyn", "start" }
+  local razor_enabled = not opts.razor or opts.razor.enabled ~= false
 
   if opts.roslynator_enabled then table.insert(cmd, "--roslynator") end
   if opts.easy_dotnet_analyzer_enabled then table.insert(cmd, "--easy-dotnet-analyzer") end
@@ -407,17 +538,62 @@ function M.enable(opts)
 
   local settings = vim.tbl_deep_extend("force", default_roslyn_settings, opts.config.settings or {}, existing_config and existing_config.settings or {})
 
-  local cap = vim.tbl_deep_extend("keep", existing_config and existing_config.capabilities or {}, {
+  local cap = vim.tbl_deep_extend("force", vim.lsp.protocol.make_client_capabilities(), existing_config and existing_config.capabilities or {}, {
     textDocument = {
+      codeAction = {
+        dynamicRegistration = true,
+      },
       codeLens = {
+        dynamicRegistration = true,
+      },
+      colorProvider = {
+        dynamicRegistration = true,
+      },
+      completion = {
+        dynamicRegistration = true,
+      },
+      definition = {
         dynamicRegistration = true,
       },
       diagnostic = {
         dynamicRegistration = true,
       },
+      documentHighlight = {
+        dynamicRegistration = true,
+      },
+      documentSymbol = {
+        dynamicRegistration = true,
+      },
       foldingRange = {
-        dynamicRegistration = false,
+        dynamicRegistration = true,
         lineFoldingOnly = true,
+      },
+      formatting = {
+        dynamicRegistration = true,
+      },
+      hover = {
+        dynamicRegistration = true,
+      },
+      implementation = {
+        dynamicRegistration = true,
+      },
+      rangeFormatting = {
+        dynamicRegistration = true,
+      },
+      references = {
+        dynamicRegistration = true,
+      },
+      rename = {
+        dynamicRegistration = true,
+      },
+      semanticTokens = {
+        dynamicRegistration = true,
+      },
+      signatureHelp = {
+        dynamicRegistration = true,
+      },
+      synchronization = {
+        dynamicRegistration = true,
       },
     },
     workspace = {
@@ -438,10 +614,16 @@ function M.enable(opts)
       --TODO: use this for when server allows changing configuration
       -- Configuration = "Release",
     },
-    filetypes = { "cs" },
+    filetypes = razor_enabled and { "cs", "razor" } or { "cs" },
+    get_language_id = function(_, filetype)
+      if filetype == "cs" then return "csharp" end
+      if filetype == "razor" then return "aspnetcorerazor" end
+      return filetype
+    end,
     root_dir = M.find_project_or_solution,
     capabilities = cap,
     on_init = function(client)
+      install_razor_request_guard(client)
       M.solution_state[client.id] = { loaded_at = nil }
       local file, type = M.find_sln_or_csproj(client.root_dir)
       if not file then return end
@@ -459,6 +641,7 @@ function M.enable(opts)
       end
     end,
     on_exit = function(code, _, client_id)
+      razor_html.stop_for_roslyn_client(client_id)
       M.state[client_id] = nil
       M.watcher_registered[client_id] = nil
       M.pending_watchers[client_id] = nil
@@ -479,13 +662,18 @@ function M.enable(opts)
       end)
     end,
     on_attach = function(client, buf)
+      install_razor_request_guard(client)
       vim.b[buf].roslyn_buf_opened_at = now()
       register_file_rename_tracking(client, buf)
       if vim.bo[buf].filetype == "cs" then
         use_roslyn_fold(buf)
         fix_indent_expression(buf)
+      elseif vim.bo[buf].filetype == "razor" then
+        razor_html.register_razor_close(client, buf)
+        disable_semantic_tokens(buf, client)
+        vim.schedule(function() disable_semantic_tokens(buf, client) end)
       end
-      if require("easy-dotnet.options").get_option("lsp").auto_refresh_codelens then
+      if vim.bo[buf].filetype == "cs" and require("easy-dotnet.options").get_option("lsp").auto_refresh_codelens then
         if vim.fn.has("nvim-0.12") == 1 then
           vim.lsp.codelens.enable(true, { bufnr = buf })
           vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
@@ -509,7 +697,7 @@ function M.enable(opts)
       ["roslyn.client.peekReferences"] = require("easy-dotnet.roslyn.lsp.peek_references"),
       -- ["dotnet.test.run"] = require("easy-dotnet.roslyn.lsp.test_run"),
     },
-    handlers = {
+    handlers = vim.tbl_deep_extend("force", razor_enabled and razor_html.handlers() or {}, {
       ["client/registerCapability"] = function(err, params, ctx, config)
         local client_id = ctx.client_id
         if params.registrations then
@@ -564,7 +752,7 @@ function M.enable(opts)
           end
         end
       end,
-    },
+    }),
     settings = settings,
   }
 

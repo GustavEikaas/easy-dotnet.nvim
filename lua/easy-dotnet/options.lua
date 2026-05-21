@@ -37,7 +37,17 @@
 ---@field analyzer_assemblies string[]|nil -- Optional list of analyzer DLLs
 ---@field easy_dotnet_analyzer_enabled boolean -- Whether built-in easy-dotnet roslyn analyzer is enabled
 ---@field roslynator_enabled boolean     -- Whether Roslynator is enabled
+---@field razor easy-dotnet.RazorOpts
 ---@field config vim.lsp.config?          -- LSP configuration table
+
+---@class easy-dotnet.RazorOpts
+---@field enabled boolean
+---@field html easy-dotnet.RazorHtmlOpts
+
+---@class easy-dotnet.RazorHtmlOpts
+---@field enabled boolean
+---@field cmd string[]|fun(dispatchers: table, config: table): table
+---@field request_timeout integer
 
 ---@class easy-dotnet.DiagnosticsOptions
 ---@field default_severity "error" | "warning"
@@ -201,6 +211,21 @@ local M = {
       auto_refresh_codelens = true,
       roslynator_enabled = true,
       easy_dotnet_analyzer_enabled = true,
+      razor = {
+        enabled = true,
+        html = {
+          enabled = true,
+          cmd = function(dispatchers, config)
+            local cmd = "vscode-html-language-server"
+            if config and config.root_dir then
+              local local_cmd = vim.fs.joinpath(config.root_dir, "node_modules/.bin", cmd)
+              if vim.fn.executable(local_cmd) == 1 then cmd = local_cmd end
+            end
+            return vim.lsp.rpc.start({ cmd, "--stdio" }, dispatchers)
+          end,
+          request_timeout = 5000,
+        },
+      },
       config = {},
     },
     diagnostics = {

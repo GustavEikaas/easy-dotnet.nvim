@@ -5,6 +5,54 @@ It uses the same [LSP](https://github.com/dotnet/roslyn) implementation that pow
 
 The **easy-dotnet Roslyn LSP** is enabled by default and requires **Neovim 0.11+**.
 
+## Razor
+
+Razor support is enabled by default through the same Roslyn LSP client. Opening `*.razor` or `*.cshtml` attaches the buffer to Roslyn and enables Razor cohosting.
+
+For the current POC, the HTML side of Razor cohosting expects `vscode-html-language-server` to be available in `PATH`:
+
+```sh
+npm install -g vscode-langservers-extracted
+```
+
+You can override the command or disable Razor:
+
+```lua
+require("easy-dotnet").setup({
+  lsp = {
+    razor = {
+      enabled = true,
+      html = {
+        enabled = true,
+        cmd = function(dispatchers, config)
+          local cmd = "vscode-html-language-server"
+          if config and config.root_dir then
+            local local_cmd = vim.fs.joinpath(config.root_dir, "node_modules/.bin", cmd)
+            if vim.fn.executable(local_cmd) == 1 then
+              cmd = local_cmd
+            end
+          end
+          return vim.lsp.rpc.start({ cmd, "--stdio" }, dispatchers)
+        end,
+        request_timeout = 5000,
+      },
+    },
+  },
+})
+```
+
+To disable Razor support:
+
+```lua
+require("easy-dotnet").setup({
+  lsp = {
+    razor = {
+      enabled = false,
+    },
+  },
+})
+```
+
 
 ## Analyzers
 
@@ -86,7 +134,7 @@ When you run a "Find References" CodeLens action, easy-dotnet provides a custom 
 `easy-dotnet.nvim` automatically discovers which **project** or **solution** your current file belongs to.
 This determines how Roslyn behaves — what files it indexes, whether “go to definition” works across projects, and how rich your IntelliSense is.
 
-When you open a `*.cs` file:
+When you open a `*.cs`, `*.razor`, or `*.cshtml` file:
 
 ```
 1. Roslyn LSP starts.

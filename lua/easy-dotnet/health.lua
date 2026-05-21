@@ -68,6 +68,47 @@ local function check_projx_lsp_configured()
   end
 end
 
+local function check_razor_lsp_configured()
+  local lsp = options.get_option("lsp") or {}
+  local razor = lsp.razor or {}
+  local html = razor.html or {}
+  if razor.enabled == false then
+    vim.health.info("Razor LSP support disabled")
+    return
+  end
+
+  vim.health.ok("Razor LSP support enabled")
+  if html.enabled == false then
+    vim.health.info("Razor HTML bridge disabled")
+    return
+  end
+
+  local cmd = html.cmd
+  if type(cmd) == "function" then
+    if vim.fn.executable("vscode-html-language-server") == 1 then
+      vim.health.ok("Razor HTML language server command available: vscode-html-language-server")
+    else
+      vim.health.warn("Razor HTML language server command not found", {
+        "Install vscode-html-language-server for the current POC, or set lsp.razor.html.cmd to a working command.",
+        "Project-local node_modules/.bin/vscode-html-language-server is also supported when opening a project.",
+        "Razor support can be disabled with lsp.razor.enabled = false.",
+      })
+    end
+    return
+  end
+
+  cmd = cmd or { "vscode-html-language-server", "--stdio" }
+  local executable = cmd[1]
+  if executable and vim.fn.executable(executable) == 1 then
+    vim.health.ok("Razor HTML language server command available: " .. table.concat(cmd, " "))
+  else
+    vim.health.warn("Razor HTML language server command not found", {
+      "Install vscode-html-language-server for the current POC, or set lsp.razor.html.cmd to a working command.",
+      "Razor support can be disabled with lsp.razor.enabled = false.",
+    })
+  end
+end
+
 local function check_debugger_configured()
   local auto_register = options.get_option("debugger").auto_register_dap
   if auto_register == false then
@@ -212,6 +253,7 @@ M.check = function()
 
   vim.health.start("easy-dotnet LSP configuration (optional)")
   check_lsp_configured()
+  check_razor_lsp_configured()
   check_projx_lsp_configured()
 
   vim.health.start("easy-dotnet configuration")

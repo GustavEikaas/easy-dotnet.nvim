@@ -12,6 +12,8 @@ M.enable_filetypes = function()
     },
     extension = {
       props = "xml",
+      cshtml = "razor",
+      razor = "razor",
     },
   })
 end

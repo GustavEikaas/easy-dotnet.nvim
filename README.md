@@ -150,6 +150,14 @@ Although not *required* by the plugin, it is highly recommended to install one o
         easy_dotnet_analyzer_enabled = true, -- Enable roslyn analyzer from easy-dotnet-server
         auto_refresh_codelens = true,
         analyzer_assemblies = {}, -- Any additional roslyn analyzers you might use like SonarAnalyzer.CSharp
+        razor = {
+          enabled = true,
+          html = {
+            enabled = true,
+            cmd = { "vscode-html-language-server", "--stdio" }, -- Override the default local node_modules/PATH lookup if needed
+            request_timeout = 5000,
+          },
+        },
         config = {},
       },
       debugger = {
@@ -512,7 +520,9 @@ Dotnet _server start
 ## Roslyn LSP
 
 Roslyn LSP support is enabled **out of the box** — no configuration required.  
-Just open a C# file and the official .NET language server starts automatically.
+Just open a C#, Razor, or CSHTML file and the official .NET language server starts automatically.
+
+Razor support uses an HTML language server for markup-backed requests. For the current POC install `vscode-html-language-server` with `npm install -g vscode-langservers-extracted`, or disable Razor with `lsp.razor.enabled = false`.
 
 For more information [check out](./docs/lsp.md)
 
