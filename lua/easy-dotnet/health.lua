@@ -143,7 +143,14 @@ local function print_dotnet_info()
 end
 
 local function check_roslyn_tool()
-  local output = vim.fn.system({ "dotnet-easydotnet", "healthcheck" })
+  local command = { "dotnet-easydotnet", "healthcheck", "--format", "json" }
+  local debugger_bin_path = options.get_option("debugger").bin_path
+  if type(debugger_bin_path) == "string" and debugger_bin_path ~= "" then
+    table.insert(command, "--debugger-bin-path")
+    table.insert(command, debugger_bin_path)
+  end
+
+  local output = vim.fn.system(command)
   if vim.v.shell_error ~= 0 then
     vim.health.warn("Unable to run easy-dotnet healthcheck", { output })
     return
@@ -155,18 +162,21 @@ local function check_roslyn_tool()
     return
   end
 
-  local roslyn = health.roslyn or {}
-  if not roslyn.isInstalled then
-    vim.health.warn("roslyn-language-server is not installed", { roslyn.message or "easy-dotnet will try to install it automatically when Roslyn LSP starts" })
-  elseif roslyn.isBelowRecommended then
-    vim.health.warn("roslyn-language-server version: " .. tostring(roslyn.version) .. " (below recommended " .. tostring(roslyn.minimumRecommendedVersion) .. ")", {
-      "Update using: dotnet-easydotnet roslyn update",
-    })
-  else
-    vim.health.ok("roslyn-language-server version: " .. tostring(roslyn.version))
-  end
+  for _, check in ipairs(health) do
+    local check_type = check.type
+    local msg = string.format("%s: %s", tostring(check.name), tostring(check.value))
+    local advice = type(check.advice) == "table" and check.advice or {}
 
-  vim.health.info("easy-dotnet healthcheck: " .. vim.inspect(health))
+    if check_type == "ok" then
+      vim.health.ok(msg)
+    elseif check_type == "warn" then
+      vim.health.warn(msg, advice)
+    elseif check_type == "error" then
+      vim.health.error(msg, advice)
+    else
+      vim.health.info(msg)
+    end
+  end
 end
 
 local function print_nvim_version()
