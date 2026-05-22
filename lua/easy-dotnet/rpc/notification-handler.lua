@@ -58,6 +58,16 @@ M.handler = function(client, method, params)
       end
     elseif method == "_server/update-available" then
       logger.info(string.format("easy-dotnet-server %s update available, update using `:Dotnet _server update`", params.updateType))
+    elseif method == "roslyn/update-available" then
+      local lsp_opts = require("easy-dotnet.options").get_option("lsp")
+      if lsp_opts and lsp_opts.suggest_updates == false then return end
+      local current = params.currentVersion or "unknown"
+      local latest = params.availableVersion or "unknown"
+      if params.isBelowRecommended then
+        logger.warn(string.format("roslyn-language-server %s is below the recommended version %s. Update using `dotnet-easydotnet roslyn update`", current, params.minimumRecommendedVersion or latest))
+      else
+        logger.info(string.format("roslyn-language-server update available: %s -> %s. Update using `dotnet-easydotnet roslyn update`", current, latest))
+      end
     elseif method == "project/changed" then
       handle_project_changed()
     elseif method == "activeProject/changed" then

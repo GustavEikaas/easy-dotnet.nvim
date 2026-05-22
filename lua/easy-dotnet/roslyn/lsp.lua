@@ -401,6 +401,8 @@ function M.enable(opts)
   source_generated_autocmd()
   local cmd = { "dotnet-easydotnet", "roslyn", "start" }
   local razor_enabled = not opts.razor or opts.razor.enabled ~= false
+  table.insert(cmd, "--clientProcessId")
+  table.insert(cmd, tostring(vim.fn.getpid()))
 
   if opts.roslynator_enabled then table.insert(cmd, "--roslynator") end
   if opts.easy_dotnet_analyzer_enabled then table.insert(cmd, "--easy-dotnet-analyzer") end
