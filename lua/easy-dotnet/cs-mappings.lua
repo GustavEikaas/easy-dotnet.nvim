@@ -22,6 +22,12 @@ local function is_key_value_table(tbl)
   return false
 end
 
+local function is_cs_file(file_path)
+  return vim.endswith(file_path, ".cs")
+    and not vim.endswith(file_path, ".razor.cs")
+    and not vim.endswith(file_path, ".cshtml.cs")
+end
+
 ---@param mode easy-dotnet.BootstrapNamespaceMode
 local function auto_bootstrap_namespace(bufnr, mode)
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
@@ -31,7 +37,8 @@ local function auto_bootstrap_namespace(bufnr, mode)
 
   local file_name = vim.fn.fnamemodify(curr_file, ":t:r")
 
-  local is_interface = file_name:sub(1, 1) == "I" and file_name:sub(2, 2):match("%u")
+  -- Interface detection only applies to plain .cs files
+  local is_interface = is_cs_file(curr_file) and file_name:sub(1, 1) == "I" and file_name:sub(2, 2):match("%u")
   local type_keyword = is_interface and "Interface" or "Class"
 
   local ns = require("easy-dotnet.constants").ns_id
@@ -51,6 +58,12 @@ local function auto_bootstrap_namespace(bufnr, mode)
   local default = function() client.roslyn:roslyn_bootstrap_file_v2(curr_file, type_keyword, mode == "file_scoped", clear_virtual_text, opts) end
 
   client:initialize(function()
+    -- JSON clipboard bootstrap is only meaningful for plain .cs files
+    if not is_cs_file(curr_file) then
+      default()
+      return
+    end
+
     local opt = require("easy-dotnet.options").get_option("auto_bootstrap_namespace")
     local clipboard = vim.fn.getreg(opt.use_clipboard_json.register)
     local is_valid_json, res = pcall(vim.fn.json_decode, clipboard)
@@ -75,7 +88,7 @@ end
 ---@param mode easy-dotnet.BootstrapNamespaceMode
 M.auto_bootstrap_namespace = function(mode)
   vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
-    pattern = "*.cs",
+    pattern = { "*.cs", "*.razor", "*.cshtml" },
     callback = function()
       local bufnr = vim.api.nvim_get_current_buf()
       auto_bootstrap_namespace(bufnr, mode)
