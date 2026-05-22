@@ -142,6 +142,43 @@ local function print_dotnet_info()
   end
 end
 
+local function check_roslyn_tool()
+  local command = { "dotnet-easydotnet", "healthcheck", "--format", "json" }
+  local debugger_bin_path = options.get_option("debugger").bin_path
+  if type(debugger_bin_path) == "string" and debugger_bin_path ~= "" then
+    table.insert(command, "--debugger-bin-path")
+    table.insert(command, debugger_bin_path)
+  end
+
+  local output = vim.fn.system(command)
+  if vim.v.shell_error ~= 0 then
+    vim.health.warn("Unable to run easy-dotnet healthcheck", { output })
+    return
+  end
+
+  local ok, health = pcall(vim.json.decode, output)
+  if not ok or type(health) ~= "table" then
+    vim.health.warn("Unable to parse easy-dotnet healthcheck output", { output })
+    return
+  end
+
+  for _, check in ipairs(health) do
+    local check_type = check.type
+    local msg = string.format("%s: %s", tostring(check.name), tostring(check.value))
+    local advice = type(check.advice) == "table" and check.advice or {}
+
+    if check_type == "ok" then
+      vim.health.ok(msg)
+    elseif check_type == "warn" then
+      vim.health.warn(msg, advice)
+    elseif check_type == "error" then
+      vim.health.error(msg, advice)
+    else
+      vim.health.info(msg)
+    end
+  end
+end
+
 local function print_nvim_version()
   local v = vim.version()
   local version_str = string.format("Neovim version: %d.%d.%d", v.major, v.minor, v.patch)
@@ -213,6 +250,7 @@ M.check = function()
   vim.health.start("easy-dotnet LSP configuration (optional)")
   check_lsp_configured()
   check_projx_lsp_configured()
+  check_roslyn_tool()
 
   vim.health.start("easy-dotnet configuration")
   local selected_picker = require("easy-dotnet.options").get_option("picker")

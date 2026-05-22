@@ -2,6 +2,46 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## Official Roslyn NuGet package
+
+easy-dotnet now uses the **official [`roslyn-language-server`](https://www.nuget.org/packages/roslyn-language-server) dotnet global tool** instead of a bundled copy of the Roslyn LSP. This reduces the server installation size from **85 MB → 44 MB**.
+
+### Auto-install
+
+The first time Roslyn is started, the server checks whether `roslyn-language-server` is present. If it isn't, it installs it automatically via:
+
+```
+dotnet tool install --global roslyn-language-server --prerelease
+```
+
+To install or update manually, run:
+
+```
+dotnet-easydotnet roslyn install
+dotnet-easydotnet roslyn update
+```
+
+`dotnet-easydotnet roslyn update` is a thin convenience wrapper — it shells out to `dotnet tool update -g roslyn-language-server --prerelease`.
+
+### Periodic update notifications
+
+On startup the server checks NuGet for a newer `roslyn-language-server` release (at most once per update-check interval). When an update is found it sends a notification to Neovim:
+
+- If your installed version is **below the minimum recommended version**, a `warn`-level message is shown.
+- Otherwise an `info`-level message is shown.
+
+Both messages tell you to run `dotnet-easydotnet roslyn update`.
+
+To silence these notifications add `suggest_updates = false` to your `lsp` options:
+
+```lua
+require("easy-dotnet").setup({
+  lsp = {
+    suggest_updates = false,
+  },
+})
+```
+
 ## Project view removed ([easy-dotnet-server#399](https://github.com/GustavEikaas/easy-dotnet-server/issues/399))
 
 The project view has been removed. ProjX LSP now owns the project-file experience, so keeping a separate Lua view for package and project-reference management no longer made sense.
