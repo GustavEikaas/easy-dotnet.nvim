@@ -1,9 +1,20 @@
 # Roslyn LSP integration
 
-`easy-dotnet.nvim` provides **first-class Roslyn LSP integration** for Neovim out of the box.  
+`easy-dotnet.nvim` provides **first-class Roslyn LSP integration** for Neovim out of the box.
 It uses the same [LSP](https://github.com/dotnet/roslyn) implementation that powers **Visual Studio** and **VS Code**.
 
 The **easy-dotnet Roslyn LSP** is enabled by default and requires **Neovim 0.11+**.
+It uses the official `roslyn-language-server` .NET global tool. If the tool is missing, easy-dotnet installs it automatically with:
+
+```bash
+dotnet tool install --global roslyn-language-server --prerelease
+```
+
+Existing installs are not updated automatically. easy-dotnet periodically suggests updates, and you can update manually with:
+
+```bash
+dotnet-easydotnet roslyn update
+```
 
 
 ## Analyzers
@@ -155,7 +166,7 @@ Opening Bar.cs → solution is found → cross-project navigation works.
     │   └── MySln.cs      ← Sln is not in a parent directory of current file
     │
     └── Library/
-        ├── Library.csproj    ← Found 
+        ├── Library.csproj    ← Found
         └── Models/
             └── Customer.cs   ← current file (you opened this)
 ```
@@ -211,4 +222,3 @@ Roslyn behaves like:
 - `:Dotnet lsp start`
 - `:Dotnet lsp stop`
 - `:Dotnet lsp restart`
-

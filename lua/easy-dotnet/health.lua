@@ -142,6 +142,33 @@ local function print_dotnet_info()
   end
 end
 
+local function check_roslyn_tool()
+  local output = vim.fn.system({ "dotnet-easydotnet", "healthcheck" })
+  if vim.v.shell_error ~= 0 then
+    vim.health.warn("Unable to run easy-dotnet healthcheck", { output })
+    return
+  end
+
+  local ok, health = pcall(vim.json.decode, output)
+  if not ok or type(health) ~= "table" then
+    vim.health.warn("Unable to parse easy-dotnet healthcheck output", { output })
+    return
+  end
+
+  local roslyn = health.roslyn or {}
+  if not roslyn.isInstalled then
+    vim.health.warn("roslyn-language-server is not installed", { roslyn.message or "easy-dotnet will try to install it automatically when Roslyn LSP starts" })
+  elseif roslyn.isBelowRecommended then
+    vim.health.warn("roslyn-language-server version: " .. tostring(roslyn.version) .. " (below recommended " .. tostring(roslyn.minimumRecommendedVersion) .. ")", {
+      "Update using: dotnet-easydotnet roslyn update",
+    })
+  else
+    vim.health.ok("roslyn-language-server version: " .. tostring(roslyn.version))
+  end
+
+  vim.health.info("easy-dotnet healthcheck: " .. vim.inspect(health))
+end
+
 local function print_nvim_version()
   local v = vim.version()
   local version_str = string.format("Neovim version: %d.%d.%d", v.major, v.minor, v.patch)
@@ -213,6 +240,7 @@ M.check = function()
   vim.health.start("easy-dotnet LSP configuration (optional)")
   check_lsp_configured()
   check_projx_lsp_configured()
+  check_roslyn_tool()
 
   vim.health.start("easy-dotnet configuration")
   local selected_picker = require("easy-dotnet.options").get_option("picker")
