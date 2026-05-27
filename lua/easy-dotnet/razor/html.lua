@@ -4,12 +4,15 @@ local logger = require("easy-dotnet.logger")
 local M = {
   clients = {},
   documents = {},
+  failed_starts = {},
   warned = {},
   roslyn_roots = {},
 }
 
 local virtual_suffix = "__virtual.html"
 local virtual_scheme = "razor-html"
+local default_executable = "vscode-html-language-server"
+local start_retry_delay_ms = 30000
 local log_file = vim.fs.joinpath(vim.fn.stdpath("state"), "easy-dotnet", "razor.log")
 
 local forwarded_methods = {
@@ -71,13 +74,28 @@ local function command_available(cmd)
   return vim.fn.executable(cmd[1]) == 1
 end
 
-local function default_cmd(dispatchers, config)
-  local cmd = "vscode-html-language-server"
-  if config and config.root_dir then
-    local local_cmd = vim.fs.joinpath(config.root_dir, "node_modules/.bin", cmd)
+local function default_cmd(root_dir)
+  local cmd = default_executable
+  if root_dir then
+    local local_cmd = vim.fs.joinpath(root_dir, "node_modules/.bin", cmd)
     if vim.fn.executable(local_cmd) == 1 then cmd = local_cmd end
   end
-  return vim.lsp.rpc.start({ cmd, "--stdio" }, dispatchers)
+  return { cmd, "--stdio" }
+end
+
+local function retry_blocked(root_dir)
+  local failed_at = M.failed_starts[root_dir]
+  if not failed_at then return false end
+
+  local elapsed = vim.uv.now() - failed_at
+  if elapsed < start_retry_delay_ms then return true end
+
+  M.failed_starts[root_dir] = nil
+  return false
+end
+
+local function mark_start_failed(root_dir)
+  if root_dir then M.failed_starts[root_dir] = vim.uv.now() end
 end
 
 local function html_settings()
@@ -99,15 +117,18 @@ end
 local function ensure_client(root_dir)
   if not is_enabled() then return nil end
   root_dir = root_dir or vim.fn.getcwd()
+  if retry_blocked(root_dir) then return nil end
 
   local existing = M.clients[root_dir]
   if existing and not existing:is_stopped() then return existing end
+  M.clients[root_dir] = nil
 
   local opts = get_opts()
-  local cmd = opts.cmd or default_cmd
+  local cmd = opts.cmd or default_cmd(root_dir)
   if not command_available(cmd) then
-    local executable = type(cmd) == "table" and cmd[1] or "vscode-html-language-server"
+    local executable = type(cmd) == "table" and cmd[1] or default_executable
     warn_once("missing-html-lsp", "[easy-dotnet] Razor HTML support requires `" .. executable .. "` in PATH")
+    mark_start_failed(root_dir)
     return nil
   end
 
@@ -122,6 +143,10 @@ local function ensure_client(root_dir)
     get_language_id = function() return "html" end,
     capabilities = capabilities,
     settings = html_settings(),
+    on_exit = function(code, signal)
+      M.clients[root_dir] = nil
+      if code ~= 0 and code ~= 143 and signal ~= 15 and signal ~= 9 then mark_start_failed(root_dir) end
+    end,
     init_options = {
       embeddedLanguages = {
         css = true,
@@ -134,11 +159,15 @@ local function ensure_client(root_dir)
 
   if not client_id then
     warn_once("html-lsp-start", "[easy-dotnet] Failed to start Razor HTML language server")
+    mark_start_failed(root_dir)
     return nil
   end
 
   local client = vim.lsp.get_client_by_id(client_id)
-  if not client then return nil end
+  if not client then
+    mark_start_failed(root_dir)
+    return nil
+  end
   M.clients[root_dir] = client
   return client
 end
