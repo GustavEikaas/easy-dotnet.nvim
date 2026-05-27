@@ -1,5 +1,7 @@
 local M = {}
 
+local BOOTSTRAP_DELAY_MS = 250
+
 local function is_buffer_empty(buf)
   for i = 0, vim.api.nvim_buf_line_count(buf) - 1 do
     local line = vim.api.nvim_buf_get_lines(buf, i, i + 1, false)[1]
@@ -27,6 +29,12 @@ local function auto_bootstrap_namespace(bufnr, mode)
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
   if not vim.startswith(vim.fs.normalize(curr_file), vim.fs.normalize(vim.fn.getcwd())) then return end
+  local lsp_created_files = require("easy-dotnet.roslyn.lsp-created-files")
+  if lsp_created_files.is_marked_fname(curr_file) then
+    -- Roslyn create edits can trigger multiple file events before text edits land.
+    if not is_buffer_empty(bufnr) then lsp_created_files.clear_fname(curr_file) end
+    return
+  end
   if not is_buffer_empty(bufnr) then return end
 
   local file_name = vim.fn.fnamemodify(curr_file, ":t:r")
@@ -78,7 +86,15 @@ M.auto_bootstrap_namespace = function(mode)
     pattern = "*.cs",
     callback = function()
       local bufnr = vim.api.nvim_get_current_buf()
-      auto_bootstrap_namespace(bufnr, mode)
+      if vim.b[bufnr].easy_dotnet_bootstrap_namespace_pending then return end
+
+      vim.b[bufnr].easy_dotnet_bootstrap_namespace_pending = true
+      vim.defer_fn(function()
+        if not vim.api.nvim_buf_is_valid(bufnr) then return end
+
+        vim.b[bufnr].easy_dotnet_bootstrap_namespace_pending = false
+        auto_bootstrap_namespace(bufnr, mode)
+      end, BOOTSTRAP_DELAY_MS)
     end,
   })
 end
