@@ -392,6 +392,17 @@ local function fix_indent_expression(buf)
   if vim.api.nvim_buf_is_valid(buf) then vim.bo[buf].indentexpr = "GetCSIndent(v:lnum)" end
 end
 
+local function mark_lsp_created_files(params)
+  local edit = params and params.edit
+  local document_changes = edit and edit.documentChanges
+  if type(document_changes) ~= "table" then return end
+
+  local lsp_created_files = require("easy-dotnet.roslyn.lsp-created-files")
+  for _, change in ipairs(document_changes) do
+    if change.kind == "create" or change.type == 1 then lsp_created_files.mark_uri(change.uri) end
+  end
+end
+
 ---@param opts easy-dotnet.LspOpts
 function M.enable(opts)
   if vim.fn.has("nvim-0.11") == 0 then
@@ -604,6 +615,10 @@ function M.enable(opts)
           end
         end
         return vim.lsp.handlers["client/registerCapability"](err, params, ctx, config)
+      end,
+      ["workspace/applyEdit"] = function(err, params, ctx, config)
+        mark_lsp_created_files(params)
+        return vim.lsp.handlers["workspace/applyEdit"](err, params, ctx, config)
       end,
       ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
         local client = vim.lsp.get_client_by_id(ctx.client_id)
