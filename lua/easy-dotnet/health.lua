@@ -73,6 +73,11 @@ local function check_razor_lsp_configured()
   local lsp = options.get_option("lsp") or {}
   local razor = lsp.razor or {}
   local html = razor.html or {}
+  if lsp.enabled == false then
+    vim.health.info("Razor LSP support disabled because Roslyn LSP is disabled")
+    return
+  end
+
   if razor.enabled == false then
     vim.health.info("Razor LSP support disabled")
     return

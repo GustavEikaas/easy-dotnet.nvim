@@ -228,7 +228,7 @@ end
 
 local function to_virtual_uri(uri)
   local ok, parsed = pcall(vim.uri_to_fname, uri)
-  if ok and parsed and parsed ~= "" then return virtual_scheme .. "://" .. parsed .. virtual_suffix end
+  if ok and parsed and parsed ~= "" then return vim.uri_from_fname(parsed):gsub("^file://", virtual_scheme .. "://") .. virtual_suffix end
   return uri:gsub("^file://", virtual_scheme .. "://") .. virtual_suffix
 end
 

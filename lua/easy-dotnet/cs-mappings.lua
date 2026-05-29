@@ -30,6 +30,7 @@ local function is_cs_file(file_path) return vim.endswith(file_path, ".cs") and n
 local function auto_bootstrap_namespace(bufnr, mode)
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
+  if not is_cs_file(curr_file) then return end
   if not vim.startswith(vim.fs.normalize(curr_file), vim.fs.normalize(vim.fn.getcwd())) then return end
   local lsp_created_files = require("easy-dotnet.roslyn.lsp-created-files")
   if lsp_created_files.is_marked_fname(curr_file) then
@@ -62,12 +63,6 @@ local function auto_bootstrap_namespace(bufnr, mode)
   local default = function() client.roslyn:roslyn_bootstrap_file_v2(curr_file, type_keyword, mode == "file_scoped", clear_virtual_text, opts) end
 
   client:initialize(function()
-    -- JSON clipboard bootstrap is only meaningful for plain .cs files
-    if not is_cs_file(curr_file) then
-      default()
-      return
-    end
-
     local opt = require("easy-dotnet.options").get_option("auto_bootstrap_namespace")
     local clipboard = vim.fn.getreg(opt.use_clipboard_json.register)
     local is_valid_json, res = pcall(vim.fn.json_decode, clipboard)
@@ -92,7 +87,7 @@ end
 ---@param mode easy-dotnet.BootstrapNamespaceMode
 M.auto_bootstrap_namespace = function(mode)
   vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile" }, {
-    pattern = { "*.cs", "*.razor", "*.cshtml" },
+    pattern = "*.cs",
     callback = function()
       local bufnr = vim.api.nvim_get_current_buf()
       if vim.b[bufnr].easy_dotnet_bootstrap_namespace_pending then return end
