@@ -44,6 +44,37 @@ local function is_duplicate_key_diagnostic_error(err)
   return stack:find("RemoteDiagnosticsService", 1, true) ~= nil or stack:find("DocumentPullDiagnosticsEndpoint", 1, true) ~= nil
 end
 
+local function has_valid_range(diagnostic)
+  local range = type(diagnostic) == "table" and diagnostic.range
+  local start = type(range) == "table" and range.start
+  local finish = type(range) == "table" and range["end"]
+  return type(start) == "table"
+    and type(finish) == "table"
+    and type(start.line) == "number"
+    and type(start.character) == "number"
+    and type(finish.line) == "number"
+    and type(finish.character) == "number"
+end
+
+local function sanitize_diagnostics(items)
+  if type(items) ~= "table" then return items end
+  return vim.tbl_filter(has_valid_range, items)
+end
+
+local function sanitize_diagnostic_result(result)
+  if type(result) ~= "table" then return result end
+
+  result.items = sanitize_diagnostics(result.items)
+
+  if type(result.relatedDocuments) == "table" then
+    for _, related in pairs(result.relatedDocuments) do
+      if type(related) == "table" then related.items = sanitize_diagnostics(related.items) end
+    end
+  end
+
+  return result
+end
+
 function M.disable_semantic_tokens(bufnr, client)
   if not (vim.api.nvim_buf_is_valid(bufnr) and client and client.id) then return end
 
@@ -56,7 +87,9 @@ function M.disable_semantic_tokens(bufnr, client)
 end
 
 function M.handle_diagnostic(err, result, ctx, config)
-  if err and is_razor_params(ctx and ctx.params) and is_duplicate_key_diagnostic_error(err) then return vim.NIL end
+  local is_razor = is_razor_params(ctx and ctx.params)
+  if err and is_razor and is_duplicate_key_diagnostic_error(err) then return vim.NIL end
+  if is_razor then result = sanitize_diagnostic_result(result) end
 
   local handler = vim.lsp.handlers["textDocument/diagnostic"]
   if handler then return handler(err, result, ctx, config) end
