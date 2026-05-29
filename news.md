@@ -2,6 +2,12 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## Razor support ([#586](https://github.com/GustavEikaas/easy-dotnet.nvim/issues/586))
+
+easy-dotnet now starts Roslyn for `.razor` and `.cshtml` files using the Razor cohosting model. This means Razor support works through the built-in Roslyn LSP.
+
+Markup-backed features use VS Code's HTML language server when `vscode-html-language-server` is available in `PATH`. easy-dotnet does not bundle or install this Node dependency; install it with `npm install -g vscode-langservers-extracted`.
+
 ## Official Roslyn NuGet package
 
 easy-dotnet now uses the **official [`roslyn-language-server`](https://www.nuget.org/packages/roslyn-language-server) dotnet global tool** instead of a bundled copy of the Roslyn LSP. This reduces the server installation size from **85 MB → 44 MB**.

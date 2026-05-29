@@ -24,10 +24,13 @@ local function is_key_value_table(tbl)
   return false
 end
 
+local function is_cs_file(file_path) return vim.endswith(file_path, ".cs") and not vim.endswith(file_path, ".razor.cs") and not vim.endswith(file_path, ".cshtml.cs") end
+
 ---@param mode easy-dotnet.BootstrapNamespaceMode
 local function auto_bootstrap_namespace(bufnr, mode)
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
+  if not is_cs_file(curr_file) then return end
   if not vim.startswith(vim.fs.normalize(curr_file), vim.fs.normalize(vim.fn.getcwd())) then return end
   local lsp_created_files = require("easy-dotnet.roslyn.lsp-created-files")
   if lsp_created_files.is_marked_fname(curr_file) then
@@ -39,7 +42,8 @@ local function auto_bootstrap_namespace(bufnr, mode)
 
   local file_name = vim.fn.fnamemodify(curr_file, ":t:r")
 
-  local is_interface = file_name:sub(1, 1) == "I" and file_name:sub(2, 2):match("%u")
+  -- Interface detection only applies to plain .cs files
+  local is_interface = is_cs_file(curr_file) and file_name:sub(1, 1) == "I" and file_name:sub(2, 2):match("%u")
   local type_keyword = is_interface and "Interface" or "Class"
 
   local ns = require("easy-dotnet.constants").ns_id

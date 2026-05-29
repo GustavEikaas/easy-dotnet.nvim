@@ -37,8 +37,18 @@
 ---@field analyzer_assemblies string[]|nil -- Optional list of analyzer DLLs
 ---@field easy_dotnet_analyzer_enabled boolean -- Whether built-in easy-dotnet roslyn analyzer is enabled
 ---@field roslynator_enabled boolean     -- Whether Roslynator is enabled
+---@field razor easy-dotnet.RazorOpts
 ---@field suggest_updates boolean
 ---@field config vim.lsp.config?          -- LSP configuration table
+
+---@class easy-dotnet.RazorOpts
+---@field enabled boolean
+---@field html easy-dotnet.RazorHtmlOpts
+
+---@class easy-dotnet.RazorHtmlOpts
+---@field enabled boolean
+---@field cmd string[]|fun(dispatchers: table, config: table): table|nil -- Defaults to project-local/PATH vscode-html-language-server; easy-dotnet does not install it
+---@field request_timeout integer
 
 ---@class easy-dotnet.DiagnosticsOptions
 ---@field default_severity "error" | "warning"
@@ -203,6 +213,14 @@ local M = {
       roslynator_enabled = true,
       easy_dotnet_analyzer_enabled = true,
       suggest_updates = true,
+      razor = {
+        enabled = true,
+        html = {
+          enabled = true,
+          cmd = nil,
+          request_timeout = 5000,
+        },
+      },
       config = {},
     },
     diagnostics = {

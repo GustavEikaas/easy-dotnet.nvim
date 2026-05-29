@@ -68,6 +68,42 @@ local function check_projx_lsp_configured()
   end
 end
 
+local function check_razor_lsp_configured()
+  local razor_html = require("easy-dotnet.razor.html")
+  local lsp = options.get_option("lsp") or {}
+  local razor = lsp.razor or {}
+  local html = razor.html or {}
+  if lsp.enabled == false then
+    vim.health.info("Razor LSP support disabled because Roslyn LSP is disabled")
+    return
+  end
+
+  if razor.enabled == false then
+    vim.health.info("Razor LSP support disabled")
+    return
+  end
+
+  vim.health.ok("Razor LSP support enabled")
+  if html.enabled == false then
+    vim.health.info("Razor HTML bridge disabled")
+    return
+  end
+
+  local cmd = html.cmd
+  if type(cmd) == "function" then
+    vim.health.info("Razor HTML language server command is configured by lsp.razor.html.cmd")
+    return
+  end
+
+  cmd = razor_html.resolve_cmd(vim.fn.getcwd(), cmd)
+  local executable = cmd[1]
+  if razor_html.command_available(cmd) then
+    vim.health.ok("Razor HTML language server command available: " .. table.concat(cmd, " "))
+  else
+    vim.health.warn("Razor HTML language server command not found: " .. tostring(executable), razor_html.install_advice(executable))
+  end
+end
+
 local function check_debugger_configured()
   local auto_register = options.get_option("debugger").auto_register_dap
   if auto_register == false then
@@ -249,6 +285,7 @@ M.check = function()
 
   vim.health.start("easy-dotnet LSP configuration (optional)")
   check_lsp_configured()
+  check_razor_lsp_configured()
   check_projx_lsp_configured()
   check_roslyn_tool()
 

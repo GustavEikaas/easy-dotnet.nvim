@@ -4,6 +4,8 @@ local root_finder = require("easy-dotnet.roslyn.root_finder")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
 local constants = require("easy-dotnet.constants")
 local current_solution = require("easy-dotnet.current_solution")
+local razor_html = require("easy-dotnet.razor.html")
+local razor_roslyn = require("easy-dotnet.razor.roslyn")
 
 local M = {
   state = {},
@@ -18,7 +20,7 @@ function M.start()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_loaded(bufnr) then
       local ft = vim.bo[bufnr].filetype
-      if ft == "cs" then vim.api.nvim_exec_autocmds("FileType", {
+      if ft == "cs" or ft == "razor" then vim.api.nvim_exec_autocmds("FileType", {
         buffer = bufnr,
       }) end
     end
@@ -258,6 +260,11 @@ local default_roslyn_settings = {
   ["csharp|code_lens"] = {
     dotnet_enable_tests_code_lens = false,
   },
+  razor = {
+    language_server = {
+      cohosting_enabled = true,
+    },
+  },
 }
 
 ---@param client vim.lsp.Client
@@ -404,6 +411,7 @@ function M.enable(opts)
   end
   source_generated_autocmd()
   local cmd = { "dotnet-easydotnet", "roslyn", "start" }
+  local razor_enabled = not opts.razor or opts.razor.enabled ~= false
   table.insert(cmd, "--clientProcessId")
   table.insert(cmd, tostring(vim.fn.getpid()))
 
@@ -420,17 +428,62 @@ function M.enable(opts)
 
   local settings = vim.tbl_deep_extend("force", default_roslyn_settings, opts.config.settings or {}, existing_config and existing_config.settings or {})
 
-  local cap = vim.tbl_deep_extend("keep", existing_config and existing_config.capabilities or {}, {
+  local cap = vim.tbl_deep_extend("force", vim.lsp.protocol.make_client_capabilities(), existing_config and existing_config.capabilities or {}, {
     textDocument = {
+      codeAction = {
+        dynamicRegistration = true,
+      },
       codeLens = {
+        dynamicRegistration = true,
+      },
+      colorProvider = {
+        dynamicRegistration = true,
+      },
+      completion = {
+        dynamicRegistration = true,
+      },
+      definition = {
         dynamicRegistration = true,
       },
       diagnostic = {
         dynamicRegistration = true,
       },
+      documentHighlight = {
+        dynamicRegistration = true,
+      },
+      documentSymbol = {
+        dynamicRegistration = true,
+      },
       foldingRange = {
-        dynamicRegistration = false,
+        dynamicRegistration = true,
         lineFoldingOnly = true,
+      },
+      formatting = {
+        dynamicRegistration = true,
+      },
+      hover = {
+        dynamicRegistration = true,
+      },
+      implementation = {
+        dynamicRegistration = true,
+      },
+      rangeFormatting = {
+        dynamicRegistration = true,
+      },
+      references = {
+        dynamicRegistration = true,
+      },
+      rename = {
+        dynamicRegistration = true,
+      },
+      semanticTokens = {
+        dynamicRegistration = true,
+      },
+      signatureHelp = {
+        dynamicRegistration = true,
+      },
+      synchronization = {
+        dynamicRegistration = true,
       },
     },
     workspace = {
@@ -451,10 +504,16 @@ function M.enable(opts)
       --TODO: use this for when server allows changing configuration
       -- Configuration = "Release",
     },
-    filetypes = { "cs" },
+    filetypes = razor_enabled and { "cs", "razor" } or { "cs" },
+    get_language_id = function(_, filetype)
+      if filetype == "cs" then return "csharp" end
+      if filetype == "razor" then return "aspnetcorerazor" end
+      return filetype
+    end,
     root_dir = M.find_project_or_solution,
     capabilities = cap,
     on_init = function(client)
+      razor_roslyn.suppress_semantic_tokens(client)
       M.solution_state[client.id] = { loaded_at = nil }
       local file, type = M.find_sln_or_csproj(client.root_dir)
       if not file then return end
@@ -472,6 +531,7 @@ function M.enable(opts)
       end
     end,
     on_exit = function(code, _, client_id)
+      razor_html.stop_for_roslyn_client(client_id)
       M.state[client_id] = nil
       M.watcher_registered[client_id] = nil
       M.pending_watchers[client_id] = nil
@@ -492,13 +552,18 @@ function M.enable(opts)
       end)
     end,
     on_attach = function(client, buf)
+      razor_roslyn.suppress_semantic_tokens(client)
       vim.b[buf].roslyn_buf_opened_at = now()
       register_file_rename_tracking(client, buf)
       if vim.bo[buf].filetype == "cs" then
         use_roslyn_fold(buf)
         fix_indent_expression(buf)
+      elseif vim.bo[buf].filetype == "razor" then
+        razor_html.register_razor_close(client, buf)
+        razor_roslyn.disable_semantic_tokens(buf, client)
+        vim.schedule(function() razor_roslyn.disable_semantic_tokens(buf, client) end)
       end
-      if require("easy-dotnet.options").get_option("lsp").auto_refresh_codelens then
+      if vim.bo[buf].filetype == "cs" and require("easy-dotnet.options").get_option("lsp").auto_refresh_codelens then
         if vim.fn.has("nvim-0.12") == 1 then
           vim.lsp.codelens.enable(true, { bufnr = buf })
           vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
@@ -522,11 +587,8 @@ function M.enable(opts)
       ["roslyn.client.peekReferences"] = require("easy-dotnet.roslyn.lsp.peek_references"),
       -- ["dotnet.test.run"] = require("easy-dotnet.roslyn.lsp.test_run"),
     },
-    handlers = {
-      ["workspace/applyEdit"] = function(err, params, ctx, config)
-        mark_lsp_created_files(params)
-        return vim.lsp.handlers["workspace/applyEdit"](err, params, ctx, config)
-      end,
+    handlers = vim.tbl_deep_extend("force", razor_enabled and razor_html.handlers() or {}, {
+      ["textDocument/diagnostic"] = razor_roslyn.handle_diagnostic,
       ["client/registerCapability"] = function(err, params, ctx, config)
         local client_id = ctx.client_id
         if params.registrations then
@@ -553,6 +615,10 @@ function M.enable(opts)
           end
         end
         return vim.lsp.handlers["client/registerCapability"](err, params, ctx, config)
+      end,
+      ["workspace/applyEdit"] = function(err, params, ctx, config)
+        mark_lsp_created_files(params)
+        return vim.lsp.handlers["workspace/applyEdit"](err, params, ctx, config)
       end,
       ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
         local client = vim.lsp.get_client_by_id(ctx.client_id)
@@ -581,7 +647,7 @@ function M.enable(opts)
           end
         end
       end,
-    },
+    }),
     settings = settings,
   }
 
