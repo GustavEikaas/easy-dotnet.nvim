@@ -13,7 +13,6 @@ local virtual_suffix = "__virtual.html"
 local virtual_scheme = "razor-html"
 local default_executable = "vscode-html-language-server"
 local start_retry_delay_ms = 30000
-local log_file = vim.fs.joinpath(vim.fn.stdpath("state"), "easy-dotnet", "razor.log")
 
 local forwarded_methods = {
   "textDocument/codeAction",
@@ -61,26 +60,70 @@ local function warn_once(key, message)
   logger.warn(message)
 end
 
-local function append_log(message)
-  if type(message) ~= "string" or message == "" then return end
-  vim.fn.mkdir(vim.fs.dirname(log_file), "p")
-  local timestamp = os.date("%Y-%m-%d %H:%M:%S")
-  vim.fn.writefile({ string.format("%s %s", timestamp, message) }, log_file, "a")
-end
-
 local function command_available(cmd)
   if type(cmd) == "function" then return true end
   if type(cmd) ~= "table" or type(cmd[1]) ~= "string" or cmd[1] == "" then return false end
   return vim.fn.executable(cmd[1]) == 1
 end
 
-local function default_cmd(root_dir)
-  local cmd = default_executable
-  if root_dir then
-    local local_cmd = vim.fs.joinpath(root_dir, "node_modules/.bin", cmd)
-    if vim.fn.executable(local_cmd) == 1 then cmd = local_cmd end
+local function local_executable_candidates(root_dir)
+  if type(root_dir) ~= "string" or root_dir == "" then return {} end
+
+  local search_dirs = {}
+  local seen = {}
+  local function add_search_dir(dir)
+    if type(dir) ~= "string" or dir == "" then return end
+    dir = vim.fs.normalize(dir)
+    if seen[dir] then return end
+    seen[dir] = true
+    table.insert(search_dirs, dir)
   end
-  return { cmd, "--stdio" }
+
+  add_search_dir(root_dir)
+  for parent in vim.fs.parents(root_dir) do
+    add_search_dir(parent)
+    if vim.fs.normalize(parent) == vim.fs.normalize(vim.fn.getcwd()) then break end
+  end
+  add_search_dir(vim.fn.getcwd())
+
+  local candidates = {}
+  for _, dir in ipairs(search_dirs) do
+    local bin_dir = vim.fs.joinpath(dir, "node_modules", ".bin")
+    table.insert(candidates, vim.fs.joinpath(bin_dir, default_executable))
+  end
+
+  if vim.fn.has("win32") == 1 then
+    for _, dir in ipairs(search_dirs) do
+      local bin_dir = vim.fs.joinpath(dir, "node_modules", ".bin")
+      table.insert(candidates, vim.fs.joinpath(bin_dir, default_executable .. ".cmd"))
+    end
+  end
+
+  return candidates
+end
+
+local function default_cmd(root_dir)
+  for _, candidate in ipairs(local_executable_candidates(root_dir)) do
+    if vim.fn.executable(candidate) == 1 then return { candidate, "--stdio" } end
+  end
+
+  return { default_executable, "--stdio" }
+end
+
+function M.resolve_cmd(root_dir, configured_cmd) return configured_cmd or default_cmd(root_dir) end
+
+function M.command_available(cmd) return command_available(cmd) end
+
+function M.install_advice(executable)
+  executable = executable or default_executable
+  return {
+    "easy-dotnet does not bundle or install the HTML language server.",
+    "Install it globally with: npm install -g vscode-langservers-extracted",
+    "Or install it in the project with: npm install --save-dev vscode-langservers-extracted",
+    "The " .. executable .. " command will be used automatically from project node_modules/.bin or PATH.",
+    "Override lsp.razor.html.cmd if your installation uses a different command.",
+    "Disable Razor support with lsp.razor.enabled = false if you do not want this integration.",
+  }
 end
 
 local function retry_blocked(root_dir)
@@ -124,10 +167,15 @@ local function ensure_client(root_dir)
   M.clients[root_dir] = nil
 
   local opts = get_opts()
-  local cmd = opts.cmd or default_cmd(root_dir)
+  local cmd = M.resolve_cmd(root_dir, opts.cmd)
   if not command_available(cmd) then
     local executable = type(cmd) == "table" and cmd[1] or default_executable
-    warn_once("missing-html-lsp", "[easy-dotnet] Razor HTML support requires `" .. executable .. "` in PATH")
+    warn_once(
+      "missing-html-lsp",
+      "[easy-dotnet] Razor HTML support is waiting for `"
+        .. executable
+        .. "`. Install it with `npm install -g vscode-langservers-extracted`, add `vscode-langservers-extracted` to this project's devDependencies, or set `lsp.razor.html.cmd`."
+    )
     mark_start_failed(root_dir)
     return nil
   end
@@ -339,10 +387,6 @@ end
 function M.handlers()
   local handlers = {
     ["razor/updateHtml"] = M.handle_update_html,
-    ["razor/log"] = function(_, params)
-      if params and params.message then append_log("[razor] " .. params.message) end
-      return vim.NIL
-    end,
   }
 
   for _, method in ipairs(forwarded_methods) do
@@ -351,7 +395,5 @@ function M.handlers()
 
   return handlers
 end
-
-function M.log_file() return log_file end
 
 return M

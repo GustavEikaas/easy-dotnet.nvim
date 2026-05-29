@@ -16,6 +16,53 @@ Existing installs are not updated automatically. easy-dotnet periodically sugges
 dotnet-easydotnet roslyn update
 ```
 
+## Razor and CSHTML
+
+`*.razor` and `*.cshtml` files are handled by Roslyn LSP and are enabled by default.
+easy-dotnet also bridges markup-backed Razor requests to VS Code's HTML language server so features such as HTML completion, hover, formatting, document symbols, and color support can work inside Razor files.
+
+The HTML language server is an optional Node dependency. easy-dotnet does not bundle it and will not install it automatically.
+If the dependency is missing, Razor still opens through Roslyn, but markup-backed requests return empty responses and `:checkhealth easy-dotnet` reports the missing command with install guidance.
+
+Install the dependency globally:
+
+```bash
+npm install -g vscode-langservers-extracted
+```
+
+Or install it per project:
+
+```bash
+npm install --save-dev vscode-langservers-extracted
+```
+
+When `vscode-html-language-server` is available in project `node_modules/.bin` or on `PATH`, easy-dotnet starts it automatically for Razor files. No plugin configuration is required.
+
+Override the command only if your install uses a custom location:
+
+```lua
+require("easy-dotnet").setup({
+  lsp = {
+    razor = {
+      html = {
+        cmd = { "vscode-html-language-server", "--stdio" },
+      },
+    },
+  },
+})
+```
+
+To disable Razor support:
+
+```lua
+require("easy-dotnet").setup({
+  lsp = {
+    razor = {
+      enabled = false,
+    },
+  },
+})
+```
 
 ## Analyzers
 
@@ -31,7 +78,7 @@ require("easy-dotnet").setup({
         },
     },
 })
-````
+```
 
 
 ## LSP Settings

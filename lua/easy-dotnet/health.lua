@@ -69,6 +69,7 @@ local function check_projx_lsp_configured()
 end
 
 local function check_razor_lsp_configured()
+  local razor_html = require("easy-dotnet.razor.html")
   local lsp = options.get_option("lsp") or {}
   local razor = lsp.razor or {}
   local html = razor.html or {}
@@ -85,27 +86,16 @@ local function check_razor_lsp_configured()
 
   local cmd = html.cmd
   if type(cmd) == "function" then
-    if vim.fn.executable("vscode-html-language-server") == 1 then
-      vim.health.ok("Razor HTML language server command available: vscode-html-language-server")
-    else
-      vim.health.warn("Razor HTML language server command not found", {
-        "Install vscode-html-language-server for the current POC, or set lsp.razor.html.cmd to a working command.",
-        "Project-local node_modules/.bin/vscode-html-language-server is also supported when opening a project.",
-        "Razor support can be disabled with lsp.razor.enabled = false.",
-      })
-    end
+    vim.health.info("Razor HTML language server command is configured by lsp.razor.html.cmd")
     return
   end
 
-  cmd = cmd or { "vscode-html-language-server", "--stdio" }
+  cmd = razor_html.resolve_cmd(vim.fn.getcwd(), cmd)
   local executable = cmd[1]
-  if executable and vim.fn.executable(executable) == 1 then
+  if razor_html.command_available(cmd) then
     vim.health.ok("Razor HTML language server command available: " .. table.concat(cmd, " "))
   else
-    vim.health.warn("Razor HTML language server command not found", {
-      "Install vscode-html-language-server for the current POC, or set lsp.razor.html.cmd to a working command.",
-      "Razor support can be disabled with lsp.razor.enabled = false.",
-    })
+    vim.health.warn("Razor HTML language server command not found: " .. tostring(executable), razor_html.install_advice(executable))
   end
 end
 

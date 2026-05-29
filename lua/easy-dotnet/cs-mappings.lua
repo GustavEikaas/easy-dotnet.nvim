@@ -24,11 +24,7 @@ local function is_key_value_table(tbl)
   return false
 end
 
-local function is_cs_file(file_path)
-  return vim.endswith(file_path, ".cs")
-    and not vim.endswith(file_path, ".razor.cs")
-    and not vim.endswith(file_path, ".cshtml.cs")
-end
+local function is_cs_file(file_path) return vim.endswith(file_path, ".cs") and not vim.endswith(file_path, ".razor.cs") and not vim.endswith(file_path, ".cshtml.cs") end
 
 ---@param mode easy-dotnet.BootstrapNamespaceMode
 local function auto_bootstrap_namespace(bufnr, mode)

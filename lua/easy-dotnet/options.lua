@@ -47,7 +47,7 @@
 
 ---@class easy-dotnet.RazorHtmlOpts
 ---@field enabled boolean
----@field cmd string[]|fun(dispatchers: table, config: table): table|nil
+---@field cmd string[]|fun(dispatchers: table, config: table): table|nil -- Defaults to project-local/PATH vscode-html-language-server; easy-dotnet does not install it
 ---@field request_timeout integer
 
 ---@class easy-dotnet.DiagnosticsOptions
