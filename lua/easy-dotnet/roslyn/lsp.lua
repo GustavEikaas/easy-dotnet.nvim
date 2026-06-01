@@ -237,6 +237,76 @@ function M.register_watchers_bulk(client)
   M.pending_watchers[client_id] = nil
 end
 
+local default_roslyn_settings = {
+  ["csharp|code_lens"] = {
+    dotnet_enable_tests_code_lens = false,
+  },
+  razor = {
+    language_server = {
+      cohosting_enabled = true,
+    },
+  },
+}
+
+---@param msg string
+local function rename_log(msg)
+  local timestamp = os.date("%H:%M:%S") .. string.format(".%03d", vim.uv.now() % 1000)
+  local formatted = string.format("[easy-dotnet rename %s] %s", timestamp, msg)
+  if vim.lsp and vim.lsp.log and vim.lsp.log.debug then
+    vim.lsp.log.debug(formatted)
+  else
+    logger.debug(formatted)
+  end
+end
+
+local function line_character_count(line, encoding)
+  local ok, count = pcall(vim.str_utfindex, line, encoding or "utf-16")
+  if ok then return count end
+  return #line
+end
+
+---@param client vim.lsp.Client
+local function clamp_semantic_tokens_range(client)
+  if client._easy_dotnet_semantic_tokens_range_clamped then return end
+
+  local request = client.request
+  client.request = function(self, method, params, handler, bufnr)
+    if method == "textDocument/semanticTokens/range" and type(params) == "table" and type(params.range) == "table" then
+      local resolved_bufnr = bufnr
+      if not resolved_bufnr and params.textDocument and type(params.textDocument.uri) == "string" then
+        local ok, fname = pcall(vim.uri_to_fname, params.textDocument.uri)
+        resolved_bufnr = ok and vim.fn.bufnr(fname) or nil
+      end
+
+      if resolved_bufnr and resolved_bufnr ~= -1 and vim.api.nvim_buf_is_valid(resolved_bufnr) then
+        local line_count = vim.api.nvim_buf_line_count(resolved_bufnr)
+        local last_line = math.max(line_count - 1, 0)
+        local range_end = params.range["end"]
+
+        if type(range_end) == "table" and type(range_end.line) == "number" and range_end.line > last_line then
+          params = vim.deepcopy(params)
+          local last_line_text = vim.api.nvim_buf_get_lines(resolved_bufnr, last_line, last_line + 1, false)[1] or ""
+          params.range["end"] = {
+            line = last_line,
+            character = line_character_count(last_line_text, self.offset_encoding),
+          }
+
+          local range_start = params.range.start
+          if type(range_start) == "table" and type(range_start.line) == "number" and range_start.line > last_line then
+            params.range.start = { line = last_line, character = 0 }
+          end
+
+          logger.debug(string.format("[easy-dotnet] Clamped semanticTokens/range end line for Roslyn: requested=%d last=%d", range_end.line, last_line))
+        end
+      end
+    end
+
+    return request(self, method, params, handler, bufnr)
+  end
+
+  client._easy_dotnet_semantic_tokens_range_clamped = true
+end
+
 ---@param client vim.lsp.Client
 local function refresh_diag(client)
   local bufnr = vim.api.nvim_get_current_buf()
@@ -254,18 +324,8 @@ local function refresh_diag(client)
   }
 
   client:notify("textDocument/didChange", params)
+  rename_log(string.format("refresh_diag sent didChange client=%s buf=%d uri=%s", client.id, bufnr, params.textDocument.uri))
 end
-
-local default_roslyn_settings = {
-  ["csharp|code_lens"] = {
-    dotnet_enable_tests_code_lens = false,
-  },
-  razor = {
-    language_server = {
-      cohosting_enabled = true,
-    },
-  },
-}
 
 ---@param client vim.lsp.Client
 ---@param buf integer
@@ -275,7 +335,10 @@ local function register_file_rename_tracking(client, buf)
   vim.api.nvim_create_autocmd("BufFilePre", {
     group = group,
     buffer = buf,
-    callback = function() vim.b[buf].easy_dotnet_old_name = vim.api.nvim_buf_get_name(buf) end,
+    callback = function()
+      vim.b[buf].easy_dotnet_old_name = vim.api.nvim_buf_get_name(buf)
+      rename_log(string.format("BufFilePre client=%s buf=%d old_name=%s", client.id, buf, vim.b[buf].easy_dotnet_old_name or ""))
+    end,
   })
 
   vim.api.nvim_create_autocmd("BufFilePost", {
@@ -287,6 +350,7 @@ local function register_file_rename_tracking(client, buf)
 
       local new_name = vim.api.nvim_buf_get_name(buf)
       if not old_name or old_name == "" or new_name == "" or old_name == new_name then return end
+      rename_log(string.format("BufFilePost client=%s buf=%d old_name=%s new_name=%s", client.id, buf, old_name, new_name))
 
       client:notify("workspace/didRenameFiles", {
         files = {
@@ -494,6 +558,10 @@ function M.enable(opts)
         didRename = true,
         willRename = true,
       },
+      workspaceEdit = {
+        documentChanges = true,
+        resourceOperations = { "create", "rename", "delete" },
+      },
     },
   })
 
@@ -513,6 +581,8 @@ function M.enable(opts)
     root_dir = M.find_project_or_solution,
     capabilities = cap,
     on_init = function(client)
+      clamp_semantic_tokens_range(client)
+      require("easy-dotnet.roslyn.lsp.enhanced_rename").install(client, opts)
       razor_roslyn.suppress_semantic_tokens(client)
       M.solution_state[client.id] = { loaded_at = nil }
       local file, type = M.find_sln_or_csproj(client.root_dir)
@@ -554,6 +624,7 @@ function M.enable(opts)
     on_attach = function(client, buf)
       razor_roslyn.suppress_semantic_tokens(client)
       vim.b[buf].roslyn_buf_opened_at = now()
+      vim.b[buf].easy_dotnet_roslyn_open_uri = vim.uri_from_bufnr(buf)
       register_file_rename_tracking(client, buf)
       if vim.bo[buf].filetype == "cs" then
         use_roslyn_fold(buf)
