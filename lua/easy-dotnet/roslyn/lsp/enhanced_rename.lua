@@ -5,50 +5,46 @@ local M = {}
 
 local should_rename_file_handler = "EasyDotnet.RoslynLanguageServices.Rename.ShouldRenameFileMessageHandler"
 
-local function has_rename_file_operation(document_changes, old_uri, new_uri)
-  for _, change in ipairs(document_changes) do
-    if change.kind == "rename" and change.oldUri == old_uri and change.newUri == new_uri then return true end
+---@param msg string
+local function rename_log(msg)
+  local timestamp = os.date("%H:%M:%S") .. string.format(".%03d", vim.uv.now() % 1000)
+  local formatted = string.format("[easy-dotnet rename %s] %s", timestamp, msg)
+  if vim.lsp and vim.lsp.log and vim.lsp.log.error then
+    vim.lsp.log.error(formatted)
+  else
+    logger.debug(formatted)
   end
-  return false
 end
 
-local function ensure_document_changes(edit)
-  if edit.documentChanges then return edit.documentChanges end
+---@param client vim.lsp.Client
+---@param bufnr integer
+---@param decision table
+local function rename_file_after_workspace_edit(client, bufnr, decision)
+  if not decision or decision.shouldRename ~= true or type(decision.oldUri) ~= "string" or type(decision.newUri) ~= "string" then return end
 
-  edit.documentChanges = {}
-  if edit.changes then
-    for uri, edits in pairs(edit.changes) do
-      table.insert(edit.documentChanges, {
-        textDocument = {
-          uri = uri,
-        },
-        edits = edits,
-      })
-    end
-    edit.changes = nil
+  local ok_old, old_fname = pcall(vim.uri_to_fname, decision.oldUri)
+  local ok_new, new_fname = pcall(vim.uri_to_fname, decision.newUri)
+  if not ok_old or not ok_new then
+    rename_log("file rename skipped: failed to convert rename URIs")
+    return
   end
 
-  return edit.documentChanges
+  local ok_tracking, changetracking = pcall(require, "vim.lsp._changetracking")
+  if ok_tracking and changetracking.flush then
+    rename_log(string.format("flush changes before file rename client=%s buf=%d old_uri=%s", client.id, bufnr, decision.oldUri))
+    changetracking.flush(client, bufnr)
+  else
+    rename_log("file rename continuing without changetracking flush")
+  end
+
+  rename_log(string.format("rename file after workspace edit old=%s new=%s", old_fname, new_fname))
+  local ok, rename_err = pcall(vim.lsp.util.rename, old_fname, new_fname, { ignoreIfExists = true })
+  if not ok then rename_log("file rename failed: " .. tostring(rename_err)) end
 end
 
-local function with_file_rename(edit, decision)
-  if not decision or decision.shouldRename ~= true or type(decision.oldUri) ~= "string" or type(decision.newUri) ~= "string" then return edit end
-
-  local result = vim.deepcopy(edit)
-  local document_changes = ensure_document_changes(result)
-  if has_rename_file_operation(document_changes, decision.oldUri, decision.newUri) then return result end
-
-  logger.debug("[easy-dotnet] Adding file rename to workspace edit: " .. decision.oldUri .. " -> " .. decision.newUri)
-  table.insert(document_changes, {
-    kind = "rename",
-    oldUri = decision.oldUri,
-    newUri = decision.newUri,
-    options = {
-      ignoreIfExists = true,
-    },
-  })
-
-  return result
+local function apply_rename_result_then_file_rename(original_handler, err, result, ctx, client, bufnr, decision)
+  original_handler(err, result, ctx)
+  rename_file_after_workspace_edit(client, bufnr, decision)
 end
 
 ---@param client vim.lsp.Client
@@ -102,7 +98,7 @@ function M.install(client, opts)
           return
         end
 
-        original_handler(err, with_file_rename(result, decision), ctx)
+        apply_rename_result_then_file_rename(original_handler, err, result, ctx, self, request_bufnr, decision)
       end)
     end
 

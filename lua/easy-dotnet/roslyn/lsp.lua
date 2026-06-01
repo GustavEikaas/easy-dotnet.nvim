@@ -237,6 +237,28 @@ function M.register_watchers_bulk(client)
   M.pending_watchers[client_id] = nil
 end
 
+local default_roslyn_settings = {
+  ["csharp|code_lens"] = {
+    dotnet_enable_tests_code_lens = false,
+  },
+  razor = {
+    language_server = {
+      cohosting_enabled = true,
+    },
+  },
+}
+
+---@param msg string
+local function rename_log(msg)
+  local timestamp = os.date("%H:%M:%S") .. string.format(".%03d", vim.uv.now() % 1000)
+  local formatted = string.format("[easy-dotnet rename %s] %s", timestamp, msg)
+  if vim.lsp and vim.lsp.log and vim.lsp.log.error then
+    vim.lsp.log.error(formatted)
+  else
+    logger.debug(formatted)
+  end
+end
+
 ---@param client vim.lsp.Client
 local function refresh_diag(client)
   local bufnr = vim.api.nvim_get_current_buf()
@@ -254,53 +276,7 @@ local function refresh_diag(client)
   }
 
   client:notify("textDocument/didChange", params)
-end
-
-local default_roslyn_settings = {
-  ["csharp|code_lens"] = {
-    dotnet_enable_tests_code_lens = false,
-  },
-  razor = {
-    language_server = {
-      cohosting_enabled = true,
-    },
-  },
-}
-
-local function get_language_id(filetype)
-  if filetype == "cs" then return "csharp" end
-  if filetype == "razor" then return "aspnetcorerazor" end
-  return filetype
-end
-
----@param client vim.lsp.Client
----@param buf integer
----@param old_name string
----@param new_name string
-local function notify_renamed_open_document(client, buf, old_name, new_name)
-  if not client.attached_buffers or not client.attached_buffers[buf] then return end
-
-  local old_uri = vim.uri_from_fname(old_name)
-  local new_uri = vim.uri_from_fname(new_name)
-  local open_uri = vim.b[buf].easy_dotnet_roslyn_open_uri or old_uri
-  if open_uri == new_uri then return end
-
-  client:notify("textDocument/didClose", {
-    textDocument = {
-      uri = open_uri,
-    },
-  })
-
-  client:notify("textDocument/didOpen", {
-    textDocument = {
-      uri = new_uri,
-      languageId = get_language_id(vim.bo[buf].filetype),
-      version = vim.lsp.util.buf_versions[buf] or 0,
-      text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n"),
-    },
-  })
-
-  vim.b[buf].easy_dotnet_roslyn_open_uri = new_uri
+  rename_log(string.format("refresh_diag sent didChange client=%s buf=%d uri=%s", client.id, bufnr, params.textDocument.uri))
 end
 
 ---@param client vim.lsp.Client
@@ -311,7 +287,10 @@ local function register_file_rename_tracking(client, buf)
   vim.api.nvim_create_autocmd("BufFilePre", {
     group = group,
     buffer = buf,
-    callback = function() vim.b[buf].easy_dotnet_old_name = vim.api.nvim_buf_get_name(buf) end,
+    callback = function()
+      vim.b[buf].easy_dotnet_old_name = vim.api.nvim_buf_get_name(buf)
+      rename_log(string.format("BufFilePre client=%s buf=%d old_name=%s", client.id, buf, vim.b[buf].easy_dotnet_old_name or ""))
+    end,
   })
 
   vim.api.nvim_create_autocmd("BufFilePost", {
@@ -323,8 +302,7 @@ local function register_file_rename_tracking(client, buf)
 
       local new_name = vim.api.nvim_buf_get_name(buf)
       if not old_name or old_name == "" or new_name == "" or old_name == new_name then return end
-
-      notify_renamed_open_document(client, buf, old_name, new_name)
+      rename_log(string.format("BufFilePost client=%s buf=%d old_name=%s new_name=%s", client.id, buf, old_name, new_name))
 
       client:notify("workspace/didRenameFiles", {
         files = {
