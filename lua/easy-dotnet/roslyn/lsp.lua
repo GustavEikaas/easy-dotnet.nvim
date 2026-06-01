@@ -267,6 +267,42 @@ local default_roslyn_settings = {
   },
 }
 
+local function get_language_id(filetype)
+  if filetype == "cs" then return "csharp" end
+  if filetype == "razor" then return "aspnetcorerazor" end
+  return filetype
+end
+
+---@param client vim.lsp.Client
+---@param buf integer
+---@param old_name string
+---@param new_name string
+local function notify_renamed_open_document(client, buf, old_name, new_name)
+  if not client.attached_buffers or not client.attached_buffers[buf] then return end
+
+  local old_uri = vim.uri_from_fname(old_name)
+  local new_uri = vim.uri_from_fname(new_name)
+  local open_uri = vim.b[buf].easy_dotnet_roslyn_open_uri or old_uri
+  if open_uri == new_uri then return end
+
+  client:notify("textDocument/didClose", {
+    textDocument = {
+      uri = open_uri,
+    },
+  })
+
+  client:notify("textDocument/didOpen", {
+    textDocument = {
+      uri = new_uri,
+      languageId = get_language_id(vim.bo[buf].filetype),
+      version = vim.lsp.util.buf_versions[buf] or 0,
+      text = table.concat(vim.api.nvim_buf_get_lines(buf, 0, -1, false), "\n"),
+    },
+  })
+
+  vim.b[buf].easy_dotnet_roslyn_open_uri = new_uri
+end
+
 ---@param client vim.lsp.Client
 ---@param buf integer
 local function register_file_rename_tracking(client, buf)
@@ -287,6 +323,8 @@ local function register_file_rename_tracking(client, buf)
 
       local new_name = vim.api.nvim_buf_get_name(buf)
       if not old_name or old_name == "" or new_name == "" or old_name == new_name then return end
+
+      notify_renamed_open_document(client, buf, old_name, new_name)
 
       client:notify("workspace/didRenameFiles", {
         files = {
@@ -559,6 +597,7 @@ function M.enable(opts)
     on_attach = function(client, buf)
       razor_roslyn.suppress_semantic_tokens(client)
       vim.b[buf].roslyn_buf_opened_at = now()
+      vim.b[buf].easy_dotnet_roslyn_open_uri = vim.uri_from_bufnr(buf)
       register_file_rename_tracking(client, buf)
       if vim.bo[buf].filetype == "cs" then
         use_roslyn_fold(buf)
