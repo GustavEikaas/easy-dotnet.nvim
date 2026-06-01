@@ -9,8 +9,8 @@ local should_rename_file_handler = "EasyDotnet.RoslynLanguageServices.Rename.Sho
 local function rename_log(msg)
   local timestamp = os.date("%H:%M:%S") .. string.format(".%03d", vim.uv.now() % 1000)
   local formatted = string.format("[easy-dotnet rename %s] %s", timestamp, msg)
-  if vim.lsp and vim.lsp.log and vim.lsp.log.error then
-    vim.lsp.log.error(formatted)
+  if vim.lsp and vim.lsp.log and vim.lsp.log.debug then
+    vim.lsp.log.debug(formatted)
   else
     logger.debug(formatted)
   end
