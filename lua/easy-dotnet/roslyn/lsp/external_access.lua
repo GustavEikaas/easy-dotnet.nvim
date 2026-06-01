@@ -5,6 +5,7 @@ local M = {}
 local state = {
   extension_info = nil,
   activated = {},
+  missing_document_handler_warnings = {},
 }
 
 local function contains(values, value)
@@ -22,6 +23,21 @@ end
 local function format_error(err)
   if type(err) == "table" then return err.message or vim.inspect(err) end
   return tostring(err)
+end
+
+local function document_handler_available(activation, message_name) return contains(activation and activation.document_message_handlers, message_name) end
+
+local function warn_missing_document_handler_once(client, message_name)
+  local warning_key = string.format("%d:%s", client.id, message_name)
+  if state.missing_document_handler_warnings[warning_key] then return end
+
+  state.missing_document_handler_warnings[warning_key] = true
+
+  local extension_path = state.extension_info and state.extension_info.EasyDotnetRoslynLanguageServicesPath or "<unknown>"
+  local message = string.format("[easy-dotnet] Roslyn extension did not advertise document handler '%s'. Enhanced rename will fall back to normal rename. Extension: %s", message_name, extension_path)
+
+  logger.warn(message)
+  logger.debug(message)
 end
 
 local function get_extension_info(cb)
@@ -103,7 +119,8 @@ function M.dispatch_document(client, bufnr, message_name, message, cb)
         return
       end
 
-      if not contains(activation and activation.document_message_handlers, message_name) then
+      if not document_handler_available(activation, message_name) then
+        warn_missing_document_handler_once(client, message_name)
         logger.debug("[easy-dotnet] Roslyn extension document handler unavailable: " .. message_name)
         cb(nil, nil)
         return
@@ -154,6 +171,17 @@ function M.dispatch_document(client, bufnr, message_name, message, cb)
   end
 
   dispatch(false)
+end
+
+function M.verify_document_handler(client, message_name)
+  activate(client, function(err, activation)
+    if err then
+      logger.debug("[easy-dotnet] Roslyn extension verification failed: " .. format_error(err))
+      return
+    end
+
+    if not document_handler_available(activation, message_name) then warn_missing_document_handler_once(client, message_name) end
+  end)
 end
 
 return M

@@ -58,6 +58,7 @@ function M.install(client, opts)
   if opts.enhanced_rename == false or opts.easy_dotnet_analyzer_enabled == false then return end
 
   client._easy_dotnet_enhanced_rename_installed = true
+  external_access.verify_document_handler(client, should_rename_file_handler)
 
   local original_request = client.request
 
@@ -72,9 +73,7 @@ function M.install(client, opts)
     local request_bufnr = bufnr or vim.api.nvim_get_current_buf()
     local wrapped_handler = function(err, result, ctx)
       if err or not result then
-        if err then
-          logger.debug("[easy-dotnet] Roslyn rename failed before enhanced rename dispatch: " .. (type(err) == "table" and (err.message or vim.inspect(err)) or tostring(err)))
-        end
+        if err then logger.debug("[easy-dotnet] Roslyn rename failed before enhanced rename dispatch: " .. (type(err) == "table" and (err.message or vim.inspect(err)) or tostring(err))) end
         if not result then logger.debug("[easy-dotnet] Roslyn rename returned no workspace edit") end
         original_handler(err, result, ctx)
         return
