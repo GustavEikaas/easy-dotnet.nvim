@@ -36,6 +36,7 @@
 ---@field preload_roslyn boolean
 ---@field analyzer_assemblies string[]|nil -- Optional list of analyzer DLLs
 ---@field easy_dotnet_analyzer_enabled boolean -- Whether built-in easy-dotnet roslyn analyzer is enabled
+---@field enhanced_rename boolean       -- Whether C# rename should also rename matching primary type files
 ---@field roslynator_enabled boolean     -- Whether Roslynator is enabled
 ---@field razor easy-dotnet.RazorOpts
 ---@field suggest_updates boolean
@@ -212,6 +213,7 @@ local M = {
       auto_refresh_codelens = true,
       roslynator_enabled = true,
       easy_dotnet_analyzer_enabled = true,
+      enhanced_rename = true,
       suggest_updates = true,
       razor = {
         enabled = true,

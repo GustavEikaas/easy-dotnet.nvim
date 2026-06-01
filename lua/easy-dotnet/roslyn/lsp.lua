@@ -494,6 +494,10 @@ function M.enable(opts)
         didRename = true,
         willRename = true,
       },
+      workspaceEdit = {
+        documentChanges = true,
+        resourceOperations = { "create", "rename", "delete" },
+      },
     },
   })
 
@@ -513,6 +517,7 @@ function M.enable(opts)
     root_dir = M.find_project_or_solution,
     capabilities = cap,
     on_init = function(client)
+      require("easy-dotnet.roslyn.lsp.enhanced_rename").install(client, opts)
       razor_roslyn.suppress_semantic_tokens(client)
       M.solution_state[client.id] = { loaded_at = nil }
       local file, type = M.find_sln_or_csproj(client.root_dir)

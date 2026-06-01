@@ -15,11 +15,21 @@ return function(edit, client)
 
   vim.lsp.util.apply_workspace_edit(edit, client.offset_encoding)
 
-  local x = vim.iter(edit.documentChanges or {}):fold({ files = {}, edit_count = 0 }, function(acc, change)
-    table.insert(acc.files, change.textDocument.uri)
-    acc.edit_count = acc.edit_count + #(change.edits or {})
-    return acc
-  end)
+  local x = { files = {}, edit_count = 0 }
+
+  if edit.documentChanges then
+    for _, change in ipairs(edit.documentChanges) do
+      if change.textDocument and change.textDocument.uri then
+        table.insert(x.files, change.textDocument.uri)
+        x.edit_count = x.edit_count + #(change.edits or {})
+      end
+    end
+  elseif edit.changes then
+    for uri, edits in pairs(edit.changes) do
+      table.insert(x.files, uri)
+      x.edit_count = x.edit_count + #(edits or {})
+    end
+  end
 
   local msg = (#x.files > 1) and string.format("Performed %d edits across %d files", x.edit_count, #x.files) or string.format("Performed %d edits", x.edit_count)
   vim.notify(msg)
