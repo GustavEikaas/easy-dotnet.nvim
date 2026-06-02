@@ -139,6 +139,7 @@ local function auto_register_dap(merged_opts)
       callback({ type = "server", host = "127.0.0.1", port = config.port })
     end
     require("easy-dotnet.netcoredbg.sys_monitor_dap_ui").setup()
+    require("easy-dotnet.netcoredbg.dap-listener").register_breakpoint_panel_hider()
 
     dap.listeners.after["event_telemetry/metrics"] = {
       [constants.debug_adapter_name] = function(_, body)

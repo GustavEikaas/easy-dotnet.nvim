@@ -116,12 +116,36 @@ local function try_get_command(session)
   return ""
 end
 
+local function is_easy_dotnet_debug_session(session)
+  local config = session.config or {}
+
+  return try_get_command(session):lower():find("netcoredbg", 1, true) ~= nil or config.type == "coreclr" or config.type == "easy-dotnet" or config.name == debug_adapter_name
+end
+
+local function hide_visible_panels()
+  local render = require("easy-dotnet.test-runner.render")
+  if render.win and vim.api.nvim_win_is_valid(render.win) then render.hide() end
+
+  local manager = require("easy-dotnet.terminal.manager")
+  if manager.panel_win and vim.api.nvim_win_is_valid(manager.panel_win) then require("easy-dotnet.terminal").hide() end
+end
+
+function M.register_breakpoint_panel_hider()
+  require("dap").listeners.before.event_stopped["easy-dotnet-hide-panels"] = function(session, body)
+    if not is_easy_dotnet_debug_session(session) then return end
+    if not body or body.reason ~= "breakpoint" then return end
+
+    hide_visible_panels()
+  end
+end
+
 function M.register_listener()
   local keymap_backup = {}
 
+  M.register_breakpoint_panel_hider()
+
   require("dap").listeners.after.event_stopped["easy-dotnet-scopes"] = function(session, body)
-    ---@diagnostic disable-next-line: undefined-field
-    if not (try_get_command(session):lower():find("netcoredbg") or session.config.type == "coreclr" or session.config.type == "easy-dotnet") then return end
+    if not is_easy_dotnet_debug_session(session) then return end
     session:request("stackTrace", { threadId = body.threadId }, function(err1, response1)
       if err1 then return end
 
