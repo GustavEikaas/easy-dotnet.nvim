@@ -6,9 +6,7 @@ local M = {}
 local handler_name = "EasyDotnet.RoslynLanguageServices.CreateType.CreateTypeFromUsageMessageHandler"
 local command_name = "easy-dotnet.roslyn.createTypeFromUsage"
 
-local function debug(msg)
-  logger.debug("[easy-dotnet create-type] " .. msg)
-end
+local function debug(msg) logger.debug("[easy-dotnet create-type] " .. msg) end
 
 local function normalize_plan(plan)
   if type(plan) ~= "table" then return nil end
@@ -161,13 +159,11 @@ function M.create_type_from_usage(data, ctx)
   vim.fn.writefile(vim.split(plan.fileText, "\n", { plain = true }), plan.filePath)
 
   local client = ctx and ctx.client_id and vim.lsp.get_client_by_id(ctx.client_id)
-  if client then
-    client:notify("workspace/didChangeWatchedFiles", {
-      changes = {
-        { uri = vim.uri_from_fname(plan.filePath), type = 1 },
-      },
-    })
-  end
+  if client then client:notify("workspace/didChangeWatchedFiles", {
+    changes = {
+      { uri = vim.uri_from_fname(plan.filePath), type = 1 },
+    },
+  }) end
 
   vim.cmd.edit(vim.fn.fnameescape(plan.filePath))
 end
