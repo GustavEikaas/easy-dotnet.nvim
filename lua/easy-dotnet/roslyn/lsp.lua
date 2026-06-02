@@ -14,8 +14,10 @@ local M = {
   solution_loaded = {}, -- Track if solution is loaded per client
   solution_state = {},
   checked_buffers = {},
+  git_branch_watchers = {},
+  client_roots = {},
 }
-local function now() return vim.uv.now() end
+
 function M.start()
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_loaded(bufnr) then
@@ -38,6 +40,17 @@ end
 function M.restart()
   M.stop()
   M.start()
+end
+
+local function restart_root(root_dir)
+  logger.info("[easy-dotnet] Git branch changed; restarting Roslyn")
+  pcall(vim.cmd, "checktime")
+
+  for _, client in ipairs(vim.lsp.get_clients({ name = constants.lsp_client_name })) do
+    if client.root_dir == root_dir then client:stop(true) end
+  end
+
+  vim.defer_fn(function() M.start() end, 250)
 end
 
 ---@param client vim.lsp.Client
@@ -248,6 +261,121 @@ local default_roslyn_settings = {
   },
 }
 
+local function is_absolute(path) return path:match("^/") ~= nil or path:match("^%a:[/\\]") ~= nil end
+
+local function resolve_relative_path(base_dir, path)
+  if is_absolute(path) then return vim.fs.normalize(path) end
+  return vim.fs.normalize(vim.fs.joinpath(base_dir, path))
+end
+
+local function find_git_dir(root_dir)
+  local dir = vim.fs.normalize(root_dir)
+
+  while dir and dir ~= "" do
+    local git_path = vim.fs.joinpath(dir, ".git")
+    local stat = vim.uv.fs_stat(git_path)
+
+    if stat and stat.type == "directory" then return vim.fs.normalize(git_path) end
+
+    if stat and stat.type == "file" then
+      local content = table.concat(vim.fn.readfile(git_path), "\n")
+      local git_dir = content and content:match("^gitdir:%s*(.-)%s*$")
+      if git_dir and git_dir ~= "" then return resolve_relative_path(dir, git_dir) end
+    end
+
+    local parent = vim.fs.dirname(dir)
+    if not parent or parent == dir then return nil end
+    dir = parent
+  end
+
+  return nil
+end
+
+local function git_state(git_dir)
+  local head_path = vim.fs.joinpath(git_dir, "HEAD")
+  local head = table.concat(vim.fn.readfile(head_path), "\n")
+
+  return {
+    head_path = head_path,
+    fingerprint = head,
+  }
+end
+
+local function close_git_branch_watcher(root_dir)
+  local state = M.git_branch_watchers[root_dir]
+  if not state then return end
+
+  if state.timer then
+    state.timer:stop()
+    state.timer:close()
+  end
+
+  for _, watcher in ipairs(state.watchers or {}) do
+    watcher:stop()
+    watcher:close()
+  end
+
+  M.git_branch_watchers[root_dir] = nil
+end
+
+local function watch_git_path(watchers, path, on_change)
+  if not path or vim.uv.fs_stat(path) == nil then return end
+
+  local watcher = vim.uv.new_fs_event()
+  if not watcher then return end
+
+  local ok = watcher:start(path, {}, function() vim.schedule(on_change) end)
+  if ok then
+    table.insert(watchers, watcher)
+  else
+    watcher:close()
+  end
+end
+
+local function register_git_branch_restart(client, opts)
+  if opts.restart_roslyn_on_branch_change ~= true then return end
+  local root_dir = client.root_dir
+  if not root_dir or M.git_branch_watchers[root_dir] then return end
+
+  local git_dir = find_git_dir(root_dir)
+  if not git_dir then return end
+
+  local state = git_state(git_dir)
+  local watcher_state = {
+    git_dir = git_dir,
+    fingerprint = state.fingerprint,
+    watchers = {},
+    timer = vim.uv.new_timer(),
+  }
+
+  if not watcher_state.timer then return end
+
+  local function schedule_restart()
+    watcher_state.timer:stop()
+    watcher_state.timer:start(
+      300,
+      0,
+      vim.schedule_wrap(function()
+        local next_state = git_state(git_dir)
+        if next_state.fingerprint == watcher_state.fingerprint then return end
+
+        close_git_branch_watcher(root_dir)
+        restart_root(root_dir)
+      end)
+    )
+  end
+
+  watch_git_path(watcher_state.watchers, state.head_path, schedule_restart)
+
+  if #watcher_state.watchers == 0 then
+    watcher_state.timer:close()
+    return
+  end
+
+  M.git_branch_watchers[root_dir] = watcher_state
+  logger.debug("[easy-dotnet] Watching Git state for Roslyn restart: " .. git_dir)
+end
+
 ---@param msg string
 local function rename_log(msg)
   local timestamp = os.date("%H:%M:%S") .. string.format(".%03d", vim.uv.now() % 1000)
@@ -259,53 +387,51 @@ local function rename_log(msg)
   end
 end
 
-local function line_character_count(line, encoding)
-  local ok, count = pcall(vim.str_utfindex, line, encoding or "utf-16")
-  if ok then return count end
-  return #line
-end
+-- local function line_character_count(line, encoding)
+--   local ok, count = pcall(vim.str_utfindex, line, encoding or "utf-16")
+--   if ok then return count end
+--   return #line
+-- end
 
----@param client vim.lsp.Client
-local function clamp_semantic_tokens_range(client)
-  if client._easy_dotnet_semantic_tokens_range_clamped then return end
-
-  local request = client.request
-  client.request = function(self, method, params, handler, bufnr)
-    if method == "textDocument/semanticTokens/range" and type(params) == "table" and type(params.range) == "table" then
-      local resolved_bufnr = bufnr
-      if not resolved_bufnr and params.textDocument and type(params.textDocument.uri) == "string" then
-        local ok, fname = pcall(vim.uri_to_fname, params.textDocument.uri)
-        resolved_bufnr = ok and vim.fn.bufnr(fname) or nil
-      end
-
-      if resolved_bufnr and resolved_bufnr ~= -1 and vim.api.nvim_buf_is_valid(resolved_bufnr) then
-        local line_count = vim.api.nvim_buf_line_count(resolved_bufnr)
-        local last_line = math.max(line_count - 1, 0)
-        local range_end = params.range["end"]
-
-        if type(range_end) == "table" and type(range_end.line) == "number" and range_end.line > last_line then
-          params = vim.deepcopy(params)
-          local last_line_text = vim.api.nvim_buf_get_lines(resolved_bufnr, last_line, last_line + 1, false)[1] or ""
-          params.range["end"] = {
-            line = last_line,
-            character = line_character_count(last_line_text, self.offset_encoding),
-          }
-
-          local range_start = params.range.start
-          if type(range_start) == "table" and type(range_start.line) == "number" and range_start.line > last_line then
-            params.range.start = { line = last_line, character = 0 }
-          end
-
-          logger.debug(string.format("[easy-dotnet] Clamped semanticTokens/range end line for Roslyn: requested=%d last=%d", range_end.line, last_line))
-        end
-      end
-    end
-
-    return request(self, method, params, handler, bufnr)
-  end
-
-  client._easy_dotnet_semantic_tokens_range_clamped = true
-end
+-- -@param client vim.lsp.Client
+-- local function clamp_semantic_tokens_range(client)
+--   if client._easy_dotnet_semantic_tokens_range_clamped then return end
+--
+--   local request = client.request
+--   client.request = function(self, method, params, handler, bufnr)
+--     if method == "textDocument/semanticTokens/range" and type(params) == "table" and type(params.range) == "table" then
+--       local resolved_bufnr = bufnr
+--       if not resolved_bufnr and params.textDocument and type(params.textDocument.uri) == "string" then
+--         local ok, fname = pcall(vim.uri_to_fname, params.textDocument.uri)
+--         resolved_bufnr = ok and vim.fn.bufnr(fname) or nil
+--       end
+--
+--       if resolved_bufnr and resolved_bufnr ~= -1 and vim.api.nvim_buf_is_valid(resolved_bufnr) then
+--         local line_count = vim.api.nvim_buf_line_count(resolved_bufnr)
+--         local last_line = math.max(line_count - 1, 0)
+--         local range_end = params.range["end"]
+--
+--         if type(range_end) == "table" and type(range_end.line) == "number" and range_end.line > last_line then
+--           params = vim.deepcopy(params)
+--           local last_line_text = vim.api.nvim_buf_get_lines(resolved_bufnr, last_line, last_line + 1, false)[1] or ""
+--           params.range["end"] = {
+--             line = last_line,
+--             character = line_character_count(last_line_text, self.offset_encoding),
+--           }
+--
+--           local range_start = params.range.start
+--           if type(range_start) == "table" and type(range_start.line) == "number" and range_start.line > last_line then params.range.start = { line = last_line, character = 0 } end
+--
+--           logger.debug(string.format("[easy-dotnet] Clamped semanticTokens/range end line for Roslyn: requested=%d last=%d", range_end.line, last_line))
+--         end
+--       end
+--     end
+--
+--     return request(self, method, params, handler, bufnr)
+--   end
+--
+--   client._easy_dotnet_semantic_tokens_range_clamped = true
+-- end
 
 ---@param client vim.lsp.Client
 local function refresh_diag(client)
@@ -581,8 +707,11 @@ function M.enable(opts)
     root_dir = M.find_project_or_solution,
     capabilities = cap,
     on_init = function(client)
-      clamp_semantic_tokens_range(client)
+      M.client_roots[client.id] = client.root_dir
+      -- clamp_semantic_tokens_range(client)
+      register_git_branch_restart(client, opts)
       require("easy-dotnet.roslyn.lsp.enhanced_rename").install(client, opts)
+      require("easy-dotnet.roslyn.lsp.create_type_from_usage").install(client, opts)
       razor_roslyn.suppress_semantic_tokens(client)
       M.solution_state[client.id] = { loaded_at = nil }
       local file, type = M.find_sln_or_csproj(client.root_dir)
@@ -608,6 +737,13 @@ function M.enable(opts)
       M.solution_loaded[client_id] = nil
       M.solution_state[client_id] = nil
       M.checked_buffers = {}
+      local root_dir = M.client_roots[client_id]
+      M.client_roots[client_id] = nil
+      if root_dir then
+        vim.schedule(function()
+          if not vim.lsp.get_clients({ name = constants.lsp_client_name, root_dir = root_dir })[1] then close_git_branch_watcher(root_dir) end
+        end)
+      end
       vim.schedule(function()
         if code == 0 or code == 143 then
           logger.info("[easy-dotnet] Roslyn stopped")
@@ -623,7 +759,7 @@ function M.enable(opts)
     end,
     on_attach = function(client, buf)
       razor_roslyn.suppress_semantic_tokens(client)
-      vim.b[buf].roslyn_buf_opened_at = now()
+      vim.b[buf].roslyn_buf_opened_at = vim.uv.now()
       vim.b[buf].easy_dotnet_roslyn_open_uri = vim.uri_from_bufnr(buf)
       register_file_rename_tracking(client, buf)
       if vim.bo[buf].filetype == "cs" then
@@ -656,6 +792,7 @@ function M.enable(opts)
       ["roslyn.client.nestedCodeAction"] = require("easy-dotnet.roslyn.lsp.nested_code_action"),
       ["roslyn.client.completionComplexEdit"] = require("easy-dotnet.roslyn.lsp.complex_edit"),
       ["roslyn.client.peekReferences"] = require("easy-dotnet.roslyn.lsp.peek_references"),
+      ["easy-dotnet.roslyn.createTypeFromUsage"] = require("easy-dotnet.roslyn.lsp.create_type_from_usage").create_type_from_usage,
       -- ["dotnet.test.run"] = require("easy-dotnet.roslyn.lsp.test_run"),
     },
     handlers = vim.tbl_deep_extend("force", razor_enabled and razor_html.handlers() or {}, {
@@ -694,7 +831,7 @@ function M.enable(opts)
       ["workspace/projectInitializationComplete"] = function(_, _, ctx, _)
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         if not client then return end
-        if M.solution_state[client.id] then M.solution_state[client.id].loaded_at = now() end
+        if M.solution_state[client.id] then M.solution_state[client.id].loaded_at = vim.uv.now() end
         local workspace_job = M.state[client.id]
         if workspace_job and type(workspace_job) == "function" then
           vim.defer_fn(function()

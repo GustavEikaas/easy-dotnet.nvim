@@ -34,7 +34,7 @@ local function warn_missing_document_handler_once(client, message_name)
   state.missing_document_handler_warnings[warning_key] = true
 
   local extension_path = state.extension_info and state.extension_info.EasyDotnetRoslynLanguageServicesPath or "<unknown>"
-  local message = string.format("[easy-dotnet] Roslyn extension did not advertise document handler '%s'. Enhanced rename will fall back to normal rename. Extension: %s", message_name, extension_path)
+  local message = string.format("[easy-dotnet] Roslyn extension did not advertise document handler '%s'. Related enhanced LSP feature will be disabled. Extension: %s", message_name, extension_path)
 
   logger.warn(message)
   logger.debug(message)

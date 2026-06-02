@@ -114,6 +114,26 @@ return {
 }
 ```
 
+## Restart Roslyn After Git Branch Changes
+
+Roslyn LSP keeps an in-memory project graph. After a Git branch switch, project files, package assets, generated files, analyzers, and source files can all change at once. Roslyn does reload individual projects from file watcher events, but a full branch switch can leave the language server with stale project state.
+
+easy-dotnet can optionally watch Git metadata for the active Roslyn root and restart Roslyn when the Git worktree state changes:
+
+```lua
+require("easy-dotnet").setup({
+  lsp = {
+    restart_roslyn_on_branch_change = true,
+  },
+})
+```
+
+This is disabled by default because it is intentionally blunt: when `.git/HEAD` changes, easy-dotnet runs `:checktime`, stops the Roslyn LSP client for that root, and starts it again. The restart forces Roslyn to reload the solution or project using the new branch contents.
+
+Only `.git/HEAD` is watched. That keeps the feature scoped to branch or detached-HEAD changes instead of restarting Roslyn for ordinary commits, rebases, staging operations, or index updates on the same branch.
+
+Use this if you frequently switch branches from inside Neovim and notice stale diagnostics, completion, source generators, or project references after checkout.
+
 ## CodeLens & Peek References
 
 See reference counts
