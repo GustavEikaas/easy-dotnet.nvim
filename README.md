@@ -148,6 +148,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
         preload_roslyn = true, -- Start loading roslyn before any buffer is opened
         roslynator_enabled = true, -- Automatically enable roslynator analyzer
         easy_dotnet_analyzer_enabled = true, -- Enable roslyn analyzer from easy-dotnet-server
+        restart_roslyn_on_branch_change = false, -- Restart Roslyn when Git HEAD changes
         auto_refresh_codelens = true,
         suggest_updates = true, -- Periodically suggest roslyn-language-server updates
         analyzer_assemblies = {}, -- Any additional roslyn analyzers you might use like SonarAnalyzer.CSharp
@@ -531,6 +532,8 @@ Install it globally with `npm install -g vscode-langservers-extracted`, or per p
 When `vscode-html-language-server` is available in project `node_modules/.bin` or on `PATH`, easy-dotnet starts and wires it up automatically.
 Run `:checkhealth easy-dotnet` for dependency status and install guidance.
 Set `lsp.razor.html.cmd` to override the command, or disable Razor with `lsp.razor.enabled = false`.
+
+Set `lsp.restart_roslyn_on_branch_change = true` to restart Roslyn automatically after Git branch or detached HEAD changes. This can help when large file watcher bursts leave stale diagnostics, especially on Linux. It is disabled by default because it stops and starts the Roslyn client for the active root.
 
 For more information [check out](./docs/lsp.md)
 

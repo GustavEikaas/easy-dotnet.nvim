@@ -6,6 +6,7 @@ local constants = require("easy-dotnet.constants")
 local current_solution = require("easy-dotnet.current_solution")
 local razor_html = require("easy-dotnet.razor.html")
 local razor_roslyn = require("easy-dotnet.razor.roslyn")
+local git_branch_watcher = require("easy-dotnet.roslyn.lsp.git_branch_watcher")
 
 local M = {
   state = {},
@@ -16,13 +17,35 @@ local M = {
   checked_buffers = {},
 }
 local function now() return vim.uv.now() end
-function M.start()
+
+local function is_roslyn_filetype(ft) return ft == "cs" or ft == "razor" end
+
+local function is_buffer_in_root(bufnr, root_dir)
+  if not root_dir then return true end
+
+  local name = vim.api.nvim_buf_get_name(bufnr)
+  if name == "" or name:match("^%a+://") then return false end
+
+  local root = vim.fs.normalize(vim.fn.fnamemodify(root_dir, ":p"))
+  local path = vim.fs.normalize(vim.fn.fnamemodify(name, ":p"))
+  if path == root then return true end
+
+  if not root:match("[/\\]$") then root = root .. "/" end
+  return path:sub(1, #root) == root
+end
+
+---@param root_dir string|nil
+function M.start(root_dir)
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_loaded(bufnr) then
       local ft = vim.bo[bufnr].filetype
-      if ft == "cs" or ft == "razor" then vim.api.nvim_exec_autocmds("FileType", {
-        buffer = bufnr,
-      }) end
+      if is_roslyn_filetype(ft) and vim.bo[bufnr].buftype == "" and is_buffer_in_root(bufnr, root_dir) then
+        vim.api.nvim_buf_call(bufnr, function()
+          vim.api.nvim_exec_autocmds("FileType", {
+            buffer = bufnr,
+          })
+        end)
+      end
     end
   end
 end
@@ -38,6 +61,17 @@ end
 function M.restart()
   M.stop()
   M.start()
+end
+
+local function restart_root(root_dir)
+  logger.info("[easy-dotnet] Git branch changed; restarting Roslyn")
+  pcall(vim.cmd, "checktime")
+
+  for _, client in ipairs(vim.lsp.get_clients({ name = constants.lsp_client_name })) do
+    if client.root_dir == root_dir then client:stop(true) end
+  end
+
+  vim.defer_fn(function() M.start(root_dir) end, 250)
 end
 
 ---@param client vim.lsp.Client
@@ -118,6 +152,8 @@ local function check_project_context(client, bufnr)
 end
 
 local function has_client_for_root_dir(root_dir) return vim.lsp.get_clients({ root_dir = root_dir })[1] end
+
+local function has_roslyn_client_for_root(root_dir) return vim.lsp.get_clients({ name = constants.lsp_client_name, root_dir = root_dir })[1] ~= nil end
 
 local function is_file_in_cwd(filepath)
   local cwd = vim.fn.getcwd()
@@ -513,6 +549,7 @@ function M.enable(opts)
     root_dir = M.find_project_or_solution,
     capabilities = cap,
     on_init = function(client)
+      git_branch_watcher.register(client, opts, restart_root)
       razor_roslyn.suppress_semantic_tokens(client)
       M.solution_state[client.id] = { loaded_at = nil }
       local file, type = M.find_sln_or_csproj(client.root_dir)
@@ -538,6 +575,7 @@ function M.enable(opts)
       M.solution_loaded[client_id] = nil
       M.solution_state[client_id] = nil
       M.checked_buffers = {}
+      git_branch_watcher.unregister_client(client_id, has_roslyn_client_for_root)
       vim.schedule(function()
         if code == 0 or code == 143 then
           logger.info("[easy-dotnet] Roslyn stopped")
