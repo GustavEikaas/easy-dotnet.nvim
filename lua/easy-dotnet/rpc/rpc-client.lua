@@ -58,7 +58,7 @@ local M = {
 ---| "debugger/start"
 ---| "lsp/start"
 ---| "launch-profiles"
----| "msbuild/add-project-reference-interactive"
+---| "project/add-reference-interactive"
 ---| "user-secrets/open"
 ---| "solution/add-project"
 ---| "solution/remove-project"
