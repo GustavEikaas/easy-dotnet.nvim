@@ -37,7 +37,7 @@
 ---@field analyzer_assemblies string[]|nil -- Optional list of analyzer DLLs
 ---@field easy_dotnet_analyzer_enabled boolean -- Whether built-in easy-dotnet roslyn analyzer is enabled
 ---@field enhanced_rename boolean       -- Whether C# rename should also rename matching primary type files
----@field restart_roslyn_on_branch_change boolean -- Whether Roslyn should restart when Git branch/worktree state changes
+---@field restart_roslyn_on_branch_change boolean -- Whether Roslyn should restart when Git HEAD changes
 ---@field roslynator_enabled boolean     -- Whether Roslynator is enabled
 ---@field razor easy-dotnet.RazorOpts
 ---@field suggest_updates boolean
@@ -215,7 +215,7 @@ local M = {
       roslynator_enabled = true,
       easy_dotnet_analyzer_enabled = true,
       enhanced_rename = true,
-      restart_roslyn_on_branch_change = true,
+      restart_roslyn_on_branch_change = false,
       suggest_updates = true,
       razor = {
         enabled = true,

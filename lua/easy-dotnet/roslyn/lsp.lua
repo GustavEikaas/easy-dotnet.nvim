@@ -6,6 +6,7 @@ local constants = require("easy-dotnet.constants")
 local current_solution = require("easy-dotnet.current_solution")
 local razor_html = require("easy-dotnet.razor.html")
 local razor_roslyn = require("easy-dotnet.razor.roslyn")
+local git_branch_watcher = require("easy-dotnet.roslyn.lsp.git_branch_watcher")
 
 local M = {
   state = {},
@@ -14,17 +15,36 @@ local M = {
   solution_loaded = {}, -- Track if solution is loaded per client
   solution_state = {},
   checked_buffers = {},
-  git_branch_watchers = {},
-  client_roots = {},
 }
 
-function M.start()
+local function is_roslyn_filetype(ft) return ft == "cs" or ft == "razor" end
+
+local function is_buffer_in_root(bufnr, root_dir)
+  if not root_dir then return true end
+
+  local name = vim.api.nvim_buf_get_name(bufnr)
+  if name == "" or name:match("^%a+://") then return false end
+
+  local root = vim.fs.normalize(vim.fn.fnamemodify(root_dir, ":p"))
+  local path = vim.fs.normalize(vim.fn.fnamemodify(name, ":p"))
+  if path == root then return true end
+
+  if not root:match("[/\\]$") then root = root .. "/" end
+  return path:sub(1, #root) == root
+end
+
+---@param root_dir string|nil
+function M.start(root_dir)
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_loaded(bufnr) then
       local ft = vim.bo[bufnr].filetype
-      if ft == "cs" or ft == "razor" then vim.api.nvim_exec_autocmds("FileType", {
-        buffer = bufnr,
-      }) end
+      if is_roslyn_filetype(ft) and vim.bo[bufnr].buftype == "" and is_buffer_in_root(bufnr, root_dir) then
+        vim.api.nvim_buf_call(bufnr, function()
+          vim.api.nvim_exec_autocmds("FileType", {
+            buffer = bufnr,
+          })
+        end)
+      end
     end
   end
 end
@@ -50,7 +70,7 @@ local function restart_root(root_dir)
     if client.root_dir == root_dir then client:stop(true) end
   end
 
-  vim.defer_fn(function() M.start() end, 250)
+  vim.defer_fn(function() M.start(root_dir) end, 250)
 end
 
 ---@param client vim.lsp.Client
@@ -131,6 +151,8 @@ local function check_project_context(client, bufnr)
 end
 
 local function has_client_for_root_dir(root_dir) return vim.lsp.get_clients({ root_dir = root_dir })[1] end
+
+local function has_roslyn_client_for_root(root_dir) return vim.lsp.get_clients({ name = constants.lsp_client_name, root_dir = root_dir })[1] ~= nil end
 
 local function is_file_in_cwd(filepath)
   local cwd = vim.fn.getcwd()
@@ -260,121 +282,6 @@ local default_roslyn_settings = {
     },
   },
 }
-
-local function is_absolute(path) return path:match("^/") ~= nil or path:match("^%a:[/\\]") ~= nil end
-
-local function resolve_relative_path(base_dir, path)
-  if is_absolute(path) then return vim.fs.normalize(path) end
-  return vim.fs.normalize(vim.fs.joinpath(base_dir, path))
-end
-
-local function find_git_dir(root_dir)
-  local dir = vim.fs.normalize(root_dir)
-
-  while dir and dir ~= "" do
-    local git_path = vim.fs.joinpath(dir, ".git")
-    local stat = vim.uv.fs_stat(git_path)
-
-    if stat and stat.type == "directory" then return vim.fs.normalize(git_path) end
-
-    if stat and stat.type == "file" then
-      local content = table.concat(vim.fn.readfile(git_path), "\n")
-      local git_dir = content and content:match("^gitdir:%s*(.-)%s*$")
-      if git_dir and git_dir ~= "" then return resolve_relative_path(dir, git_dir) end
-    end
-
-    local parent = vim.fs.dirname(dir)
-    if not parent or parent == dir then return nil end
-    dir = parent
-  end
-
-  return nil
-end
-
-local function git_state(git_dir)
-  local head_path = vim.fs.joinpath(git_dir, "HEAD")
-  local head = table.concat(vim.fn.readfile(head_path), "\n")
-
-  return {
-    head_path = head_path,
-    fingerprint = head,
-  }
-end
-
-local function close_git_branch_watcher(root_dir)
-  local state = M.git_branch_watchers[root_dir]
-  if not state then return end
-
-  if state.timer then
-    state.timer:stop()
-    state.timer:close()
-  end
-
-  for _, watcher in ipairs(state.watchers or {}) do
-    watcher:stop()
-    watcher:close()
-  end
-
-  M.git_branch_watchers[root_dir] = nil
-end
-
-local function watch_git_path(watchers, path, on_change)
-  if not path or vim.uv.fs_stat(path) == nil then return end
-
-  local watcher = vim.uv.new_fs_event()
-  if not watcher then return end
-
-  local ok = watcher:start(path, {}, function() vim.schedule(on_change) end)
-  if ok then
-    table.insert(watchers, watcher)
-  else
-    watcher:close()
-  end
-end
-
-local function register_git_branch_restart(client, opts)
-  if opts.restart_roslyn_on_branch_change ~= true then return end
-  local root_dir = client.root_dir
-  if not root_dir or M.git_branch_watchers[root_dir] then return end
-
-  local git_dir = find_git_dir(root_dir)
-  if not git_dir then return end
-
-  local state = git_state(git_dir)
-  local watcher_state = {
-    git_dir = git_dir,
-    fingerprint = state.fingerprint,
-    watchers = {},
-    timer = vim.uv.new_timer(),
-  }
-
-  if not watcher_state.timer then return end
-
-  local function schedule_restart()
-    watcher_state.timer:stop()
-    watcher_state.timer:start(
-      300,
-      0,
-      vim.schedule_wrap(function()
-        local next_state = git_state(git_dir)
-        if next_state.fingerprint == watcher_state.fingerprint then return end
-
-        close_git_branch_watcher(root_dir)
-        restart_root(root_dir)
-      end)
-    )
-  end
-
-  watch_git_path(watcher_state.watchers, state.head_path, schedule_restart)
-
-  if #watcher_state.watchers == 0 then
-    watcher_state.timer:close()
-    return
-  end
-
-  M.git_branch_watchers[root_dir] = watcher_state
-  logger.debug("[easy-dotnet] Watching Git state for Roslyn restart: " .. git_dir)
-end
 
 ---@param msg string
 local function rename_log(msg)
@@ -661,8 +568,7 @@ function M.enable(opts)
     root_dir = M.find_project_or_solution,
     capabilities = cap,
     on_init = function(client)
-      M.client_roots[client.id] = client.root_dir
-      register_git_branch_restart(client, opts)
+      git_branch_watcher.register(client, opts, restart_root)
       require("easy-dotnet.roslyn.lsp.enhanced_rename").install(client, opts)
       require("easy-dotnet.roslyn.lsp.create_type_from_usage").install(client, opts)
       razor_roslyn.suppress_semantic_tokens(client)
@@ -690,13 +596,7 @@ function M.enable(opts)
       M.solution_loaded[client_id] = nil
       M.solution_state[client_id] = nil
       M.checked_buffers = {}
-      local root_dir = M.client_roots[client_id]
-      M.client_roots[client_id] = nil
-      if root_dir then
-        vim.schedule(function()
-          if not vim.lsp.get_clients({ name = constants.lsp_client_name, root_dir = root_dir })[1] then close_git_branch_watcher(root_dir) end
-        end)
-      end
+      git_branch_watcher.unregister_client(client_id, has_roslyn_client_for_root)
       vim.schedule(function()
         if code == 0 or code == 143 then
           logger.info("[easy-dotnet] Roslyn stopped")
