@@ -14,6 +14,17 @@ Are you a .NET developer looking to harness the power of Neovim for your daily c
 > 📰 **Stay updated:** Major updates and new features are announced in [`news.md`](./news.md).  
 > Give it a read periodically to stay in sync with the latest capabilities!
 
+[![Join easy-dotnet on Discord](https://img.shields.io/badge/Discord-Join%20easy--dotnet-5865F2?logo=discord&logoColor=white&style=for-the-badge)](https://discord.gg/HkAyDy2hWU)
+
+<a href="https://discord.gg/HkAyDy2hWU">
+  <img src="https://img.shields.io/badge/Discord-Join%20easy--dotnet-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Join easy-dotnet on Discord">
+</a>
+
+> [!TIP]
+> 💬 **Join the easy-dotnet Discord community**  
+> Get help, share ideas, and hang out with other users.  
+>
+> 👉 [Join easy-dotnet on Discord](https://discord.gg/HkAyDy2hWU)
 
 ## Motivation
 As a developer transitioning from Rider to Neovim, I found myself missing the simplicity of running projects with just a single button click. Tired of typing out lengthy terminal commands for common tasks like running, testing, and managing user secrets, I decided to create easy-dotnet.nvim. This plugin aims to bridge the gap between the convenience of IDEs like Rider and the flexibility of Neovim.
