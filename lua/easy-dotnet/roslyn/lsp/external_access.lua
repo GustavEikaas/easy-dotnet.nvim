@@ -125,7 +125,7 @@ local function activate(client, cb)
       if err then
         if is_already_registered_error(err) then
           local activation = registered_activation()
-          logger.debug("[easy-dotnet] Roslyn extension was already registered; reusing existing registration")
+          logger.trace("[easy-dotnet] Roslyn extension was already registered; reusing existing registration")
           complete_activation(client.id, nil, activation)
           return
         end
@@ -138,7 +138,7 @@ local function activate(client, cb)
       if result and result.extensionException then
         if is_already_registered_error(result.extensionException) then
           local activation = registered_activation()
-          logger.debug("[easy-dotnet] Roslyn extension was already registered; reusing existing registration")
+          logger.trace("[easy-dotnet] Roslyn extension was already registered; reusing existing registration")
           complete_activation(client.id, nil, activation)
           return
         end

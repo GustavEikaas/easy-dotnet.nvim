@@ -6,7 +6,7 @@ local M = {}
 local handler_name = "EasyDotnet.RoslynLanguageServices.CreateType.CreateTypeFromUsageMessageHandler"
 local command_name = "easy-dotnet.roslyn.createTypeFromUsage"
 
-local function debug(msg)  end
+local function debug(msg) logger.trace(msg) end
 
 local function normalize_plan(plan)
   if type(plan) ~= "table" then return nil end
@@ -126,7 +126,7 @@ function M.install(client, opts)
 
       dispatch_at_positions(self, request_bufnr, positions, 1, function(dispatch_err, plan)
         if dispatch_err then
-          logger.debug("[easy-dotnet] Create type from usage dispatch failed: " .. (type(dispatch_err) == "table" and (dispatch_err.message or vim.inspect(dispatch_err)) or tostring(dispatch_err)))
+          logger.trace("[easy-dotnet] Create type from usage dispatch failed: " .. (type(dispatch_err) == "table" and (dispatch_err.message or vim.inspect(dispatch_err)) or tostring(dispatch_err)))
           original_handler(err, result, ctx)
           return
         end

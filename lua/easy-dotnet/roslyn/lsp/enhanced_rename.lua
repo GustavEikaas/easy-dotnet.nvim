@@ -12,7 +12,7 @@ local function rename_log(msg)
   if vim.lsp and vim.lsp.log and vim.lsp.log.debug then
     vim.lsp.log.debug(formatted)
   else
-    logger.debug(formatted)
+    logger.trace(formatted)
   end
 end
 
@@ -69,8 +69,8 @@ function M.install(client, opts)
     local request_bufnr = bufnr or vim.api.nvim_get_current_buf()
     local wrapped_handler = function(err, result, ctx)
       if err or not result then
-        if err then logger.debug("[easy-dotnet] Roslyn rename failed before enhanced rename dispatch: " .. (type(err) == "table" and (err.message or vim.inspect(err)) or tostring(err))) end
-        if not result then logger.debug("[easy-dotnet] Roslyn rename returned no workspace edit") end
+        if err then logger.trace("[easy-dotnet] Roslyn rename failed before enhanced rename dispatch: " .. (type(err) == "table" and (err.message or vim.inspect(err)) or tostring(err))) end
+        if not result then logger.trace("[easy-dotnet] Roslyn rename returned no workspace edit") end
         original_handler(err, result, ctx)
         return
       end
@@ -82,13 +82,13 @@ function M.install(client, opts)
         newName = params.newName,
       }, function(dispatch_err, decision)
         if dispatch_err then
-          logger.debug("[easy-dotnet] Enhanced rename decision dispatch failed: " .. (type(dispatch_err) == "table" and (dispatch_err.message or vim.inspect(dispatch_err)) or tostring(dispatch_err)))
+          logger.trace("[easy-dotnet] Enhanced rename decision dispatch failed: " .. (type(dispatch_err) == "table" and (dispatch_err.message or vim.inspect(dispatch_err)) or tostring(dispatch_err)))
           original_handler(err, result, ctx)
           return
         end
 
         if not decision then
-          logger.debug("[easy-dotnet] Enhanced rename decision unavailable")
+          logger.trace("[easy-dotnet] Enhanced rename decision unavailable")
           original_handler(err, result, ctx)
           return
         end
