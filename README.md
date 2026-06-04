@@ -18,6 +18,7 @@ Are you a .NET developer looking to harness the power of Neovim for your daily c
 > 📰 **Stay updated:** Major updates and new features are announced in [`news.md`](./news.md).  
 > Give it a read periodically to stay in sync with the latest capabilities!
 
+
 ## Motivation
 As a developer transitioning from Rider to Neovim, I found myself missing the simplicity of running projects with just a single button click. Tired of typing out lengthy terminal commands for common tasks like running, testing, and managing user secrets, I decided to create easy-dotnet.nvim. This plugin aims to bridge the gap between the convenience of IDEs like Rider and the flexibility of Neovim.
 
