@@ -6,7 +6,7 @@ local M = {}
 local handler_name = "EasyDotnet.RoslynLanguageServices.CreateType.CreateTypeFromUsageMessageHandler"
 local command_name = "easy-dotnet.roslyn.createTypeFromUsage"
 
-local function debug(msg) logger.debug("[easy-dotnet create-type] " .. msg) end
+local function debug(msg)  end
 
 local function normalize_plan(plan)
   if type(plan) ~= "table" then return nil end
