@@ -3,6 +3,10 @@
 	<img src="https://dotfyle.com/plugins/GustavEikaas/easy-dotnet.nvim/shield?style=flat" />
 </a>
 
+<a href="https://discord.gg/HkAyDy2hWU">
+  <img src="https://img.shields.io/badge/Discord-Join%20easy--dotnet-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Join easy-dotnet on Discord">
+</a>
+
 ## Simplifying .NET development in Neovim
 Are you a .NET developer looking to harness the power of Neovim for your daily coding tasks? Look no further! easy-dotnet.nvim is here to streamline your workflow and make .NET development in Neovim a breeze.
 
