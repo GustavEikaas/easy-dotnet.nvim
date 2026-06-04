@@ -5,12 +5,8 @@ M.add_project_reference = function(curr_project_path, cb) return require("easy-d
 local function attach_mappings()
   vim.api.nvim_create_autocmd({ "BufReadPost" }, {
     pattern = "*.fsproj",
-    callback = function()
-      local bufnr = vim.api.nvim_get_current_buf()
-      local curr_project_path = vim.api.nvim_buf_get_name(bufnr)
-      vim.keymap.set("n", "<leader>ar", function()
-        coroutine.wrap(function() M.add_project_reference(curr_project_path) end)()
-      end, { buffer = bufnr })
+    callback = function(args)
+      vim.keymap.set("n", "<leader>ar", function() M.add_project_reference(args.file) end, { buffer = args.buf, silent = true, noremap = true, desc = "Add project reference" })
     end,
   })
 end
