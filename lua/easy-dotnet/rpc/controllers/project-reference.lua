@@ -22,7 +22,7 @@ function M:add_project_reference(projectPath, cb, opts)
     client = self._client,
     cb = cb,
     on_crash = opts.on_crash,
-    method = "msbuild/add-project-reference-interactive",
+    method = "project/add-reference-interactive",
     params = { projectPath = projectPath },
   })()
 end
