@@ -292,6 +292,7 @@ M.setup = function(opts)
 end
 
 M.create_new_item = wrap(function(...) require("easy-dotnet.actions.new").create_new_item(...) end)
+M.create_item = wrap(function(...) require("easy-dotnet.actions.new").create_item(...) end)
 
 M.try_get_selected_solution = function()
   local file = current_solution.try_get_selected_solution()

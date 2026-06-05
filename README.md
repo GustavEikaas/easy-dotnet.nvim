@@ -795,7 +795,7 @@ If a configuration file is selected it will
 
 ### Integrating with nvim-tree
 
-Adding the following configuration to your nvim-tree will allow for creating files using dotnet templates
+Adding the following configuration to your nvim-tree will allow for quickly creating contextual items. Today this creates C# enums, records, interfaces, and classes using Roslyn.
 
 ```lua
     require("nvim-tree").setup({
@@ -809,14 +809,14 @@ Adding the following configuration to your nvim-tree will allow for creating fil
         vim.keymap.set('n', 'A', function()
           local node = api.tree.get_node_under_cursor()
           local path = node.type == "directory" and node.absolute_path or vim.fs.dirname(node.absolute_path)
-          require("easy-dotnet").create_new_item(path)
-        end, opts('Create file from dotnet template'))
+          require("easy-dotnet").create_item(path)
+        end, opts('Create item'))
       end
     })
 ```
 
 ### Integrating with neo-tree
-Adding the following configuration to your neo-tree will allow for creating files using dotnet templates
+Adding the following configuration to your neo-tree will allow for quickly creating contextual items. Today this creates C# enums, records, interfaces, and classes using Roslyn.
 
 ```lua
       require("neo-tree").setup({
@@ -832,9 +832,7 @@ Adding the following configuration to your neo-tree will allow for creating file
             ["easy"] = function(state)
               local node = state.tree:get_node()
               local path = node.type == "directory" and node.path or vim.fs.dirname(node.path)
-              require("easy-dotnet").create_new_item(path, function()
-                require("neo-tree.sources.manager").refresh(state.name)
-              end)
+              require("easy-dotnet").create_item(path)
             end
           }
         },
@@ -843,7 +841,7 @@ Adding the following configuration to your neo-tree will allow for creating file
 
 ### Integrating with mini files
 
-Adding the following autocmd to your config will allow for creating files using dotnet templates
+Adding the following autocmd to your config will allow for quickly creating contextual items.
 
 ```lua
     vim.api.nvim_create_autocmd("User", {
@@ -860,8 +858,8 @@ Adding the following autocmd to your config will allow for creating files using 
           if entry.fs_type == "file" then
             target_dir = vim.fn.fnamemodify(entry.path, ":h")
           end
-          require("easy-dotnet").create_new_item(target_dir)
-        end, { buffer = buf_id, desc = "Create file from dotnet template" })
+          require("easy-dotnet").create_item(target_dir)
+        end, { buffer = buf_id, desc = "Create item" })
       end,
     })
 ```
@@ -888,14 +886,7 @@ Adding the following autocmd to your config will allow for creating files using 
                 local dir = picker:dir()
                 local easydotnet = require("easy-dotnet")
 
-                easydotnet.create_new_item(dir, function(item_path)
-                  local tree = require("snacks.explorer.tree")
-                  local actions = require("snacks.explorer.actions")
-                  tree:open(dir)
-                  tree:refresh(dir)
-                  actions.update(picker, { target = item_path })
-                  picker:focus()
-                end)
+                easydotnet.create_item(dir)
               end,
             },
           },

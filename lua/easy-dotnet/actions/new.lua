@@ -399,4 +399,14 @@ M.create_new_item = function(path, cb)
   })
 end
 
+---@param path string
+M.create_item = function(path)
+  path = vim.fn.fnamemodify(path or ".", ":p")
+  local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+  client:initialize(function()
+    local opts = require("easy-dotnet.options").get_option("auto_bootstrap_namespace")
+    client.new_file:create_item({ output_path = path, prefer_file_scoped_namespace = opts.type == "file_scoped" })
+  end)
+end
+
 return M
