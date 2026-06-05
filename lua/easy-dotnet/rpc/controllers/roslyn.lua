@@ -1,14 +1,9 @@
 ---@class easy-dotnet.RPC.Client.Roslyn
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
 -- luacheck: no max line length
----@field roslyn_bootstrap_file_v2 fun(self: easy-dotnet.RPC.Client.Roslyn, file_path: string, type: "Class" | "Interface" | "Record", prefer_file_scoped: boolean, cb?: fun(success: true), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
--- luacheck: no max line length
----@field roslyn_bootstrap_file_json_v2 fun(self: easy-dotnet.RPC.Client.Roslyn, file_path: string, json_data: string, prefer_file_scoped: boolean, cb?: fun(success: true), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
--- luacheck: no max line length
 ---@field roslyn_scope_variables fun(self: easy-dotnet.RPC.Client.Roslyn, file_path: string, line: number, cb?: fun(variables: easy-dotnet.Roslyn.VariableLocation[]), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 -- luacheck: no max line length
 ---@field get_workspace_diagnostics fun(self: easy-dotnet.RPC.Client.Roslyn, project_path: string, include_warnings: boolean, cb?: fun(res: easy-dotnet.RPC.Response), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
-
 local M = {}
 M.__index = M
 
@@ -19,32 +14,6 @@ function M.new(client)
   local self = setmetatable({}, M)
   self._client = client
   return self
-end
-
-function M:roslyn_bootstrap_file_json_v2(file_path, json_data, prefer_file_scoped, cb, opts)
-  local helper = require("easy-dotnet.rpc.dotnet-client")
-  opts = opts or {}
-  return helper.create_rpc_call({
-    client = self._client,
-    job = nil,
-    cb = function(res) cb(res.success) end,
-    on_crash = opts.on_crash,
-    method = "json-code-gen-v2",
-    params = { filePath = file_path, jsonData = json_data, preferFileScopedNamespace = prefer_file_scoped },
-  })()
-end
-
-function M:roslyn_bootstrap_file_v2(file_path, type, prefer_file_scoped, cb, opts)
-  local helper = require("easy-dotnet.rpc.dotnet-client")
-  opts = opts or {}
-  return helper.create_rpc_call({
-    client = self._client,
-    job = nil,
-    cb = function(res) cb(res.success) end,
-    on_crash = opts.on_crash,
-    method = "roslyn/bootstrap-file-v2",
-    params = { filePath = file_path, kind = type, preferFileScopedNamespace = prefer_file_scoped },
-  })()
 end
 
 ---@class easy-dotnet.Roslyn.VariableLocation
