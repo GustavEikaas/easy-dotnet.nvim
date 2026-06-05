@@ -13,7 +13,6 @@
 ---@field stop fun(self: easy-dotnet.RPC.Client.Workspace, opts?: easy-dotnet.RPC.Client.Workspace.StopOpts): easy-dotnet.RPC.CallHandle
 ---@field pack fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.PackOpts): easy-dotnet.RPC.CallHandle
 ---@field pack_and_push fun(self: easy-dotnet.RPC.Client.Workspace, opts: easy-dotnet.RPC.Client.Workspace.PackOpts): easy-dotnet.RPC.CallHandle
-
 ---@class easy-dotnet.RPC.Client.Workspace.PackOpts
 ---@field file_path string | nil
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
