@@ -359,21 +359,19 @@ end
 local function populate_source_generated_buffer(client, buf, file)
   if not vim.api.nvim_buf_is_valid(buf) then return end
 
+  ---@type lsp.TextDocumentContentRefreshParams
   local params = {
-    resultId = vim.b[buf].resultId,
-    textDocument = {
-      uri = file,
-    },
+    uri = file,
   }
 
   local function handler(err, result)
     if not vim.api.nvim_buf_is_valid(buf) then return end
     if not result or type(result) ~= "table" then return end
-    if result.resultId == vim.b[buf].resultId then return end
     assert(not err, vim.inspect(err))
     local text = result.text
     if text == vim.NIL or type(text) ~= "string" then text = "" end
     text = text:gsub("\r\n", "\n")
+    vim.bo[buf].modifiable = true
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(text, "\n", { plain = true }))
     vim.b[buf].resultId = result.resultId
     vim.lsp.buf_attach_client(buf, client.id)
@@ -382,7 +380,7 @@ local function populate_source_generated_buffer(client, buf, file)
     vim.bo[buf].modified = false
   end
 
-  local response = client:request_sync("sourceGeneratedDocument/_roslyn_getText", params, 2000, buf)
+  local response = client:request_sync("workspace/textDocumentContent", params, 2000, buf)
   if not response or response.err then
     local err_msg = response and response.err and response.err.message or "Timeout or No Response"
     logger.warn("Roslyn generation failed: " .. err_msg)
@@ -531,6 +529,10 @@ function M.enable(opts)
       fileOperations = {
         didRename = true,
         willRename = true,
+      },
+      textDocumentContent = {
+        -- support refreshing source generated documents
+        dynamicRegistration = true,
       },
     },
   })
@@ -688,7 +690,7 @@ function M.enable(opts)
         end
         vim.defer_fn(function() refresh_diag(client) end, 500)
       end,
-      ["workspace/refreshSourceGeneratedDocument"] = function(_, _, ctx)
+      ["workspace/textDocumentContent/refresh"] = function(_, _, ctx)
         local client = assert(vim.lsp.get_client_by_id(ctx.client_id))
 
         for _, buf in ipairs(vim.api.nvim_list_bufs()) do
@@ -697,6 +699,8 @@ function M.enable(opts)
             if ok and uri:match("^roslyn%-source%-generated://") then populate_source_generated_buffer(client, buf, uri) end
           end
         end
+
+        return vim.NIL
       end,
     }),
     settings = settings,
