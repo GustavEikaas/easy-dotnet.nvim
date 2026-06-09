@@ -448,11 +448,13 @@ function M.enable(opts)
   source_generated_autocmd()
   local cmd = { "dotnet-easydotnet", "roslyn", "start" }
   local razor_enabled = not opts.razor or opts.razor.enabled ~= false
+  local roslyn_extension_enabled = opts.easy_dotnet_extension_enabled == true or opts.enhanced_rename == true or opts.create_type_from_usage == true
   table.insert(cmd, "--clientProcessId")
   table.insert(cmd, tostring(vim.fn.getpid()))
 
   if opts.roslynator_enabled then table.insert(cmd, "--roslynator") end
   if opts.easy_dotnet_analyzer_enabled then table.insert(cmd, "--easy-dotnet-analyzer") end
+  if roslyn_extension_enabled then table.insert(cmd, "--easy-dotnet-extension") end
 
   if opts.analyzer_assemblies then
     for _, dll in ipairs(opts.analyzer_assemblies) do
@@ -533,6 +535,11 @@ function M.enable(opts)
     },
   })
 
+  if roslyn_extension_enabled then cap.workspace.workspaceEdit = {
+    documentChanges = true,
+    resourceOperations = { "create", "rename", "delete" },
+  } end
+
   ---@type vim.lsp.Config
   vim.lsp.config[constants.lsp_client_name] = {
     cmd = cmd,
@@ -550,6 +557,10 @@ function M.enable(opts)
     capabilities = cap,
     on_init = function(client)
       git_branch_watcher.register(client, opts, restart_root)
+      if roslyn_extension_enabled then
+        require("easy-dotnet.roslyn.lsp.enhanced_rename").install(client, opts)
+        require("easy-dotnet.roslyn.lsp.create_type_from_usage").install(client, opts)
+      end
       razor_roslyn.suppress_semantic_tokens(client)
       M.solution_state[client.id] = { loaded_at = nil }
       local file, type = M.find_sln_or_csproj(client.root_dir)
@@ -624,6 +635,7 @@ function M.enable(opts)
       ["roslyn.client.nestedCodeAction"] = require("easy-dotnet.roslyn.lsp.nested_code_action"),
       ["roslyn.client.completionComplexEdit"] = require("easy-dotnet.roslyn.lsp.complex_edit"),
       ["roslyn.client.peekReferences"] = require("easy-dotnet.roslyn.lsp.peek_references"),
+      ["easy-dotnet.roslyn.createTypeFromUsage"] = require("easy-dotnet.roslyn.lsp.create_type_from_usage").create_type_from_usage,
       -- ["dotnet.test.run"] = require("easy-dotnet.roslyn.lsp.test_run"),
     },
     handlers = vim.tbl_deep_extend("force", razor_enabled and razor_html.handlers() or {}, {

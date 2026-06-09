@@ -153,6 +153,9 @@ Although not *required* by the plugin, it is highly recommended to install one o
         preload_roslyn = true, -- Start loading roslyn before any buffer is opened
         roslynator_enabled = true, -- Automatically enable roslynator analyzer
         easy_dotnet_analyzer_enabled = true, -- Enable roslyn analyzer from easy-dotnet-server
+        easy_dotnet_extension_enabled = false, -- Needs to be true for enhanced_rename and create_type_from_usage
+        enhanced_rename = false, -- auto rename file when renaming class
+        create_type_from_usage = false, -- code action for creating class from unresolved symbol in a separate file
         restart_roslyn_on_branch_change = false, -- Restart Roslyn when Git HEAD changes
         auto_refresh_codelens = true,
         suggest_updates = true, -- Periodically suggest roslyn-language-server updates
