@@ -596,6 +596,7 @@ function M.enable(opts)
       if vim.bo[buf].filetype == "cs" then
         use_roslyn_fold(buf)
         fix_indent_expression(buf)
+        require("easy-dotnet.roslyn.lsp.auto_insert").setup(client, buf)
       elseif vim.bo[buf].filetype == "razor" then
         razor_html.register_razor_close(client, buf)
         razor_roslyn.disable_semantic_tokens(buf, client)
