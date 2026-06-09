@@ -256,10 +256,15 @@ function M:_initialize(cb, opts)
   coroutine.wrap(function()
     local use_visual_studio = require("easy-dotnet.options").options.server.use_visual_studio == true
     local debugger_path = require("easy-dotnet.options").options.debugger.bin_path
+    local debugger_engine = require("easy-dotnet.options").options.debugger.engine
     local ext_terminal = require("easy-dotnet.options").options.external_terminal
     local apply_value_converters = require("easy-dotnet.options").options.debugger.apply_value_converters
 
-    local debuggerOptions = { applyValueConverters = apply_value_converters, binaryPath = debugger_path }
+    local debuggerOptions = {
+      applyValueConverters = apply_value_converters,
+      binaryPath = debugger_path,
+      engine = debugger_path == nil and debugger_engine or nil,
+    }
     current_solution.get_or_pick_solution(
       function(sln_file)
         M.create_rpc_call({

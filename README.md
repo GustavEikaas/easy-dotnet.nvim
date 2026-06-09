@@ -169,8 +169,13 @@ Although not *required* by the plugin, it is highly recommended to install one o
       },
       debugger = {
         -- Path to custom coreclr DAP adapter
-        -- easy-dotnet-server falls back to its own netcoredbg binary if bin_path is nil
+        -- When set, this fully overrides `engine`; easy-dotnet-server uses this binary as-is.
+        -- When nil, easy-dotnet-server falls back to its own bundled debugger selected by `engine`.
         bin_path = nil,
+        -- Which bundled debugger to use when `bin_path` is nil.
+        --   "netcoredbg" (default) — Samsung netcoredbg
+        --   "dncdbg"               — viewizard/dncdbg
+        engine = "netcoredbg",
         console = "integratedTerminal", -- Controls where the target app runs: "integratedTerminal" (Neovim buffer) or "externalTerminal" (OS window)
         apply_value_converters = true,
         auto_register_dap = true,
