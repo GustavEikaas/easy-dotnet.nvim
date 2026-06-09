@@ -1,3 +1,4 @@
+local logger = require("easy-dotnet.logger")
 local M = {}
 
 local state = {
@@ -74,21 +75,18 @@ local function get_extension_info(cb)
   vim.system({ "dotnet-easydotnet", "roslyn", "extension-info" }, { text = true }, function(result)
     if result.code ~= 0 then
       local stderr = result.stderr or ""
-      logger.warn("[easy-dotnet] Failed to resolve Roslyn extension info: " .. (stderr ~= "" and stderr or "exit code " .. tostring(result.code)))
       schedule(cb, stderr ~= "" and stderr or "Failed to resolve EasyDotnet Roslyn extension info")
       return
     end
 
     local ok, decoded = pcall(vim.json.decode, result.stdout or "")
     if not ok then
-      logger.warn("[easy-dotnet] Failed to decode Roslyn extension info: " .. format_error(decoded))
       schedule(cb, decoded)
       return
     end
 
     local path = extension_path(decoded)
     if type(path) ~= "string" or path == "" then
-      logger.warn("[easy-dotnet] Roslyn extension info did not include a language-services path")
       schedule(cb, "EasyDotnet Roslyn extension info did not include a language-services path")
       return
     end
