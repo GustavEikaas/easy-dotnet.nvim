@@ -1,5 +1,3 @@
-local logger = require("easy-dotnet.logger")
-
 local M = {}
 
 local state = {
@@ -125,7 +123,6 @@ local function activate(client, cb)
       if err then
         if is_already_registered_error(err) then
           local activation = registered_activation()
-          logger.trace("[easy-dotnet] Roslyn extension was already registered; reusing existing registration")
           complete_activation(client.id, nil, activation)
           return
         end
@@ -138,12 +135,10 @@ local function activate(client, cb)
       if result and result.extensionException then
         if is_already_registered_error(result.extensionException) then
           local activation = registered_activation()
-          logger.trace("[easy-dotnet] Roslyn extension was already registered; reusing existing registration")
           complete_activation(client.id, nil, activation)
           return
         end
 
-        logger.warn("[easy-dotnet] Roslyn extension activation threw: " .. format_error(result.extensionException))
         complete_activation(client.id, result.extensionException)
         return
       end
@@ -168,7 +163,6 @@ function M.dispatch_document(client, bufnr, message_name, message, cb)
 
       if not document_handler_available(activation, message_name) then
         warn_missing_document_handler_once(client, message_name)
-        logger.warn("[easy-dotnet] Roslyn extension document handler unavailable: " .. message_name)
         cb(nil, nil)
         return
       end
@@ -181,33 +175,28 @@ function M.dispatch_document(client, bufnr, message_name, message, cb)
         message = vim.json.encode(message),
       }, function(err, result)
         if err then
-          logger.warn("[easy-dotnet] Roslyn document extension dispatch failed: " .. format_error(err))
           cb(err)
           return
         end
 
         if result and result.extensionWasUnloaded and not retried then
-          logger.warn("[easy-dotnet] Roslyn extension was unloaded; reactivating and retrying message: " .. message_name)
           state.activated[client.id] = nil
           dispatch(true)
           return
         end
 
         if result and result.extensionException then
-          logger.warn("[easy-dotnet] Roslyn document extension handler threw: " .. format_error(result.extensionException))
           cb(result.extensionException)
           return
         end
 
         if not result or result.response == nil then
-          logger.warn("[easy-dotnet] Roslyn document extension message returned no response: " .. message_name)
           cb(nil, nil)
           return
         end
 
         local ok, decoded = pcall(vim.json.decode, result.response)
         if not ok then
-          logger.warn("[easy-dotnet] Failed to decode Roslyn document extension response: " .. format_error(decoded))
           cb(decoded)
           return
         end
@@ -222,10 +211,7 @@ end
 
 function M.verify_document_handler(client, message_name)
   activate(client, function(err, activation)
-    if err then
-      logger.warn("[easy-dotnet] Roslyn extension verification failed: " .. format_error(err))
-      return
-    end
+    if err then return end
 
     if not document_handler_available(activation, message_name) then warn_missing_document_handler_once(client, message_name) end
   end)

@@ -12,7 +12,6 @@ local function rename_log(msg)
   if vim.lsp and vim.lsp.log and vim.lsp.log.debug then
     vim.lsp.log.debug(formatted)
   else
-    logger.trace(formatted)
   end
 end
 

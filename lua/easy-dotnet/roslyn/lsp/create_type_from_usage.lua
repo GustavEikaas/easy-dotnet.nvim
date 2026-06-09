@@ -6,8 +6,6 @@ local M = {}
 local handler_name = "EasyDotnet.RoslynLanguageServices.CreateType.CreateTypeFromUsageMessageHandler"
 local command_name = "easy-dotnet.roslyn.createTypeFromUsage"
 
-local function debug(msg) logger.trace(msg) end
-
 local function normalize_plan(plan)
   if type(plan) ~= "table" then return nil end
 
@@ -74,7 +72,6 @@ local function dispatch_at_positions(client, bufnr, positions, index, cb)
     return
   end
 
-  debug(string.format("dispatch client=%s buf=%s position=%d:%d", client.id, bufnr, position.line, position.character))
   external_access.dispatch_document(client, bufnr, handler_name, {
     line = position.line,
     character = position.character,
@@ -86,12 +83,10 @@ local function dispatch_at_positions(client, bufnr, positions, index, cb)
 
     plan = normalize_plan(plan)
     if plan and plan.canCreate == true and type(plan.filePath) == "string" and type(plan.fileText) == "string" then
-      debug(string.format("plan accepted type=%s path=%s", tostring(plan.typeName), plan.filePath))
       cb(nil, plan)
       return
     end
 
-    debug("plan rejected: " .. vim.inspect(plan))
     dispatch_at_positions(client, bufnr, positions, index + 1, cb)
   end)
 end
@@ -101,7 +96,6 @@ function M.install(client, opts)
   if opts.create_type_from_usage ~= true then return end
 
   client._easy_dotnet_create_type_from_usage_installed = true
-  debug("install client=" .. tostring(client.id))
   external_access.verify_document_handler(client, handler_name)
 
   local original_request = client.request
@@ -116,7 +110,6 @@ function M.install(client, opts)
 
     local request_bufnr = bufnr or vim.api.nvim_get_current_buf()
     local positions = code_action_positions(params)
-    debug(string.format("codeAction intercepted client=%s buf=%s positions=%d diagnostics=%d", self.id, request_bufnr, #positions, #(params.context and params.context.diagnostics or {})))
 
     local wrapped_handler = function(err, result, ctx)
       if err then
@@ -126,18 +119,15 @@ function M.install(client, opts)
 
       dispatch_at_positions(self, request_bufnr, positions, 1, function(dispatch_err, plan)
         if dispatch_err then
-          logger.trace("[easy-dotnet] Create type from usage dispatch failed: " .. (type(dispatch_err) == "table" and (dispatch_err.message or vim.inspect(dispatch_err)) or tostring(dispatch_err)))
           original_handler(err, result, ctx)
           return
         end
 
         if not plan then
-          debug("no create-type plan; returning original code actions")
           original_handler(err, result, ctx)
           return
         end
 
-        debug("appending action: " .. tostring(plan.title or plan.typeName))
         original_handler(err, append_action(result, plan), ctx)
       end)
     end
@@ -151,7 +141,7 @@ function M.create_type_from_usage(data, ctx)
   if type(plan) ~= "table" or type(plan.filePath) ~= "string" or type(plan.fileText) ~= "string" then return end
 
   if vim.uv.fs_stat(plan.filePath) then
-    vim.notify("[easy-dotnet] File already exists: " .. plan.filePath, vim.log.levels.WARN)
+    logger.warn("[easy-dotnet] File already exists: " .. plan.filePath)
     return
   end
 
