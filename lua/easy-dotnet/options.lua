@@ -202,6 +202,7 @@ local M = {
       },
       console = "integratedTerminal", --externalTerminal
       bin_path = nil,
+      engine = "netcoredbg", -- "netcoredbg" | "dncdbg" — ignored when bin_path is set
       apply_value_converters = true,
       auto_register_dap = true,
     },

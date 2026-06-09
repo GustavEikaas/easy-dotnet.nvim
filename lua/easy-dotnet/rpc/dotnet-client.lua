@@ -142,6 +142,7 @@ function M:new()
   instance.lsp = require("easy-dotnet.rpc.controllers.lsp").new(client)
   instance.test = require("easy-dotnet.rpc.controllers.test").new(client)
   instance.workspace = require("easy-dotnet.rpc.controllers.workspace").new(client)
+  instance.new_file = require("easy-dotnet.rpc.controllers.new-file").new(client)
   instance.project_reference = require("easy-dotnet.rpc.controllers.project-reference").new(client)
   instance.server = require("easy-dotnet.rpc.controllers.server").new(client)
   instance.secrets = require("easy-dotnet.rpc.controllers.secrets").new(client)
@@ -255,10 +256,15 @@ function M:_initialize(cb, opts)
   coroutine.wrap(function()
     local use_visual_studio = require("easy-dotnet.options").options.server.use_visual_studio == true
     local debugger_path = require("easy-dotnet.options").options.debugger.bin_path
+    local debugger_engine = require("easy-dotnet.options").options.debugger.engine
     local ext_terminal = require("easy-dotnet.options").options.external_terminal
     local apply_value_converters = require("easy-dotnet.options").options.debugger.apply_value_converters
 
-    local debuggerOptions = { applyValueConverters = apply_value_converters, binaryPath = debugger_path }
+    local debuggerOptions = {
+      applyValueConverters = apply_value_converters,
+      binaryPath = debugger_path,
+      engine = debugger_path == nil and debugger_engine or nil,
+    }
     current_solution.get_or_pick_solution(
       function(sln_file)
         M.create_rpc_call({

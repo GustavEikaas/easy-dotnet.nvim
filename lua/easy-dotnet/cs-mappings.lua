@@ -59,8 +59,8 @@ local function auto_bootstrap_namespace(bufnr, mode)
 
   local opts = { on_crash = function(_) clear_virtual_text() end }
 
-  local from_json = function(clipboard) client.roslyn:roslyn_bootstrap_file_json_v2(curr_file, clipboard, mode == "file_scoped", clear_virtual_text, opts) end
-  local default = function() client.roslyn:roslyn_bootstrap_file_v2(curr_file, type_keyword, mode == "file_scoped", clear_virtual_text, opts) end
+  local from_json = function(clipboard) client.new_file:bootstrap_file_json_v2(curr_file, clipboard, mode == "file_scoped", clear_virtual_text, opts) end
+  local default = function() client.new_file:bootstrap_file_v2(curr_file, type_keyword, mode == "file_scoped", clear_virtual_text, opts) end
 
   client:initialize(function()
     local opt = require("easy-dotnet.options").get_option("auto_bootstrap_namespace")
