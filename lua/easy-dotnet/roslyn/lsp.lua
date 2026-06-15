@@ -364,6 +364,16 @@ local function populate_source_generated_buffer(client, buf, file)
     uri = file,
   }
 
+  ---@param buf number
+  local function set_virtual_buffer_props(buf)
+    vim.bo[buf].filetype = "cs"
+    vim.bo[buf].modifiable = false
+    vim.bo[buf].modified = false
+    vim.bo[buf].swapfile = false
+    vim.bo[buf].buftype = "nofile"
+    vim.bo[buf].readonly = true
+  end
+
   local function handler(err, result)
     if not vim.api.nvim_buf_is_valid(buf) then return end
     if not result or type(result) ~= "table" then return end
@@ -373,11 +383,8 @@ local function populate_source_generated_buffer(client, buf, file)
     text = text:gsub("\r\n", "\n")
     vim.bo[buf].modifiable = true
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(text, "\n", { plain = true }))
-    vim.b[buf].resultId = result.resultId
     vim.lsp.buf_attach_client(buf, client.id)
-    vim.bo[buf].filetype = "cs"
-    vim.bo[buf].modifiable = false
-    vim.bo[buf].modified = false
+    set_virtual_buffer_props(buf)
   end
 
   local response = client:request_sync("workspace/textDocumentContent", params, 2000, buf)
@@ -393,11 +400,7 @@ local function source_generated_autocmd()
   vim.api.nvim_create_autocmd("BufReadCmd", {
     pattern = "roslyn-source-generated://*",
     callback = function(args)
-      vim.bo[args.buf].modifiable = true
-      vim.bo[args.buf].swapfile = false
-
       local clients = vim.lsp.get_clients({ name = constants.lsp_client_name })
-
       for _, client in ipairs(clients) do
         if does_file_belong_to_active_client(client, args.buf) then populate_source_generated_buffer(client, args.buf, args.file) end
       end
