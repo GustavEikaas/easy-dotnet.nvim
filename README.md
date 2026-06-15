@@ -229,6 +229,8 @@ Although not *required* by the plugin, it is highly recommended to install one o
           close = { lhs = "q", desc = "close testrunner" },
           refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" },
           cancel = { lhs = "<C-c>", desc = "cancel in-flight operation" },
+          next_failure = { lhs = "]f", desc = "jump to next failing test" },
+          prev_failure = { lhs = "[f", desc = "jump to previous failing test" },
         }
       },
       new = {
@@ -570,6 +572,7 @@ The test runner starts automatically when the server starts and runs discovery s
 - [x] Test runner window
   - [x] Float, split and vsplit view modes
   - [x] Grouped by solution, project, namespace and class
+  - [x] Jump to next / previous failing test (`]f` / `[f`, dot-repeatable)
   - [x] Passed, skipped, failed with live counts in header
   - [x] Configurable icons and highlights
   - [x] Collapsible hierarchy
@@ -592,11 +595,13 @@ The test runner starts automatically when the server starts and runs discovery s
 | `o` | Expand / collapse node under cursor |
 | `E` | Expand all |
 | `W` | Collapse all |
+| `]f` / `[f` | Jump to next / previous failing test (dot-repeatable with `.`) |
 | `<leader>r` | Run test under cursor |
 | `<leader>R` | Run all tests |
 | `<leader>d` | Debug test under cursor |
 | `<leader>p` | Peek stacktrace of failed test |
 | `<leader>g` | Go to file |
+| `<leader>e` | Show build errors (failed build) |
 | `<C-r>` | Refresh test runner node |
 | `<C-c>` | Cancel in-flight operation |
 | `q` | Close window |

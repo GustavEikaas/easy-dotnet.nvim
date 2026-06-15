@@ -54,6 +54,13 @@ M.root_id = nil
 M.initialized = false
 M.active_handle = nil
 
+-- Statuses treated as failures for ]f / [f jump-to-failure navigation.
+local FAILURE_STATUSES = {
+  Failed = true,
+  Faulted = true,
+  BuildFailed = true,
+}
+
 --- Upsert a node. Preserves local UI state (expanded) if the node already exists.
 ---@param node easy-dotnet.TestRunner.Node
 function M.register(node)
@@ -177,6 +184,53 @@ function M.has_action(node, action)
     if a == action then return true end
   end
   return false
+end
+
+--- Find the next/previous failing leaf test relative to from_id, in full tree
+--- order, wrapping around. A "leaf" failure is a failed node with no failed child,
+--- so containers on the failure path (project/class/namespace) are skipped and you
+--- land on the actual failing test. Returns nil when there are no failures.
+---@param from_id string|nil  node to search from (usually the node under the cursor)
+---@param direction 1|-1      1 = next (]f), -1 = previous ([f)
+---@return string|nil
+function M.failure_jump_target(from_id, direction)
+  local order = {}
+  local failed = {}
+  local has_failed_child = {}
+  M.traverse_all(function(node)
+    order[#order + 1] = node.id
+    if node.status ~= nil and FAILURE_STATUSES[node.status.type] == true then
+      failed[node.id] = true
+      if node.parentId then has_failed_child[node.parentId] = true end
+    end
+  end)
+
+  local n = #order
+  if n == 0 then return nil end
+
+  local is_target = {}
+  local has_target = false
+  for id in pairs(failed) do
+    if not has_failed_child[id] then
+      is_target[id] = true
+      has_target = true
+    end
+  end
+  if not has_target then return nil end
+
+  local from = 0
+  for i, id in ipairs(order) do
+    if id == from_id then
+      from = i
+      break
+    end
+  end
+
+  for step = 1, n do
+    local idx = (from - 1 + direction * step) % n + 1
+    if is_target[order[idx]] then return order[idx] end
+  end
+  return nil
 end
 
 return M

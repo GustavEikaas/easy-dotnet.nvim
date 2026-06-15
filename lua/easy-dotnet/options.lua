@@ -89,6 +89,8 @@
 ---@field refresh_testrunner easy-dotnet.Keymap
 ---@field close easy-dotnet.Keymap
 ---@field cancel easy-dotnet.Keymap
+---@field next_failure easy-dotnet.Keymap
+---@field prev_failure easy-dotnet.Keymap
 
 ---@class easy-dotnet.Keymap
 ---@field lhs string
@@ -159,6 +161,8 @@ local M = {
         close = { lhs = "q", desc = "close testrunner" },
         refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" },
         cancel = { lhs = "<C-c>", desc = "cancel in-flight operation" },
+        next_failure = { lhs = "]f", desc = "jump to next failing test" },
+        prev_failure = { lhs = "[f", desc = "jump to previous failing test" },
       },
     },
     csproj_mappings = true,

@@ -598,4 +598,35 @@ function M.node_at_cursor()
   return found
 end
 
+--- Expand the ancestors of node_id so it becomes visible, then move the cursor to it.
+---@param node_id string
+function M.focus_node(node_id)
+  local node = state.nodes[node_id]
+  if not node then return end
+
+  local parent_id = node.parentId
+  while parent_id do
+    local parent = state.nodes[parent_id]
+    if not parent then break end
+    parent.expanded = true
+    parent_id = parent.parentId
+  end
+
+  M.refresh()
+
+  if not M.win or not vim.api.nvim_win_is_valid(M.win) then return end
+
+  local target_row, row = nil, 0
+  state.traverse_visible(function(n)
+    row = row + 1
+    if n.id == node_id and not target_row then target_row = row end
+  end)
+
+  if target_row then
+    pcall(vim.api.nvim_win_set_cursor, M.win, { target_row, 0 })
+    vim.api.nvim_win_call(M.win, function() vim.cmd("normal! zz") end)
+    render_footer(M.node_at_cursor())
+  end
+end
+
 return M
