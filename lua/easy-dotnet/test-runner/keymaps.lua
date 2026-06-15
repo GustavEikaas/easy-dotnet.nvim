@@ -4,6 +4,21 @@ local logger = require("easy-dotnet.logger")
 
 local M = {}
 
+local function jump_to_failure(direction)
+  local node = render.node_at_cursor()
+  local from_id = node and node.id or state.root_id
+  local target = state.failure_jump_target(from_id, direction)
+  if not target then
+    logger.warn("No failing tests")
+    return
+  end
+  render.focus_node(target)
+end
+
+-- operatorfunc entry points so ]f / [f are dot-repeatable via g@ (see M.register)
+function M.op_next_failure() jump_to_failure(1) end
+function M.op_prev_failure() jump_to_failure(-1) end
+
 --- Register all keymaps on the test runner buffer.
 ---@param buf integer
 ---@param client easy-dotnet.RPC.Client.Dotnet  the rpc client (has .testrunner)
@@ -161,6 +176,16 @@ function M.register(buf, client, options)
       client.testrunner:get_build_errors(node.id)
     end)
   )
+
+  vim.keymap.set("n", km.next_failure and km.next_failure.lhs or "]f", function()
+    vim.o.operatorfunc = "v:lua.require'easy-dotnet.test-runner.keymaps'.op_next_failure"
+    return "g@l"
+  end, { buffer = buf, expr = true, silent = true, noremap = true, desc = "Next failing test" })
+
+  vim.keymap.set("n", km.prev_failure and km.prev_failure.lhs or "[f", function()
+    vim.o.operatorfunc = "v:lua.require'easy-dotnet.test-runner.keymaps'.op_prev_failure"
+    return "g@l"
+  end, { buffer = buf, expr = true, silent = true, noremap = true, desc = "Previous failing test" })
 
   map(km.close and km.close.lhs or "q", "Close test runner", function() render.hide() end)
   map("<Esc>", "Close test runner", function() render.hide() end)
