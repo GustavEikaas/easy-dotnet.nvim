@@ -355,6 +355,16 @@ function M.preload_roslyn(opts)
   end
 end
 
+---@param buf_nr number
+local function set_virtual_buffer_props(buf_nr)
+  vim.bo[buf_nr].filetype = "cs"
+  vim.bo[buf_nr].modifiable = false
+  vim.bo[buf_nr].modified = false
+  vim.bo[buf_nr].swapfile = false
+  vim.bo[buf_nr].buftype = "nofile"
+  vim.bo[buf_nr].readonly = true
+end
+
 ---@param client vim.lsp.Client
 local function populate_source_generated_buffer(client, buf, file)
   if not vim.api.nvim_buf_is_valid(buf) then return end
@@ -363,16 +373,6 @@ local function populate_source_generated_buffer(client, buf, file)
   local params = {
     uri = file,
   }
-
-  ---@param buf number
-  local function set_virtual_buffer_props(buf)
-    vim.bo[buf].filetype = "cs"
-    vim.bo[buf].modifiable = false
-    vim.bo[buf].modified = false
-    vim.bo[buf].swapfile = false
-    vim.bo[buf].buftype = "nofile"
-    vim.bo[buf].readonly = true
-  end
 
   local function handler(err, result)
     if not vim.api.nvim_buf_is_valid(buf) then return end
