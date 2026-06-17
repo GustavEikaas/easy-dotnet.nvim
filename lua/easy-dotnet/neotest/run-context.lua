@@ -53,10 +53,18 @@ function M.begin_run(root_id, leaf_ids)
 
     if self.leaf_ids[id] then self.result_chan.put_nowait(vim.json.encode({ id = id, status = status }) .. "\n") end
 
-    if id == self.root_node_id then
+    local has_build_failed = status_type == "BuildFailed"
+    if id == self.root_node_id or has_build_failed then
       self.done = true
       self.result_chan.put_nowait(nil)
       self.completion.set(0)
+
+      if has_build_failed then
+        table.insert(self._stdout, "Build has failed")
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client.testrunner:get_build_errors(id)
+      end
+
       current = nil
     end
   end
