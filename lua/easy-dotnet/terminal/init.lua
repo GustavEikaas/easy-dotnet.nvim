@@ -3,7 +3,7 @@ local Tab = require("easy-dotnet.terminal.tab")
 
 local M = {}
 
-local panel_height = 15
+local panel_height = 15 -- visible terminal rows (the 2-line header is a separate split above)
 
 local function apply_panel_keymaps(buf)
   local km = require("easy-dotnet.options").get_option("managed_terminal").mappings or {}
@@ -67,7 +67,8 @@ function M.show()
 
   vim.cmd("botright split")
   local win = vim.api.nvim_get_current_win()
-  vim.api.nvim_win_set_height(win, panel_height)
+  -- Reserve room for the 2-line header split that tabline.create carves off the top.
+  vim.api.nvim_win_set_height(win, panel_height + 2)
 
   local active = manager.active_id and manager.get(manager.active_id)
   if active then
@@ -81,6 +82,7 @@ function M.show()
   if active then apply_panel_keymaps(active.buf) end
 
   require("easy-dotnet.terminal.tabline").create(win)
+  vim.api.nvim_win_set_height(win, panel_height)
 
   vim.api.nvim_create_autocmd("WinClosed", {
     pattern = tostring(win),
