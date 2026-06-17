@@ -68,6 +68,14 @@ local function check_projx_lsp_configured()
   end
 end
 
+local function check_in_process_lsp_configured()
+  local is_enabled = vim.lsp.is_enabled(constants.lsp_in_process_client_name)
+  if is_enabled then
+    vim.health.ok("In process LSP enabled")
+  else
+    vim.health.warn("In process LSP not enabled")
+  end
+end
 local function check_razor_lsp_configured()
   local razor_html = require("easy-dotnet.razor.html")
   local lsp = options.get_option("lsp") or {}
@@ -287,6 +295,7 @@ M.check = function()
   check_lsp_configured()
   check_razor_lsp_configured()
   check_projx_lsp_configured()
+  check_in_process_lsp_configured()
   check_roslyn_tool()
 
   vim.health.start("easy-dotnet configuration")
