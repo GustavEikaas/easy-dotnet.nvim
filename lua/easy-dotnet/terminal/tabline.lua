@@ -38,31 +38,9 @@ local function header_icon(tab)
   end
 end
 
-local function get_panel_screen_pos()
-  if not manager.panel_win or not vim.api.nvim_win_is_valid(manager.panel_win) then return nil end
-  local pos = vim.api.nvim_win_get_position(manager.panel_win)
-  local width = vim.api.nvim_win_get_width(manager.panel_win)
-  return math.max(0, pos[1] - 2), pos[2], width
-end
-
-local function sync_position()
-  if not manager.tabline_win or not vim.api.nvim_win_is_valid(manager.tabline_win) then return end
-  local row, col, width = get_panel_screen_pos()
-  if not row then return end
-  vim.api.nvim_win_set_config(manager.tabline_win, {
-    relative = "editor",
-    row = row,
-    col = col,
-    width = width,
-    height = 2,
-  })
-end
-
 function M.render()
   if not manager.tabline_buf or not vim.api.nvim_buf_is_valid(manager.tabline_buf) then return end
   if not manager.panel_win or not vim.api.nvim_win_is_valid(manager.panel_win) then return end
-
-  sync_position()
 
   local panel_width = vim.api.nvim_win_get_width(manager.panel_win)
   local tabs = manager.get_all()
@@ -242,29 +220,62 @@ function M.create(panel_win)
 
   if manager.tabline_win and vim.api.nvim_win_is_valid(manager.tabline_win) then vim.api.nvim_win_close(manager.tabline_win, true) end
 
-  local row, col, width = get_panel_screen_pos()
-  manager.tabline_win = vim.api.nvim_open_win(manager.tabline_buf, false, {
-    relative = "editor",
-    row = row,
-    col = col,
-    width = width,
-    height = 2,
-    style = "minimal",
-    focusable = true,
-    zindex = 101,
-  })
-  vim.api.nvim_win_set_option(manager.tabline_win, "winhighlight", "Normal:TabLineFill,FloatBorder:TabLineFill")
-  vim.api.nvim_win_set_option(manager.tabline_win, "cursorline", false)
+  -- Real 2-line split directly above the terminal so the header owns its own
+  -- screen rows instead of floating over (and hiding) neighbouring content.
+  vim.api.nvim_set_current_win(panel_win)
+  vim.cmd("aboveleft split")
+  manager.tabline_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_win_set_buf(manager.tabline_win, manager.tabline_buf)
+  vim.api.nvim_win_set_height(manager.tabline_win, 2)
+
+  local wo = vim.wo[manager.tabline_win]
+  wo.winfixheight = true
+  wo.number = false
+  wo.relativenumber = false
+  wo.signcolumn = "no"
+  wo.foldcolumn = "0"
+  wo.cursorline = false
+  wo.cursorcolumn = false
+  wo.list = false
+  wo.wrap = false
+  wo.winhighlight = "Normal:TabLineFill,EndOfBuffer:TabLineFill,StatusLine:TabLineFill,StatusLineNC:TabLineFill"
+
+  -- Keep focus on the terminal, not the header.
+  if vim.api.nvim_win_is_valid(panel_win) then vim.api.nvim_set_current_win(panel_win) end
 
   M._attach_mouse_keymaps()
 
+  local group = vim.api.nvim_create_augroup("EasyDotnetOverlaySync", { clear = true })
+
   vim.api.nvim_create_autocmd({ "WinResized", "VimResized" }, {
-    group = vim.api.nvim_create_augroup("EasyDotnetOverlaySync", { clear = true }),
+    group = group,
     callback = function()
       if not manager.panel_win or not vim.api.nvim_win_is_valid(manager.panel_win) then return end
       if not manager.tabline_win or not vim.api.nvim_win_is_valid(manager.tabline_win) then return end
-      sync_position()
       M.render()
+    end,
+  })
+
+  -- The header is a real window, so it can be focused (e.g. <C-w>k). It is not
+  -- interactive, so skip over it in the direction of travel: coming up from the
+  -- terminal continue up to the window above; otherwise drop into the terminal
+  -- where the panel keymaps (+, <Tab>, X, q, ...) live.
+  vim.api.nvim_create_autocmd("WinEnter", {
+    group = group,
+    callback = function()
+      if not manager.tabline_win or not vim.api.nvim_win_is_valid(manager.tabline_win) then return end
+      if vim.api.nvim_get_current_win() ~= manager.tabline_win then return end
+      local from_terminal = vim.fn.win_getid(vim.fn.winnr("#")) == manager.panel_win
+      vim.schedule(function()
+        if not manager.tabline_win or not vim.api.nvim_win_is_valid(manager.tabline_win) then return end
+        if vim.api.nvim_get_current_win() ~= manager.tabline_win then return end
+        if from_terminal then
+          vim.cmd("wincmd k")
+          -- No window above the header: fall back to the terminal so we never trap focus here.
+          if vim.api.nvim_get_current_win() ~= manager.tabline_win then return end
+        end
+        if manager.panel_win and vim.api.nvim_win_is_valid(manager.panel_win) then vim.api.nvim_set_current_win(manager.panel_win) end
+      end)
     end,
   })
 
