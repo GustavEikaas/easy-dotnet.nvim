@@ -1,4 +1,5 @@
 local logger = require("easy-dotnet.logger")
+local constants = require("easy-dotnet.constants")
 
 local M = {}
 
@@ -14,7 +15,7 @@ local required_diagnostics = {
 local function get_roslyn_client(bufnr)
   for _, client in ipairs(vim.lsp.get_clients({ bufnr = bufnr })) do
     local client_name = client.name:lower()
-    if client_name:match("roslyn") or client_name:match("easy_dotnet") then return client end
+    if client_name:match("roslyn") or client_name:match(constants.lsp_client_name) then return client end
   end
 end
 
