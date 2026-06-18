@@ -147,9 +147,6 @@ Although not *required* by the plugin, it is highly recommended to install one o
       projx_lsp = {
         enabled = true,
       },
-      in_process_lsp = {
-        enabled = true,
-      },
       lsp = {
         enabled = true, -- Enable builtin roslyn lsp
         set_fold_expr = false,

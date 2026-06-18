@@ -565,6 +565,7 @@ function M.enable(opts)
       if roslyn_extension_enabled then
         require("easy-dotnet.roslyn.lsp.enhanced_rename").install(client, opts)
         require("easy-dotnet.roslyn.lsp.create_type_from_usage").install(client, opts)
+        require("easy-dotnet.roslyn.lsp.import_missing_namespaces").install(client)
       end
       razor_roslyn.suppress_semantic_tokens(client)
       M.solution_state[client.id] = { loaded_at = nil }
@@ -641,6 +642,7 @@ function M.enable(opts)
       ["roslyn.client.completionComplexEdit"] = require("easy-dotnet.roslyn.lsp.complex_edit"),
       ["roslyn.client.peekReferences"] = require("easy-dotnet.roslyn.lsp.peek_references"),
       ["easy-dotnet.roslyn.createTypeFromUsage"] = require("easy-dotnet.roslyn.lsp.create_type_from_usage").create_type_from_usage,
+      ["easy-dotnet.roslyn.importMissingNamespaces"] = require("easy-dotnet.roslyn.lsp.import_missing_namespaces").import_missing_namespaces,
       -- ["dotnet.test.run"] = require("easy-dotnet.roslyn.lsp.test_run"),
     },
     handlers = vim.tbl_deep_extend("force", razor_enabled and razor_html.handlers() or {}, {

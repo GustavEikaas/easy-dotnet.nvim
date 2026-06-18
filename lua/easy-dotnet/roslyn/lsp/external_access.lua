@@ -11,6 +11,7 @@ local state = {
 local default_document_message_handlers = {
   "EasyDotnet.RoslynLanguageServices.Rename.ShouldRenameFileMessageHandler",
   "EasyDotnet.RoslynLanguageServices.CreateType.CreateTypeFromUsageMessageHandler",
+  "EasyDotnet.RoslynLanguageServices.ImportMissingNamespaces.ImportMissingNamespacesMessageHandler",
 }
 
 local function contains(values, value)
