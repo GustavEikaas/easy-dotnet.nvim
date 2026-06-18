@@ -213,9 +213,6 @@ local M = {
     projx_lsp = {
       enabled = true,
     },
-    in_process_lsp = {
-      enabled = true,
-    },
     lsp = {
       enabled = true,
       set_fold_expr = false,
