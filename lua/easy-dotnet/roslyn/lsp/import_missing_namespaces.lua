@@ -47,34 +47,17 @@ local function merge_usings(existing, added)
 end
 
 local function apply_using_block(bufnr, new_usings)
-  local uri = vim.uri_from_bufnr(bufnr)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local existing, start_line, end_line = get_existing_using_block(lines)
   local merged = merge_usings(existing, new_usings)
 
-  local new_text = table.concat(merged, "\n") .. "\n"
-
-  if not start_line then
-    start_line = 0
-    end_line = 0
-    new_text = new_text .. "\n"
+  -- Edit buffer lines directly so Neovim manages the file's line endings; building
+  -- multi-line text for an LSP edit corrupts CRLF files (mixes \n into a \r\n file).
+  if start_line then
+    vim.api.nvim_buf_set_lines(bufnr, start_line, end_line, false, merged)
+  else
+    vim.api.nvim_buf_set_lines(bufnr, 0, 0, false, vim.list_extend(merged, { "" }))
   end
-
-  local edit = {
-    changes = {
-      [uri] = {
-        {
-          range = {
-            start = { line = start_line, character = 0 },
-            ["end"] = { line = end_line, character = 0 },
-          },
-          newText = new_text,
-        },
-      },
-    },
-  }
-
-  vim.lsp.util.apply_workspace_edit(edit, "utf-8")
 end
 
 local function normalize_response(response)
