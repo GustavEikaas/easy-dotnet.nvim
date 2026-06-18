@@ -2,6 +2,25 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## Aspire support ([#430](https://github.com/GustavEikaas/easy-dotnet.nvim/issues/430))
+
+One of the older requests is finally in: `:Dotnet run` and `:Dotnet debug` now work with .NET Aspire solutions.
+
+When easy-dotnet detects an Aspire AppHost project it shows up in the picker with an `[aspire]` suffix:
+
+```
+ServiceA (net8.0)
+MyAppHost (net8.0) [aspire]
+```
+
+Pick the AppHost and run it like any other project. easy-dotnet launches the Aspire host instead of a plain `dotnet run`, so the dashboard comes up and all of your services are orchestrated for you. `:Dotnet debug` does the same with the debugger attached.
+
+There's nothing to configure — detection is automatic via the `IsAspireHost` MSBuild property. Non-Aspire projects in the same solution keep running and debugging exactly as before.
+
+To tear everything down, hit `Ctrl+C` in the terminal window running the AppHost — all the child services spin down with it.
+
+Big thanks to everyone who helped test this out, both in [#430](https://github.com/GustavEikaas/easy-dotnet.nvim/issues/430) and over on Discord.
+
 ## Razor support ([#586](https://github.com/GustavEikaas/easy-dotnet.nvim/issues/586))
 
 easy-dotnet now starts Roslyn for `.razor` and `.cshtml` files using the Razor cohosting model. This means Razor support works through the built-in Roslyn LSP.
