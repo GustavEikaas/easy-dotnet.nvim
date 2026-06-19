@@ -138,7 +138,7 @@ local function request_actions_for_diag(bufnr, client, diag, cb)
     end
 
     local has_multiple_potential_namespaces = #result > 1
-    if has_multiple_potential_namespaces > 1 then
+    if has_multiple_potential_namespaces then
       cb({})
       return
     end
