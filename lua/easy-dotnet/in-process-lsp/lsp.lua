@@ -5,9 +5,8 @@ local handlers = {}
 
 local M = {}
 
----@param params lsp.InitializeParams
 ---@param callback fun(err?: lsp.ResponseError, result: lsp.InitializeResult)
-handlers["initialize"] = function(params, callback)
+handlers["initialize"] = function(_, callback)
   callback(nil, {
     capabilities = {
       textDocumentSync = 1,
@@ -28,7 +27,7 @@ function M.enable()
   ---@type vim.lsp.Config
   vim.lsp.config(constants.lsp_in_process_client_name, {
     filetypes = { "cs" },
-    cmd = function(dispatchers)
+    cmd = function(_)
       return {
         request = function(method, params, callback)
           if handlers[method] then handlers[method](params, callback) end
