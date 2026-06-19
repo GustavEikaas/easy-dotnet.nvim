@@ -284,9 +284,9 @@ M.setup = function(opts)
     local lsp = require("easy-dotnet.roslyn.lsp")
     lsp.enable(merged_opts.lsp)
     lsp.preload_roslyn(merged_opts.lsp)
+    require("easy-dotnet.in-process-lsp.lsp").enable()
   end
   if merged_opts.projx_lsp.enabled == true then require("easy-dotnet.projx.lsp").enable() end
-  require("easy-dotnet.in-process-lsp.lsp").enable()
   wrap(auto_register_dap)(merged_opts)
   wrap(auto_start_testrunner)()
   wrap(auto_install_easy_dotnet)()
