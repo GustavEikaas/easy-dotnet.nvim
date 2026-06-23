@@ -178,6 +178,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
         -- Which bundled debugger to use when `bin_path` is nil.
         --   "netcoredbg" (default) — Samsung netcoredbg
         --   "dncdbg"               — viewizard/dncdbg (a fork of netcoredbg with a richer set of features)
+        --   "sharpdbg"             — MattParkerDev/sharpdbg (a new debugger written in C#)
         engine = "netcoredbg",
         console = "integratedTerminal", -- Controls where the target app runs: "integratedTerminal" (Neovim buffer) or "externalTerminal" (OS window)
         apply_value_converters = true,
