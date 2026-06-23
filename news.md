@@ -2,6 +2,20 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## SharpDbg debugger support
+
+easy-dotnet ships with a new debugger engine, **SharpDbg**. Select it with:
+
+```lua
+require("easy-dotnet").setup({
+  debugger = {
+    engine = "sharpdbg", -- "netcoredbg" | "dncdbg" | "sharpdbg"
+  },
+})
+```
+
+easy-dotnet's value converters (the `apply_value_converters` option) exist to clean up how common .NET types like `List<T>` and `Dictionary<K,V>` display, because netcoredbg shows their raw internals. SharpDbg already presents these types cleanly on its own, so when `engine = "sharpdbg"` the `apply_value_converters` option is ignored.
+
 ## Aspire support ([#430](https://github.com/GustavEikaas/easy-dotnet.nvim/issues/430))
 
 One of the older requests is finally in: `:Dotnet run` and `:Dotnet debug` now work with .NET Aspire solutions.
