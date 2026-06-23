@@ -179,7 +179,6 @@ Although not *required* by the plugin, it is highly recommended to install one o
         --   "netcoredbg" (default) — Samsung netcoredbg
         --   "dncdbg"               — viewizard/dncdbg (a fork of netcoredbg with a richer set of features)
         --   "sharpdbg"             — MattParkerDev/sharpdbg (a new debugger written in C#)
-
         engine = "netcoredbg",
         console = "integratedTerminal", -- Controls where the target app runs: "integratedTerminal" (Neovim buffer) or "externalTerminal" (OS window)
         apply_value_converters = true,
