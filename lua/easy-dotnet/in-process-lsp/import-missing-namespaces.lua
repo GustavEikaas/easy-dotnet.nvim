@@ -5,11 +5,19 @@ local M = {}
 
 M.command_name = "easy-dotnet.importMissingNamespaces"
 
-local required_diagnostics = {
-  CS0246 = true,
-  CS0234 = true,
-  CS0103 = true,
-  CS1061 = true,
+local diagnostics_for_code_action = {
+  CS0246 = true, -- type or namespace could not be found
+  CS0234 = true, -- type or namespace name does not exist in the namespace
+  CS0103 = true, -- name does not exist in the current context
+  CS1061 = true, -- no definition / no accessible extension method
+}
+
+-- We're omitting CS0103 cause it might give false positives due to ambiguity
+-- only later check whether there is available code action
+local diagnostics_for_initial_check = {
+  CS0246 = true, -- type or namespace could not be found
+  CS0234 = true, -- type or namespace name does not exist in the namespace
+  CS1061 = true, -- no definition / no accessible extension method
 }
 
 local function get_roslyn_client(bufnr)
@@ -25,7 +33,7 @@ local function get_target_diagnostics(bufnr)
   for _, d in ipairs(vim.diagnostic.get(bufnr)) do
     local code = tostring(d.code)
 
-    if required_diagnostics[code] then table.insert(result, d) end
+    if diagnostics_for_code_action[code] then table.insert(result, d) end
   end
 
   return result
@@ -155,7 +163,7 @@ local function has_multiple_missing_import_diagnostic(bufnr)
   for _, d in ipairs(vim.diagnostic.get(bufnr)) do
     local code = tostring(d.code)
     local diag_location = string.format("%d:%d", d.lnum, d.col)
-    if required_diagnostics[code] and not seen_location[diag_location] and not seen_message[d.message] then
+    if diagnostics_for_initial_check[code] and not seen_location[diag_location] and not seen_message[d.message] then
       count = count + 1
       if count > 1 then return true end
     end
