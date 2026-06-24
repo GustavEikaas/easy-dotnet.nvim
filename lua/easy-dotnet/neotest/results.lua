@@ -16,10 +16,14 @@ local OUTCOME_MAP = {
 local function to_neotest_result(detail)
   local errors = nil
   if detail.errorMessage and #detail.errorMessage > 0 then
+    local is_from_test = detail.failingFrame and detail.failingFrame.isFromTest
+    -- For assertion failures show only error itself without stack trace
+    local error_messages = is_from_test and detail.errorMessage or vim.list_extend(vim.deepcopy(detail.errorMessage or {}), { detail.failingFrame.originalText })
+
     errors = {
       {
-        message = table.concat(detail.errorMessage, "\n"),
-        line = detail.failingFrame and detail.failingFrame.line or nil,
+        message = table.concat(error_messages, "\n"),
+        line = is_from_test and detail.failingFrame.line - 1 or nil,
       },
     }
   end

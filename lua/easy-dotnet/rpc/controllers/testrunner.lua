@@ -27,6 +27,7 @@
 ---@field file string|nil
 ---@field line integer|nil
 ---@field isUserCode boolean
+---@field isFromTest boolean|nil
 
 ---@class easy-dotnet.TestRunner.BuildErrorsResult
 ---@field errors easy-dotnet.TestRunner.BuildError[]
