@@ -449,7 +449,7 @@ function M.enable(opts)
   source_generated_autocmd()
   local cmd = { "dotnet-easydotnet", "roslyn", "start" }
   local razor_enabled = not opts.razor or opts.razor.enabled ~= false
-  local roslyn_extension_enabled = opts.easy_dotnet_extension_enabled == true or opts.enhanced_rename == true or opts.create_type_from_usage == true
+  local roslyn_extension_enabled = opts.easy_dotnet_extension_enabled == true or opts.enhanced_rename == true or opts.create_type_from_usage == true or opts.ef_generated_sql == true
   table.insert(cmd, "--clientProcessId")
   table.insert(cmd, tostring(vim.fn.getpid()))
 
@@ -565,6 +565,7 @@ function M.enable(opts)
       if roslyn_extension_enabled then
         require("easy-dotnet.roslyn.lsp.enhanced_rename").install(client, opts)
         require("easy-dotnet.roslyn.lsp.create_type_from_usage").install(client, opts)
+        require("easy-dotnet.roslyn.lsp.ef_generated_sql").install(client, opts)
       end
       razor_roslyn.suppress_semantic_tokens(client)
       M.solution_state[client.id] = { loaded_at = nil }
@@ -641,6 +642,7 @@ function M.enable(opts)
       ["roslyn.client.completionComplexEdit"] = require("easy-dotnet.roslyn.lsp.complex_edit"),
       ["roslyn.client.peekReferences"] = require("easy-dotnet.roslyn.lsp.peek_references"),
       ["easy-dotnet.roslyn.createTypeFromUsage"] = require("easy-dotnet.roslyn.lsp.create_type_from_usage").create_type_from_usage,
+      ["easy-dotnet.roslyn.efGeneratedSql"] = require("easy-dotnet.roslyn.lsp.ef_generated_sql").ef_generated_sql,
       -- ["dotnet.test.run"] = require("easy-dotnet.roslyn.lsp.test_run"),
     },
     handlers = vim.tbl_deep_extend("force", razor_enabled and razor_html.handlers() or {}, {

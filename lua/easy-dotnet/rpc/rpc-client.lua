@@ -73,6 +73,7 @@ local M = {
 ---| "outdated/packages"
 ---| "roslyn/scope-variables"
 ---| "roslyn/get-workspace-diagnostics"
+---| "roslyn/ef-generated-sql"
 ---| "roslyn/bootstrap-file-v2"
 ---| "json-code-gen-v2"
 ---| "new-file/bootstrap-file-v2"

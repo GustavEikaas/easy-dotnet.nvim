@@ -440,6 +440,12 @@ M.ef = {
         },
       },
     },
+    sql = {
+      handle = function()
+        local pos = vim.api.nvim_win_get_cursor(0)
+        require("easy-dotnet.ef-sql-preview").show(vim.api.nvim_buf_get_name(0), pos[1] - 1, pos[2])
+      end,
+    },
     migrations = {
       handle = nil,
       subcommands = {
