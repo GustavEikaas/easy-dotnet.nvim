@@ -354,6 +354,15 @@ M.testrunner = {
   handle = function() require("easy-dotnet.test-runner").open() end,
 }
 
+M.project = {
+  handle = nil,
+  subcommands = {
+    view = {
+      handle = function() require("easy-dotnet.project-view").open() end,
+    },
+  },
+}
+
 M.outdated = {
   handle = function() require("easy-dotnet.outdated.outdated").outdated() end,
 }

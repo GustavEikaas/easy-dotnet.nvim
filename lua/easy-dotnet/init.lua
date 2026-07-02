@@ -1,3 +1,20 @@
+
+-- [15:10:17 INF] [CLIENT] Attach request: {   "arguments": {     "request": "attach"
+   --   "program": null
+   --   "processId": 433420
+   --   "cwd": "/home/gustav/repo/easy-dotnet-server/EasyDotnet.IDE/bin/Debug/net8.0"
+   --   "console": "integratedTerminal"
+   --   "args": null
+   --   "env": null
+   --   "port": 38967
+   --   "name": "easy-dotnet"
+   --   "type": "easy-dotnet"
+   --   "host": "127.0.0.1"   }
+   -- "command": "attach"
+   -- "seq": 3
+   -- "type": "request" }
+
+
 local constants = require("easy-dotnet.constants")
 local commands = require("easy-dotnet.commands")
 local logger = require("easy-dotnet.logger")
@@ -83,6 +100,19 @@ local function define_highlights()
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerQueued, { link = "Comment" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerProbable, { link = "Comment" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetProjectViewTitle, { link = "Title" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetProjectViewSection, { link = "Character" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetProjectViewCount, { link = "Comment" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetProjectViewPackage, { link = "Include" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetProjectViewVersion, { link = "Comment" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetProjectViewProjectRef, { link = "Directory" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetProjectViewMeta, { link = "Comment" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetProjectViewOutdated, { link = "DiagnosticWarn" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetProjectViewEmpty, { link = "Comment" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetProjectViewKey, { link = "Special" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetProjectViewUpgradeMajor, { link = "DiagnosticError" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetProjectViewUpgradeMinor, { link = "DiagnosticWarn" })
+  vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetProjectViewUpgradePatch, { link = "DiagnosticOk" })
   --Debugger
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerFloatVariable, { link = "Question" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerVirtualVariable, { link = "Question" })
