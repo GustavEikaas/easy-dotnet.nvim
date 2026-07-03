@@ -30,7 +30,8 @@ local function is_cs_file(file_path) return vim.endswith(file_path, ".cs") and n
 local function auto_bootstrap_namespace(bufnr, mode)
   local curr_file = vim.api.nvim_buf_get_name(bufnr)
 
-  if not is_cs_file(curr_file) then return end
+  --Code actions produce virtual buffers with non-virtual file prefixes need to check if file actually exists on disk
+  if not is_cs_file(curr_file) or vim.fn.filereadable(curr_file) == 0 then return end
   if not vim.startswith(vim.fs.normalize(curr_file), vim.fs.normalize(vim.fn.getcwd())) then return end
   local lsp_created_files = require("easy-dotnet.roslyn.lsp-created-files")
   if lsp_created_files.is_marked_fname(curr_file) then
