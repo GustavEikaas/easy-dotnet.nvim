@@ -551,6 +551,10 @@ This dotnet tool exists at two places:
   * [nuget.org], which is not updated that often.
   * [Azure Devops feed], where updates happen multiple times a day.
 
+> [!IMPORTANT]  
+> The version used in vscode can be extracted [here](https://github.com/dotnet/vscode-csharp/blob/main/package.json#L43).  
+> The extension uses the [Azure Devops feed] as well.
+
  ```bash
   # Installing the tool using the more recent Azure Devops feed
   dotnet tool install -g roslyn-language-server --prerelease --source https://pkgs.dev.azure.com/azure-public/vside/_packaging/vs-impl/nuget/v3/index.json
