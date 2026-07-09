@@ -573,11 +573,8 @@ function M.enable(opts)
 
       local uri = vim.uri_from_fname(file)
       if type == "sln" then
-        M.state[client.id] =
-          job.register_job({ name = "[roslyn] Loading solution", on_error_text = "[roslyn] Failed to open solution", on_success_text = "[roslyn] Workspace ready", timeout = 150000 })
         client:notify("solution/open", { solution = uri })
       elseif type == "csproj" then
-        M.state[client.id] = job.register_job({ name = "[roslyn] Loading project", on_error_text = "[roslyn] Failed to open project", on_success_text = "[roslyn] Workspace ready", timeout = 15000 })
         client:notify("project/open", { projects = { uri } })
       else
         logger.warn("Unknown file selected as root_file " .. file)
