@@ -547,6 +547,21 @@ Just open a C#, Razor, or CSHTML file and the official .NET language server star
 If `roslyn-language-server` is missing, easy-dotnet will install the global tool with `dotnet tool install --global roslyn-language-server --prerelease`.
 Existing installs are not updated automatically; run `dotnet-easydotnet roslyn update` when an update is suggested.
 
+This dotnet tool exists at two places:
+  * [nuget.org], which is not updated that often.
+  * [Azure Devops feed], where updates happen multiple times a day.
+
+ ```bash
+  # Installing the tool using the more recent Azure Devops feed
+  dotnet tool install -g roslyn-language-server --prerelease --source https://pkgs.dev.azure.com/azure-public/vside/_packaging/vs-impl/nuget/v3/index.json
+
+  # Installing the tool from nuget.org
+  dotnet tool install -g roslyn-language-server --prerelease
+
+  # Updating works the same way as installing ( by replacing "install" with "update")
+  dotnet tool update -g roslyn-language-server --prerelease --source https://pkgs.dev.azure.com/azure-public/vside/_packaging/vs-impl/nuget/v3/index.json
+  ```
+
 Razor support also uses VS Code's HTML language server for markup completions, hover, formatting, and related requests.
 easy-dotnet does **not** bundle or auto-install this Node dependency.
 Install it globally with `npm install -g vscode-langservers-extracted`, or per project with `npm install --save-dev vscode-langservers-extracted`.
@@ -1030,3 +1045,7 @@ Check out [setup guide](./docs/server-development.md)
 <a href="https://github.com/GustavEikaas/easy-dotnet.nvim/graphs/contributors">
 <img src="https://contrib.rocks/image?repo=GustavEikaas/easy-dotnet.nvim" />
 </a>
+
+
+[nuget.org]: https://www.nuget.org/packages/roslyn-language-server
+[Azure Devops feed]: https://dev.azure.com/azure-public/vside/_artifacts/feed/vs-impl/NuGet/roslyn-language-server.linux-x64
