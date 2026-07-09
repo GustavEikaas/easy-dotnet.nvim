@@ -1,4 +1,3 @@
-local job = require("easy-dotnet.ui-modules.jobs")
 local logger = require("easy-dotnet.logger")
 local root_finder = require("easy-dotnet.roslyn.root_finder")
 local sln_parse = require("easy-dotnet.parsers.sln-parse")
