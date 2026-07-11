@@ -19,14 +19,6 @@ local TERMINAL_TYPES = {
 ---@field completion nio.control.Future
 ---@field result_chan nio.control.Queue
 
----@type easy-dotnet.neotest.RunContext|nil
-local current = nil
-
-events.subscribe("updateStatus", function(id, status)
-  if not current then return end
-  current:on_update(id, status)
-end)
-
 ---@param root_id string  The node ID that was passed to testrunner/run
 ---@param leaf_ids string[] All leaf position IDs (type == "test") in the subtree
 ---@return easy-dotnet.neotest.RunContext
@@ -45,6 +37,7 @@ function M.begin_run(root_id, leaf_ids)
     _stdout = {},
   }
 
+  local unsubscribe = events.subscribe("updateStatus", function(id, status) ctx:on_update(id, status) end)
   function ctx:on_update(id, status)
     local status_type = status and status.type or ""
     if not TERMINAL_TYPES[status_type] then return end
@@ -62,7 +55,7 @@ function M.begin_run(root_id, leaf_ids)
         client.testrunner:get_build_errors(id)
       end
 
-      current = nil
+      unsubscribe()
     end
   end
 
@@ -76,7 +69,6 @@ function M.begin_run(root_id, leaf_ids)
     return path
   end
 
-  current = ctx
   return ctx
 end
 
