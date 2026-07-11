@@ -40,7 +40,7 @@ local M = {
 ---@field id number
 ---@field jsonrpc "2.0"
 ---@field result? table
----@field error? RPC_Error
+---@field error? easy-dotnet.RPC.Error
 
 ---@class easy-dotnet.RPC.JsonRpcNotification
 ---@field jsonrpc "2.0"
@@ -84,6 +84,16 @@ local M = {
 ---| "workspace/run"
 ---| "workspace/debug"
 ---| "$/enumerator/next"
+---| "testrunner/run"
+---| "testrunner/initialize"
+---| "testrunner/quickDiscover"
+---| "testrunner/debug"
+---| "testrunner/invalidate"
+---| "testrunner/getResults"
+---| "testrunner/syncFile"
+---| "testrunner/getBuildErrors"
+---| "testrunner/neotestPositions"
+---| "testrunner/neotestBatchResults"
 
 local connection = nil
 local is_connected = false
