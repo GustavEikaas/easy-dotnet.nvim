@@ -18,7 +18,6 @@ local TERMINAL_TYPES = {
 ---@field leaf_ids table<string, boolean>
 ---@field completion nio.control.Future
 ---@field result_chan nio.control.Queue
----@field done boolean
 
 ---@type easy-dotnet.neotest.RunContext|nil
 local current = nil
@@ -37,13 +36,12 @@ function M.begin_run(root_id, leaf_ids)
     leaf_set[id] = true
   end
 
-  ---@type easy-dotnet.neotest.RunContext
+  ---@class easy-dotnet.neotest.RunContext
   local ctx = {
     root_node_id = root_id,
     leaf_ids = leaf_set,
     completion = nio.control.future(),
     result_chan = nio.control.queue(),
-    done = false,
     _stdout = {},
   }
 
@@ -55,7 +53,6 @@ function M.begin_run(root_id, leaf_ids)
 
     local has_build_failed = status_type == "BuildFailed"
     if id == self.root_node_id or has_build_failed then
-      self.done = true
       self.result_chan.put_nowait(nil)
       self.completion.set(0)
 

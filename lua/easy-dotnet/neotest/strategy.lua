@@ -18,7 +18,7 @@ return function(spec, _context)
     output_stream = function() return ctx.result_chan.get end,
     output = function() return ctx:flush_stdout_to_tempfile() end,
     stop = function() client.testrunner:cancel() end,
-    is_complete = function() return ctx.done end,
+    is_complete = function() return ctx.completion.is_set() end,
     attach = function() end,
   }
 end
