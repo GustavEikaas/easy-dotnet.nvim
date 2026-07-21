@@ -145,18 +145,27 @@ function M.build_spec(args)
   if #result_ids == 0 then result_ids = { root.id } end
 
   local node_id = root.id
+  local first_child = args.tree:children()[1]
+
   if root.type == "file" then
-    local first_child = args.tree:children()[1]
     node_id = first_child and first_child:data().id or root.id
   elseif root.type == "dir" then
     local state = require("easy-dotnet.test-runner.state")
     local dir = vim.fn.resolve(root.id)
+
     for _, node in pairs(state.nodes) do
       if node.type and node.type.type == "Project" and node.filePath then
         if vim.fn.resolve(vim.fn.fnamemodify(node.filePath, ":h")) == dir then
           node_id = node.id
           break
         end
+      end
+
+      -- for typical folders neotest just assigns folder path so we need to determine
+      -- proper node id that does exist on server side  based on it
+      if node.type and node.type.type == "Namespace" and node.displayName == root.name then
+        local doesChildBelongToFolder = first_child:data().path:find(root.path, 1, true) ~= nil
+        if doesChildBelongToFolder then node_id = node.id end
       end
     end
   end
