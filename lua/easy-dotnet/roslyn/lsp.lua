@@ -381,7 +381,7 @@ local function populate_source_generated_buffer(client, buf, file)
     if text == vim.NIL or type(text) ~= "string" then text = "" end
     text = text:gsub("\r\n", "\n")
     vim.bo[buf].modifiable = true
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(text, "\n", { plain = true }))
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(text, "\n", { plain = true, trimempty = true }))
     vim.lsp.buf_attach_client(buf, client.id)
     set_virtual_buffer_props(buf)
   end
@@ -697,6 +697,10 @@ function M.enable(opts)
             local ok, uri = pcall(vim.api.nvim_buf_get_name, buf)
             if ok and uri:match("^roslyn%-source%-generated://") then populate_source_generated_buffer(client, buf, uri) end
           end
+        end
+
+        for bufnr in pairs(client.attached_buffers) do
+          vim.lsp.diagnostic._refresh(bufnr, ctx.client_id)
         end
 
         return vim.NIL
