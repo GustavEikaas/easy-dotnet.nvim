@@ -15,51 +15,6 @@ local M = {
 }
 local function now() return vim.uv.now() end
 
-local function is_roslyn_filetype(ft) return ft == "cs" or ft == "razor" end
-
-local function is_buffer_in_root(bufnr, root_dir)
-  if not root_dir then return true end
-
-  local name = vim.api.nvim_buf_get_name(bufnr)
-  if name == "" or name:match("^%a+://") then return false end
-
-  local root = vim.fs.normalize(vim.fn.fnamemodify(root_dir, ":p"))
-  local path = vim.fs.normalize(vim.fn.fnamemodify(name, ":p"))
-  if path == root then return true end
-
-  if not root:match("[/\\]$") then root = root .. "/" end
-  return path:sub(1, #root) == root
-end
-
----@param root_dir string|nil
-function M.start(root_dir)
-  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_is_loaded(bufnr) then
-      local ft = vim.bo[bufnr].filetype
-      if is_roslyn_filetype(ft) and vim.bo[bufnr].buftype == "" and is_buffer_in_root(bufnr, root_dir) then
-        vim.api.nvim_buf_call(bufnr, function()
-          vim.api.nvim_exec_autocmds("FileType", {
-            buffer = bufnr,
-          })
-        end)
-      end
-    end
-  end
-end
-
-function M.stop()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local attached_clients = vim.lsp.get_clients({ bufnr = bufnr, name = constants.lsp_client_name })
-  for _, client in ipairs(attached_clients) do
-    client:stop(true)
-  end
-end
-
-function M.restart()
-  M.stop()
-  M.start()
-end
-
 local function restart_root(root_dir)
   logger.info("[easy-dotnet] Git branch changed; restarting Roslyn")
   pcall(vim.cmd, "checktime")
@@ -223,7 +178,7 @@ end
 local function refresh_diag(client)
   ---https://github.com/neovim/nvim-lspconfig/pull/4474
   ---Avoid using vim.lsp.diagnostic._refresh since it is removed from nightly
-  local capabilities = vim.iter(client.dynamic_capabilities.capabilities.diagnosticProvider):map(function(cap) return cap.registerOptions.identifier end):totable()
+  local capabilities = vim.iter(client.dynamic_capabilities.capabilities.diagnosticProvider or {}):map(function(cap) return cap.registerOptions.identifier end):totable()
 
   for buf, _ in pairs(client.attached_buffers) do
     if vim.api.nvim_buf_is_loaded(buf) then
