@@ -8,7 +8,6 @@ local razor_roslyn = require("easy-dotnet.razor.roslyn")
 local git_branch_watcher = require("easy-dotnet.roslyn.lsp.git_branch_watcher")
 
 local M = {
-  state = {},
   watcher_registered = {},
   pending_watchers = {}, -- Collect all watcher registrations per client
   solution_loaded = {}, -- Track if solution is loaded per client
@@ -581,7 +580,6 @@ function M.enable(opts)
     end,
     on_exit = function(code, _, client_id)
       razor_html.stop_for_roslyn_client(client_id)
-      M.state[client_id] = nil
       M.watcher_registered[client_id] = nil
       M.pending_watchers[client_id] = nil
       M.solution_loaded[client_id] = nil
@@ -676,17 +674,15 @@ function M.enable(opts)
         local client = vim.lsp.get_client_by_id(ctx.client_id)
         if not client then return end
         if M.solution_state[client.id] then M.solution_state[client.id].loaded_at = now() end
-        local workspace_job = M.state[client.id]
-        if workspace_job and type(workspace_job) == "function" then
-          vim.defer_fn(function()
-            workspace_job(true)
-            M.state[client.id] = nil
-            -- Register all collected watchers in bulk after solution/project is ready
-            M.register_watchers_bulk(client)
-            -- Mark solution as loaded - future registrations will go through normally
-            M.solution_loaded[client.id] = true
-          end, 2000)
-        end
+
+        vim.defer_fn(function()
+          -- Register all collected watchers in bulk after solution/project is ready
+          M.register_watchers_bulk(client)
+          -- Mark solution as loaded - future registrations will go through normally
+          vim.notify("Marking solution as loaded: " .. client.id)
+          M.solution_loaded[client.id] = true
+        end, 2000)
+
         vim.defer_fn(function() refresh_diag(client) end, 500)
       end,
       ["workspace/textDocumentContent/refresh"] = function(_, _, ctx)
