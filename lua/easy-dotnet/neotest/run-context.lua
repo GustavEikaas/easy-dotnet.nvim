@@ -18,15 +18,6 @@ local TERMINAL_TYPES = {
 ---@field leaf_ids table<string, boolean>
 ---@field completion nio.control.Future
 ---@field result_chan nio.control.Queue
----@field done boolean
-
----@type easy-dotnet.neotest.RunContext|nil
-local current = nil
-
-events.subscribe("updateStatus", function(id, status)
-  if not current then return end
-  current:on_update(id, status)
-end)
 
 ---@param root_id string  The node ID that was passed to testrunner/run
 ---@param leaf_ids string[] All leaf position IDs (type == "test") in the subtree
@@ -37,16 +28,16 @@ function M.begin_run(root_id, leaf_ids)
     leaf_set[id] = true
   end
 
-  ---@type easy-dotnet.neotest.RunContext
+  ---@class easy-dotnet.neotest.RunContext
   local ctx = {
     root_node_id = root_id,
     leaf_ids = leaf_set,
     completion = nio.control.future(),
     result_chan = nio.control.queue(),
-    done = false,
     _stdout = {},
   }
 
+  local unsubscribe = events.subscribe("updateStatus", function(id, status) ctx:on_update(id, status) end)
   function ctx:on_update(id, status)
     local status_type = status and status.type or ""
     if not TERMINAL_TYPES[status_type] then return end
@@ -55,7 +46,6 @@ function M.begin_run(root_id, leaf_ids)
 
     local has_build_failed = status_type == "BuildFailed"
     if id == self.root_node_id or has_build_failed then
-      self.done = true
       self.result_chan.put_nowait(nil)
       self.completion.set(0)
 
@@ -65,7 +55,7 @@ function M.begin_run(root_id, leaf_ids)
         client.testrunner:get_build_errors(id)
       end
 
-      current = nil
+      unsubscribe()
     end
   end
 
@@ -79,7 +69,6 @@ function M.begin_run(root_id, leaf_ids)
     return path
   end
 
-  current = ctx
   return ctx
 end
 

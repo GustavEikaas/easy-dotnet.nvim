@@ -59,6 +59,7 @@
 ---@class easy-dotnet.TestRunner.NeotestBatchResult
 ---@field outcome string
 ---@field errorMessage string[]|nil
+---@field frames easy-dotnet.TestRunner.StackFrame[]|nil
 ---@field failingFrame easy-dotnet.TestRunner.StackFrame|nil
 ---@field stdout string[]|nil
 

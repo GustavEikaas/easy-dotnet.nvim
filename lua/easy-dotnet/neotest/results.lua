@@ -15,15 +15,20 @@ local OUTCOME_MAP = {
 ---@return neotest.Result
 local function to_neotest_result(detail)
   local errors = nil
+  local stack_trace = {}
+
   if detail.errorMessage and #detail.errorMessage > 0 then
     local is_from_test = detail.failingFrame and detail.failingFrame.isFromTest
-    -- For assertion failures show only error itself without stack trace
-    local error_messages = is_from_test and detail.errorMessage or vim.list_extend(vim.deepcopy(detail.errorMessage or {}), { detail.failingFrame.originalText })
+    local diagnostic_line = is_from_test and detail.failingFrame.line - 1 or nil
+
+    for _, item in ipairs(detail.frames) do
+      table.insert(stack_trace, item.originalText)
+    end
 
     errors = {
       {
-        message = table.concat(error_messages, "\n"),
-        line = is_from_test and detail.failingFrame.line - 1 or nil,
+        message = table.concat(detail.errorMessage, "\n"),
+        line = diagnostic_line,
       },
     }
   end
@@ -32,7 +37,11 @@ local function to_neotest_result(detail)
   local f = io.open(output_path, "w")
   if f then
     if detail.stdout and #detail.stdout > 0 then f:write(table.concat(detail.stdout, "\n")) end
-    if errors then f:write("\n" .. (errors[1].message or "")) end
+    if errors then
+      f:write("\n" .. (errors[1].message or ""))
+      f:write("\n\n" .. (detail.failingFrame and detail.failingFrame.originalText or ""))
+      f:write("\n\n" .. (table.concat(stack_trace, "\n") .. "\n\n"))
+    end
     f:close()
   end
 
