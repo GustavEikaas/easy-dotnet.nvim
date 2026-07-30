@@ -495,6 +495,8 @@ function M.enable(opts)
   vim.lsp.config[constants.lsp_client_name] = {
     cmd = cmd,
     cmd_env = {
+      -- MACOS decompilation. roslyn.nvim#296
+      TMPDIR = vim.fn.resolve(vim.env.TMPDIR),
       --TODO: use this for when server allows changing configuration
       -- Configuration = "Release",
     },
