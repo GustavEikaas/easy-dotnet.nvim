@@ -568,18 +568,4 @@ M.terminal = {
   },
 }
 
-M.lsp = {
-  subcommands = {
-    start = {
-      handle = function() require("easy-dotnet.roslyn.lsp").start() end,
-    },
-    restart = {
-      handle = function() require("easy-dotnet.roslyn.lsp").restart() end,
-    },
-    stop = {
-      handle = function() require("easy-dotnet.roslyn.lsp").stop() end,
-    },
-  },
-}
-
 return M
