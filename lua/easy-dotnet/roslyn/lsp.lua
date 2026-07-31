@@ -451,7 +451,7 @@ function M.enable(opts)
     cmd = cmd,
     cmd_env = {
       -- MACOS decompilation. roslyn.nvim#296
-      TMPDIR = vim.fn.resolve(vim.env.TMPDIR),
+      TMPDIR = vim.env.TMPDIR and vim.fn.resolve(vim.env.TMPDIR) or nil,
       --TODO: use this for when server allows changing configuration
       -- Configuration = "Release",
     },
