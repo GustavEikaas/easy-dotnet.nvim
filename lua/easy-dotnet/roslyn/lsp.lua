@@ -560,7 +560,7 @@ function M.enable(opts)
               if not M.solution_loaded[client_id] then
                 -- Cache the entire registration (will register in bulk on solution/open)
                 if not M.pending_watchers[client_id] then M.pending_watchers[client_id] = {} end
-                table.insert(M.pending_watchers[client_id], registration)
+                table.insert(M.pending_watchers[client_id], vim.deepcopy(registration))
                 -- Block the registration
                 registration.registerOptions.watchers = {}
               end
