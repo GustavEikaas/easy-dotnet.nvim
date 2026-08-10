@@ -16,6 +16,16 @@ local M = {
 }
 local function now() return vim.uv.now() end
 
+---@return boolean
+function M.default_client_file_watching() return not require("easy-dotnet.extensions").isLinux() end
+
+---@return boolean
+function M.client_file_watching_enabled()
+  local config = vim.lsp.config[constants.lsp_client_name]
+  if not config then return M.default_client_file_watching() end
+  return vim.tbl_get(config, "capabilities", "workspace", "didChangeWatchedFiles", "dynamicRegistration") == true
+end
+
 local function is_roslyn_filetype(ft) return ft == "cs" or ft == "razor" end
 
 local function is_buffer_in_root(bufnr, root_dir)
@@ -420,7 +430,7 @@ function M.enable(opts)
 
   local settings = vim.tbl_deep_extend("force", default_roslyn_settings, opts.config.settings or {}, existing_config and existing_config.settings or {})
 
-  local cap = vim.tbl_deep_extend("force", vim.lsp.protocol.make_client_capabilities(), existing_config and existing_config.capabilities or {}, {
+  local default_cap = {
     textDocument = {
       codeAction = {
         dynamicRegistration = true,
@@ -480,7 +490,7 @@ function M.enable(opts)
     },
     workspace = {
       didChangeWatchedFiles = {
-        dynamicRegistration = true,
+        dynamicRegistration = M.default_client_file_watching(),
       },
       fileOperations = {
         didRename = true,
@@ -491,7 +501,10 @@ function M.enable(opts)
         dynamicRegistration = true,
       },
     },
-  })
+  }
+
+  local cap =
+    vim.tbl_deep_extend("force", vim.lsp.protocol.make_client_capabilities(), default_cap, opts.config and opts.config.capabilities or {}, existing_config and existing_config.capabilities or {})
 
   if roslyn_extension_enabled then cap.workspace.workspaceEdit = {
     documentChanges = true,

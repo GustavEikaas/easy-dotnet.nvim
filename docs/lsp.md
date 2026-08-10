@@ -114,6 +114,44 @@ return {
 }
 ```
 
+## File Watching
+
+Roslyn needs to know when files change on disk, and there are two ways to do that:
+
+- **Neovim watches the files** and tells Roslyn about changes through `workspace/didChangeWatchedFiles`. **This is the better option** — it is the model the LSP spec is built around, it picks up changes Roslyn's own watcher misses, and it is what easy-dotnet uses by default on macOS and Windows.
+- **Roslyn watches the files in-process.** A more basic watcher, used when the client does not advertise the capability.
+
+**On Linux, easy-dotnet defaults to the in-process watcher.** Not because it is better, but because Neovim watches files with `inotifywait` there, which registers one inotify instance per directory. On a large solution that means hundreds of thousands of inotify watches, and the default `fs.inotify.max_user_instances`, `fs.inotify.max_user_watches`, and open file descriptor limits are nowhere near high enough. You run out of file descriptors, Neovim reports `inotify(7) limit reached`, and file watching stops working ([#1037](https://github.com/GustavEikaas/easy-dotnet.nvim/issues/1037)). Defaulting to the in-process watcher keeps the out-of-the-box experience working on an untuned machine.
+
+If you are on Linux, raising the limits and letting Neovim do the watching is the recommended setup. `:checkhealth easy-dotnet` reports which side is currently watching and warns when your file descriptor limit is too low for it.
+
+### Enabling Neovim file watching on Linux
+
+Raise the limits (persist them in `/etc/sysctl.d/` and your shell's limits config):
+
+```bash
+sudo sysctl fs.inotify.max_user_instances=1024
+sudo sysctl fs.inotify.max_user_watches=524288
+ulimit -n 4096
+```
+
+Then advertise the capability from `lsp/easy_dotnet.lua`:
+
+```lua
+---@type vim.lsp.Config
+return {
+  capabilities = {
+    workspace = {
+      didChangeWatchedFiles = {
+        dynamicRegistration = true,
+      },
+    },
+  },
+}
+```
+
+Capabilities and settings from `lsp/easy_dotnet.lua` are merged on top of easy-dotnet's defaults, so anything you set there wins.
+
 ## Restart Roslyn After Git Branch Changes
 
 Roslyn LSP keeps an in-memory project graph. After a Git branch switch, project files, package assets, generated files, analyzers, and source files can all change at once. Roslyn and Neovim both have file watching, but this is not perfect: large bursts of file changes can be missed or coalesced, especially on Linux, which can leave stale diagnostics or project state behind.

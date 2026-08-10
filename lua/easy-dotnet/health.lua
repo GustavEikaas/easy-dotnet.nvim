@@ -76,6 +76,33 @@ local function check_in_process_lsp_configured()
     vim.health.warn("In process LSP not enabled")
   end
 end
+
+local function check_file_watching()
+  local lsp = options.get_option("lsp") or {}
+  if lsp.enabled == false then return end
+
+  if require("easy-dotnet.roslyn.lsp").client_file_watching_enabled() then
+    vim.health.ok("file watching: neovim")
+  else
+    vim.health.warn("file watching: roslyn (in-process), neovim file watching is more accurate and is the recommended setup", {
+      "Disabled by default on Linux because the default file descriptor limit is too low for large solutions",
+      "Raise it, then opt in from lsp/easy_dotnet.lua: capabilities.workspace.didChangeWatchedFiles.dynamicRegistration = true",
+      "https://github.com/GustavEikaas/easy-dotnet.nvim/blob/main/docs/lsp.md#file-watching",
+    })
+  end
+
+  if not require("easy-dotnet.extensions").isLinux() then return end
+
+  local limit = tonumber(vim.fn.system({ "sh", "-c", "ulimit -n" }))
+  if not limit then
+    vim.health.info("ulimit -n: unknown")
+  elseif limit < 4096 then
+    vim.health.warn(string.format("ulimit -n: %d, recommended >= 4096 for neovim file watching", limit), { "ulimit -n 8192" })
+  else
+    vim.health.ok(string.format("ulimit -n: %d", limit))
+  end
+end
+
 local function check_razor_lsp_configured()
   local razor_html = require("easy-dotnet.razor.html")
   local lsp = options.get_option("lsp") or {}
@@ -293,6 +320,7 @@ M.check = function()
 
   vim.health.start("easy-dotnet LSP configuration (optional)")
   check_lsp_configured()
+  check_file_watching()
   check_razor_lsp_configured()
   check_projx_lsp_configured()
   check_in_process_lsp_configured()
