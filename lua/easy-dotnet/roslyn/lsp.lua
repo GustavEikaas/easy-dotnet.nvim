@@ -12,6 +12,7 @@ local M = {
   pending_watchers = {}, -- Collect all watcher registrations per client
   solution_loaded = {}, -- Track if solution is loaded per client
   solution_state = {},
+  virtual_documents = {},
 }
 local function now() return vim.uv.now() end
 
@@ -296,6 +297,17 @@ local function set_virtual_buffer_props(buf_nr)
   vim.bo[buf_nr].readonly = true
 end
 
+local function track_virtual_document(client_id, uri, bufnr)
+  if not M.virtual_documents[client_id] then M.virtual_documents[client_id] = {} end
+  M.virtual_documents[client_id][uri] = bufnr
+
+  vim.api.nvim_create_autocmd("BufDelete", {
+    buffer = bufnr,
+    once = true,
+    callback = function() M.virtual_documents[client_id][uri] = nil end,
+  })
+end
+
 ---@param client vim.lsp.Client
 local function populate_source_generated_buffer(client, buf, file)
   if not vim.api.nvim_buf_is_valid(buf) then return end
@@ -326,6 +338,7 @@ local function populate_source_generated_buffer(client, buf, file)
     return
   end
   handler(response.err, response.result)
+  track_virtual_document(client.id, file, buf)
 end
 
 local function source_generated_autocmd()
@@ -370,6 +383,14 @@ local function mark_lsp_created_files(params)
   for _, change in ipairs(document_changes) do
     if change.kind == "create" or change.type == 1 then lsp_created_files.mark_uri(change.uri) end
   end
+end
+
+--TODO: Try to come up with solution for presering virtual buffer content even after lsp_restart
+local function cleanup_virtual_documents(client_id)
+  for _, bufnr in pairs(M.virtual_documents[client_id]) do
+    if vim.api.nvim_buf_is_valid(bufnr) then vim.api.nvim_buf_delete(bufnr, { force = true, unload = false }) end
+  end
+  M.virtual_documents[client_id] = nil
 end
 
 ---@param opts easy-dotnet.LspOpts
@@ -515,6 +536,7 @@ function M.enable(opts)
       end
     end,
     on_exit = function(code, _, client_id)
+      vim.schedule(function() cleanup_virtual_documents(client_id) end)
       razor_html.stop_for_roslyn_client(client_id)
       M.watcher_registered[client_id] = nil
       M.pending_watchers[client_id] = nil
