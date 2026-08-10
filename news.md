@@ -2,6 +2,29 @@
 
 This document is intended for documenting major improvements to this plugin. It can be a good idea to check this document occasionally
 
+## File watching defaults on Linux ([#1037](https://github.com/GustavEikaas/easy-dotnet.nvim/issues/1037))
+
+Letting Neovim watch the workspace and report changes to Roslyn is the better setup, and it stays the default on macOS and Windows. On Linux it comes with a catch: Neovim watches files with `inotifywait`, which registers one inotify instance per directory. Open a large solution and that is hundreds of thousands of watches — far past the default `fs.inotify.max_user_instances`, `fs.inotify.max_user_watches`, and open file descriptor limits. Neovim then reports `inotify(7) limit reached` and file watching stops working.
+
+Since most machines are not tuned for that, easy-dotnet now falls back to Roslyn's in-process watcher on Linux so things work out of the box. It is a fallback, not an upgrade: the in-process watcher misses changes that Neovim would catch.
+
+`:checkhealth easy-dotnet` tells you which side is watching, and on Linux it warns when your file descriptor limit is too low. Raise the limits and you can go back to the better setup by opting in from `lsp/easy_dotnet.lua`:
+
+```lua
+---@type vim.lsp.Config
+return {
+  capabilities = {
+    workspace = {
+      didChangeWatchedFiles = {
+        dynamicRegistration = true,
+      },
+    },
+  },
+}
+```
+
+See [docs/lsp.md](docs/lsp.md#file-watching) for the recommended limits and how to cut the number of watches with Neovim's libuv backend.
+
 ## SharpDbg debugger support
 
 easy-dotnet ships with a new debugger engine, **SharpDbg**. Select it with:
