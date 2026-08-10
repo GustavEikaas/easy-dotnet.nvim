@@ -259,11 +259,13 @@ function M:_initialize(cb, opts)
     local debugger_engine = require("easy-dotnet.options").options.debugger.engine
     local ext_terminal = require("easy-dotnet.options").options.external_terminal
     local apply_value_converters = require("easy-dotnet.options").options.debugger.apply_value_converters
+    local mem_cpu_usage = require("easy-dotnet.options").options.debugger.mem_cpu_usage ~= false
 
     local debuggerOptions = {
       applyValueConverters = apply_value_converters,
       binaryPath = debugger_path,
       engine = debugger_path == nil and debugger_engine or nil,
+      memCpuUsage = mem_cpu_usage,
     }
     current_solution.get_or_pick_solution(
       function(sln_file)

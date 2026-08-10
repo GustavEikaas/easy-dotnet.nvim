@@ -209,6 +209,7 @@ local M = {
       engine = "netcoredbg", -- "netcoredbg" | "dncdbg" | "sharpdbg" — ignored when bin_path is set
       apply_value_converters = true,
       auto_register_dap = true,
+      mem_cpu_usage = true,
     },
     projx_lsp = {
       enabled = true,

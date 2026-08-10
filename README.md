@@ -183,6 +183,9 @@ Although not *required* by the plugin, it is highly recommended to install one o
         console = "integratedTerminal", -- Controls where the target app runs: "integratedTerminal" (Neovim buffer) or "externalTerminal" (OS window)
         apply_value_converters = true,
         auto_register_dap = true,
+        -- Sample the debugged process' CPU/memory usage so the `easy-dotnet_cpu` and `easy-dotnet_mem`
+        -- dapui widgets have data to draw. Set to false to turn sampling off and unregister the widgets.
+        mem_cpu_usage = true,
         mappings = {
           open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
         },

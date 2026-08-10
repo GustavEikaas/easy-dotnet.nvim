@@ -138,16 +138,19 @@ local function auto_register_dap(merged_opts)
       end
       callback({ type = "server", host = "127.0.0.1", port = config.port })
     end
-    require("easy-dotnet.netcoredbg.sys_monitor_dap_ui").setup()
-    require("easy-dotnet.netcoredbg.dap-listener").register_breakpoint_panel_hider()
+    if merged_opts.debugger.mem_cpu_usage ~= false then
+      require("easy-dotnet.netcoredbg.sys_monitor_dap_ui").setup()
 
-    dap.listeners.after["event_telemetry/metrics"] = {
-      [constants.debug_adapter_name] = function(_, body)
-        if not body then return end
-        require("easy-dotnet.netcoredbg.sys_monitor").route_message("telemetry/cpu", { value = body.cpuPercent, timestamp = body.timestamp })
-        require("easy-dotnet.netcoredbg.sys_monitor").route_message("telemetry/mem", { value = body.memoryBytes, timestamp = body.timestamp })
-      end,
-    }
+      dap.listeners.after["event_telemetry/metrics"] = {
+        [constants.debug_adapter_name] = function(_, body)
+          if not body then return end
+          require("easy-dotnet.netcoredbg.sys_monitor").route_message("telemetry/cpu", { value = body.cpuPercent, timestamp = body.timestamp })
+          require("easy-dotnet.netcoredbg.sys_monitor").route_message("telemetry/mem", { value = body.memoryBytes, timestamp = body.timestamp })
+        end,
+      }
+    end
+
+    require("easy-dotnet.netcoredbg.dap-listener").register_breakpoint_panel_hider()
   end
 end
 
