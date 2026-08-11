@@ -397,7 +397,7 @@ end
 
 --TODO: Try to come up with solution for presering virtual buffer content even after lsp_restart
 local function cleanup_virtual_documents(client_id)
-  for _, bufnr in pairs(M.virtual_documents[client_id]) do
+  for _, bufnr in pairs(M.virtual_documents[client_id] or {}) do
     if vim.api.nvim_buf_is_valid(bufnr) then vim.api.nvim_buf_delete(bufnr, { force = true, unload = false }) end
   end
   M.virtual_documents[client_id] = nil
