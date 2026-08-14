@@ -210,6 +210,7 @@ dotnet.setup({
     -- local linux_term = { command = "kitty", args = { "--hold", "--" } }
     external_terminal = nil,
 })
+```
 
 ## Test Runner v2 ([#838](https://github.com/GustavEikaas/easy-dotnet.nvim/pull/838))
 

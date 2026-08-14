@@ -333,6 +333,7 @@ local function name_input_sync(default) return vim.fn.input({ prompt = "Enter na
 
 ---@param path string
 ---@param cb function | nil
+---@deprecated
 M.create_new_item = function(path, cb)
   path = path or "."
   local template = require("easy-dotnet.picker").pick_sync(nil, {
