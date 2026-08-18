@@ -132,7 +132,7 @@ local function request_actions_for_diag(bufnr, client, diag, cb)
     trigger = 1,
   }
 
-  client.request("textDocument/codeAction", params, function(err, actions)
+  client:request("textDocument/codeAction", params, function(err, actions)
     if err or not actions then
       cb({})
       return
