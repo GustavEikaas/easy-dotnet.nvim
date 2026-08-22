@@ -9,6 +9,7 @@ local function handle_project_changed() end
 
 local function handle_quickfix_set(params, silent)
   require("easy-dotnet.test-runner.render").hide()
+  if not silent then require("easy-dotnet.project-view.render").hide() end
   local items = vim.tbl_map(
     function(value)
       return {
@@ -104,6 +105,26 @@ M.handler = function(client, method, params)
         render.refresh()
         require("easy-dotnet.neotest.events").emit("registerTest", params.test)
       end)
+    elseif method == "projectview/update" then
+      local pv_state = require("easy-dotnet.project-view.state")
+      local pv_render = require("easy-dotnet.project-view.render")
+      if not params or not params.header then return end
+      if pv_state.project_path and params.header.projectPath == pv_state.project_path then
+        vim.schedule(function()
+          pv_state.snapshot = params
+          pv_render.schedule_refresh()
+        end)
+      end
+    elseif method == "projectview/status" then
+      local pv_state = require("easy-dotnet.project-view.state")
+      local pv_render = require("easy-dotnet.project-view.render")
+      if not params or not params.projectPath then return end
+      if pv_state.project_path and params.projectPath == pv_state.project_path then
+        vim.schedule(function()
+          pv_state.set_status(params.isLoading and true or false, params.operation)
+          pv_render.schedule_refresh()
+        end)
+      end
     elseif method == "removeTest" then
       local state = require("easy-dotnet.test-runner.state")
       local render = require("easy-dotnet.test-runner.render")
