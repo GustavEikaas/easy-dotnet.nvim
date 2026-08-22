@@ -44,6 +44,9 @@
 ---@field razor easy-dotnet.RazorOpts
 ---@field suggest_updates boolean
 ---@field config vim.lsp.config?          -- LSP configuration table
+--- reference: https://github.com/dotnet/roslyn/blob/main/src/LanguageServer/roslyn-language-server/README.md
+---@field auto_load_projects boolean
+---@field daemon_mode boolean
 
 ---@class easy-dotnet.RazorOpts
 ---@field enabled boolean
@@ -227,6 +230,8 @@ local M = {
       create_type_from_usage = false,
       restart_roslyn_on_branch_change = false,
       suggest_updates = true,
+      auto_load_projects = false,
+      daemon_mode = false,
       razor = {
         enabled = true,
         html = {
