@@ -23,6 +23,7 @@
 ---@field use_launch_profile boolean
 ---@field file_path string | nil
 ---@field cli_args string | nil
+---@field configuration string | nil
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 ---@class easy-dotnet.RPC.Client.Workspace.DebugOpts
@@ -30,6 +31,7 @@
 ---@field use_launch_profile boolean
 ---@field file_path string | nil
 ---@field cli_args string | nil
+---@field configuration string | nil
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 ---@class easy-dotnet.RPC.Client.Workspace.DebugAttachOpts
@@ -43,17 +45,20 @@
 ---@field use_launch_profile boolean
 ---@field file_path string | nil
 ---@field cli_args string | nil
+---@field configuration string | nil
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 ---@class easy-dotnet.RPC.Client.Workspace.BuildOpts
 ---@field use_default boolean
 ---@field use_terminal boolean
 ---@field build_args string | nil
+---@field configuration string | nil
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 ---@class easy-dotnet.RPC.Client.Workspace.BuildSolutionOpts
 ---@field use_terminal boolean
 ---@field build_args string | nil
+---@field configuration string | nil
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 ---@class easy-dotnet.RPC.Client.Workspace.CleanOpts
@@ -61,11 +66,13 @@
 
 ---@class easy-dotnet.RPC.Client.Workspace.RestoreOpts
 ---@field restore_args string | nil
+---@field configuration string | nil
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 ---@class easy-dotnet.RPC.Client.Workspace.TestOpts
 ---@field use_default boolean
 ---@field test_args string | nil
+---@field configuration string | nil
 ---@field on_crash? fun(err: easy-dotnet.RPC.Error)
 
 local M = {}
@@ -103,6 +110,7 @@ function M:run(opts)
       useLaunchProfile = opts.use_launch_profile or false,
       filePath = resolve_file_path(opts.file_path) or vim.NIL,
       cliArgs = opts.cli_args or vim.NIL,
+      configuration = opts.configuration or vim.NIL,
     },
     cb = nil,
     on_crash = opts.on_crash,
@@ -123,6 +131,7 @@ function M:debug(opts)
       useLaunchProfile = opts.use_launch_profile or false,
       filePath = resolve_file_path(opts.file_path) or vim.NIL,
       cliArgs = opts.cli_args or vim.NIL,
+      configuration = opts.configuration or vim.NIL,
     },
     cb = nil,
     on_crash = opts.on_crash,
@@ -144,6 +153,7 @@ function M:watch(opts)
       useDebugger = false,
       filePath = resolve_file_path(opts.file_path) or vim.NIL,
       cliArgs = opts.cli_args or vim.NIL,
+      configuration = opts.configuration or vim.NIL,
     },
     cb = nil,
     on_crash = opts.on_crash,
@@ -163,6 +173,7 @@ function M:build(opts)
       useDefault = opts.use_default or false,
       useTerminal = opts.use_terminal or false,
       buildArgs = opts.build_args or vim.NIL,
+      configuration = opts.configuration or vim.NIL,
     },
     cb = nil,
     on_crash = opts.on_crash,
@@ -182,6 +193,7 @@ function M:build_solution(opts)
       useDefault = false,
       useTerminal = opts.use_terminal or false,
       buildArgs = opts.build_args or vim.NIL,
+      configuration = opts.configuration or vim.NIL,
     },
     cb = nil,
     on_crash = opts.on_crash,
@@ -214,6 +226,7 @@ function M:restore(opts)
     method = "workspace/restore",
     params = {
       restoreArgs = opts.restore_args or vim.NIL,
+      configuration = opts.configuration or vim.NIL,
     },
     cb = nil,
     on_crash = opts.on_crash,
@@ -232,6 +245,7 @@ function M:test(opts)
     params = {
       useDefault = opts.use_default or false,
       testArgs = opts.test_args or vim.NIL,
+      configuration = opts.configuration or vim.NIL,
     },
     cb = nil,
     on_crash = opts.on_crash,
@@ -250,6 +264,7 @@ function M:test_solution(opts)
     params = {
       useDefault = false,
       testArgs = opts.test_args or vim.NIL,
+      configuration = opts.configuration or vim.NIL,
     },
     cb = nil,
     on_crash = opts.on_crash,
