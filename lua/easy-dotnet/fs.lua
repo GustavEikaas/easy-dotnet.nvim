@@ -1,5 +1,5 @@
 local M = {}
-local uv = vim.uv or vim.loop
+local uv = vim.uv
 
 local DEFAULT_SKIP = { [".git"] = true, ["node_modules"] = true, ["bin"] = true, ["obj"] = true }
 

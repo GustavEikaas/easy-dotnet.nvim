@@ -82,7 +82,7 @@ end
 --- Clears the persisted solution for current cwd
 local function clear_cache()
   local cache_path = get_cache_file_path()
-  if vim.fn.filereadable(cache_path) == 1 then pcall(vim.loop.fs_unlink, cache_path) end
+  if vim.fn.filereadable(cache_path) == 1 then pcall(vim.uv.fs_unlink, cache_path) end
 end
 
 --- Reads the cache file and returns the decoded data

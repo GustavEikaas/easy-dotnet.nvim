@@ -1,7 +1,7 @@
 local M = {}
 
 M.ensure_directory_exists = function(path)
-  local uv = vim.loop
+  local uv = vim.uv
 
   local stat = uv.fs_stat(path)
   if not stat then

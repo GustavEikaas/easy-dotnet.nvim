@@ -181,7 +181,7 @@ local function make_response(decoded)
 
     local full_message = encode_rpc_message(message)
 
-    local ok, write_result = pcall(vim.loop.write, connection, full_message)
+    local ok, write_result = pcall(vim.uv.write, connection, full_message)
     if not ok or not write_result then vim.schedule(function() vim.notify("StreamJsonRpc: failed to send response for ID " .. tostring(decoded.id), vim.log.levels.ERROR) end) end
   end
 end
@@ -278,7 +278,7 @@ function M.connect(cb)
   end
   if not pipe_path then error("StreamJsonRpc client: setup() must be called before connect()") end
 
-  local pipe = vim.loop.new_pipe(false)
+  local pipe = vim.uv.new_pipe(false)
 
   if not pipe then
     vim.notify("StreamJsonRpc client: failed to create pipe", vim.log.levels.ERROR)
@@ -326,7 +326,7 @@ function M.request(method, params, callback, options)
 
   local full_message = encode_rpc_message(message)
 
-  local ok, write_result = pcall(vim.loop.write, connection, full_message)
+  local ok, write_result = pcall(vim.uv.write, connection, full_message)
 
   if not ok or not write_result then
     callbacks[id] = nil
@@ -436,7 +436,7 @@ function M.notify(method, params)
 
   local full_message = encode_rpc_message(message)
 
-  local ok, write_result = pcall(vim.loop.write, connection, full_message)
+  local ok, write_result = pcall(vim.uv.write, connection, full_message)
 
   if not ok or not write_result then return false end
 

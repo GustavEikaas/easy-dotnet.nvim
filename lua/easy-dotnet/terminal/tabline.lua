@@ -111,7 +111,7 @@ end
 
 local function start_timer()
   if timer then return end
-  timer = vim.loop.new_timer()
+  timer = vim.uv.new_timer()
   timer:start(
     0,
     100,
