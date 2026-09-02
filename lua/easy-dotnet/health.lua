@@ -215,10 +215,15 @@ end
 
 local function check_roslyn_tool()
   local command = { "dotnet-easydotnet", "healthcheck", "--format", "json" }
-  local debugger_bin_path = options.get_option("debugger").bin_path
+  local debugger = options.get_option("debugger")
+  local debugger_bin_path = debugger.bin_path
   if type(debugger_bin_path) == "string" and debugger_bin_path ~= "" then
     table.insert(command, "--debugger-bin-path")
     table.insert(command, debugger_bin_path)
+  elseif type(debugger.engine) == "string" and debugger.engine ~= "" then
+    -- engine is ignored by the server when a bin_path is set
+    table.insert(command, "--debugger-engine")
+    table.insert(command, debugger.engine)
   end
 
   local output = vim.fn.system(command)
