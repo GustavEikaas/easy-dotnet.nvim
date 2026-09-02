@@ -69,7 +69,7 @@ return function(params, response, throw, validate)
           if tab.owned_by == "server" and exit_code == 0 and managed_terminal_opts.auto_hide and manager.active_id == slot_id then
             local delay = managed_terminal_opts.auto_hide_delay or 0
             if delay > 0 then
-              local hide_timer = vim.loop.new_timer()
+              local hide_timer = vim.uv.new_timer()
               hide_timer:start(
                 delay,
                 0,

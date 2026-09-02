@@ -60,7 +60,7 @@ local M = {
 function M.register_job(job)
   if job.is_server_job and not job.server_token then error("Server jobs must provide a server_token") end
   job.timeout = job.timeout or M.default_timeout
-  local started_at = vim.loop.now()
+  local started_at = vim.uv.now()
   local index = #M.jobs + 1
   M.jobs[index] = job
   local on_finished = M.notify_listeners({ event = "started", job = job })
@@ -74,7 +74,7 @@ function M.register_job(job)
         M.jobs = vim.tbl_filter(function(x) return x ~= job end, M.jobs)
         local msg = string.format("%s (timed out)", job.name)
         local level = vim.log.levels.WARN
-        local finished_at = vim.loop.now()
+        local finished_at = vim.uv.now()
         M.finished_job = msg
         M.finished_job_time = finished_at
         M.finished_job_duration = finished_at - started_at
@@ -109,7 +109,7 @@ function M.register_job(job)
     local is_error = success == false
     local msg = is_error and (job.on_error_text or job.name) or (job.on_success_text or job.name)
     local level = is_error and vim.log.levels.ERROR or vim.log.levels.INFO
-    local finished_at = vim.loop.now()
+    local finished_at = vim.uv.now()
     M.finished_job = msg
     M.finished_job_time = finished_at
     M.finished_job_duration = finished_at - started_at
@@ -141,7 +141,7 @@ function M.lualine(min_display_length)
   local total_jobs = #M.jobs
 
   if total_jobs == 0 and M.finished_job and M.finished_job_time then
-    local elapsed = vim.loop.now() - M.finished_job_time
+    local elapsed = vim.uv.now() - M.finished_job_time
     local finished_duration = M.finished_job_duration or 0
     local cleanup_after_ms = math.max(0, min_display_ms - finished_duration)
 

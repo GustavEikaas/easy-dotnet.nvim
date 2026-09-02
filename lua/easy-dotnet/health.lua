@@ -183,7 +183,7 @@ local function check_cmp()
 end
 
 local function os_info()
-  local platform = vim.loop.os_uname()
+  local platform = vim.uv.os_uname()
   local sysname = platform.sysname
   local release = platform.release
 

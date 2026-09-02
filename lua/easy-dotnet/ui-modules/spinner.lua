@@ -44,7 +44,7 @@ function M:start_spinner(text_provider, preset)
   self.spinner_symbols = M.spinner_presets[preset] or M.spinner_presets.default
 
   if not self.spinner_timer then
-    self.spinner_timer = vim.loop.new_timer()
+    self.spinner_timer = vim.uv.new_timer()
     self.spinner_timer:start(0, 300, vim.schedule_wrap(function() self:update_spinner(text_provider) end))
   end
 end

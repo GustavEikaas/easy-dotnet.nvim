@@ -621,7 +621,7 @@ function M.enable(opts)
               registration.registerOptions.watchers = vim
                 .iter(registration.registerOptions.watchers)
                 :filter(function(watch)
-                  if type(watch.globPattern) == "table" and watch.globPattern.baseUri then return vim.loop.fs_stat(vim.uri_to_fname(watch.globPattern.baseUri)) ~= nil end
+                  if type(watch.globPattern) == "table" and watch.globPattern.baseUri then return vim.uv.fs_stat(vim.uri_to_fname(watch.globPattern.baseUri)) ~= nil end
                   return true -- Keep watchers without baseUri (string patterns)
                 end)
                 :totable()

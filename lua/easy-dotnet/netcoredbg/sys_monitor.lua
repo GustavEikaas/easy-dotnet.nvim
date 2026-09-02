@@ -92,7 +92,7 @@ function Graph:render_to_buffer(buf)
   local canvas_width = math.max(10, win_width - AXIS_COL_WIDTH)
   local canvas_height = math.max(2, win_height - 2)
 
-  local now = vim.loop.now()
+  local now = vim.uv.now()
   if (now - self.last_render) < THROTTLE_MS then return end
   self.last_render = now
 
