@@ -314,6 +314,9 @@ require("lualine").setup {
     -- Shows the default startup project and its launch profile (if any),
     -- pushed by the server whenever it changes.
     lualine_x = { dotnet.lualine.active_project },
+    -- Shows the active build configuration (e.g. "Release"), pushed by the server.
+    -- Empty when the workspace has no solution.
+    lualine_y = { dotnet.lualine.build_configuration },
     -- ...
   },
 }
@@ -520,6 +523,7 @@ Dotnet clean
 Dotnet new
 Dotnet createfile <path>
 Dotnet solution select [path]
+Dotnet solution configuration [Debug|Release|...]
 Dotnet solution add
 Dotnet solution remove
 Dotnet outdated

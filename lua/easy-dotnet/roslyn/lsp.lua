@@ -42,6 +42,18 @@ local function is_buffer_in_root(bufnr, root_dir)
   return path:sub(1, #root) == root
 end
 
+---@param path string
+---@param root string
+---@return boolean
+local function is_path_in_root(path, root)
+  local abs_root = vim.fs.normalize(vim.fn.fnamemodify(root, ":p"))
+  local abs_path = vim.fs.normalize(vim.fn.fnamemodify(path, ":p"))
+  if abs_path == abs_root then return true end
+
+  if not abs_root:match("[/\\]$") then abs_root = abs_root .. "/" end
+  return abs_path:sub(1, #abs_root) == abs_root
+end
+
 ---@param root_dir string|nil
 local function start(root_dir)
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
@@ -66,6 +78,35 @@ local function restart_root(root_dir)
   end
 
   vim.defer_fn(function() start(root_dir) end, 250)
+end
+
+local applied_configuration = nil
+
+---@param configuration string
+function M.apply_configuration(configuration)
+  if applied_configuration == configuration then return end
+  applied_configuration = configuration
+
+  vim.lsp.config(constants.lsp_client_name, { cmd_env = { Configuration = configuration } })
+
+  local cwd = vim.fn.getcwd()
+  local roots = {}
+  for _, client in ipairs(vim.lsp.get_clients({ name = constants.lsp_client_name })) do
+    if client.root_dir and is_path_in_root(client.root_dir, cwd) then
+      roots[client.root_dir] = true
+      client:stop(true)
+    end
+  end
+
+  if vim.tbl_isempty(roots) then return end
+
+  logger.info(string.format("[easy-dotnet] Build configuration %s; restarting Roslyn", configuration))
+  pcall(vim.cmd, "checktime")
+  vim.defer_fn(function()
+    for root in pairs(roots) do
+      start(root)
+    end
+  end, 250)
 end
 
 ---@param client vim.lsp.Client
@@ -432,6 +473,9 @@ function M.enable(opts)
   end
   local existing_config = vim.lsp.config[constants.lsp_client_name]
 
+  local initial_configuration = require("easy-dotnet.build-configuration").msbuild_configuration()
+  applied_configuration = initial_configuration
+
   local settings = vim.tbl_deep_extend("force", default_roslyn_settings, opts.config.settings or {}, existing_config and existing_config.settings or {})
 
   local default_cap = {
@@ -521,8 +565,7 @@ function M.enable(opts)
     cmd_env = {
       -- MACOS decompilation. roslyn.nvim#296
       TMPDIR = vim.env.TMPDIR and vim.fn.resolve(vim.env.TMPDIR) or nil,
-      --TODO: use this for when server allows changing configuration
-      -- Configuration = "Release",
+      Configuration = initial_configuration,
     },
     filetypes = razor_enabled and { "cs", "razor" } or { "cs" },
     get_language_id = function(_, filetype)

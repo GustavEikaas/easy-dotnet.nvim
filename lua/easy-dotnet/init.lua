@@ -313,6 +313,7 @@ M.diagnostics = require("easy-dotnet.actions.diagnostics")
 M.lualine = {
   jobs = function() return require("easy-dotnet.ui-modules.jobs").lualine() end,
   active_project = function() return require("easy-dotnet.active-project").lualine() end,
+  build_configuration = function() return require("easy-dotnet.build-configuration").lualine() end,
   run_status = require("easy-dotnet.running-sessions").run_status,
   run_status_color = require("easy-dotnet.running-sessions").run_status_color,
   run_status_click = require("easy-dotnet.running-sessions").run_status_click,
