@@ -83,6 +83,13 @@ local function define_highlights()
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerRunning, { link = "DiagnosticWarn" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerQueued, { link = "Comment" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetTestRunnerProbable, { link = "Comment" })
+  --Roslyn semantic tokens
+  -- `excludedCode` is an off-spec token type Roslyn sends for code inside inactive
+  -- preprocessor branches (`#if DEBUG` when building Release). Neovim only pre-links the
+  -- standard LSP token types, so without this the block renders as if it were active.
+  -- `default = true` so colorschemes and user config can override it.
+  vim.api.nvim_set_hl(0, "@lsp.type.excludedCode", { link = "Comment", default = true })
+
   --Debugger
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerFloatVariable, { link = "Question" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerVirtualVariable, { link = "Question" })

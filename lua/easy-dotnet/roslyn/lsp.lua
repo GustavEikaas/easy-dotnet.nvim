@@ -14,6 +14,16 @@ local M = {
   solution_state = {},
   virtual_documents = {},
 }
+
+-- Client ids we stopped on purpose to restart them. Keeps on_exit from reporting
+local expected_stop = {}
+
+---@param client vim.lsp.Client
+local function stop_for_restart(client)
+  expected_stop[client.id] = true
+  client:stop(true)
+end
+
 local function now() return vim.uv.now() end
 
 ---@return boolean
@@ -74,7 +84,7 @@ local function restart_root(root_dir)
   pcall(vim.cmd, "checktime")
 
   for _, client in ipairs(vim.lsp.get_clients({ name = constants.lsp_client_name })) do
-    if client.root_dir == root_dir then client:stop(true) end
+    if client.root_dir == root_dir then stop_for_restart(client) end
   end
 
   vim.defer_fn(function() start(root_dir) end, 250)
@@ -94,7 +104,7 @@ function M.apply_configuration(configuration)
   for _, client in ipairs(vim.lsp.get_clients({ name = constants.lsp_client_name })) do
     if client.root_dir and is_path_in_root(client.root_dir, cwd) then
       roots[client.root_dir] = true
-      client:stop(true)
+      stop_for_restart(client)
     end
   end
 
@@ -596,6 +606,8 @@ function M.enable(opts)
       end
     end,
     on_exit = function(code, _, client_id)
+      local was_expected = expected_stop[client_id] == true
+      expected_stop[client_id] = nil
       vim.schedule(function() cleanup_virtual_documents(client_id) end)
       razor_html.stop_for_roslyn_client(client_id)
       M.watcher_registered[client_id] = nil
@@ -605,7 +617,7 @@ function M.enable(opts)
       git_branch_watcher.unregister_client(client_id, has_roslyn_client_for_root)
       vim.schedule(function()
         if code == 0 or code == 143 then
-          logger.info("[easy-dotnet] Roslyn stopped")
+          if not was_expected then logger.info("[easy-dotnet] Roslyn stopped") end
           return
         end
 
