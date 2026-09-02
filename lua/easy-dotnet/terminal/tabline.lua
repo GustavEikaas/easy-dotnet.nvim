@@ -89,7 +89,7 @@ function M.render()
     }
   end
 
-  vim.api.nvim_buf_set_option(manager.tabline_buf, "modifiable", true)
+  vim.api.nvim_set_option_value("modifiable", true, { buf = manager.tabline_buf })
   vim.api.nvim_buf_set_lines(manager.tabline_buf, 0, -1, false, { tabline_str, header_str })
   vim.api.nvim_buf_clear_namespace(manager.tabline_buf, ns_id, 0, -1)
 
@@ -106,7 +106,7 @@ function M.render()
     vim.api.nvim_buf_add_highlight(manager.tabline_buf, ns_id, "Comment", 1, header_segs.args_s, header_segs.args_e)
   end
 
-  vim.api.nvim_buf_set_option(manager.tabline_buf, "modifiable", false)
+  vim.api.nvim_set_option_value("modifiable", false, { buf = manager.tabline_buf })
 end
 
 local function start_timer()
@@ -214,8 +214,8 @@ function M.create(panel_win)
 
   if not manager.tabline_buf or not vim.api.nvim_buf_is_valid(manager.tabline_buf) then
     manager.tabline_buf = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_option(manager.tabline_buf, "bufhidden", "hide")
-    vim.api.nvim_buf_set_option(manager.tabline_buf, "modifiable", false)
+    vim.api.nvim_set_option_value("bufhidden", "hide", { buf = manager.tabline_buf })
+    vim.api.nvim_set_option_value("modifiable", false, { buf = manager.tabline_buf })
   end
 
   if manager.tabline_win and vim.api.nvim_win_is_valid(manager.tabline_win) then vim.api.nvim_win_close(manager.tabline_win, true) end
