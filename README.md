@@ -1036,6 +1036,30 @@ Check out [debugging-setup](./docs/debugging.md) for a full walkthrough of debug
 
 </details>
 
+### Inactive preprocessor branches (`#if DEBUG`)
+
+Roslyn reports code inside inactive preprocessor branches — for example a `#if DEBUG` block while
+the build configuration is `Release` — as an off-spec `excludedCode` semantic token. Neovim only
+links the standard LSP token types by default, so easy-dotnet links this one for you:
+
+| Highlight group | Default |
+| --- | --- |
+| **@lsp.type.excludedCode** | *Comment* |
+
+It is set with `default = true`, so your colorscheme or config wins. To pick your own look:
+
+```lua
+vim.api.nvim_set_hl(0, "@lsp.type.excludedCode", { link = "NonText" })
+```
+
+Or to turn the dimming off entirely:
+
+```lua
+vim.api.nvim_set_hl(0, "@lsp.type.excludedCode", {})
+```
+
+Put it in a `ColorScheme` autocmd if your colorscheme is loaded after easy-dotnet.
+
 ## Local Development
 
 Check out [setup guide](./docs/server-development.md)
