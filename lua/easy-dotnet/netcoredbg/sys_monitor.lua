@@ -161,9 +161,9 @@ function Graph:render_to_buffer(buf)
   local latest = self.data[#self.data]
   table.insert(lines, 1, string.format(self.title_fmt, self:format_value(latest)))
 
-  vim.api.nvim_buf_set_option(buf, "modifiable", true)
+  vim.api.nvim_set_option_value("modifiable", true, { buf = buf })
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(buf, "modifiable", false)
+  vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
 end
 
 function Graph:push_data(val)
