@@ -14,8 +14,8 @@ function MonitorElement.new(graph_type)
   function self.render()
     if not self._buf or not vim.api.nvim_buf_is_valid(self._buf) then
       self._buf = vim.api.nvim_create_buf(false, true)
-      vim.api.nvim_buf_set_option(self._buf, "bufhidden", "wipe")
-      vim.api.nvim_buf_set_option(self._buf, "filetype", "monitorgraph")
+      vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = self._buf })
+      vim.api.nvim_set_option_value("filetype", "monitorgraph", { buf = self._buf })
       vim.api.nvim_buf_call(self._buf, function() vim.cmd([[syntax match Comment "[0-9.]\+[KMGTB%s]\+\|│\|─\|┤\|┼"]]) end)
     end
 

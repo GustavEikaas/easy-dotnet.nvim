@@ -62,9 +62,9 @@ function M.set_active(id)
   M.active_id = id
 
   if M.panel_win and vim.api.nvim_win_is_valid(M.panel_win) then
-    pcall(vim.api.nvim_win_set_option, M.panel_win, "winfixbuf", false)
+    pcall(vim.api.nvim_set_option_value, "winfixbuf", false, { win = M.panel_win })
     vim.api.nvim_win_set_buf(M.panel_win, tab.buf)
-    pcall(vim.api.nvim_win_set_option, M.panel_win, "winfixbuf", true)
+    pcall(vim.api.nvim_set_option_value, "winfixbuf", true, { win = M.panel_win })
     vim.api.nvim_win_call(M.panel_win, function() vim.cmd("normal! G") end)
   end
 
