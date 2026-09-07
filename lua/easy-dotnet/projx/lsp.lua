@@ -23,6 +23,7 @@ function M.enable()
   vim.lsp.config[constants.lsp_projx_client_name] = {
     cmd = { "dotnet-easydotnet", "projx-language-server" },
     filetypes = { "xml" },
+    workspace_required = true,
     root_dir = function(buf_nr, cb)
       local buf_path = vim.api.nvim_buf_get_name(buf_nr)
       if buf_path:match("^%a+://") then return cb(nil) end

@@ -27,14 +27,40 @@ function M.enable()
   ---@type vim.lsp.Config
   vim.lsp.config(constants.lsp_in_process_client_name, {
     filetypes = { "cs" },
-    cmd = function(_)
+    ---@param dispatchers vim.lsp.rpc.Dispatchers
+    ---@return vim.lsp.rpc.PublicClient
+    cmd = function(dispatchers)
+      local closing = false
+      local request_id = 0
+      local function close()
+        if closing then return end
+        closing = true
+        vim.schedule(function() dispatchers.on_exit(0, 0) end)
+      end
+
       return {
         request = function(method, params, callback)
-          if handlers[method] then handlers[method](params, callback) end
+          if closing then return false end
+
+          request_id = request_id + 1
+
+          if method == "shutdown" then
+            callback(nil, nil, request_id)
+          elseif handlers[method] then
+            handlers[method](params, callback)
+          else
+            callback({ code = -32601, message = "Method not found: " .. method }, nil, request_id)
+          end
+
+          return true, request_id
         end,
-        notify = function() end,
-        is_closing = function() return false end,
-        terminate = function() end,
+        notify = function(method)
+          if closing then return false end
+          if method == "exit" then close() end
+          return true
+        end,
+        is_closing = function() return closing end,
+        terminate = close,
       }
     end,
     commands = {
