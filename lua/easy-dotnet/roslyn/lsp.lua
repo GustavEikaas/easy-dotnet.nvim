@@ -160,8 +160,29 @@ local function is_file_in_cwd(filepath)
   return abs_file:sub(1, #abs_cwd) == abs_cwd
 end
 
+local build_configuration_timeout_ms = 2000
+
+-- Blocks the running coroutine until the EasyDotnet server has reported the active
+-- build configuration (or the timeout elapses), so Roslyn spawns with the correct
+-- `Configuration` env var instead of racing apply_configuration's restart-after-the-fact.
+local function await_build_configuration()
+  local co = coroutine.running()
+  local resumed = false
+  local function resume_once()
+    if resumed then return end
+    resumed = true
+    coroutine.resume(co)
+  end
+
+  require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(resume_once)
+  vim.defer_fn(resume_once, build_configuration_timeout_ms)
+  coroutine.yield()
+end
+
 function M.find_project_or_solution(bufnr, cb)
   coroutine.wrap(function()
+    await_build_configuration()
+
     local buf_path = vim.api.nvim_buf_get_name(bufnr)
     if buf_path:match("^%a+://") then return nil end
     if vim.fn.filereadable(buf_path) == 0 then return nil end
