@@ -8,6 +8,8 @@ local razor_roslyn = require("easy-dotnet.razor.roslyn")
 local git_branch_watcher = require("easy-dotnet.roslyn.lsp.git_branch_watcher")
 
 local M = {
+  -- True while LSP activation is held back waiting for the active build configuration
+  activation_pending = false,
   watcher_registered = {},
   pending_watchers = {}, -- Collect all watcher registrations per client
   solution_loaded = {}, -- Track if solution is loaded per client
@@ -90,19 +92,21 @@ local function restart_root(root_dir)
   vim.defer_fn(function() start(root_dir) end, 250)
 end
 
-local applied_configuration = nil
+---@param client vim.lsp.Client
+---@return string
+local function client_configuration(client) return vim.tbl_get(client, "config", "cmd_env", "Configuration") or "Debug" end
 
 ---@param configuration string
 function M.apply_configuration(configuration)
-  if applied_configuration == configuration then return end
-  applied_configuration = configuration
-
   vim.lsp.config(constants.lsp_client_name, { cmd_env = { Configuration = configuration } })
 
+  -- Never short-circuit on a cached "applied" value. The config we just wrote only
+  -- affects clients started from now on; already running clients keep the `Configuration`
+  -- they were spawned with, so the live clients are the only source of truth.
   local cwd = vim.fn.getcwd()
   local roots = {}
   for _, client in ipairs(vim.lsp.get_clients({ name = constants.lsp_client_name })) do
-    if client.root_dir and is_path_in_root(client.root_dir, cwd) then
+    if client.root_dir and is_path_in_root(client.root_dir, cwd) and client_configuration(client) ~= configuration then
       roots[client.root_dir] = true
       stop_for_restart(client)
     end
@@ -117,6 +121,67 @@ function M.apply_configuration(configuration)
       start(root)
     end
   end, 250)
+end
+
+local build_configuration_timeout_ms = 5000
+local build_configuration_ready = false
+---@type fun()[]|nil
+local build_configuration_waiters = nil
+
+--- Roslyn reads `Configuration` from its spawn environment only, and `vim.lsp.enable`
+--- deep-copies `vim.lsp.config[name]` *before* it resolves `root_dir` - so the env var has to
+--- be correct before anything can trigger a start. Everything that may spawn a client is held
+--- back until the EasyDotnet server has reported the active build configuration, bounded by a
+--- timeout so a missing or slow server never leaves the user without an LSP.
+---@param cb fun()
+local function await_build_configuration(cb)
+  if build_configuration_ready then
+    vim.schedule(cb)
+    return
+  end
+
+  if build_configuration_waiters then
+    table.insert(build_configuration_waiters, cb)
+    return
+  end
+
+  build_configuration_waiters = { cb }
+  M.activation_pending = true
+
+  local finish_job = require("easy-dotnet.ui-modules.jobs").register_job({
+    name = "Preparing Roslyn LSP",
+    on_success_text = "Roslyn LSP ready",
+    timeout = build_configuration_timeout_ms * 2,
+  })
+
+  local function resolve()
+    if build_configuration_ready then return end
+    build_configuration_ready = true
+    M.activation_pending = false
+    finish_job(true)
+
+    local waiters = build_configuration_waiters or {}
+    build_configuration_waiters = nil
+    for _, waiter in ipairs(waiters) do
+      pcall(waiter)
+    end
+  end
+
+  require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(function() vim.schedule(resolve) end)
+  vim.defer_fn(resolve, build_configuration_timeout_ms)
+end
+
+--- Re-fires FileType for cs/razor buffers that still have no Roslyn client. Buffers loaded
+--- while activation was deferred fired their FileType before the config was enabled, so
+--- nothing tried to start a client for them.
+local function start_missed_buffers()
+  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(bufnr) and is_roslyn_filetype(vim.bo[bufnr].filetype) and vim.bo[bufnr].buftype == "" then
+      if not vim.lsp.get_clients({ name = constants.lsp_client_name, bufnr = bufnr })[1] then
+        vim.api.nvim_buf_call(bufnr, function() vim.api.nvim_exec_autocmds("FileType", { buffer = bufnr }) end)
+      end
+    end
+  end
 end
 
 ---@param client vim.lsp.Client
@@ -160,29 +225,8 @@ local function is_file_in_cwd(filepath)
   return abs_file:sub(1, #abs_cwd) == abs_cwd
 end
 
-local build_configuration_timeout_ms = 2000
-
--- Blocks the running coroutine until the EasyDotnet server has reported the active
--- build configuration (or the timeout elapses), so Roslyn spawns with the correct
--- `Configuration` env var instead of racing apply_configuration's restart-after-the-fact.
-local function await_build_configuration()
-  local co = coroutine.running()
-  local resumed = false
-  local function resume_once()
-    if resumed then return end
-    resumed = true
-    coroutine.resume(co)
-  end
-
-  require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(resume_once)
-  vim.defer_fn(resume_once, build_configuration_timeout_ms)
-  coroutine.yield()
-end
-
 function M.find_project_or_solution(bufnr, cb)
   coroutine.wrap(function()
-    await_build_configuration()
-
     local buf_path = vim.api.nvim_buf_get_name(bufnr)
     if buf_path:match("^%a+://") then return nil end
     if vim.fn.filereadable(buf_path) == 0 then return nil end
@@ -361,11 +405,15 @@ end
 function M.preload_roslyn(opts)
   local sln = current_solution.try_get_selected_solution()
   if sln and opts.preload_roslyn == true then
-    local dirname = vim.fs.dirname(sln)
-    local cap = vim.tbl_deep_extend("force", vim.lsp.config[constants.lsp_client_name], {
-      root_dir = dirname,
-    })
-    vim.lsp.start(cap)
+    -- Spawns a client directly, so it has to wait for the build configuration just like
+    -- the FileType-driven path does.
+    await_build_configuration(function()
+      local dirname = vim.fs.dirname(sln)
+      local cap = vim.tbl_deep_extend("force", vim.lsp.config[constants.lsp_client_name], {
+        root_dir = dirname,
+      })
+      vim.lsp.start(cap)
+    end)
   end
 end
 
@@ -505,7 +553,6 @@ function M.enable(opts)
   local existing_config = vim.lsp.config[constants.lsp_client_name]
 
   local initial_configuration = require("easy-dotnet.build-configuration").msbuild_configuration()
-  applied_configuration = initial_configuration
 
   local settings = vim.tbl_deep_extend("force", default_roslyn_settings, opts.config.settings or {}, existing_config and existing_config.settings or {})
 
@@ -607,6 +654,14 @@ function M.enable(opts)
     root_dir = M.find_project_or_solution,
     capabilities = cap,
     on_init = function(client)
+      -- Safety net for the bounded wait in await_build_configuration: if the server reported
+      -- the build configuration after this client was spawned it is running with a stale
+      -- `Configuration` env var, and only a restart can give it the right one.
+      vim.schedule(function()
+        local desired = require("easy-dotnet.build-configuration").msbuild_configuration()
+        if client_configuration(client) ~= desired then M.apply_configuration(desired) end
+      end)
+
       git_branch_watcher.register(client, opts, restart_root)
       if roslyn_extension_enabled then
         require("easy-dotnet.roslyn.lsp.enhanced_rename").install(client, opts)
@@ -753,7 +808,13 @@ function M.enable(opts)
     settings = settings,
   }
 
-  vim.lsp.enable(constants.lsp_client_name)
+  -- Deliberately not enabled yet: buffers that fire FileType before this point are picked
+  -- up again by start_missed_buffers once the build configuration is known.
+  await_build_configuration(function()
+    vim.lsp.config(constants.lsp_client_name, { cmd_env = { Configuration = require("easy-dotnet.build-configuration").msbuild_configuration() } })
+    vim.lsp.enable(constants.lsp_client_name)
+    start_missed_buffers()
+  end)
 end
 
 return M
