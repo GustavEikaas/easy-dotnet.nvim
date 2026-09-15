@@ -1,6 +1,7 @@
 local M = {}
 
 local BOOTSTRAP_DELAY_MS = 250
+local BOOTSTRAP_MAX_ATTACH_WAIT_MS = 15000
 
 local function is_buffer_empty(buf)
   for i = 0, vim.api.nvim_buf_line_count(buf) - 1 do
@@ -25,6 +26,43 @@ local function is_key_value_table(tbl)
 end
 
 local function is_cs_file(file_path) return vim.endswith(file_path, ".cs") and not vim.endswith(file_path, ".razor.cs") and not vim.endswith(file_path, ".cshtml.cs") end
+
+local function wait_for_lsp_attach(bufnr, callback)
+  if vim.b[bufnr].roslyn_buf_opened_at then
+    vim.schedule(callback)
+    return
+  end
+
+  local done = false
+  local autocmd_id
+
+  local function finish()
+    if done then return end
+    done = true
+    if autocmd_id then pcall(vim.api.nvim_del_autocmd, autocmd_id) end
+    callback()
+  end
+
+  autocmd_id = vim.api.nvim_create_autocmd("LspAttach", {
+    buffer = bufnr,
+    callback = function(args)
+      local client = vim.lsp.get_client_by_id(args.data.client_id)
+      if not client or client.name ~= require("easy-dotnet.constants").lsp_client_name then return end
+      -- Defer a tick so the client's own didOpen dispatch is flushed before we let the
+      -- bootstrap edit fire and potentially trigger a didChange.
+      vim.schedule(finish)
+    end,
+  })
+
+  vim.defer_fn(function()
+    if not vim.api.nvim_buf_is_valid(bufnr) then
+      done = true
+      if autocmd_id then pcall(vim.api.nvim_del_autocmd, autocmd_id) end
+      return
+    end
+    finish()
+  end, BOOTSTRAP_MAX_ATTACH_WAIT_MS)
+end
 
 ---@param mode easy-dotnet.BootstrapNamespaceMode
 local function auto_bootstrap_namespace(bufnr, mode)
@@ -97,8 +135,11 @@ M.auto_bootstrap_namespace = function(mode)
       vim.defer_fn(function()
         if not vim.api.nvim_buf_is_valid(bufnr) then return end
 
-        vim.b[bufnr].easy_dotnet_bootstrap_namespace_pending = false
-        auto_bootstrap_namespace(bufnr, mode)
+        wait_for_lsp_attach(bufnr, function()
+          if not vim.api.nvim_buf_is_valid(bufnr) then return end
+          vim.b[bufnr].easy_dotnet_bootstrap_namespace_pending = false
+          auto_bootstrap_namespace(bufnr, mode)
+        end)
       end, BOOTSTRAP_DELAY_MS)
     end,
   })
