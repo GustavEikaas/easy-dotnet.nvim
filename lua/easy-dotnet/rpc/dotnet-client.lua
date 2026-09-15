@@ -114,6 +114,8 @@ end
 ---@field secrets easy-dotnet.RPC.Client.Secrets
 ---@field solution_add_project fun(self: easy-dotnet.RPC.Client.Dotnet, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field solution_remove_project fun(self: easy-dotnet.RPC.Client.Dotnet, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
+-- luacheck: no max line length
+---@field solution_set_build_configuration fun(self: easy-dotnet.RPC.Client.Dotnet, build_type?: string, platform?: string, cb?: fun(), opts?: easy-dotnet.RPC.CallOpts): easy-dotnet.RPC.CallHandle
 ---@field outdated_packages fun(self: easy-dotnet.RPC.Client.Dotnet, target_path: string, cb?: fun(res: easy-dotnet.Nuget.OutdatedPackage[])): integer | false # Query dotnet-outdated for outdated packages
 ---@field ef fun(self: easy-dotnet.RPC.Client.Dotnet): integer | false
 ---@field get_state fun(self: easy-dotnet.RPC.Client.Dotnet): '"Connected"'|'"Not connected"'|'"Starting"'|'"Stopped"' # Returns current connection state
@@ -220,6 +222,10 @@ function M:initialize(cb)
 
           M.supports_single_file_execution = result.capabilities.supportsSingleFileExecution or false
 
+          local build_configuration = require("easy-dotnet.build-configuration")
+          build_configuration.set(result.buildConfiguration)
+          build_configuration.apply_to_lsp()
+
           self._initializing = false
           self._initialized = true
 
@@ -300,6 +306,23 @@ function M:solution_add_project(cb, opts)
     on_crash = opts.on_crash,
     method = "solution/add-project",
     params = {},
+  })()
+end
+
+---@param build_type string | nil
+---@param platform string | nil
+function M:solution_set_build_configuration(build_type, platform, cb, opts)
+  opts = opts or {}
+  local params = vim.empty_dict()
+  params.buildType = build_type
+  params.platform = platform
+
+  return M.create_rpc_call({
+    client = self._client,
+    cb = cb,
+    on_crash = opts.on_crash,
+    method = "solution/set-build-configuration",
+    params = params,
   })()
 end
 
