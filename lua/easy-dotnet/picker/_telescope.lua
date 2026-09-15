@@ -89,12 +89,7 @@ M.preview_picker = function(bufnr, options, on_select_cb, title, previewer)
     sorter = conf.generic_sorter({}),
     preview = true,
     attach_mappings = function(_, map)
-      map("i", "<CR>", function(prompt_bufnr)
-        local selection = require("telescope.actions.state").get_selected_entry()
-        require("telescope.actions").close(prompt_bufnr)
-        on_select_cb(selection.value)
-      end)
-      map("n", "<CR>", function(prompt_bufnr)
+      actions.select_default:replace(function(prompt_bufnr)
         local selection = require("telescope.actions.state").get_selected_entry()
         require("telescope.actions").close(prompt_bufnr)
         on_select_cb(selection.value)
@@ -151,12 +146,7 @@ M.picker = function(bufnr, options, on_select_cb, title, autopick, apply_numerat
     }),
     sorter = conf.generic_sorter({}),
     attach_mappings = function(_, map)
-      map("i", "<CR>", function(prompt_bufnr)
-        local selection = require("telescope.actions.state").get_selected_entry()
-        require("telescope.actions").close(prompt_bufnr)
-        on_select_cb(selection.value)
-      end)
-      map("n", "<CR>", function(prompt_bufnr)
+      actions.select_default:replace(function(prompt_bufnr)
         local selection = require("telescope.actions.state").get_selected_entry()
         require("telescope.actions").close(prompt_bufnr)
         on_select_cb(selection.value)
@@ -200,25 +190,7 @@ M.multi_picker = function(options, on_select_cb, title, apply_numeration)
     }),
     sorter = conf.generic_sorter({}),
     attach_mappings = function(_, map)
-      map("i", "<CR>", function(pb)
-        local picker = action_state.get_current_picker(pb)
-        local multi_selections = picker:get_multi_selection()
-
-        actions.close(pb)
-
-        if #multi_selections > 0 then
-          local selected_values = {}
-          for _, selection in ipairs(multi_selections) do
-            table.insert(selected_values, selection.value)
-          end
-          on_select_cb(selected_values)
-        else
-          local selection = action_state.get_selected_entry()
-          on_select_cb({ selection.value })
-        end
-      end)
-
-      map("n", "<CR>", function(pb)
+      actions.select_default:replace(function(pb)
         local picker = action_state.get_current_picker(pb)
         local multi_selections = picker:get_multi_selection()
 
