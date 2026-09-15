@@ -16,7 +16,6 @@ return function(params, response, throw, validate)
     return
   end
 
-  local Tab = require("easy-dotnet.terminal.tab")
   local manager = require("easy-dotnet.terminal.manager")
   local tabline = require("easy-dotnet.terminal.tabline")
   local term = require("easy-dotnet.terminal")
