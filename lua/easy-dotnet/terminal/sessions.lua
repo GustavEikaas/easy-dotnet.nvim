@@ -9,6 +9,8 @@
 ---@field buf integer
 ---@field slot_id string
 ---@field tab easy-dotnet.TerminalTab
+---@field rows integer   -- last size reported to the server, so we only resend on a real change
+---@field cols integer
 
 local M = {
   ---@type table<string, easy-dotnet.Terminal.Session>
@@ -22,13 +24,17 @@ local function notify(method, params)
 end
 
 ---@param buf integer
----@return integer rows, integer cols
+---@return integer|nil rows, integer|nil cols
 function M.measure(buf)
   for _, win in ipairs(vim.api.nvim_list_wins()) do
     if vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_buf(win) == buf then return vim.api.nvim_win_get_height(win), vim.api.nvim_win_get_width(win) end
   end
-  return 24, 80
+  return nil, nil
 end
+
+--- Size to open a terminal at when it has no window yet. Matches the pty defaults on the server.
+M.DEFAULT_ROWS = 24
+M.DEFAULT_COLS = 80
 
 ---@param job_id string
 ---@param session easy-dotnet.Terminal.Session
@@ -84,28 +90,49 @@ function M.on_exit(job_id, exit_code)
   end
 end
 
+---@param job_id string
+function M.kill(job_id)
+  if not M._by_job[job_id] then return end
+  notify("terminal/kill", { jobId = job_id })
+end
+
 ---@param slot_id string
 function M.close_by_slot(slot_id)
   for job_id, session in pairs(M._by_job) do
-    if session.slot_id == slot_id then M._by_job[job_id] = nil end
+    if session.slot_id == slot_id then
+      M.kill(job_id)
+      M._by_job[job_id] = nil
+    end
   end
 end
 
---- Tell the server when the rendering window changes size, so the pty's winsize matches and
---- programs relying on COLUMNS/LINES wrap correctly.
+function M.sync_sizes()
+  for job_id, session in pairs(M._by_job) do
+    if vim.api.nvim_buf_is_valid(session.buf) then
+      local rows, cols = M.measure(session.buf)
+      if rows and (rows ~= session.rows or cols ~= session.cols) then
+        session.rows, session.cols = rows, cols
+        notify("terminal/resize", { jobId = job_id, cols = cols, rows = rows })
+      end
+    end
+  end
+end
+
+--- Dragging a split emits a burst of WinResized; coalesce them into one notification per settle.
+local resize_timer = nil
+
+local function schedule_sync()
+  if not resize_timer then resize_timer = vim.uv.new_timer() end
+  resize_timer:stop()
+  resize_timer:start(50, 0, vim.schedule_wrap(function() M.sync_sizes() end))
+end
+
 function M._ensure_resize_autocmd()
   if M._resize_autocmd then return end
 
-  M._resize_autocmd = vim.api.nvim_create_autocmd({ "WinResized", "VimResized" }, {
+  M._resize_autocmd = vim.api.nvim_create_autocmd({ "WinResized", "VimResized", "BufWinEnter", "WinClosed" }, {
     group = vim.api.nvim_create_augroup("EasyDotnetTerminalResize", { clear = true }),
-    callback = function()
-      for job_id, session in pairs(M._by_job) do
-        if vim.api.nvim_buf_is_valid(session.buf) then
-          local rows, cols = M.measure(session.buf)
-          notify("terminal/resize", { jobId = job_id, cols = cols, rows = rows })
-        end
-      end
-    end,
+    callback = schedule_sync,
   })
 end
 

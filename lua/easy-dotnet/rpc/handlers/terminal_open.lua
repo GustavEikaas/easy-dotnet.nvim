@@ -4,6 +4,7 @@ local sessions = require("easy-dotnet.terminal.sessions")
 ---@field jobId string
 ---@field slotId string|nil
 ---@field label string
+---@field arguments string[]|nil
 
 --- Allocates a terminal buffer for a process that runs on the *server*. Neovim never spawns
 --- anything here: output arrives as `terminal/output` notifications and keystrokes are forwarded
@@ -32,7 +33,7 @@ return function(params, response, throw, validate)
   vim.bo[tab.buf].buflisted = false
 
   tab.exec_name = params.label
-  tab.full_args = nil
+  tab.full_args = table.concat(params.arguments or {}, " ")
   tab.last_status = "running"
   tab.last_exit_code = nil
   tab.owned_by = "server"
@@ -45,12 +46,17 @@ return function(params, response, throw, validate)
     on_input = function(_, _, _, data) sessions.send_input(job_id, data) end,
   })
 
-  sessions.register(job_id, { chan = chan, buf = tab.buf, slot_id = slot_id, tab = tab })
+  local rows, cols = sessions.measure(tab.buf)
+  rows = rows or sessions.DEFAULT_ROWS
+  cols = cols or sessions.DEFAULT_COLS
+
+  sessions.register(job_id, { chan = chan, buf = tab.buf, slot_id = slot_id, tab = tab, rows = rows, cols = cols })
 
   if old_buf and vim.api.nvim_buf_is_valid(old_buf) then pcall(vim.api.nvim_buf_delete, old_buf, { force = true }) end
 
   tabline.ensure_timer()
 
-  local rows, cols = sessions.measure(tab.buf)
+  if vim.api.nvim_get_current_buf() == tab.buf then vim.cmd("startinsert") end
+
   response({ rows = rows, cols = cols })
 end
