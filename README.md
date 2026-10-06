@@ -478,9 +478,6 @@ diagnostics.get_workspace_diagnostics("warning")
 Run :Dotnet in nvim to list all commands
 ```
 ```
-Dotnet lsp start
-Dotnet lsp restart
-Dotnet lsp stop
 Dotnet testrunner
 Dotnet run
 Dotnet run default

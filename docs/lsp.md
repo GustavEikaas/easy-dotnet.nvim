@@ -321,9 +321,3 @@ Roslyn behaves like:
 - ⚠️ limited IntelliSense
 - ⚠️ decompiled definitions
 - ⚠️ no project context
-
-
-## Commands
-- `:Dotnet lsp start`
-- `:Dotnet lsp stop`
-- `:Dotnet lsp restart`
