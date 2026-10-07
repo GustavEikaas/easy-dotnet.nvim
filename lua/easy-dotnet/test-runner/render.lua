@@ -180,6 +180,131 @@ local function render_footer(node)
   end
 end
 
+-- ── single-window float chrome (border title + footer) ──────────────────────
+local has_footer_support = vim.fn.has("nvim-0.10") == 1
+
+local function build_right_count_chunks(rs)
+  local ic = M.options.icons or {}
+  local chunks, dw = {}, 0
+  local function push(text, hl)
+    chunks[#chunks + 1] = { text, hl }
+    dw = dw + vim.fn.strdisplaywidth(text)
+  end
+  if (rs.totalRunning or 0) > 0 then push(string.format("%s %d  ", ic.reload, rs.totalRunning), "EasyDotnetTestRunnerRunning") end
+  push(string.format("%s %d  ", ic.success, rs.totalPassed or 0), "EasyDotnetTestRunnerPassed")
+  push(string.format("%s %d  ", ic.failed, rs.totalFailed or 0), "EasyDotnetTestRunnerFailed")
+  push(string.format("%s %d  ", ic.skipped, rs.totalSkipped or 0), "EasyDotnetTestRunnerSkipped")
+  if (rs.totalInconclusive or 0) > 0 then push(string.format("%s %d  ", ic.inconclusive or ic.skipped, rs.totalInconclusive), "EasyDotnetTestRunnerInconclusive") end
+  push(string.format("%d tests ", rs.totalTests or 0), "Comment")
+  return chunks, dw
+end
+
+-- Top border: status on the left, live counts pushed to the right edge.
+local function build_title_chunks(rs, frame)
+  rs = rs or {}
+  local width = (M.win and vim.api.nvim_win_is_valid(M.win)) and vim.api.nvim_win_get_width(M.win) or math.floor(vim.o.columns * 0.8)
+  local status = rs.overallStatus or "Idle"
+
+  local left_text, left_hl
+  if rs.isLoading then
+    left_text = " " .. (frame or spinner.frames[spinner.frame]) .. "  " .. status .. " "
+    left_hl = "EasyDotnetTestRunnerRunning"
+  elseif status == "Idle" then
+    left_text = "  Test Runner "
+    left_hl = "EasyDotnetTestRunnerSolution"
+  else
+    left_text = "  " .. status .. " "
+    if status == "Failed" or status == "Killed" then
+      left_hl = "EasyDotnetTestRunnerFailed"
+    elseif status == "Cancelled" then
+      left_hl = "Comment"
+    elseif status == "Inconclusive" then
+      left_hl = "EasyDotnetTestRunnerInconclusive"
+    else
+      left_hl = "EasyDotnetTestRunnerPassed"
+    end
+  end
+
+  local right_chunks, right_dw = build_right_count_chunks(rs)
+  local pad = math.max(1, width - vim.fn.strdisplaywidth(left_text) - right_dw)
+  local chunks = { { left_text, left_hl }, { string.rep(" ", pad) } }
+  for _, c in ipairs(right_chunks) do
+    chunks[#chunks + 1] = c
+  end
+  return chunks
+end
+
+local footer_label = {
+  Run = "run",
+  Debug = "debug",
+  Invalidate = "reset",
+  GoToSource = "go to file",
+  PeekResults = "peek",
+  GetBuildErrors = "errors",
+  Cancel = "cancel",
+}
+local footer_map = {
+  Run = "run",
+  Debug = "debug_test",
+  Invalidate = "refresh_testrunner",
+  GoToSource = "go_to_file",
+  PeekResults = "peek_stacktrace",
+  GetBuildErrors = "get_build_errors",
+  Cancel = "cancel",
+}
+
+local function key_for(map_name)
+  local m = (M.options.mappings or {})[map_name]
+  return m and m.lhs or "?"
+end
+
+-- Bottom border: contextual "key action" legend for the node under the cursor.
+local function build_footer_chunks(node)
+  local rs = state.runner_status
+  if rs and rs.isLoading then
+    if rs.overallStatus == "Killing" then return nil end
+    local label = rs.overallStatus == "Cancelling" and "kill" or "cancel"
+    return { { " " .. key_for("cancel") .. " ", "EasyDotnetTestRunnerFailed" }, { label .. " ", "Comment" } }
+  end
+
+  if not node or not node.availableActions or #node.availableActions == 0 then return nil end
+
+  local chunks = { { " " } }
+  for _, action in ipairs(node.availableActions) do
+    local label = footer_label[action]
+    local map_name = footer_map[action]
+    if label and map_name then
+      chunks[#chunks + 1] = { key_for(map_name) .. " ", "Special" }
+      chunks[#chunks + 1] = { label .. "   ", "Comment" }
+    end
+  end
+  if #chunks <= 1 then return nil end
+  return chunks
+end
+
+local function set_float_chrome(frame)
+  if M.viewmode ~= "float" then return end
+  if not M.win or not vim.api.nvim_win_is_valid(M.win) then return end
+  local g = M.float_geom
+  if not g then return end
+  local cfg = {
+    relative = "editor",
+    row = g.row,
+    col = g.col,
+    width = g.width,
+    height = g.height,
+    border = "rounded",
+    title = build_title_chunks(state.runner_status, frame),
+    title_pos = "left",
+  }
+  if has_footer_support then
+    local f = (not M.options.hide_legend) and build_footer_chunks(M.node_at_cursor()) or nil
+    cfg.footer = f or ""
+    cfg.footer_pos = "left"
+  end
+  pcall(vim.api.nvim_win_set_config, M.win, cfg)
+end
+
 local function spinner_stop()
   if not spinner.timer then return end
   spinner.timer:stop()
@@ -189,6 +314,15 @@ local function spinner_stop()
 end
 
 local function spinner_tick()
+  if M.viewmode == "float" then
+    if not M.win or not vim.api.nvim_win_is_valid(M.win) then
+      spinner_stop()
+      return
+    end
+    spinner.frame = (spinner.frame % #spinner.frames) + 1
+    set_float_chrome(spinner.frames[spinner.frame])
+    return
+  end
   if not M.header_buf or not vim.api.nvim_buf_is_valid(M.header_buf) then
     spinner_stop()
     return
@@ -222,74 +356,18 @@ end
 
 local function get_float_dims()
   local width = math.floor(vim.o.columns * 0.8)
-  local main_height = math.floor(vim.o.lines * 0.7)
-  local has_footer = not M.options.hide_legend
-  local total_visual_height = main_height + (has_footer and 6 or 4)
-  local start_visual_row = math.floor((vim.o.lines - total_visual_height) / 2) - 2
-  start_visual_row = math.max(1, start_visual_row)
-
-  local main_row = start_visual_row + 3
+  local height = math.floor(vim.o.lines * 0.8)
   local col = math.floor((vim.o.columns - width) / 2)
-
-  return {
-    width = width,
-    height = main_height,
-    col = col,
-    row = main_row,
-    header_row = main_row - 2,
-    footer_row = main_row + main_height + 1,
-  }
+  local row = math.floor((vim.o.lines - height) / 2)
+  return { width = width, height = height, col = col, row = row }
 end
 
 local function resize_floats()
   if not M.win or not vim.api.nvim_win_is_valid(M.win) then return end
   local dims = get_float_dims()
-
+  M.float_geom = dims
   vim.api.nvim_win_set_config(M.win, { width = dims.width, height = dims.height, col = dims.col, row = dims.row, relative = "editor" })
-
-  if M.header_win and vim.api.nvim_win_is_valid(M.header_win) then
-    vim.api.nvim_win_set_config(M.header_win, { width = dims.width, height = 1, col = dims.col, row = dims.header_row, relative = "editor" })
-  end
-
-  if M.footer_win and vim.api.nvim_win_is_valid(M.footer_win) then
-    vim.api.nvim_win_set_config(M.footer_win, { width = dims.width, height = 1, col = dims.col, row = dims.footer_row, relative = "editor" })
-  end
-
   M.refresh()
-end
-
-local function open_header_float(dims)
-  ensure_header_buf()
-  M.header_win = vim.api.nvim_open_win(M.header_buf, false, {
-    relative = "editor",
-    width = dims.width,
-    height = 1,
-    col = dims.col,
-    row = dims.header_row,
-    style = "minimal",
-    border = "rounded",
-    focusable = false,
-    zindex = 51,
-  })
-  vim.wo[M.header_win].cursorline = false
-  vim.wo[M.header_win].winhighlight = "Normal:NormalFloat"
-end
-
-local function open_footer_float(dims)
-  ensure_footer_buf()
-  M.footer_win = vim.api.nvim_open_win(M.footer_buf, false, {
-    relative = "editor",
-    width = dims.width,
-    height = 1,
-    col = dims.col,
-    row = dims.footer_row,
-    style = "minimal",
-    border = "rounded",
-    focusable = false,
-    zindex = 51,
-  })
-  vim.wo[M.footer_win].cursorline = false
-  vim.wo[M.footer_win].winhighlight = "Normal:NormalFloat"
 end
 
 local function open_header_split()
@@ -375,9 +453,7 @@ function M.open(mode, options)
 
   if mode == "float" then
     local dims = get_float_dims()
-
-    open_header_float(dims)
-    if not M.options.hide_legend then open_footer_float(dims) end
+    M.float_geom = dims
 
     M.win = vim.api.nvim_open_win(M.buf, true, {
       relative = "editor",
@@ -388,6 +464,8 @@ function M.open(mode, options)
       style = "minimal",
       border = "rounded",
       focusable = true,
+      title = build_title_chunks(state.runner_status),
+      title_pos = "left",
     })
     disable_gutter(M.win)
 
@@ -396,9 +474,7 @@ function M.open(mode, options)
       once = true,
       callback = function()
         spinner_stop()
-        close_aux_wins()
         M.win = nil
-        pcall(vim.api.nvim_del_augroup_by_name, "EasyDotnetTestRunnerAuxFocus")
         pcall(vim.api.nvim_del_augroup_by_name, "EasyDotnetTestRunnerResize")
       end,
     })
@@ -434,7 +510,13 @@ function M.open(mode, options)
     vim.api.nvim_set_option_value("cursorline", true, { win = M.win })
     vim.api.nvim_create_autocmd("CursorMoved", {
       buffer = M.buf,
-      callback = function() render_footer(M.node_at_cursor()) end,
+      callback = function()
+        if M.viewmode == "float" then
+          set_float_chrome()
+        else
+          render_footer(M.node_at_cursor())
+        end
+      end,
     })
     vim.api.nvim_create_autocmd("VimResized", {
       group = vim.api.nvim_create_augroup("EasyDotnetTestRunnerResize", { clear = true }),
@@ -509,8 +591,7 @@ local function get_status_icon(stype)
   })[stype] or ""
 end
 
-local function render_node(node, depth)
-  local indent = string.rep(" ", depth + 1)
+local function render_node(node, prefix)
   local ntype = node.type and node.type.type or ""
   local pre = node_pre_icon(ntype)
 
@@ -536,7 +617,7 @@ local function render_node(node, depth)
     })[ntype]
   end
 
-  return string.format("%s%s %s%s", indent, pre, node.displayName, status_suffix), hl
+  return string.format("%s%s %s%s", prefix, pre, node.displayName, status_suffix), hl
 end
 
 function M.refresh()
@@ -556,8 +637,12 @@ function M.refresh()
     spinner_stop()
   end
 
-  render_header()
-  render_footer(M.node_at_cursor())
+  if M.viewmode == "float" then
+    set_float_chrome()
+  else
+    render_header()
+    render_footer(M.node_at_cursor())
+  end
 
   if not M.win or not vim.api.nvim_win_is_valid(M.win) then return end
 
@@ -566,17 +651,29 @@ function M.refresh()
 
   local lines = {}
   local highlights = {}
-  state.traverse_visible(function(node, depth)
-    local line, hl = render_node(node, depth)
-    table.insert(lines, line)
-    if hl then table.insert(highlights, { row = #lines - 1, hl = hl }) end
+  local lasts = {}
+  state.traverse_visible(function(node, depth, is_last)
+    lasts[depth] = is_last
+    local prefix = " "
+    if depth > 0 then
+      for i = 1, depth - 1 do
+        prefix = prefix .. (lasts[i] and "   " or "│  ")
+      end
+      prefix = prefix .. (is_last and "└─ " or "├─ ")
+    end
+
+    local line, hl = render_node(node, prefix)
+    lines[#lines + 1] = line
+    local row = #lines - 1
+    highlights[#highlights + 1] = { row = row, hl = "Comment", s = 0, e = #prefix }
+    if hl then highlights[#highlights + 1] = { row = row, hl = hl, s = #prefix, e = -1 } end
   end)
 
   vim.api.nvim_buf_set_lines(M.buf, 0, -1, true, lines)
   vim.api.nvim_set_option_value("modifiable", false, { buf = M.buf })
 
   for _, h in ipairs(highlights) do
-    vim.hl.range(M.buf, ns_id, h.hl, { h.row, 0 }, { h.row, -1 })
+    vim.hl.range(M.buf, ns_id, h.hl, { h.row, h.s }, { h.row, h.e })
   end
 end
 
