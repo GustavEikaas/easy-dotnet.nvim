@@ -142,6 +142,7 @@ local handlers = {
   ---@deprecated we can remove this later when server is updated and we stopped using runCommand
   runCommand = require("easy-dotnet.rpc.handlers.run_command_managed"),
   runCommandManaged = require("easy-dotnet.rpc.handlers.run_command_managed"),
+  ["terminal/open"] = require("easy-dotnet.rpc.handlers.terminal_open"),
   runCommandExternal = require("easy-dotnet.rpc.handlers.run_command_external"),
 }
 
