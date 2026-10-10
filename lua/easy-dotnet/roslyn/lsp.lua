@@ -614,6 +614,9 @@ function M.enable(opts)
       ["textDocument/diagnostic"] = razor_roslyn.handle_diagnostic,
       ["client/registerCapability"] = function(err, params, ctx, config)
         local client_id = ctx.client_id
+
+        if not opts.bulk_filewatcher_registrations then return vim.lsp.handlers["client/registerCapability"](err, params, ctx, config) end
+
         if params.registrations then
           for _, registration in ipairs(params.registrations) do
             if registration.method == "workspace/didChangeWatchedFiles" and registration.registerOptions and registration.registerOptions.watchers then
@@ -648,12 +651,16 @@ function M.enable(opts)
         if not client then return end
         if M.solution_state[client.id] then M.solution_state[client.id].loaded_at = now() end
 
-        vim.defer_fn(function()
-          -- Register all collected watchers in bulk after solution/project is ready
-          M.register_watchers_bulk(client)
-          -- Mark solution as loaded - future registrations will go through normally
+        if not opts.bulk_filewatcher_registrations then
           M.solution_loaded[client.id] = true
-        end, 2000)
+        else
+          vim.defer_fn(function()
+            -- Register all collected watchers in bulk after solution/project is ready
+            M.register_watchers_bulk(client)
+            -- Mark solution as loaded - future registrations will go through normally
+            M.solution_loaded[client.id] = true
+          end, 2000)
+        end
 
         -- This will no longer be needed in 0.13
         -- in nightly after https://github.com/neovim/neovim/pull/40623
