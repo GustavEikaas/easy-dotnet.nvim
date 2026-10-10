@@ -160,6 +160,9 @@ Although not *required* by the plugin, it is highly recommended to install one o
         auto_refresh_codelens = true,
         suggest_updates = true, -- Periodically suggest roslyn-language-server updates
         analyzer_assemblies = {}, -- Any additional roslyn analyzers you might use like SonarAnalyzer.CSharp
+        auto_load_projects = false,
+        daemon_mode = false,
+        bulk_filewatcher_registrations = true,
         razor = {
           enabled = true,
           html = {

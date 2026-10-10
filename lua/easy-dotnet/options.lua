@@ -47,6 +47,7 @@
 --- reference: https://github.com/dotnet/roslyn/blob/main/src/LanguageServer/roslyn-language-server/README.md
 ---@field auto_load_projects boolean
 ---@field daemon_mode boolean
+---@field bulk_filewatcher_registrations boolean -- Whether file watcher registrations are registered at once after solution is loaded (helpful with big solutions)
 
 ---@class easy-dotnet.RazorOpts
 ---@field enabled boolean
@@ -232,6 +233,7 @@ local M = {
       suggest_updates = true,
       auto_load_projects = false,
       daemon_mode = false,
+      bulk_filewatcher_registrations = true,
       razor = {
         enabled = true,
         html = {
