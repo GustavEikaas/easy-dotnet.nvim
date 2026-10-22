@@ -13,6 +13,28 @@ local function get_or_create_buffer(filename)
   return nil
 end
 
+local function is_roslyn_client(client) return client.name == "roslyn" or client.name == constants.lsp_client_name end
+
+---Roslyn keeps diagnostics for attached buffers up to date via pull diagnostics
+---@param buf integer
+local function has_live_diagnostics(buf)
+  for _, client in ipairs(vim.lsp.get_clients({ bufnr = buf })) do
+    if is_roslyn_client(client) then return true end
+  end
+  return false
+end
+
+-- Diagnostics in our namespace are a snapshot from the last workspace diagnostics run.
+-- Once Roslyn attaches to a buffer it reports live diagnostics for it, so drop the snapshot
+-- for that buffer to avoid stale (or duplicated) entries.
+vim.api.nvim_create_autocmd("LspAttach", {
+  group = vim.api.nvim_create_augroup("easy-dotnet-diagnostics", { clear = true }),
+  callback = function(args)
+    local client = vim.lsp.get_client_by_id(args.data.client_id)
+    if client and is_roslyn_client(client) then vim.diagnostic.reset(diagnostic_ns, args.buf) end
+  end,
+})
+
 ---@param diagnostic_msg table DiagnosticMessage from server
 ---@return vim.Diagnostic
 local function diagnostic_message_to_vim(diagnostic_msg)
@@ -45,24 +67,7 @@ function M.populate_diagnostics(diagnostics_response, filter_func)
     return
   end
 
-  local roslyn_clients = vim.lsp.get_clients({ name = "roslyn" })
-  local easy_dotnet_roslyn_clients = vim.lsp.get_clients({ name = constants.lsp_client_name })
-  local all_clients = {}
-  vim.list_extend(all_clients, roslyn_clients)
-  vim.list_extend(all_clients, easy_dotnet_roslyn_clients)
-  local ns = diagnostic_ns
-
-  if all_clients and #all_clients > 0 then
-    for _, client in ipairs(all_clients) do
-      local ok, lsp_ns = pcall(vim.lsp.diagnostic.get_namespace, client.id)
-      if ok and lsp_ns then
-        ns = lsp_ns
-        break
-      end
-    end
-  end
-
-  vim.diagnostic.reset(ns)
+  vim.diagnostic.reset(diagnostic_ns)
 
   local grouped_diagnostics = {}
   for _, diagnostic in ipairs(diagnostics) do
@@ -74,9 +79,16 @@ function M.populate_diagnostics(diagnostics_response, filter_func)
     end
   end
 
+  local qf_diagnostics = {}
   for filepath, file_diagnostics in pairs(grouped_diagnostics) do
     local buf = get_or_create_buffer(filepath)
-    if buf then vim.diagnostic.set(ns, buf, file_diagnostics) end
+    if buf then
+      for _, d in ipairs(file_diagnostics) do
+        d.bufnr = buf
+        table.insert(qf_diagnostics, d)
+      end
+      if not has_live_diagnostics(buf) then vim.diagnostic.set(diagnostic_ns, buf, file_diagnostics) end
+    end
   end
 
   local total_count = #diagnostics
@@ -84,7 +96,10 @@ function M.populate_diagnostics(diagnostics_response, filter_func)
   vim.notify(string.format("Populated %d diagnostics across %d files", total_count, filtered_count), vim.log.levels.INFO)
 
   local options = require("easy-dotnet.options").options
-  if options.diagnostics and options.diagnostics.setqflist then vim.diagnostic.setqflist({ namespace = ns }) end
+  if options.diagnostics and options.diagnostics.setqflist then
+    vim.fn.setqflist({}, " ", { title = "Workspace diagnostics", items = vim.diagnostic.toqflist(qf_diagnostics) })
+    vim.cmd("botright copen")
+  end
 end
 
 return M
