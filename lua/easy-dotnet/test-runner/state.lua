@@ -143,18 +143,20 @@ end
 function M.traverse_visible(cb)
   if not M.root_id then return end
 
-  local function walk(id, depth)
+  local function walk(id, depth, is_last)
     local node = M.nodes[id]
     if not node then return end
-    cb(node, depth)
+    cb(node, depth, is_last)
     if node.expanded then
-      for _, child in ipairs(M.children(id)) do
-        walk(child.id, depth + 1)
+      local children = M.children(id)
+      local count = #children
+      for i, child in ipairs(children) do
+        walk(child.id, depth + 1, i == count)
       end
     end
   end
 
-  walk(M.root_id, 0)
+  walk(M.root_id, 0, true)
 end
 
 --- Walk ALL nodes in tree order regardless of expansion, calling cb(node, depth).
