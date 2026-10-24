@@ -54,6 +54,8 @@ local function check_lsp_configured()
   local is_enabled = vim.lsp.is_enabled(constants.lsp_client_name)
   if is_enabled then
     vim.health.ok("Roslyn LSP enabled")
+  elseif require("easy-dotnet.roslyn.lsp").activation_pending then
+    vim.health.ok("Roslyn LSP enabled (waiting for build configuration)")
   else
     vim.health.warn("Roslyn LSP not enabled")
   end

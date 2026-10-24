@@ -62,6 +62,7 @@ local M = {
 ---| "user-secrets/open"
 ---| "solution/add-project"
 ---| "solution/remove-project"
+---| "solution/set-build-configuration"
 ---| "workspace/pack"
 ---| "workspace/pack-and-push"
 ---| "nuget/get-package-versions"

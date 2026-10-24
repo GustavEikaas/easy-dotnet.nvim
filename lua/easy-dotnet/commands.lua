@@ -445,6 +445,14 @@ M.solution = {
       end,
       passthrough = true,
     },
+    configuration = {
+      handle = function(args)
+        local build_type = type(args) == "string" and args or (type(args) == "table" and args[1] or nil)
+        local client = require("easy-dotnet.rpc.rpc").global_rpc_client
+        client:initialize(function() client:solution_set_build_configuration(build_type) end)
+      end,
+      passthrough = true,
+    },
     add = {
       handle = function()
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
