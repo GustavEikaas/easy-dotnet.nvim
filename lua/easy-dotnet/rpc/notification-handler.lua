@@ -30,6 +30,14 @@ end
 
 ---@param client easy-dotnet.RPC.Client.Dotnet
 M.handler = function(client, method, params)
+  if method == "terminal/output" then
+    require("easy-dotnet.terminal.sessions").write_output(params.jobId, params.data)
+    return
+  elseif method == "terminal/exit" then
+    require("easy-dotnet.terminal.sessions").on_exit(params.jobId, params.exitCode)
+    return
+  end
+
   coroutine.wrap(function()
     if method == "$/progress" then
       local token = params.token
