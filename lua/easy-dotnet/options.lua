@@ -48,6 +48,7 @@
 ---@field auto_load_projects boolean
 ---@field daemon_mode boolean
 ---@field bulk_filewatcher_registrations boolean -- Whether file watcher registrations are registered at once after solution is loaded (helpful with big solutions)
+---@field log_level "Critical"|"Debug"|"Error"|"Information"|"None"|"Trace"|"Warning"
 
 ---@class easy-dotnet.RazorOpts
 ---@field enabled boolean
@@ -243,6 +244,7 @@ local M = {
         },
       },
       config = {},
+      log_level = "Information",
     },
     diagnostics = {
       default_severity = "error",

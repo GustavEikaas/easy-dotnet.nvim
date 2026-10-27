@@ -414,6 +414,9 @@ function M.enable(opts)
   local razor_enabled = not opts.razor or opts.razor.enabled ~= false
   local roslyn_extension_enabled = opts.easy_dotnet_extension_enabled == true or opts.enhanced_rename == true or opts.create_type_from_usage == true
 
+  table.insert(cmd, "--logLevel")
+  table.insert(cmd, opts.log_level)
+
   if opts.daemon_mode then table.insert(cmd, "--daemon-mode") end
   if opts.auto_load_projects then table.insert(cmd, "--autoLoadProjects") end
 
