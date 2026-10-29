@@ -90,6 +90,32 @@ local function define_highlights()
   -- `default = true` so colorschemes and user config can override it.
   vim.api.nvim_set_hl(0, "@lsp.type.excludedCode", { link = "Comment", default = true })
 
+  local razor_highlights = {
+    markupAttributeQuote = "@string",
+    markupAttribute = "@tag.attribute",
+    markupAttributeValue = "@string",
+    markupCommentPunctuation = "@comment",
+    markupComment = "@comment",
+    markupElement = "@tag",
+    markupOperator = "@operator",
+    markupTagDelimiter = "@tag.delimiter",
+    markupTextLiteral = "@none",
+    razorCommentStar = "@comment",
+    razorCommentTransition = "@comment",
+    razorComment = "@comment",
+    razorComponentAttribute = "@property",
+    razorComponentElement = "@type",
+    razorDirectiveAttribute = "@attribute",
+    razorDirectiveColon = "@punctuation.delimiter",
+    razorDirective = "@keyword",
+    razorTagHelperAttribute = "@tag.attribute",
+    razorTagHelperElement = "@type",
+    razorTransition = "@punctuation.special",
+  }
+  for token, link in pairs(razor_highlights) do
+    vim.api.nvim_set_hl(0, "@lsp.type." .. token .. ".razor", { link = link, default = true })
+  end
+
   --Debugger
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerFloatVariable, { link = "Question" })
   vim.api.nvim_set_hl(0, constants.highlights.EasyDotnetDebuggerVirtualVariable, { link = "Question" })

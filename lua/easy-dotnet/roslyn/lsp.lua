@@ -617,6 +617,8 @@ function M.enable(opts)
       ["textDocument/diagnostic"] = razor_roslyn.handle_diagnostic,
       ["client/registerCapability"] = function(err, params, ctx, config)
         local client_id = ctx.client_id
+        local client = vim.lsp.get_client_by_id(client_id)
+        if not err and client and params and params.registrations then razor_roslyn.update_semantic_token_legend(client, params.registrations) end
 
         if not opts.bulk_filewatcher_registrations then return vim.lsp.handlers["client/registerCapability"](err, params, ctx, config) end
 
