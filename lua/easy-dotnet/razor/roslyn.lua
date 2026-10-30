@@ -75,17 +75,6 @@ local function sanitize_diagnostic_result(result)
   return result
 end
 
-function M.disable_semantic_tokens(bufnr, client)
-  if not (vim.api.nvim_buf_is_valid(bufnr) and client and client.id) then return end
-
-  if vim.lsp.semantic_tokens and vim.lsp.semantic_tokens.enable then
-    vim.lsp.semantic_tokens.enable(false, { bufnr = bufnr })
-    return
-  end
-
-  if vim.lsp.semantic_tokens and vim.lsp.semantic_tokens.stop then vim.lsp.semantic_tokens.stop(bufnr, client.id) end
-end
-
 function M.handle_diagnostic(err, result, ctx, config)
   local is_razor = is_razor_params(ctx and ctx.params)
   if err and is_razor and is_duplicate_key_diagnostic_error(err) then return vim.NIL end
@@ -146,6 +135,44 @@ function M.suppress_semantic_tokens(client)
     local resolved_bufnr = type(bufnr) == "table" and bufnr.bufnr or bufnr
     if is_semantic_tokens_method(method) and is_razor_buffer(resolved_bufnr) then return false end
     return supports_method(self, method, bufnr)
+  end
+end
+
+---@param client vim.lsp.Client
+---@param registrations lsp.Registration[]
+function M.update_semantic_token_legend(client, registrations)
+  if client._easy_dotnet_razor_semantic_tokens_incompatible then return end
+  local provider = client.server_capabilities.semanticTokensProvider
+  if not provider then return end
+
+  -- Neovim decodes even dynamically registered tokens using the static legend.
+  -- Razor extends Roslyn's legend; only append entries so C# token indexes stay intact.
+  local legend = vim.deepcopy(provider.legend)
+  for _, registration in ipairs(registrations) do
+    local incoming = registration.method == "textDocument/semanticTokens" and vim.tbl_get(registration, "registerOptions", "legend")
+    if incoming then
+      for _, key in ipairs({ "tokenTypes", "tokenModifiers" }) do
+        for index, name in ipairs(incoming[key]) do
+          if legend[key][index] and legend[key][index] ~= name then
+            client._easy_dotnet_razor_semantic_tokens_incompatible = true
+            M.suppress_semantic_tokens(client)
+            -- Clear stale tokens without persisting a buffer opt-out across client restarts.
+            for bufnr in pairs(client.attached_buffers) do
+              if is_razor_buffer(bufnr) then vim.lsp.semantic_tokens.force_refresh(bufnr) end
+            end
+            logger.warn("[easy-dotnet] Razor semantic highlighting disabled until Roslyn restarts: incompatible semantic token legend (" .. key .. ").")
+            return
+          end
+          legend[key][index] = name
+        end
+      end
+    end
+  end
+  if not vim.deep_equal(provider.legend, legend) then
+    provider.legend = legend
+    for bufnr in pairs(client.attached_buffers) do
+      if is_razor_buffer(bufnr) then vim.lsp.semantic_tokens.force_refresh(bufnr) end
+    end
   end
 end
 

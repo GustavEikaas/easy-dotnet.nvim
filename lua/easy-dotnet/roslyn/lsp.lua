@@ -541,7 +541,6 @@ function M.enable(opts)
         require("easy-dotnet.roslyn.lsp.enhanced_rename").install(client, opts)
         require("easy-dotnet.roslyn.lsp.create_type_from_usage").install(client, opts)
       end
-      razor_roslyn.suppress_semantic_tokens(client)
       M.solution_state[client.id] = { loaded_at = nil }
       local file, type = M.find_sln_or_csproj(client.root_dir)
       if not file then return end
@@ -577,7 +576,6 @@ function M.enable(opts)
       end)
     end,
     on_attach = function(client, buf)
-      razor_roslyn.suppress_semantic_tokens(client)
       vim.b[buf].roslyn_buf_opened_at = now()
       register_file_rename_tracking(client, buf)
       if vim.bo[buf].filetype == "cs" then
@@ -586,8 +584,6 @@ function M.enable(opts)
         require("easy-dotnet.roslyn.lsp.auto_insert").setup(client, buf)
       elseif vim.bo[buf].filetype == "razor" then
         razor_html.register_razor_close(client, buf)
-        razor_roslyn.disable_semantic_tokens(buf, client)
-        vim.schedule(function() razor_roslyn.disable_semantic_tokens(buf, client) end)
       end
       if vim.bo[buf].filetype == "cs" and require("easy-dotnet.options").get_option("lsp").auto_refresh_codelens then
         if vim.fn.has("nvim-0.12") == 1 then
@@ -617,6 +613,8 @@ function M.enable(opts)
       ["textDocument/diagnostic"] = razor_roslyn.handle_diagnostic,
       ["client/registerCapability"] = function(err, params, ctx, config)
         local client_id = ctx.client_id
+        local client = vim.lsp.get_client_by_id(client_id)
+        if not err and client and params and params.registrations then razor_roslyn.update_semantic_token_legend(client, params.registrations) end
 
         if not opts.bulk_filewatcher_registrations then return vim.lsp.handlers["client/registerCapability"](err, params, ctx, config) end
 

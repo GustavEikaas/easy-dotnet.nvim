@@ -21,6 +21,12 @@ dotnet-easydotnet roslyn update
 `*.razor` and `*.cshtml` files are handled by Roslyn LSP and are enabled by default.
 easy-dotnet also bridges markup-backed Razor requests to VS Code's HTML language server so features such as HTML completion, hover, formatting, document symbols, and color support can work inside Razor files.
 
+Razor and CSHTML use native LSP semantic highlighting automatically, including markup, directives, components, and embedded C#.
+
+Razor-specific token groups (`@lsp.type.<token>.razor`, also used for CSHTML) have default links to standard highlight groups and are restored on colorscheme changes without overriding custom colors. For example, override `@lsp.type.razorComponentElement.razor` to customize component names.
+
+The plugin extends Roslyn's semantic token legend without changing existing C# indexes. If a server registers an incompatible legend, easy-dotnet warns and disables Razor semantic highlighting for that client until Roslyn restarts, leaving C# highlighting intact.
+
 The HTML language server is an optional Node dependency. easy-dotnet does not bundle it and will not install it automatically.
 If the dependency is missing, Razor still opens through Roslyn, but markup-backed requests return empty responses and `:checkhealth easy-dotnet` reports the missing command with install guidance.
 
