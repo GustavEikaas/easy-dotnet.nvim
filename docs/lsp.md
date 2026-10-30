@@ -21,7 +21,7 @@ dotnet-easydotnet roslyn update
 `*.razor` and `*.cshtml` files are handled by Roslyn LSP and are enabled by default.
 easy-dotnet also bridges markup-backed Razor requests to VS Code's HTML language server so features such as HTML completion, hover, formatting, document symbols, and color support can work inside Razor files.
 
-On **Neovim 0.12+**, Razor and CSHTML use native LSP semantic highlighting automatically, including markup, directives, components, and embedded C#. No local semantic-token overrides are needed. Neovim 0.11 still suppresses Razor semantic tokens because it does not support the required range requests; C# highlighting is unaffected.
+Razor and CSHTML use native LSP semantic highlighting automatically, including markup, directives, components, and embedded C#.
 
 Razor-specific token groups (`@lsp.type.<token>.razor`, also used for CSHTML) have default links to standard highlight groups and are restored on colorscheme changes without overriding custom colors. For example, override `@lsp.type.razorComponentElement.razor` to customize component names.
 
