@@ -1,0 +1,861 @@
+*easy-dotnet-news.txt*
+                         For Neovim >= 0.11.0    Last change: 2026 November 06
+
+==============================================================================
+Table of Contents                         *easy-dotnet-news-table-of-contents*
+
+1. News                                                |easy-dotnet-news-news|
+  - File watching defaults on Linux (#1037)|easy-dotnet-news-news-file-watching-defaults-on-linux-(#1037)|
+  - SharpDbg debugger support|easy-dotnet-news-news-sharpdbg-debugger-support|
+  - Aspire support (#430)        |easy-dotnet-news-news-aspire-support-(#430)|
+  - Razor support (#586)          |easy-dotnet-news-news-razor-support-(#586)|
+  - Official Roslyn NuGet package|easy-dotnet-news-news-official-roslyn-nuget-package|
+  - Project view removed (easy-dotnet-server#399)|easy-dotnet-news-news-project-view-removed-(easy-dotnet-server#399)|
+  - ProjX LSP enabled by default|easy-dotnet-news-news-projx-lsp-enabled-by-default|
+  - Neotest support (#389)      |easy-dotnet-news-news-neotest-support-(#389)|
+  - Multi-terminal panel (#872)|easy-dotnet-news-news-multi-terminal-panel-(#872)|
+  - External terminal window reuse (#336)|easy-dotnet-news-news-external-terminal-window-reuse-(#336)|
+  - Workspace run and debug moved to the server (#858)|easy-dotnet-news-news-workspace-run-and-debug-moved-to-the-server-(#858)|
+  - Test Runner v2 (#838)        |easy-dotnet-news-news-test-runner-v2-(#838)|
+  - Interactive debugger console (#813)|easy-dotnet-news-news-interactive-debugger-console-(#813)|
+  - Preloading Roslyn (#794)  |easy-dotnet-news-news-preloading-roslyn-(#794)|
+  - Automatic .NET Variable Conversion (#666)|easy-dotnet-news-news-automatic-.net-variable-conversion-(#666)|
+  - Supported Types                    |easy-dotnet-news-news-supported-types|
+  - Bundled NetCoreDbg - Zero Installation Debugging (#204)|easy-dotnet-news-news-bundled-netcoredbg---zero-installation-debugging-(#204)|
+  - Roslyn native lsp setup    |easy-dotnet-news-news-roslyn-native-lsp-setup|
+  - Roslyn LSP 0 click setup (#539)|easy-dotnet-news-news-roslyn-lsp-0-click-setup-(#539)|
+  - NetCoreDbg 0 click DAP configuration (#523)|easy-dotnet-news-news-netcoredbg-0-click-dap-configuration-(#523)|
+  - .NET framework support (#484)|easy-dotnet-news-news-.net-framework-support-(#484)|
+
+==============================================================================
+1. News                                                *easy-dotnet-news-news*
+
+This document is intended for documenting major improvements to this plugin. It
+can be a good idea to check this document occasionally
+
+
+FILE WATCHING DEFAULTS ON LINUX (#1037)*easy-dotnet-news-news-file-watching-defaults-on-linux-(#1037)*
+
+Letting Neovim watch the workspace and report changes to Roslyn is the better
+setup, and it stays the default on macOS and Windows. On Linux it comes with a
+catch: Neovim watches files with `inotifywait`, which registers one inotify
+instance per directory. Open a large solution and that is hundreds of thousands
+of watches — far past the default `fs.inotify.max_user_instances`,
+`fs.inotify.max_user_watches`, and open file descriptor limits. Neovim then
+reports `inotify(7) limit reached` and file watching stops working.
+
+Since most machines are not tuned for that, easy-dotnet now falls back to
+Roslyn’s in-process watcher on Linux so things work out of the box. It is a
+fallback, not an upgrade: the in-process watcher misses changes that Neovim
+would catch.
+
+`:checkhealth easy-dotnet` tells you which side is watching, and on Linux it
+warns when your file descriptor limit is too low. Raise the limits and you can
+go back to the better setup by opting in from `lsp/easy_dotnet.lua`:
+
+>lua
+    ---@type vim.lsp.Config
+    return {
+      capabilities = {
+        workspace = {
+          didChangeWatchedFiles = {
+            dynamicRegistration = true,
+          },
+        },
+      },
+    }
+<
+
+See docs/lsp.md <docs/lsp.md#file-watching> for the recommended limits and how
+to cut the number of watches with Neovim’s libuv backend.
+
+
+SHARPDBG DEBUGGER SUPPORT    *easy-dotnet-news-news-sharpdbg-debugger-support*
+
+easy-dotnet ships with a new debugger engine, **SharpDbg**. Select it with:
+
+>lua
+    require("easy-dotnet").setup({
+      debugger = {
+        engine = "sharpdbg", -- "netcoredbg" | "dncdbg" | "sharpdbg"
+      },
+    })
+<
+
+easy-dotnet’s value converters (the `apply_value_converters` option) exist to
+clean up how common .NET types like `List<T>` and `Dictionary<K,V>` display,
+because netcoredbg shows their raw internals. SharpDbg already presents these
+types cleanly on its own, so when `engine = "sharpdbg"` the
+`apply_value_converters` option is ignored.
+
+
+ASPIRE SUPPORT (#430)            *easy-dotnet-news-news-aspire-support-(#430)*
+
+One of the older requests is finally in: `:Dotnet run` and `:Dotnet debug` now
+work with .NET Aspire solutions.
+
+When easy-dotnet detects an Aspire AppHost project it shows up in the picker
+with an `[aspire]` suffix:
+
+>
+    ServiceA (net8.0)
+    MyAppHost (net8.0) [aspire]
+<
+
+Pick the AppHost and run it like any other project. easy-dotnet launches the
+Aspire host instead of a plain `dotnet run`, so the dashboard comes up and all
+of your services are orchestrated for you. `:Dotnet debug` does the same with
+the debugger attached.
+
+There’s nothing to configure — detection is automatic via the
+`IsAspireHost` MSBuild property. Non-Aspire projects in the same solution keep
+running and debugging exactly as before.
+
+To tear everything down, hit `Ctrl+C` in the terminal window running the
+AppHost — all the child services spin down with it.
+
+Big thanks to everyone who helped test this out, both in #430
+<https://github.com/GustavEikaas/easy-dotnet.nvim/issues/430> and over on
+Discord.
+
+
+RAZOR SUPPORT (#586)              *easy-dotnet-news-news-razor-support-(#586)*
+
+easy-dotnet now starts Roslyn for `.razor` and `.cshtml` files using the Razor
+cohosting model. This means Razor support works through the built-in Roslyn
+LSP.
+
+Markup-backed features use VS Code’s HTML language server when
+`vscode-html-language-server` is available in `PATH`. easy-dotnet does not
+bundle or install this Node dependency; install it with `npm install -g
+vscode-langservers-extracted`.
+
+
+OFFICIAL ROSLYN NUGET PACKAGE*easy-dotnet-news-news-official-roslyn-nuget-package*
+
+easy-dotnet now uses the **official roslyn-language-server dotnet global tool**
+instead of a bundled copy of the Roslyn LSP. This reduces the server
+installation size from **85 MB → 44 MB**.
+
+
+AUTO-INSTALL ~
+
+The first time Roslyn is started, the server checks whether
+`roslyn-language-server` is present. If it isn’t, it installs it
+automatically via:
+
+>
+    dotnet tool install --global roslyn-language-server --prerelease
+<
+
+To install or update manually, run:
+
+>
+    dotnet-easydotnet roslyn install
+    dotnet-easydotnet roslyn update
+<
+
+`dotnet-easydotnet roslyn update` is a thin convenience wrapper — it shells
+out to `dotnet tool update -g roslyn-language-server --prerelease`.
+
+
+PERIODIC UPDATE NOTIFICATIONS ~
+
+On startup the server checks NuGet for a newer `roslyn-language-server` release
+(at most once per update-check interval). When an update is found it sends a
+notification to Neovim:
+
+- If your installed version is **below the minimum recommended version**, a `warn`-level message is shown.
+- Otherwise an `info`-level message is shown.
+
+Both messages tell you to run `dotnet-easydotnet roslyn update`.
+
+To silence these notifications add `suggest_updates = false` to your `lsp`
+options:
+
+>lua
+    require("easy-dotnet").setup({
+      lsp = {
+        suggest_updates = false,
+      },
+    })
+<
+
+
+PROJECT VIEW REMOVED (EASY-DOTNET-SERVER#399)*easy-dotnet-news-news-project-view-removed-(easy-dotnet-server#399)*
+
+The project view has been removed. ProjX LSP now owns the project-file
+experience, so keeping a separate Lua view for package and project-reference
+management no longer made sense.
+
+
+BREAKING CHANGES ~
+
+- Removed `dotnet.project_view()` and `dotnet.project_view_default()`.
+- Removed `:Dotnet project view` and `:Dotnet project view default`.
+- Removed the old persisted project-selection cache and the internal `:Dotnet _cached_files` preview command.
+- Removed the `background_scanning` option and the startup `.sln` project preload. Roslyn preload remains controlled by `lsp.preload_roslyn`.
+
+Project references can still be added from `.csproj` and `.fsproj` buffers
+through the existing project-file mappings, and package operations remain
+available through `:Dotnet add package` / `:Dotnet remove package` and ProjX
+LSP completion.
+
+
+PROJX LSP ENABLED BY DEFAULT*easy-dotnet-news-news-projx-lsp-enabled-by-default*
+
+easy-dotnet now enables the ProjX LSP by default for `.csproj` files. Package
+autocomplete for `PackageReference` entries is provided through normal LSP
+completion, so manual completion-source setup is no longer needed.
+
+
+UPGRADE NOTES ~
+
+If you previously registered the `easy-dotnet` completion source manually,
+remove it from your completion setup:
+
+- `cmp.register_source("easy-dotnet", require("easy-dotnet").package_completion_source)`
+- `easy-dotnet` entries in `nvim-cmp` sources
+- `easy-dotnet.completion.blink` providers in `blink.cmp`
+
+
+NEOTEST SUPPORT (#389)          *easy-dotnet-news-news-neotest-support-(#389)*
+
+One of the oldest feature requests (#298
+<https://github.com/GustavEikaas/easy-dotnet.nvim/issues/298>, raised Mar 29,
+2025) has finally landed. easy-dotnet now ships with a built-in neotest
+<https://github.com/nvim-neotest/neotest> adapter. It piggybacks on the
+existing test runner RPC server, so both VSTest and MTP adapters are supported
+— no separate discovery or build step is needed.
+
+To enable it, pass the adapter to your neotest setup:
+
+>lua
+    require("neotest").setup({
+      adapters = {
+        require("easy-dotnet").neotest(),
+      },
+    })
+<
+
+If you prefer neotest’s buffer signs and keymaps, set `neotest_integration =
+true` to prevent the built-in test runner from overwriting them:
+
+>lua
+    dotnet.setup({
+      test_runner = {
+        neotest_integration = true,
+      },
+    })
+<
+
+
+MULTI-TERMINAL PANEL (#872)*easy-dotnet-news-news-multi-terminal-panel-(#872)*
+
+The managed terminal has been replaced with a multi-tab panel. Instead of a
+single scratch buffer, the panel now hosts named tabs — one per running job
+— and you can open as many personal shell tabs as you like.
+
+
+GETTING A TERMINAL ~
+
+>vim
+    :Dotnet terminal toggle
+    :Dotnet terminal show
+    :Dotnet terminal hide
+<
+
+A floating tab-bar sits above the panel showing every open tab, its status
+icon, and the command being run.
+
+
+OWNERSHIP CONTEXT ~
+
+Tabs are either **server-owned** or **user-owned**.
+
+**Server-owned tabs** are created automatically whenever the server starts a
+job (`:Dotnet run`, restore, build output, etc.). Each job gets its own named
+slot so concurrent jobs never overwrite each other. When a server-owned job
+exits with code 0, the panel auto-hides after the configured delay (controlled
+by `managed_terminal.auto_hide` and `managed_terminal.auto_hide_delay`).
+
+**User-owned tabs** are plain `$SHELL` sessions you open yourself by pressing
+`+` inside the panel. They are never auto-hidden and survive across multiple
+server jobs.
+
+
+PANEL KEYMAPS (CONFIGURABLE) ~
+
+  Key       Action
+  --------- -----------------------
+  <Tab>     Next tab
+  <S-Tab>   Previous tab
+  +         New user terminal tab
+  X         Close current tab
+  q         Hide panel
+All of these can be remapped — see the `managed_terminal.mappings`
+configuration below.
+
+
+EXTERNAL TERMINAL WINDOW REUSE (#336)*easy-dotnet-news-news-external-terminal-window-reuse-(#336)*
+
+When using `options.external_terminal`, running and debugging will spawn a
+completely separate window like Kitty or Windows Terminal. This is great and
+provides an easy way to see stdout from your application. Unfortunately, when
+your app exits, this window is orphaned. Depending on your config, one of 2
+things will happen. The terminal window closes, causing you to miss crash logs
+if any. The window lingers, but it has lost its relationship with easy-dotnet,
+so when you start a new debug session a completely new window will be spawned.
+GustavEikaas/easy-dotnet-server#336 fixes this and ensures that terminal
+windows will be reused no matter which terminal emulator you use.
+
+
+WORKSPACE RUN AND DEBUG MOVED TO THE SERVER (#858)*easy-dotnet-news-news-workspace-run-and-debug-moved-to-the-server-(#858)*
+
+`:Dotnet run` and `:Dotnet debug` have now been moved fully into the C# server,
+similar to the test runner rewrite. This also improves support for running and
+debugging file-based apps. Debugging file-based apps was not possible at all
+previously. It now uses the newer managed terminal flow instead of the older
+user-provided `options.terminal` path. CLI arg passthrough when debugging has
+also been improved, so `:Dotnet debug --abc` will pass `--abc` to the debuggee.
+
+
+WHAT THIS MEANS FOR YOU ~
+
+Run and debug should now behave more consistently, and the server has much
+better heuristics for deciding whether something should be treated as a project
+or as a file-based app.
+
+If you want debugging in a separate window, you can use the `external_terminal`
+option.
+
+>lua
+    dotnet.setup({
+        -- Some examples
+        -- local windows_term = { command = "wt", args = { "-w", "-1", "nt", "--" } }
+        -- local linux_term = { command = "kitty", args = { "--hold", "--" } }
+        external_terminal = nil,
+    })
+<
+
+
+TEST RUNNER V2 (#838)            *easy-dotnet-news-news-test-runner-v2-(#838)*
+
+The test runner has been completely rewritten. The old implementation was
+almost entirely Lua, which made it very hard to refactor or improve without
+introducing regressions. Moving it to the C# server (as discussed in #809
+<https://github.com/GustavEikaas/easy-dotnet.nvim/issues/809>) brings strong
+typing, proper testability, and a much cleaner boundary between UI and business
+logic. The Lua side is now a thin UI layer the server handles everything else.
+
+If you run into regressions, please report them in the dedicated feedback issue
+#841 <https://github.com/GustavEikaas/easy-dotnet.nvim/issues/841> the test
+runner is complex and edge cases are expected.
+
+
+WHAT’S NEW ~
+
+**Auto-start and silent background discovery**
+
+The test runner now starts automatically when the server starts. Discovery runs
+silently in the background against any already-built DLLs, so the tree is
+populated before you even open the window. For projects that haven’t been
+built yet, the runner waits until you open the window and then builds and
+discovers the remaining projects automatically. No more cold-start friction.
+
+This can be disabled if you prefer to start the runner manually:
+
+>lua
+    dotnet.setup({
+      test_runner = {
+        auto_start_testrunner = false,
+      }
+    })
+<
+
+**Cancellation support**
+
+There was previously no cancellation support closing the window or triggering a
+new run had no effect on whatever the test binary was doing. The runner now
+supports cancellation properly, signalling the test binary to stop and waiting
+for it to finish cleanly.
+
+**Class-level test execution from buffer**
+
+You can now run an entire test class directly from the buffer. This replaces
+the old `run_all_tests_from_buffer` command, which only ran individual methods.
+
+**Improved debugger integration**
+
+Debugging can now be triggered from namespace, class, and project nodes in the
+runner, not only from individual tests or theory groups.
+
+Automatic breakpoint insertion when starting a debug session from the runner or
+buffer has been removed. Breakpoints need to be set manually. With debug now
+supported at the namespace, class, and project level there is no single
+sensible location to insert a breakpoint automatically, so breakpoints are left
+entirely to you.
+
+**Flash on run and completion from buffer**
+
+When you trigger a test from the buffer, the method or class flashes to confirm
+the run was picked up. When the run finishes, it flashes again in the colour of
+the result green for passed, red for failed, and so on. Both methods and
+classes support this.
+
+**Improved floating stacktrace from buffer**
+
+The floating stacktrace view now focuses on the stacktrace itself. The source
+buffer float is hidden in this mode as it provides no useful information.
+
+The stacktrace is now parsed and syntax highlighted. Lines from your own code
+are highlighted in yellow and framework code is dimmed in grey, making it easy
+to see at a glance where in your code the failure originated. Press `<CR>` on
+any yellow line to jump directly to that location.
+
+**Class-level icons and signs**
+
+Test result icons and gutter signs are now tracked at the class level in
+addition to individual methods.
+
+**Correct and responsive test signs**
+
+Previously, signs were placed based on line positions reported by the DLL at
+build time. This meant signs would render on incorrect lines whenever you
+edited a file and would stay wrong until the next rebuild. Under heavy editing
+this could also produce out-of-bounds errors as the runner tried to place signs
+on lines that no longer existed.
+
+Signs now use the Roslyn AST to sync their position after every `BufWritePost`,
+so they always reflect the current state of the file regardless of edits.
+
+Because we now resolve test locations through Roslyn rather than relying on
+what the test adapters report, a few other things also improved. We now know
+the start line of the method body and the end line of each test method, neither
+of which are reported by VSTest or MTP. We also use a consistent line for both
+adapters: previously MTP pointed to the [Test] attribute line and VSTest
+pointed to the function signature line, making them disagree on the same test.
+Both now resolve to the same location.
+
+**Stable tree during rediscovery**
+
+The tree no longer collapses while rediscovery is running. Only new and
+orphaned nodes are affected newly discovered nodes are added and nodes that no
+longer exist are removed, while everything else stays exactly where it was.
+
+**M.get_test_results removed**
+
+This API was added in #485
+<https://github.com/GustavEikaas/easy-dotnet.nvim/pull/485> to support use
+cases like displaying test results as code lens via plugins such as
+lensline.nvim <https://github.com/oribarilan/lensline.nvim>. It has been
+removed in v2 and test signs are the intended replacement for surfacing results
+outside the runner window. If signs don’t cover your use case please open an
+issue and we can figure out the best way to bring that functionality back
+properly.
+
+
+BREAKING CHANGES ~
+
+**Removed options**
+
+- `noBuild` no longer meaningful given how the runner manages the build lifecycle
+- `enable_buffer_test_execution` buffer test execution is always enabled now. If you want to disable it, simply unbind the default keys
+- `additional_args` removed. Passing global additional args independent of project context doesn’t really make sense use a `.runsettings` file or the MTP equivalent instead
+- `run_all_tests_from_buffer` keybind removed. Now that running an entire class from the buffer is supported, this command no longer makes sense
+
+Remove these from your config.
+
+
+PERFORMANCE IMPROVEMENTS ~
+
+- Silent background discovery on startup means the tree is populated before you open it
+- Now using the new `EasyDotnet.BuildServer` which is significantly faster than the old dotnet CLI wrapper, and also improves test project properties resolution
+- Multi-project runs share a single build step
+- Incremental tree diffing only changed nodes trigger a re-render
+
+
+UI/UX IMPROVEMENTS ~
+
+- The runner now has a proper header and footer window. Previously there was only virtual text that would disappear if you scrolled too far down
+- The header right-aligns pass/fail/skip counts and degrades gracefully in narrow splits
+- Spinner and status update live during runs without re-rendering the full tree
+- Improved layout responsiveness the runner handles resizing correctly in all split modes
+
+
+UPGRADE NOTES ~
+
+1. Remove `noBuild`, `enable_buffer_test_execution`, `additional_args`, and any `run_all_tests_from_buffer` bindings from your config
+2. Migrate any extra test arguments to `.runsettings` or MTP config
+
+If something that worked in v1 is broken, please drop a note in #841
+<https://github.com/GustavEikaas/easy-dotnet.nvim/issues/841>
+
+
+INTERACTIVE DEBUGGER CONSOLE (#813)*easy-dotnet-news-news-interactive-debugger-console-(#813)*
+
+As many of you know, `easy-dotnet` automatically configures DAP for you with
+netcoredbg, some of you probably noticed that `Console.ReadLine()` would throw
+an exception due to netcoredbg not running in an actual console. To make
+matters worse, all of your application’s output was dumped directly into the
+DAP REPL, creating a messy debugging experience.
+
+This is now fixed in the latest release! We completely overhauled how the
+debugger handles process execution, bringing the Neovim debugging experience
+much closer to Visual Studio.
+
+
+WHAT THIS MEANS FOR YOU ~
+
+- **Full Interactivity:** You can now type input directly into your running C# application! CLI tools and interactive prompts work flawlessly.
+- **A Clean REPL:** Your application’s standard output is now properly routed to the console widget (or an external terminal). Your REPL is finally clean!
+- **Native External Terminals:** Want your app to pop open in a dedicated, detached OS window (like Windows Terminal or Kitty) just like hitting F5 in Visual Studio? The `externalTerminal` option is now supported!
+
+
+CONFIGURATION ~
+
+The `integratedTerminal` option is used by default. You can configure this
+preference in your options.
+
+If you choose to use an `externalTerminal`, you will need to tell `nvim-dap`
+which terminal emulator to use on your machine:
+
+>lua
+    local dotnet = require("easy-dotnet")
+
+    dotnet.setup({
+      debugger = {
+        console = "externalTerminal",
+      }
+    })
+
+    -- Instructions on how dap creates an external terminal window:
+    local dap = require("dap")
+
+    -- Windows (Windows Terminal)
+    dap.defaults.fallback.external_terminal = {
+      command = "wt",
+      args = { "-w", "0", "nt", "--" },
+    }
+
+    -- Linux (Kitty)
+    dap.defaults.fallback.external_terminal = {
+      command = "/usr/bin/kitty",
+      args = { "--hold" }
+    }
+<
+
+
+PRELOADING ROSLYN (#794)      *easy-dotnet-news-news-preloading-roslyn-(#794)*
+
+Neovim traditionally waits to start LSP servers until you open a buffer of the
+relevant filetype. This creates a noticeable delay when opening your first C#
+file.
+
+With this feature, `easy-dotnet` starts loading Roslyn immediately when your
+plugin setup is called, rather than waiting for you to navigate to a file. This
+background loading ensures the server is often "warm" and ready by the time you
+start typing, making the IDE experience significantly smoother.
+
+
+HOW IT WORKS ~
+
+The LSP will preload automatically if:
+
+- The `preload_roslyn` option is enabled (it is `true` by default).
+- A solution file is successfully selected or detected during startup.
+
+
+CONFIGURATION ~
+
+This feature is enabled by default, but you can configure it specifically in
+your `lsp` table:
+
+>lua
+    dotnet.setup({
+      lsp = {
+        enabled = true, -- Enable builtin roslyn lsp
+        preload_roslyn = true, -- Start loading roslyn before any buffer is opened
+      },
+    })
+<
+
+
+AUTOMATIC .NET VARIABLE CONVERSION (#666)*easy-dotnet-news-news-automatic-.net-variable-conversion-(#666)*
+
+Debugging in C# and F# just got significantly more readable. With this release,
+**common .NET types are automatically unwrapped and displayed in a concise,
+human-friendly format** across any DAP-compliant UI in Neovim, including
+`nvim-dap-ui`, `nvim-dap-view`, and others.
+
+Previously, inspecting variables often required navigating internal fields such
+as `_items`, `_size`, or thread-local queues. Now, with **value converters
+enabled by default**, variables like `List<T>`, `Dictionary<K,V>`, and
+`CancellationTokenSource` are displayed cleanly without drilling into private
+fields.
+
+
+WHAT THIS MEANS FOR YOU ~
+
+- **Immediate readability:** See the contents of collections and other common types directly.
+- **DAP-compliant:** Works with any DAP UI plugin — no custom UI required.
+- **Optional:** Can be disabled globally by setting:
+
+>lua
+    require("easy-dotnet").setup({
+      debugger = {
+        apply_value_converters = false,
+      }
+    })
+<
+
+
+EXAMPLE: LIST<STRING> ~
+
+**Converted (new):**
+
+>
+    x System.Collections.Generic.List<string> = {System.Collections.Generic.List<string>}
+      [0] string = "hello"
+      [1] string = "world"
+<
+
+**Previous view (old):**
+
+>
+    x System.Collections.Generic.List<string> = {System.Collections.Generic.List<string>}
+      _items string[] = {string[4]}
+        [0] string = "hello"
+        [1] string = "world"
+        [2] string = null
+        [3] string = null
+      _size int = 2
+      _version int = 2
+      Capacity int = 4
+      Count int = 2
+      System.Collections.IList.IsFixedSize bool = false
+      System.Collections.Generic.ICollection<T>.IsReadOnly bool = false
+      System.Collections.IList.IsReadOnly bool = false
+      System.Collections.ICollection.IsSynchronized bool = false
+      System.Collections.ICollection.SyncRoot System.Collections.Generic.List<string> = {…}
+      Item System.Reflection.TargetParameterCountException = {…}
+      System.Collections.IList.Item System.Reflection.TargetParameterCountException = {…}
+      Static members
+<
+
+
+SUPPORTED TYPES                        *easy-dotnet-news-news-supported-types*
+
+The converters currently handle most basic types, lists, hashsets, queues,
+read-only collections, time types, and threading primitives like
+`CancellationToken`.
+
+If you encounter a type that isn’t yet handled, or want a specific value
+converter, please file an issue
+
+Community contributions are always welcome.
+
+
+BUNDLED NETCOREDBG - ZERO INSTALLATION DEBUGGING (#204)*easy-dotnet-news-news-bundled-netcoredbg---zero-installation-debugging-(#204)*
+
+Debugging just got even easier. NetCoreDbg is now bundled directly with
+easy-dotnet-server for all platforms.
+
+Previously, users had to manually install NetCoreDbg (typically via Mason) and
+configure the `bin_path` option to point to the debugger executable. This added
+unnecessary friction to the setup process and could lead to version mismatches
+or platform-specific issues.
+
+With this release, easy-dotnet-server automatically includes NetCoreDbg
+binaries for Linux (x64/ARM64), macOS (x64), and Windows (x64). The plugin
+intelligently selects the correct binary for your platform at runtime.
+
+
+WHAT THIS MEANS FOR YOU ~
+
+- **No manual installation**: NetCoreDbg comes bundled — just install easy-dotnet-server and start debugging
+- **No bin_path configuration**: The `debugger.bin_path` option is now completely optional
+- **Always compatible**: NetCoreDbg version is guaranteed to work with your server version
+- **Automatic updates**: When you run `dotnet tool update -g EasyDotnet`, you get the latest debugger too
+- **Cross-platform by default**: Works seamlessly on Linux, macOS, and Windows without platform-specific setup
+
+
+MIGRATION GUIDE ~
+
+If you previously configured NetCoreDbg manually, you can now simplify your
+setup:
+
+**Before:**
+
+>lua
+    dotnet.setup {
+      debugger = {
+        bin_path = vim.fn.stdpath("data") .. "/mason/bin/netcoredbg", -- Required
+        auto_register_dap = true,
+      }
+    }
+<
+
+**After:**
+
+>lua
+    dotnet.setup {
+      debugger = {
+        -- bin_path is now optional - falls back to bundled NetCoreDbg
+        auto_register_dap = true,
+      }
+    }
+<
+
+**Note**: If you still prefer to use your own NetCoreDbg installation (e.g.,
+via Mason) or another CoreCLR DAP adapter, the `bin_path` option continues to
+work as before.
+
+
+TECHNICAL DETAILS ~
+
+The bundled NetCoreDbg is extracted from official Samsung/netcoredbg
+<https://github.com/Samsung/netcoredbg> releases during the CI build process
+and packaged with the. NET tool. At runtime, easy-dotnet-server automatically
+detects your platform and uses the appropriate binary.
+
+This approach ensures you always have a working, tested debugger without any
+manual intervention.
+
+
+ROSLYN NATIVE LSP SETUP        *easy-dotnet-news-news-roslyn-native-lsp-setup*
+
+Read more here <./docs/lsp.md> or in the PR #632
+
+
+PROS ~
+
+- Uses the new vim.lsp.config api
+- Easier
+- :LspRestart works now
+- More maintainable
+- More extendable for end users
+- Users can register lsp config in `./lsp/easy_dotnet.lua`
+
+
+ROSLYN LSP 0 CLICK SETUP (#539)*easy-dotnet-news-news-roslyn-lsp-0-click-setup-(#539)*
+
+This release marks a major milestone for easy-dotnet.nvim. With this update,
+Roslyn is now installed and configured automatically. No manual setup required.
+
+You no longer need separate plugins like roslyn.nvim or omnisharp-vim, as LSP
+support is built directly into easy-dotnet. If you prefer to keep using an
+external LSP, simply disable the built-in one by setting:
+
+>lua
+    options.lsp.enabled = false
+<
+
+Additionally, Roslynator is now installed and enabled by default, providing
+richer refactorings and deeper code analysis right out of the box.
+
+
+HOW CAN I START USING THIS ~
+
+It’s enabled by default. Just disable any existing C# LSPs you may have
+configured.
+
+You can pass settings to roslyn like this
+
+>lua
+    local dotnet = require "easy-dotnet"
+
+    dotnet.setup {
+      lsp = {
+        enabled = true,
+        config = {
+          settings = {
+            ["csharp|background_analysis"] = {
+              dotnet_compiler_diagnostics_scope = "fullSolution",
+            },
+            ["csharp|inlay_hints"] = {
+              csharp_enable_inlay_hints_for_implicit_object_creation = true,
+            },
+            ["csharp|code_lens"] = {
+              dotnet_enable_references_code_lens = true,
+            },
+          },
+        },
+      },
+      ...
+    }
+<
+
+
+NETCOREDBG 0 CLICK DAP CONFIGURATION (#523)*easy-dotnet-news-news-netcoredbg-0-click-dap-configuration-(#523)*
+
+Setting up debugging for .NET projects in Neovim has historically been tedious
+and error-prone. Involving manual project rebuilds, DLL resolution, and complex
+nvim-dap configurations. This release completely changes that.
+
+With easy-dotnet’s built-in NetCoreDbg integration, the plugin now handles
+all the heavy lifting for you. By leveraging easy-dotnet-server, debugger
+setup, attach/launch, and breakpoint handling are all automated behind the
+scenes.
+
+You no longer need to manually write DAP configurations for typical .NET
+workflows.
+
+
+FEATURES ~
+
+- Automatic DAP setup: No manual dap.configurations required.
+- Smart project detection: Automatically attaches to the right context (console, VSTest, or MTP).
+- Easy debugging workflow: Starts, attaches, and manages the NetCoreDbg process transparently.
+- easy-dotnet-server <https://github.com/GustavEikaas/easy-dotnet-server>: Acts as a smart proxy between Neovim and NetCoreDbg, rewriting requests and responses as needed.
+- Automatically normalize breakpoints (windows): Automatically fixes this issue nvim-dap#1551 <https://github.com/mfussenegger/nvim-dap/issues/1551>
+
+
+HOW CAN I START USING THIS ~
+
+1. Remove any existing DAP configuration for C#.
+2. Set your debugger path:
+
+>lua
+
+    local dotnet = require "easy-dotnet"
+
+    dotnet.setup {
+      debugger = {
+        -- or full path to netcoredbg executable. (can be installed with mason)
+        bin_path = "netcoredbg",
+      }
+    }
+<
+
+
+.NET FRAMEWORK SUPPORT (#484)*easy-dotnet-news-news-.net-framework-support-(#484)*
+
+This release brings native support for .NET Framework You can now build, run,
+and test classic .NET Framework projects directly inside Neovim including full
+testrunner integration and support for IIS-based projects. LSP functionality is
+also supported out of the box.
+
+Debugger support is not yet available, as no open-source, DAP-compliant CLR
+debugger exists. However, all core workflows are now functional and ready for
+daily use.
+
+
+HOW CAN I START USING THIS ~
+
+- Visual Studio must be installed (required for MSBuild).
+- Install the nuget CLI via Chocolatey or other sources
+
+>sh
+    choco install nuget.commandline
+<
+
+- Set this option in your setup:
+
+>lua
+    options.server.use_visual_studio = true
+<
+
+Generated by panvimdoc <https://github.com/kdheepak/panvimdoc>
+
+vim:tw=78:ts=8:noet:ft=help:norl:
