@@ -1,35 +1,6 @@
 *easy-dotnet.txt*
                          For Neovim >= 0.11.0    Last change: 2026 November 06
 
-==============================================================================
-Table of Contents                              *easy-dotnet-table-of-contents*
-
-  - Simplifying .NET development in Neovim|easy-dotnet-simplifying-.net-development-in-neovim|
-  - Motivation                                        |easy-dotnet-motivation|
-1. Table of Contents                           |easy-dotnet-table-of-contents|
-  - Features                          |easy-dotnet-table-of-contents-features|
-  - Requirements                  |easy-dotnet-table-of-contents-requirements|
-  - Setup                                |easy-dotnet-table-of-contents-setup|
-  - Advanced Patterns        |easy-dotnet-table-of-contents-advanced-patterns|
-  - Commands                          |easy-dotnet-table-of-contents-commands|
-  - Roslyn LSP                      |easy-dotnet-table-of-contents-roslyn-lsp|
-  - Test runner                    |easy-dotnet-table-of-contents-test-runner|
-  - Neotest                            |easy-dotnet-table-of-contents-neotest|
-  - Workspace Diagnostics|easy-dotnet-table-of-contents-workspace-diagnostics|
-  - Outdated                          |easy-dotnet-table-of-contents-outdated|
-  - Add                                    |easy-dotnet-table-of-contents-add|
-  - Project mappings          |easy-dotnet-table-of-contents-project-mappings|
-  - .NET Framework              |easy-dotnet-table-of-contents-.net-framework|
-  - New                                    |easy-dotnet-table-of-contents-new|
-  - EntityFramework            |easy-dotnet-table-of-contents-entityframework|
-  - Language injections    |easy-dotnet-table-of-contents-language-injections|
-  - Nvim-dapconfiguration|easy-dotnet-table-of-contents-nvim-dapconfiguration|
-  - Troubleshooting            |easy-dotnet-table-of-contents-troubleshooting|
-  - Highlight groups          |easy-dotnet-table-of-contents-highlight-groups|
-  - Local Development        |easy-dotnet-table-of-contents-local-development|
-  - Star History                  |easy-dotnet-table-of-contents-star-history|
-  - Contributors                  |easy-dotnet-table-of-contents-contributors|
-2. Links                                                   |easy-dotnet-links|
 <https://git.io/typing-svg>
 
 
@@ -63,51 +34,50 @@ to bridge the gap between the convenience of IDEs like Rider and the
 flexibility of Neovim.
 
 
-==============================================================================
-1. Table of Contents                           *easy-dotnet-table-of-contents*
+TABLE OF CONTENTS                              *easy-dotnet-table-of-contents*
 
 1. Simplifying .NET development in Neovim
 2. |easy-dotnet-motivation|
-3. |easy-dotnet-table-of-contents-features|
-4. |easy-dotnet-table-of-contents-requirements|
-5. |easy-dotnet-table-of-contents-setup|- Without options
+3. |easy-dotnet-features|
+4. |easy-dotnet-requirements|
+5. |easy-dotnet-setup|- Without options
 - With options
 - Lualine config
 
 
-6. |easy-dotnet-table-of-contents-advanced-patterns|
-7. |easy-dotnet-table-of-contents-commands|- Lua functions
+6. |easy-dotnet-advanced-patterns|
+7. |easy-dotnet-commands|- Lua functions
 - Vim commands
 
 
-8. |easy-dotnet-table-of-contents-roslyn-lsp|
-9. |easy-dotnet-table-of-contents-test-runner|- Keymaps
+8. |easy-dotnet-roslyn-lsp|
+9. |easy-dotnet-test-runner|- Keymaps
 - Debugging tests
 - Running tests from buffer
 
 
-10. |easy-dotnet-table-of-contents-neotest|
+10. |easy-dotnet-neotest|
 
 - Requirements
 - Setup
 
-1. |easy-dotnet-table-of-contents-workspace-diagnostics|- Commands
+1. |easy-dotnet-workspace-diagnostics|- Commands
 - Configuration
 - Features
 
 
-2. |easy-dotnet-table-of-contents-outdated|
-3. |easy-dotnet-table-of-contents-add|- Add package
+2. |easy-dotnet-outdated|
+3. |easy-dotnet-add|- Add package
 
 
-4. |easy-dotnet-table-of-contents-project-mappings|- Add reference
+4. |easy-dotnet-project-mappings|- Add reference
 - Package autocomplete
 
 
-5. |easy-dotnet-table-of-contents-.net-framework|- Requirements
+5. |easy-dotnet-.net-framework|- Requirements
 
 
-6. |easy-dotnet-table-of-contents-new|- Project
+6. |easy-dotnet-new|- Project
 - Configuration file
 - Integrating with nvim-tree
 - Integrating with neo-tree
@@ -115,25 +85,25 @@ flexibility of Neovim.
 - Integrating with snacks explorer
 
 
-7. |easy-dotnet-table-of-contents-entityframework|- Requirements
+7. |easy-dotnet-entityframework|- Requirements
 - Database
 - Migrations
 
 
-8. |easy-dotnet-table-of-contents-language-injections|- Showcase
+8. |easy-dotnet-language-injections|- Showcase
 - Requirements
 - Support matrix
 
 
-9. |easy-dotnet-table-of-contents-nvim-dapconfiguration|
-10. |easy-dotnet-table-of-contents-troubleshooting|
-11. |easy-dotnet-table-of-contents-highlight-groups|
-12. |easy-dotnet-table-of-contents-local-development|
-13. |easy-dotnet-table-of-contents-star-history|
-14. |easy-dotnet-table-of-contents-contributors|
+9. |easy-dotnet-nvim-dapconfiguration|
+10. |easy-dotnet-troubleshooting|
+11. |easy-dotnet-highlight-groups|
+12. |easy-dotnet-local-development|
+13. |easy-dotnet-star-history|
+14. |easy-dotnet-contributors|
 
 
-FEATURES                              *easy-dotnet-table-of-contents-features*
+FEATURES                                                *easy-dotnet-features*
 
 - Roslyn LSP support out of the box — powered by the official .NET Roslyn language server (see LSP details <./docs/lsp.md>)
 - Debugger configured out of the box- powered by netcoredbg <https://github.com/samsung/netcoredbg>
@@ -151,7 +121,7 @@ FEATURES                              *easy-dotnet-table-of-contents-features*
     syntax highlighting for injected languages (sql, json and xml) based on comments
 
 
-REQUIREMENTS                      *easy-dotnet-table-of-contents-requirements*
+REQUIREMENTS                                        *easy-dotnet-requirements*
 
 - Neovim 0.11+ built with **LuaJIT**
 - EasyDotnet <https://www.nuget.org/packages/EasyDotnet> `dotnet tool install -g EasyDotnet`
@@ -162,7 +132,7 @@ fzf-lua <https://github.com/ibhagwan/fzf-lua> - snacks.nvim
 <https://github.com/folke/snacks.nvim>
 
 
-SETUP                                    *easy-dotnet-table-of-contents-setup*
+SETUP                                                      *easy-dotnet-setup*
 
 
 WITHOUT OPTIONS ~
@@ -415,7 +385,7 @@ Uses three Codicons <https://www.nerdfonts.com/> (requires Nerd Font):
 <
 
 
-ADVANCED PATTERNS            *easy-dotnet-table-of-contents-advanced-patterns*
+ADVANCED PATTERNS                              *easy-dotnet-advanced-patterns*
 
 For a more complete Visual Studio-style setup with external run/debug
 terminals, AppWrapper window reuse, the built-in terminal panel, lualine
@@ -423,7 +393,7 @@ status, and ProjX project-file features, see Advanced Patterns
 <./docs/advanced-patterns.md>.
 
 
-COMMANDS                              *easy-dotnet-table-of-contents-commands*
+COMMANDS                                                *easy-dotnet-commands*
 
 
 LUA FUNCTIONS ~
@@ -686,7 +656,7 @@ VIM COMMANDS ~
 <
 
 
-ROSLYN LSP                          *easy-dotnet-table-of-contents-roslyn-lsp*
+ROSLYN LSP                                            *easy-dotnet-roslyn-lsp*
 
 Roslyn LSP support is enabled **out of the box** — no configuration required.
 Just open a C#, Razor, or CSHTML file and the official .NET language server
@@ -738,7 +708,7 @@ active root.
 For more information check out <./docs/lsp.md>
 
 
-TEST RUNNER                        *easy-dotnet-table-of-contents-test-runner*
+TEST RUNNER                                          *easy-dotnet-test-runner*
 
 Integrated test runner inspired by Rider IDE. Powered by easy-dotnet-server
 <https://github.com/GustavEikaas/easy-dotnet-server>. The server supports both
@@ -834,7 +804,7 @@ result.
 
 
 
-NEOTEST                                *easy-dotnet-table-of-contents-neotest*
+NEOTEST                                                  *easy-dotnet-neotest*
 
 easy-dotnet ships a built-in neotest <https://github.com/nvim-neotest/neotest>
 adapter. It reuses the same test runner state that powers the built-in test
@@ -906,7 +876,7 @@ LAZY.NVIM EXAMPLE
 <
 
 
-WORKSPACE DIAGNOSTICS    *easy-dotnet-table-of-contents-workspace-diagnostics*
+WORKSPACE DIAGNOSTICS                      *easy-dotnet-workspace-diagnostics*
 
 Analyze your entire solution or individual projects for compilation errors and
 warnings using Roslyn diagnostics.
@@ -948,7 +918,7 @@ trouble.nvim or snacks.nvim configured, the diagnostics will automatically be
 available in their respective interfaces.
 
 
-OUTDATED                              *easy-dotnet-table-of-contents-outdated*
+OUTDATED                                                *easy-dotnet-outdated*
 
 Run the command `Dotnet outdated` in one of the supported filetypes, virtual
 text with packages latest version will appear
@@ -971,7 +941,7 @@ version and removes the virtual text). Both keymaps are configurable via
   <leader>pu   Upgrade the outdated package under the cursor
   <leader>pa   Upgrade all outdated packages in the buffer
 
-ADD                                        *easy-dotnet-table-of-contents-add*
+ADD                                                          *easy-dotnet-add*
 
 
 ADD PACKAGE ~
@@ -980,7 +950,7 @@ Adding nuget packages are available using the `:Dotnet add package` command.
 This will allow you to browse for nuget packages.
 
 
-PROJECT MAPPINGS              *easy-dotnet-table-of-contents-project-mappings*
+PROJECT MAPPINGS                                *easy-dotnet-project-mappings*
 
 Key mappings are available automatically within `.csproj` and `.fsproj` files
 
@@ -1003,7 +973,7 @@ Older configurations that manually register the `easy-dotnet` source with
   [!NOTE] Latest is added as a snippet to make it easier to select the latest
   version
 
-.NET FRAMEWORK                  *easy-dotnet-table-of-contents-.net-framework*
+.NET FRAMEWORK                                    *easy-dotnet-.net-framework*
 
 Basic support for .NET framework has been achieved. This means basic
 functionality like `build/run/test/test-runner` should work. If you find
@@ -1017,7 +987,7 @@ REQUIREMENTS ~
 - `options.server.use_visual_studio == true`
 
 
-NEW                                        *easy-dotnet-table-of-contents-new*
+NEW                                                          *easy-dotnet-new*
 
 Create dotnet templates as with `dotnet new <templatename>` Try it out by
 running `Dotnet new`
@@ -1149,7 +1119,7 @@ INTEGRATING WITH SNACKS EXPLORER ~
 <
 
 
-ENTITYFRAMEWORK                *easy-dotnet-table-of-contents-entityframework*
+ENTITYFRAMEWORK                                  *easy-dotnet-entityframework*
 
 Common EntityFramework commands have been added mainly to reduce the overhead
 of writing `--project .. --startup-project ..`.
@@ -1175,7 +1145,7 @@ MIGRATIONS ~
 - `Dotnet ef migrations list`
 
 
-LANGUAGE INJECTIONS        *easy-dotnet-table-of-contents-language-injections*
+LANGUAGE INJECTIONS                          *easy-dotnet-language-injections*
 
 Rider-like
 <https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments>
@@ -1224,19 +1194,19 @@ INTERPOLATEDSTRINGS
   regexpverbatim
   regexpraw
 
-NVIM-DAPCONFIGURATION    *easy-dotnet-table-of-contents-nvim-dapconfiguration*
+NVIM-DAPCONFIGURATION                      *easy-dotnet-nvim-dapconfiguration*
 
 Check out debugging-setup <./docs/debugging.md> for a full walkthrough of
 debugging setup
 
 
-TROUBLESHOOTING                *easy-dotnet-table-of-contents-troubleshooting*
+TROUBLESHOOTING                                  *easy-dotnet-troubleshooting*
 
 - Update the plugin to latest version
 - Run `:checkhealth easy-dotnet`
 
 
-HIGHLIGHT GROUPS              *easy-dotnet-table-of-contents-highlight-groups*
+HIGHLIGHT GROUPS                                *easy-dotnet-highlight-groups*
 
 Click to see all highlight groups ~
 
@@ -1292,22 +1262,22 @@ Put it in a `ColorScheme` autocmd if your colorscheme is loaded after
 easy-dotnet.
 
 
-LOCAL DEVELOPMENT            *easy-dotnet-table-of-contents-local-development*
+LOCAL DEVELOPMENT                              *easy-dotnet-local-development*
 
 Check out setup guide <./docs/server-development.md>
 
 
-STAR HISTORY                      *easy-dotnet-table-of-contents-star-history*
+STAR HISTORY                                        *easy-dotnet-star-history*
 
 
 
 
-CONTRIBUTORS                      *easy-dotnet-table-of-contents-contributors*
+CONTRIBUTORS                                        *easy-dotnet-contributors*
 
 
 
 ==============================================================================
-2. Links                                                   *easy-dotnet-links*
+1. Links                                                   *easy-dotnet-links*
 
 1. *Typing SVG*: https://readme-typing-svg.demolab.com?font=Fira+Code&size=32&pause=1000&width=435&lines=easy-dotnet.nvim
 2. *image*: https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113
