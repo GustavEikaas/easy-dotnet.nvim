@@ -43,7 +43,7 @@
 ---@field roslynator_enabled boolean     -- Whether Roslynator is enabled
 ---@field razor easy-dotnet.RazorOpts
 ---@field suggest_updates boolean
----@field config vim.lsp.config?          -- LSP configuration table
+---@field config easy-dotnet.Roslyn.Config? -- LSP configuration table
 --- reference: https://github.com/dotnet/roslyn/blob/main/src/LanguageServer/roslyn-language-server/README.md
 ---@field auto_load_projects boolean
 ---@field daemon_mode boolean

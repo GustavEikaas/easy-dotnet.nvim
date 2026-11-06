@@ -100,10 +100,11 @@ To customize LSP settings, it’s recommended to use this neovim 0.11+ pattern:
     └── init.lua
 ```
 
-Example `lsp/easy_dotnet.lua` configuration:
+Example `lsp/easy_dotnet.lua` configuration. Annotating it with `easy-dotnet.Roslyn.Config` gives you lua_ls completion and type checking for every setting Roslyn reads (see `lua/easy-dotnet/roslyn/settings_types.lua`):
 
 ```lua
----@type vim.lsp.Config
+---@module "easy-dotnet"
+---@type easy-dotnet.Roslyn.Config
 return {
   settings = {
     ["csharp|inlay_hints"] = {
@@ -118,6 +119,28 @@ return {
     },
   },
 }
+```
+
+`lsp/easy_dotnet.lua` never requires easy-dotnet, so lua_ls only resolves the type if easy-dotnet is in its workspace library.
+
+With [lazydev.nvim](https://github.com/folke/lazydev.nvim) (included in LazyVim), the `---@module "easy-dotnet"` line is all you need: lazydev treats it like a `require` and adds easy-dotnet to the library, without loading the plugin at runtime. Don't combine lazydev with a `.luarc.json` in your config root: its `workspace.library` overrides the one lazydev manages, which drops the `vim.*` types.
+
+Without lazydev, add Neovim's runtime and the plugin's `lua` directory to your lua_ls settings (adjust the path to wherever your plugin manager installs easy-dotnet):
+
+```lua
+vim.lsp.config("lua_ls", {
+  settings = {
+    Lua = {
+      runtime = { version = "LuaJIT" },
+      workspace = {
+        library = {
+          vim.env.VIMRUNTIME,
+          vim.fn.stdpath("data") .. "/lazy/easy-dotnet.nvim/lua",
+        },
+      },
+    },
+  },
+})
 ```
 
 ## File Watching
