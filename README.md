@@ -22,7 +22,7 @@ easy-dotnet.nvim brings common .NET IDE workflows into Neovim: run, debug, test,
 ## Motivation
 As a developer transitioning from Rider to Neovim, I found myself missing the simplicity of running projects with just a single button click. Tired of typing out lengthy terminal commands for common tasks like running, testing, and managing user secrets, I decided to create easy-dotnet.nvim. This plugin aims to bridge the gap between the convenience of IDEs like Rider and the flexibility of Neovim.
 
-# Table of Contents
+## Table of Contents
 
 1. [Simplifying .NET development in Neovim](#simplifying-net-development-in-neovim)
 2. [Motivation](#motivation)

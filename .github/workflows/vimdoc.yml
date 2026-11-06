@@ -42,6 +42,8 @@ jobs:
           pandoc: README.md
           version: "Neovim >= 0.11.0"
           demojify: true
+          # README has its own "Table of Contents" heading; a generated one would duplicate its tag
+          toc: false
 
       - uses: kdheepak/panvimdoc@v6.0.0
         with:
