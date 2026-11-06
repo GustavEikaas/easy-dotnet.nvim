@@ -8,6 +8,8 @@ local M = {}
 ---@field subcommands table<string,easy-dotnet.Command> | nil
 ---@field handle nil | fun(args: table<string>|string, options: table): nil
 ---@field passthrough boolean | nil
+---@field desc string | nil Shown in the generated command and Lua API docs
+---@field args string | nil Argument placeholder shown in the docs, e.g. "<path>"
 
 ---@class easy-dotnet.PassthroughArgs
 ---@field configuration string | nil Build configuration the user asked for, if any
@@ -51,6 +53,7 @@ local actions = require("easy-dotnet.actions")
 ---This entire object is exposed, any change to this will possibly be a breaking change, tread carefully
 ---@type easy-dotnet.Command
 M.run = {
+  desc = "`dotnet run --project <Picker> <DArgs>`",
   handle = function(args, _)
     local parsed = parse_passthrough_args(args, "app")
     local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -69,6 +72,7 @@ M.run = {
   passthrough = true,
   subcommands = {
     default = {
+      desc = "`dotnet run --project <Picker Default> <DArgs>`",
       handle = function(args, _)
         local parsed = parse_passthrough_args(args, "app")
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -87,6 +91,7 @@ M.run = {
       passthrough = true,
     },
     profile = {
+      desc = "`dotnet run --project <Picker> --launch-profile <Picker> <DArgs>`",
       handle = function(args, _)
         local parsed = parse_passthrough_args(args, "app")
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -105,6 +110,7 @@ M.run = {
       passthrough = true,
       subcommands = {
         default = {
+          desc = "`dotnet run --project <Picker Default> --launch-profile <Picker> <DArgs>`",
           handle = function(args, _)
             local parsed = parse_passthrough_args(args, "app")
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -128,6 +134,7 @@ M.run = {
 }
 
 M.debug = {
+  desc = "Debug selected project",
   handle = function(args, _)
     local parsed = parse_passthrough_args(args, "app")
     local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -146,6 +153,7 @@ M.debug = {
   passthrough = true,
   subcommands = {
     default = {
+      desc = "Debug the persisted default project",
       handle = function(args, _)
         local parsed = parse_passthrough_args(args, "app")
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -164,6 +172,7 @@ M.debug = {
       passthrough = true,
     },
     profile = {
+      desc = "Debug selected project with selected launch profile",
       handle = function(args, _)
         local parsed = parse_passthrough_args(args, "app")
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -182,6 +191,7 @@ M.debug = {
       passthrough = true,
       subcommands = {
         default = {
+          desc = "Debug the persisted default project with selected launch profile",
           handle = function(args, _)
             local parsed = parse_passthrough_args(args, "app")
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -202,6 +212,7 @@ M.debug = {
       },
     },
     attach = {
+      desc = "Attach the debugger to a running .NET process",
       handle = function(_, _)
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
         client:initialize(function() client.workspace:debug_attach({}) end)
@@ -211,6 +222,7 @@ M.debug = {
 }
 
 M.watch = {
+  desc = "`dotnet watch --project <Picker> <DArgs>`",
   handle = function(args, _)
     local parsed = parse_passthrough_args(args, "app")
     local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -229,6 +241,7 @@ M.watch = {
   passthrough = true,
   subcommands = {
     default = {
+      desc = "`dotnet watch --project <Picker Default> <DArgs>`",
       handle = function(args, _)
         local parsed = parse_passthrough_args(args, "app")
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -250,11 +263,13 @@ M.watch = {
 }
 
 M.pack = {
+  desc = "`dotnet pack -c release`",
   handle = function() actions.pack() end,
   passthrough = false,
 }
 
 M.push = {
+  desc = "`dotnet pack` and push the package",
   handle = function() actions.pack_and_push() end,
   passthrough = false,
 }
@@ -262,10 +277,12 @@ M.push = {
 M.add = {
   subcommands = {
     package = {
+      desc = "Pick a NuGet package and add it to a project",
       handle = function() require("easy-dotnet.nuget").add_package(nil, false) end,
       passthrough = true,
       subcommands = {
         prerelease = {
+          desc = "Same as `add package`, including prerelease versions",
           passthrough = true,
           handle = function() require("easy-dotnet.nuget").add_package(nil, true) end,
         },
@@ -277,12 +294,14 @@ M.add = {
 M.remove = {
   subcommands = {
     package = {
+      desc = "Pick a NuGet package and remove it from a project",
       handle = function() require("easy-dotnet.nuget").remove_nuget() end,
     },
   },
 }
 
 M.secrets = {
+  desc = "Opens a picker for .NET user-secrets",
   handle = function(_, _)
     local client = require("easy-dotnet.rpc.rpc").global_rpc_client
     client:initialize(function() client.secrets:open() end)
@@ -290,6 +309,7 @@ M.secrets = {
 }
 
 M.test = {
+  desc = "`dotnet test <Picker> <DArgs>`",
   handle = function(args, _)
     local parsed = parse_passthrough_args(args, "dotnet")
     local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -298,6 +318,7 @@ M.test = {
   passthrough = true,
   subcommands = {
     default = {
+      desc = "`dotnet test <Picker Default> <DArgs>`",
       handle = function(args, _)
         local parsed = parse_passthrough_args(args, "dotnet")
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -306,6 +327,7 @@ M.test = {
       passthrough = true,
     },
     solution = {
+      desc = "`dotnet test <sln> <DArgs>`",
       handle = function(args, _)
         local parsed = parse_passthrough_args(args, "dotnet")
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -316,6 +338,7 @@ M.test = {
     ["run-settings"] = {
       subcommands = {
         set = {
+          desc = "Pick a `.runsettings` file for a project, applied when running tests through the VSTest adapter",
           handle = function()
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
             client:initialize(function() client.test:set_run_settings() end)
@@ -327,6 +350,7 @@ M.test = {
 }
 
 M.restore = {
+  desc = "`dotnet restore <sln> <DArgs>`",
   handle = function(args, _)
     local parsed = parse_passthrough_args(args, "dotnet")
     local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -336,6 +360,7 @@ M.restore = {
 }
 
 M.build = {
+  desc = "`dotnet build <Picker> <DArgs>`",
   handle = function(args, _)
     local parsed = parse_passthrough_args(args, "dotnet")
     local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -344,6 +369,7 @@ M.build = {
   passthrough = true,
   subcommands = {
     quickfix = {
+      desc = "`dotnet build <Picker> <DArgs>` and opens build errors in the quickfix list",
       handle = function(args, _)
         local parsed = parse_passthrough_args(args, "dotnet")
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -352,6 +378,7 @@ M.build = {
       passthrough = true,
     },
     solution = {
+      desc = "`dotnet build <sln> <DArgs>`",
       handle = function(args, _)
         local parsed = parse_passthrough_args(args, "dotnet")
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -360,6 +387,7 @@ M.build = {
       passthrough = true,
       subcommands = {
         quickfix = {
+          desc = "`dotnet build <sln> <DArgs>` and opens build errors in the quickfix list",
           handle = function(args, _)
             local parsed = parse_passthrough_args(args, "dotnet")
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -370,6 +398,7 @@ M.build = {
       },
     },
     default = {
+      desc = "`dotnet build <Picker Default> <DArgs>`",
       handle = function(args, _)
         local parsed = parse_passthrough_args(args, "dotnet")
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -378,6 +407,7 @@ M.build = {
       passthrough = true,
       subcommands = {
         quickfix = {
+          desc = "`dotnet build <Picker Default> <DArgs>` and opens build errors in the quickfix list",
           handle = function(args, _)
             local parsed = parse_passthrough_args(args, "dotnet")
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
@@ -391,6 +421,8 @@ M.build = {
 }
 
 M.createfile = {
+  desc = "Spawns a picker for creating a new file based on a `dotnet new` template",
+  args = "<path>",
   passthrough = true,
   handle = function(args)
     local path = type(args) == "string" and args or args[1]
@@ -399,14 +431,17 @@ M.createfile = {
 }
 
 M.testrunner = {
+  desc = "Shows or hides the test runner",
   handle = function() require("easy-dotnet.test-runner").open() end,
 }
 
 M.outdated = {
+  desc = "Shows the latest package versions as virtual text in `.csproj`, `.fsproj`, `Directory.Packages.props`, `Packages.props` and `Directory.Build.props` files",
   handle = function() require("easy-dotnet.outdated.outdated").outdated() end,
 }
 
 M.clean = {
+  desc = "`dotnet clean <Picker>`",
   handle = function(_, _)
     local client = require("easy-dotnet.rpc.rpc").global_rpc_client
     client:initialize(function() client.workspace:clean() end)
@@ -415,10 +450,12 @@ M.clean = {
 }
 
 M.new = {
+  desc = "Picker for creating a new project from a `dotnet new` template",
   handle = function() require("easy-dotnet.actions.new").new() end,
 }
 
 M.reset = {
+  desc = "Deletes all files persisted by easy-dotnet.nvim. Use this if unable to pick a different solution or project",
   handle = function()
     local dir = require("easy-dotnet.constants").get_data_directory()
     vim.fs.rm(dir, { recursive = true, force = true })
@@ -430,6 +467,8 @@ M.solution = {
   handle = nil,
   subcommands = {
     select = {
+      desc = "Set the solution file for the current working directory, or pick one when no path is given. Useful when the solution is outside the normal search depth",
+      args = "[path]",
       handle = function(args)
         local path = type(args) == "string" and args or (type(args) == "table" and args[1] or nil)
         if path then
@@ -446,12 +485,14 @@ M.solution = {
       passthrough = true,
     },
     add = {
+      desc = "`dotnet sln <sln> add <Picker>`",
       handle = function()
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
         client:initialize(function() client:solution_add_project() end)
       end,
     },
     remove = {
+      desc = "`dotnet sln <sln> remove <Picker>`",
       handle = function()
         local client = require("easy-dotnet.rpc.rpc").global_rpc_client
         client:initialize(function() client:solution_remove_project() end)
@@ -467,12 +508,14 @@ M.ef = {
       handle = nil,
       subcommands = {
         update = {
+          desc = "Updates the database to the latest migration",
           handle = function()
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
             client:initialize(function() client.entity_framework:database_update() end)
           end,
           subcommands = {
             pick = {
+              desc = "Opens a picker to update the database to a selected migration",
               handle = function()
                 local client = require("easy-dotnet.rpc.rpc").global_rpc_client
                 client:initialize(function() client.entity_framework:migration_apply() end)
@@ -481,6 +524,7 @@ M.ef = {
           },
         },
         drop = {
+          desc = "Drops the database for the selected project",
           handle = function()
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
             client:initialize(function() client.entity_framework:database_drop() end)
@@ -492,6 +536,8 @@ M.ef = {
       handle = nil,
       subcommands = {
         add = {
+          desc = "Adds a new Entity Framework migration with the specified name",
+          args = "<name>",
           passthrough = true,
           handle = function(args)
             local migration_name = type(args) == "string" and args or args[1]
@@ -500,12 +546,14 @@ M.ef = {
           end,
         },
         remove = {
+          desc = "Removes the last Entity Framework migration",
           handle = function()
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
             client:initialize(function() client.entity_framework:migration_remove() end)
           end,
         },
         list = {
+          desc = "Lists all Entity Framework migrations",
           handle = function()
             local client = require("easy-dotnet.rpc.rpc").global_rpc_client
             client:initialize(function() client.entity_framework:migration_list() end)
@@ -520,6 +568,7 @@ M._server = {
   handle = nil,
   subcommands = {
     update = {
+      desc = "Updates easy-dotnet-server (`dotnet tool install -g EasyDotnet`)",
       handle = function()
         local on_finished = job.register_job({ name = "Updating EasyDotnet", on_success_text = "Successfully updated", on_error_text = "Failed to update server" })
         require("easy-dotnet.rpc.rpc").global_rpc_client:stop(function()
@@ -545,35 +594,43 @@ M._server = {
       end,
     },
     stop = {
+      desc = "Stops easy-dotnet-server",
       handle = function()
         local on_finished = job.register_job({ name = "Stopping server...", on_success_text = "Server stopped" })
         require("easy-dotnet.rpc.rpc").global_rpc_client:stop(function() on_finished(true) end)
       end,
     },
     start = {
+      desc = "Starts easy-dotnet-server",
       handle = function()
         local on_finished = job.register_job({ name = "Starting server...", on_success_text = "Server started" })
         require("easy-dotnet.rpc.rpc").global_rpc_client:initialize(function() on_finished(true) end)
       end,
     },
     restart = {
+      desc = "Restarts easy-dotnet-server",
       handle = function()
         local on_finished = job.register_job({ name = "Restarting server...", on_success_text = "Server restarted" })
         require("easy-dotnet.rpc.rpc").global_rpc_client:restart(function() on_finished(true) end)
       end,
     },
     logdump = {
+      desc = "Opens the easy-dotnet-server logs",
       handle = function() require("easy-dotnet.rpc.server").dump_logs() end,
       subcommands = {
         buildserver = {
+          desc = "Opens the build server logs",
           handle = function() require("easy-dotnet.rpc.server").dump_buildserver_logs() end,
         },
         stdout = {
+          desc = "Opens the easy-dotnet-server stdout",
           handle = function() require("easy-dotnet.rpc.server").dump_stdout_logs() end,
         },
       },
     },
     loglevel = {
+      desc = "Sets the easy-dotnet-server log level (off, error, warning, information, verbose)",
+      args = "<level>",
       passthrough = true,
       handle = function(args)
         local level = type(args) == "string" and args or (args and args[1])
@@ -591,12 +648,15 @@ M._server = {
 }
 
 M.diagnostic = {
+  desc = "Workspace diagnostics using the configured default severity",
   handle = function() require("easy-dotnet.actions.diagnostics").get_workspace_diagnostics() end,
   subcommands = {
     errors = {
+      desc = "Workspace diagnostics, errors only",
       handle = function() require("easy-dotnet.actions.diagnostics").get_workspace_diagnostics("error") end,
     },
     warnings = {
+      desc = "Workspace diagnostics, errors and warnings",
       handle = function() require("easy-dotnet.actions.diagnostics").get_workspace_diagnostics("warning") end,
     },
   },
@@ -605,12 +665,15 @@ M.diagnostic = {
 M.terminal = {
   subcommands = {
     toggle = {
+      desc = "Toggles the managed terminal panel",
       handle = function() require("easy-dotnet.terminal").toggle() end,
     },
     show = {
+      desc = "Shows the managed terminal panel",
       handle = function() require("easy-dotnet.terminal").show() end,
     },
     hide = {
+      desc = "Hides the managed terminal panel",
       handle = function() require("easy-dotnet.terminal").hide() end,
     },
   },

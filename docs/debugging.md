@@ -2,16 +2,6 @@
 
 This guide describes how to integrate .NET Core debugging in Neovim using nvim-dap and netcoredbg.
 
-## Table of Contents
-
-* [Debugging in .NET](#debugging-in-.net)
-  * [Setting up .NET Debugging with nvim-dap and netcoredbg](#setting-up-.net-debugging-with-nvim-dap-and-netcoredbg)
-    * [Debugging](#debugging)
-    * [Configuration](#configuration)
-    * [Interactive Console & External Terminal](#interactive-console--external-terminal)
-    * [Programmatic Debugging](#programmatic-debugging)
-    * [CPU/MEM Performance Widgets](#cpumem-performance-widgets)
-
 ## Debugging
 To start debugging do the following. Ensure you have configured the code below
 
