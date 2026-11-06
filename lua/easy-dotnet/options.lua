@@ -114,10 +114,9 @@
 local M = {
   ---@type easy-dotnet.Options
   options = {
-    -- docs:defaults:start (copied verbatim into docs/configuration.md by scripts/generate-docs.lua)
     managed_terminal = {
-      auto_hide = true, -- auto hides terminal if exit code is 0
-      auto_hide_delay = 1000, -- delay before auto hiding, 0 = instant
+      auto_hide = true,
+      auto_hide_delay = 1000,
       mappings = {
         next_tab = { lhs = "<Tab>", desc = "Next terminal tab" },
         prev_tab = { lhs = "<S-Tab>", desc = "Previous terminal tab" },
@@ -132,11 +131,10 @@ local M = {
     test_runner = {
       auto_start_testrunner = true,
       hide_legend = false,
-      -- Set to true when using neotest to avoid duplicate signs and conflicting buffer keymaps
       neotest_integration = false,
-      viewmode = "float", -- "split" | "vsplit" | "float" | "buf"
-      vsplit_width = nil, -- number | nil
-      vsplit_pos = nil, -- "topleft" | "topright" | nil
+      viewmode = "float",
+      vsplit_width = nil,
+      vsplit_pos = nil,
       icons = {
         passed = "",
         skipped = "",
@@ -152,50 +150,50 @@ local M = {
         build_failed = "󰒡",
       },
       mappings = {
-        run_test_from_buffer = { lhs = "<leader>r", desc = "Run test or class under cursor" },
+        run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
         run_all_tests_from_buffer = { lhs = "<leader>t", desc = "Run all tests in file" },
-        get_build_errors = { lhs = "<leader>e", desc = "Show build errors (failed build)" },
-        peek_stack_trace_from_buffer = { lhs = "<leader>p", desc = "Peek stack trace of failed test" },
-        debug_test_from_buffer = { lhs = "<leader>d", desc = "Debug test or class under cursor" },
-        debug_test = { lhs = "<leader>d", desc = "Debug test under cursor" },
-        go_to_file = { lhs = "<leader>g", desc = "Go to file" },
-        run_all = { lhs = "<leader>R", desc = "Run all tests" },
-        run = { lhs = "<leader>r", desc = "Run test under cursor" },
-        peek_stacktrace = { lhs = "<leader>p", desc = "Peek stack trace of failed test" },
-        expand = { lhs = "o", desc = "Expand / collapse node under cursor" },
-        expand_node = { lhs = "E", desc = "Expand node under cursor and all its children" },
-        collapse_all = { lhs = "W", desc = "Collapse node under cursor and all its children" },
-        close = { lhs = "q", desc = "Close window" },
-        refresh_testrunner = { lhs = "<C-r>", desc = "Refresh test runner" },
-        cancel = { lhs = "<C-c>", desc = "Cancel in-flight operation" },
-        next_failure = { lhs = "]f", desc = "Jump to next failing test (dot-repeatable)" },
-        prev_failure = { lhs = "[f", desc = "Jump to previous failing test (dot-repeatable)" },
+        get_build_errors = { lhs = "<leader>e", desc = "get build errors" },
+        peek_stack_trace_from_buffer = { lhs = "<leader>p", desc = "peek stack trace from buffer" },
+        debug_test_from_buffer = { lhs = "<leader>d", desc = "run test from buffer" },
+        debug_test = { lhs = "<leader>d", desc = "debug test" },
+        go_to_file = { lhs = "<leader>g", desc = "go to file" },
+        run_all = { lhs = "<leader>R", desc = "run all tests" },
+        run = { lhs = "<leader>r", desc = "run test" },
+        peek_stacktrace = { lhs = "<leader>p", desc = "peek stacktrace of failed test" },
+        expand = { lhs = "o", desc = "expand" },
+        expand_node = { lhs = "E", desc = "expand node" },
+        collapse_all = { lhs = "W", desc = "collapse all" },
+        close = { lhs = "q", desc = "close testrunner" },
+        refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" },
+        cancel = { lhs = "<C-c>", desc = "cancel in-flight operation" },
+        next_failure = { lhs = "]f", desc = "jump to next failing test" },
+        prev_failure = { lhs = "[f", desc = "jump to previous failing test" },
       },
     },
     csproj_mappings = true,
     fsproj_mappings = true,
     new = {
       project = {
-        prefix = "sln", -- "sln" | "none"
+        prefix = "sln",
       },
     },
     server = {
-      use_visual_studio = false, -- Set true for .NET Framework support on Windows
+      use_visual_studio = false,
       ---@type nil | "Off" | "Critical" | "Error" | "Warning" | "Information" | "Verbose" | "All"
       log_level = nil,
     },
-    enable_filetypes = true, -- appsettings/launchSettings/secrets.json as json5, .props as xml, .razor/.cshtml as razor
+    enable_filetypes = true,
     auto_bootstrap_namespace = {
-      type = "block_scoped", -- "block_scoped" | "file_scoped"
+      type = "block_scoped",
       enabled = true,
       use_clipboard_json = {
         behavior = "prompt", --'auto' | 'prompt' | 'never',
-        register = "+", -- which register to check
+        register = "+",
       },
     },
     -- choose which picker to use with the plugin
     -- possible values are "telescope" | "fzf" | "snacks" | "basic"
-    -- if nil, will auto-detect available pickers in order: snacks -> fzf -> telescope -> basic
+    -- if nil, will auto-detect available pickers in order: telescope -> fzf -> basic
     ---@type easy-dotnet.PickerType
     picker = nil,
     notifications = {
@@ -211,52 +209,42 @@ local M = {
       mappings = {
         open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
       },
-      -- Controls where the target app runs: "integratedTerminal" (Neovim buffer) or "externalTerminal" (OS window)
-      console = "integratedTerminal",
-      -- Path to custom coreclr DAP adapter
-      -- When set, this fully overrides `engine`; easy-dotnet-server uses this binary as-is.
-      -- When nil, easy-dotnet-server falls back to its own bundled debugger selected by `engine`.
+      console = "integratedTerminal", --externalTerminal
       bin_path = nil,
-      -- Which bundled debugger to use when `bin_path` is nil.
-      --   "netcoredbg" (default) — Samsung netcoredbg
-      --   "dncdbg"               — viewizard/dncdbg (a fork of netcoredbg with a richer set of features)
-      --   "sharpdbg"             — MattParkerDev/sharpdbg (a new debugger written in C#)
-      engine = "netcoredbg",
+      engine = "netcoredbg", -- "netcoredbg" | "dncdbg" | "sharpdbg" — ignored when bin_path is set
       apply_value_converters = true,
       auto_register_dap = true,
-      -- Sample the debugged process' CPU/memory usage so the `easy-dotnet_cpu` and `easy-dotnet_mem`
-      -- dapui widgets have data to draw. Set to false to turn sampling off and unregister the widgets.
       mem_cpu_usage = true,
     },
     projx_lsp = {
       enabled = true,
     },
     lsp = {
-      enabled = true, -- Enable builtin roslyn lsp
+      enabled = true,
       set_fold_expr = false,
-      preload_roslyn = true, -- Start loading roslyn before any buffer is opened
-      analyzer_assemblies = {}, -- Any additional roslyn analyzers you might use like SonarAnalyzer.CSharp
+      preload_roslyn = true,
+      analyzer_assemblies = {},
       auto_refresh_codelens = true,
-      roslynator_enabled = true, -- Automatically enable roslynator analyzer
-      easy_dotnet_analyzer_enabled = true, -- Enable roslyn analyzer from easy-dotnet-server
-      easy_dotnet_extension_enabled = false, -- Needs to be true for enhanced_rename and create_type_from_usage
-      enhanced_rename = false, -- auto rename file when renaming class
-      create_type_from_usage = false, -- code action for creating class from unresolved symbol in a separate file
-      restart_roslyn_on_branch_change = false, -- Restart Roslyn when Git HEAD changes
-      suggest_updates = true, -- Periodically suggest roslyn-language-server updates
+      roslynator_enabled = true,
+      easy_dotnet_analyzer_enabled = true,
+      easy_dotnet_extension_enabled = false,
+      enhanced_rename = false,
+      create_type_from_usage = false,
+      restart_roslyn_on_branch_change = false,
+      suggest_updates = true,
       auto_load_projects = false,
       daemon_mode = false,
-      bulk_filewatcher_registrations = true, -- Register file watchers at once after the solution loads (helps with big solutions)
+      bulk_filewatcher_registrations = true,
       razor = {
         enabled = true,
         html = {
           enabled = true,
-          cmd = nil, -- Auto-detect project node_modules/.bin/vscode-html-language-server, then PATH
+          cmd = nil,
           request_timeout = 5000,
         },
       },
-      config = {}, -- vim.lsp.Config merged into the Roslyn client config, see docs/lsp.md
-      log_level = "Information", -- "Critical" | "Debug" | "Error" | "Information" | "None" | "Trace" | "Warning"
+      config = {},
+      log_level = "Information",
     },
     diagnostics = {
       default_severity = "error",
@@ -268,7 +256,6 @@ local M = {
         upgrade_all = { lhs = "<leader>pa", desc = "upgrade all outdated packages" },
       },
     },
-    -- docs:defaults:end
   },
 }
 

@@ -1,4 +1,4 @@
-name: Generate docs
+name: Generate vimdoc
 
 on:
   push:
@@ -8,22 +8,12 @@ on:
       - README.md
       - news.md
       - docs/**
-      - scripts/generate-docs.lua
-      - lua/easy-dotnet/commands.lua
-      - lua/easy-dotnet/options.lua
-      - lua/easy-dotnet/highlights.lua
-      - lua/easy-dotnet/init.lua
       - .github/workflows/vimdoc.yml
   pull_request:
     paths:
       - README.md
       - news.md
       - docs/**
-      - scripts/generate-docs.lua
-      - lua/easy-dotnet/commands.lua
-      - lua/easy-dotnet/options.lua
-      - lua/easy-dotnet/highlights.lua
-      - lua/easy-dotnet/init.lua
       - .github/workflows/vimdoc.yml
 
 permissions:
@@ -46,14 +36,6 @@ jobs:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.head_ref }}
 
-      - uses: rhysd/action-setup-vim@v1.6.1
-        with:
-          neovim: true
-          version: stable
-
-      # docs/commands.md and docs/configuration.md are generated from the plugin source
-      - run: nvim --headless --clean -l scripts/generate-docs.lua
-
       - uses: kdheepak/panvimdoc@v6.0.0
         with:
           vimdoc: easy-dotnet
@@ -65,22 +47,6 @@ jobs:
 
       # The docs pages start with a "# Title"; shifting makes it the document title instead of
       # a parent heading, which would otherwise be prepended to every tag
-      - uses: kdheepak/panvimdoc@v6.0.0
-        with:
-          vimdoc: easy-dotnet-commands
-          pandoc: docs/commands.md
-          version: "Neovim >= 0.11.0"
-          demojify: true
-          shiftheadinglevelby: -1
-
-      - uses: kdheepak/panvimdoc@v6.0.0
-        with:
-          vimdoc: easy-dotnet-configuration
-          pandoc: docs/configuration.md
-          version: "Neovim >= 0.11.0"
-          demojify: true
-          shiftheadinglevelby: -1
-
       - uses: kdheepak/panvimdoc@v6.0.0
         with:
           vimdoc: easy-dotnet-lsp
@@ -117,9 +83,9 @@ jobs:
       # and Vim does not register a tag that is not preceded by whitespace
       - run: sed -i -E 's/([^ ])(\*[^* ]+\*)$/\1 \2/' doc/*.txt
 
-      # Fork PRs only verify the generation; their branches can't be pushed to
+      # Fork PRs only verify the conversion; their branches can't be pushed to
       - uses: stefanzweifel/git-auto-commit-action@v7
         if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         with:
-          commit_message: "chore(docs): auto-generate docs"
-          file_pattern: doc/*.txt docs/commands.md docs/configuration.md
+          commit_message: "chore(docs): auto-generate vimdoc"
+          file_pattern: doc/*.txt
