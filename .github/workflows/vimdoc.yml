@@ -1,0 +1,79 @@
+name: Generate vimdoc
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - README.md
+      - news.md
+      - docs/**
+      - .github/workflows/vimdoc.yml
+  pull_request:
+    paths:
+      - README.md
+      - news.md
+      - docs/**
+      - .github/workflows/vimdoc.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vimdoc-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  vimdoc:
+    name: vimdoc
+    runs-on: ubuntu-latest
+    steps:
+
+      # On PRs, check out the branch itself (not the merge commit) so the generated docs can be pushed to it
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.head_ref }}
+
+      - uses: kdheepak/panvimdoc@v6.0.0
+        with:
+          vimdoc: easy-dotnet
+          pandoc: README.md
+          version: "Neovim >= 0.11.0"
+          demojify: true
+
+      - uses: kdheepak/panvimdoc@v6.0.0
+        with:
+          vimdoc: easy-dotnet-lsp
+          pandoc: docs/lsp.md
+          version: "Neovim >= 0.11.0"
+          demojify: true
+
+      - uses: kdheepak/panvimdoc@v6.0.0
+        with:
+          vimdoc: easy-dotnet-debugging
+          pandoc: docs/debugging.md
+          version: "Neovim >= 0.11.0"
+          demojify: true
+
+      - uses: kdheepak/panvimdoc@v6.0.0
+        with:
+          vimdoc: easy-dotnet-advanced-patterns
+          pandoc: docs/advanced-patterns.md
+          version: "Neovim >= 0.11.0"
+          demojify: true
+
+      - uses: kdheepak/panvimdoc@v6.0.0
+        with:
+          vimdoc: easy-dotnet-news
+          pandoc: news.md
+          version: "Neovim >= 0.11.0"
+          demojify: true
+
+      # Fork PRs only verify the conversion; their branches can't be pushed to
+      - uses: stefanzweifel/git-auto-commit-action@v7
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        with:
+          commit_message: "chore(docs): auto-generate vimdoc"
+          file_pattern: doc/*.txt
