@@ -22,7 +22,7 @@ easy-dotnet.nvim brings common .NET IDE workflows into Neovim: run, debug, test,
 ## Motivation
 As a developer transitioning from Rider to Neovim, I found myself missing the simplicity of running projects with just a single button click. Tired of typing out lengthy terminal commands for common tasks like running, testing, and managing user secrets, I decided to create easy-dotnet.nvim. This plugin aims to bridge the gap between the convenience of IDEs like Rider and the flexibility of Neovim.
 
-# Table of Contents
+## Table of Contents
 
 1. [Simplifying .NET development in Neovim](#simplifying-net-development-in-neovim)
 2. [Motivation](#motivation)
@@ -81,7 +81,7 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 ## Features
 
 - Roslyn LSP support out of the box — powered by the official .NET Roslyn language server (see [LSP details](./docs/lsp.md))
-- Debugger configured out of the box- powered by [netcoredbg](https://github.com/samsung/netcoredbg)
+- Debugger configured out of the box - choose between bundled [netcoredbg](https://github.com/samsung/netcoredbg), [dncdbg](https://github.com/viewizard/dncdbg) and [sharpdbg](https://github.com/MattParkerDev/sharpdbg) engines
 - Solution, slnx, csproj and fsproj support: Whether its a single project or a solution containing multiple projects easy-dotnet has you covered.
 - Action Commands: Execute common tasks like building, running, testing, cleaning and restoring with ease.
 - User Secrets Management: Edit, create, and preview .NET user secrets directly within Neovim.
@@ -172,6 +172,8 @@ Although not *required* by the plugin, it is highly recommended to install one o
           },
         },
         config = {},
+        ---@type "Critical" | "Debug" | "Error" | "Information" | "None" | "Trace" | "Warning"
+        log_level = "Information", -- Roslyn language server log level
       },
       debugger = {
         -- Path to custom coreclr DAP adapter
@@ -193,7 +195,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
           open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
         },
       },
-      ---@type TestRunnerOptions
+      ---@type easy-dotnet.TestRunner.Options
       test_runner = {
         auto_start_testrunner = true,
         hide_legend = false,
@@ -247,6 +249,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
       },
       csproj_mappings = true,
       fsproj_mappings = true,
+      enable_filetypes = true, -- appsettings/launchSettings/secrets.json as json5, .props as xml, .razor/.cshtml as razor
       auto_bootstrap_namespace = {
           --block_scoped, file_scoped
           type = "block_scoped",
@@ -272,7 +275,7 @@ Although not *required* by the plugin, it is highly recommended to install one o
         handler = function(start_event)
           local spinner = require("easy-dotnet.ui-modules.spinner").new()
           spinner:start_spinner(function() return start_event.job.name end)
-          ---@param finished_event JobEvent
+          ---@param finished_event easy-dotnet.Job.Event
           return function(finished_event)
             spinner:stop_spinner(finished_event.result.msg, finished_event.result.level)
           end
@@ -397,9 +400,9 @@ For a more complete Visual Studio-style setup with external run/debug terminals,
 ||
 | `dotnet.remove_package()`                              | |
 | `dotnet.add_package()`                              | |
+| `dotnet.add_package_prerelease()`                   | Same as `add_package()`, including prerelease versions |
 ||
 | `dotnet.testrunner()`                         | Shows or hides the testrunner                                                                                            |
-| `dotnet.is_dotnet_project()`                  | Returns `true` if a `.csproj` or `.sln` file is present in the current working directory or subfolders       |
 | `dotnet.try_get_selected_solution()`          | If a solution is selected, returns `{ basename: string, path: string }`, otherwise `nil`                    |
 | `dotnet.new()`                                | Picker for creating a new template based on `Dotnet new`                                                                                                            |
 | `dotnet.outdated()`                           | Runs `Dotnet outdated` in supported file types (`.csproj`, `.fsproj`, `Directory.Packages.props`, `Packages.props`, `Directory.Build.props`) and displays virtual text with the latest package versions. |
@@ -416,25 +419,25 @@ For a more complete Visual Studio-style setup with external run/debug terminals,
 | `dotnet.ef_database_update_pick()`            |  Opens a picker to update the database to a selected migration.                                                                                                          |
 ||
 | `dotnet.createfile(path)`                     | Spawns a picker for creating a new file based on a `.NET new` template                            |
+| `dotnet.create_item(path)`                    | Spawns a picker for creating a new file from a template in the given directory (used by the file explorer integrations) |
 | `dotnet.secrets()`                            | Opens a picker for `.NET user-secrets`                                                              |
-| `dotnet.get_debug_dll()`                      | Returns the DLL from the `bin/debug` folder                                                                 |
-| `dotnet.get_environment_variables(project_name, project_path, use_default_launch_profile: boolean)` | Returns the environment variables from the `launchSetting.json` file                                         |
 | `dotnet.reset()`                              | Deletes all files persisted by `easy-dotnet.nvim`. Use this if unable to pick a different solution or project |
 | `dotnet.stop()`                               | Stops running workspace sessions |
 ||
+| `dotnet.terminal_toggle()`                    | Toggles the managed terminal panel |
+| `dotnet.terminal_show()`                      | Shows the managed terminal panel |
+| `dotnet.terminal_hide()`                      | Hides the managed terminal panel |
+||
+| `dotnet.diagnostic()`                         | Same as `diagnostics.get_workspace_diagnostics()` |
+| `dotnet.diagnostic_errors()`                  | Same as `diagnostics.get_workspace_diagnostics("error")` |
+| `dotnet.diagnostic_warnings()`                | Same as `diagnostics.get_workspace_diagnostics("warning")` |
 | `diagnostics.get_workspace_diagnostics()`     | Get workspace diagnostics using configured default severity                                                 |
 | `diagnostics.get_workspace_diagnostics("error")` | Get workspace diagnostics for errors only                                                                |
 | `diagnostics.get_workspace_diagnostics("warning")` | Get workspace diagnostics for errors and warnings                                                       |
 
 ```lua
 local dotnet = require("easy-dotnet")
-dotnet.lsp_start()
-dotnet.lsp_restart()
-dotnet.lsp_stop()
-dotnet.get_environment_variables(project_name, project_path, use_default_launch_profile: boolean)
-dotnet.is_dotnet_project()                                 
 dotnet.try_get_selected_solution()                         
-dotnet.get_debug_dll()                                     
 dotnet.reset()                                             
 dotnet.test()
 dotnet.test_solution()
@@ -443,6 +446,7 @@ dotnet.testrunner()
 dotnet.new()
 dotnet.outdated()
 dotnet.add_package()
+dotnet.add_package_prerelease()
 dotnet.remove_package()
 dotnet.solution_select(path: string)
 dotnet.ef_migrations_remove()
@@ -469,6 +473,13 @@ dotnet.secrets()
 dotnet.clean()                                                           
 dotnet.restore()
 dotnet.stop()
+dotnet.create_item(path: string)
+dotnet.terminal_toggle()
+dotnet.terminal_show()
+dotnet.terminal_hide()
+dotnet.diagnostic()
+dotnet.diagnostic_errors()
+dotnet.diagnostic_warnings()
 
 local diagnostics = require("easy-dotnet.actions.diagnostics")
 diagnostics.get_workspace_diagnostics()
@@ -616,8 +627,8 @@ The test runner starts automatically when the server starts and runs discovery s
 | Key | Action |
 |-----|--------|
 | `o` | Expand / collapse node under cursor |
-| `E` | Expand all |
-| `W` | Collapse all |
+| `E` | Expand node under cursor and all its children |
+| `W` | Collapse node under cursor and all its children |
 | `]f` / `[f` | Jump to next / previous failing test (dot-repeatable with `.`) |
 | `<leader>r` | Run test under cursor |
 | `<leader>R` | Run all tests |
@@ -644,6 +655,7 @@ Gutter signs appear automatically on test methods and classes once discovery has
 | Key | Action |
 |-----|--------|
 | `<leader>r` | Run test or class under cursor |
+| `<leader>t` | Run all tests in file |
 | `<leader>d` | Debug test or class under cursor |
 | `<leader>p` | Peek stacktrace of failed test |
 

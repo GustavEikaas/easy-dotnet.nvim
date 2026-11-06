@@ -1,0 +1,1312 @@
+*easy-dotnet.txt*
+                         For Neovim >= 0.11.0    Last change: 2026 November 06
+
+<https://git.io/typing-svg>
+
+
+
+
+SIMPLIFYING .NET DEVELOPMENT IN NEOVIM *easy-dotnet-simplifying-.net-development-in-neovim*
+
+easy-dotnet.nvim brings common .NET IDE workflows into Neovim: run, debug,
+test, manage packages, work with solutions, use Roslyn LSP, and handle project
+files without leaving the editor.
+
+
+  [!IMPORTANT] This plugin now uses easy-dotnet-server
+  <https://github.com/GustavEikaas/easy-dotnet-server> to enable more advanced
+  functionality. As a result, the server may require more frequent updates. Run
+  `:Dotnet _server update` or `dotnet tool install -g EasyDotnet` to update it.
+  The plugin will attempt to detect when the server is outdated and notify you.
+  If you encounter any issues, please don’t hesitate to file an issue.
+
+  **Stay updated:** Major updates and new features are announced in `news.md`
+  <./news.md>. Give it a read periodically to stay in sync with the latest
+  capabilities!
+
+MOTIVATION                                            *easy-dotnet-motivation*
+
+As a developer transitioning from Rider to Neovim, I found myself missing the
+simplicity of running projects with just a single button click. Tired of typing
+out lengthy terminal commands for common tasks like running, testing, and
+managing user secrets, I decided to create easy-dotnet.nvim. This plugin aims
+to bridge the gap between the convenience of IDEs like Rider and the
+flexibility of Neovim.
+
+
+TABLE OF CONTENTS                              *easy-dotnet-table-of-contents*
+
+1. Simplifying .NET development in Neovim
+2. |easy-dotnet-motivation|
+3. |easy-dotnet-features|
+4. |easy-dotnet-requirements|
+5. |easy-dotnet-setup|- Without options
+- With options
+- Lualine config
+
+
+6. |easy-dotnet-advanced-patterns|
+7. |easy-dotnet-commands|- Lua functions
+- Vim commands
+
+
+8. |easy-dotnet-roslyn-lsp|
+9. |easy-dotnet-test-runner|- Keymaps
+- Debugging tests
+- Running tests from buffer
+
+
+10. |easy-dotnet-neotest|
+
+- Requirements
+- Setup
+
+1. |easy-dotnet-workspace-diagnostics|- Commands
+- Configuration
+- Features
+
+
+2. |easy-dotnet-outdated|
+3. |easy-dotnet-add|- Add package
+
+
+4. |easy-dotnet-project-mappings|- Add reference
+- Package autocomplete
+
+
+5. |easy-dotnet-.net-framework|- Requirements
+
+
+6. |easy-dotnet-new|- Project
+- Configuration file
+- Integrating with nvim-tree
+- Integrating with neo-tree
+- Integrating with mini files
+- Integrating with snacks explorer
+
+
+7. |easy-dotnet-entityframework|- Requirements
+- Database
+- Migrations
+
+
+8. |easy-dotnet-language-injections|- Showcase
+- Requirements
+- Support matrix
+
+
+9. |easy-dotnet-nvim-dapconfiguration|
+10. |easy-dotnet-troubleshooting|
+11. |easy-dotnet-highlight-groups|
+12. |easy-dotnet-local-development|
+13. |easy-dotnet-star-history|
+14. |easy-dotnet-contributors|
+
+
+FEATURES                                                *easy-dotnet-features*
+
+- Roslyn LSP support out of the box — powered by the official .NET Roslyn language server (see LSP details <./docs/lsp.md>)
+- Debugger configured out of the box - choose between bundled netcoredbg <https://github.com/samsung/netcoredbg>, dncdbg <https://github.com/viewizard/dncdbg> and sharpdbg <https://github.com/MattParkerDev/sharpdbg> engines
+- Solution, slnx, csproj and fsproj support: Whether its a single project or a solution containing multiple projects easy-dotnet has you covered.
+- Action Commands: Execute common tasks like building, running, testing, cleaning and restoring with ease.
+- User Secrets Management: Edit, create, and preview .NET user secrets directly within Neovim.
+- Test runner: Test runner similiar to the one you find in Rider.
+- Workspace diagnostics: Get diagnostic errors and warnings from your entire solution or individual projects
+- Outdated command: Makes checking outdated packages a breeze using virtual text
+- (csproj/fsproj) mappings: Keymappings for .csproj and .fsproj files are automatically available
+- Auto bootstrap namespace: Automatically inserts namespace and class/interface when opening a newly created `.cs` file. (also checks clipboard for json to create class from)
+- Create dotnet templates like with `dotnet new`, automatically adding them to the current solution
+- Package autocomplete inside .csproj and .fsproj files Check it out
+- Rider-like <https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments>
+    syntax highlighting for injected languages (sql, json and xml) based on comments
+
+
+REQUIREMENTS                                        *easy-dotnet-requirements*
+
+- Neovim 0.11+ built with **LuaJIT**
+- EasyDotnet <https://www.nuget.org/packages/EasyDotnet> `dotnet tool install -g EasyDotnet`
+
+Although not _required_ by the plugin, it is highly recommended to install one
+of: - telescope.nvim <https://github.com/nvim-telescope/telescope.nvim> -
+fzf-lua <https://github.com/ibhagwan/fzf-lua> - snacks.nvim
+<https://github.com/folke/snacks.nvim>
+
+
+SETUP                                                      *easy-dotnet-setup*
+
+
+WITHOUT OPTIONS ~
+
+>lua
+    -- lazy.nvim
+    {
+      "GustavEikaas/easy-dotnet.nvim",
+      dependencies = { "nvim-lua/plenary.nvim", 'folke/snacks.nvim', },
+      config = function()
+        require("easy-dotnet").setup()
+      end
+    }
+<
+
+
+WITH OPTIONS ~
+
+>lua
+    -- lazy.nvim
+    {
+      "GustavEikaas/easy-dotnet.nvim",
+      -- 'nvim-telescope/telescope.nvim' or 'ibhagwan/fzf-lua' or 'folke/snacks.nvim'
+      -- are highly recommended for a better experience
+      dependencies = { "nvim-lua/plenary.nvim", 'mfussenegger/nvim-dap', 'folke/snacks.nvim', },
+      config = function()
+        local dotnet = require("easy-dotnet")
+        -- Options are not required
+        dotnet.setup({
+         managed_terminal = {
+           auto_hide = true, -- auto hides terminal if exit code is 0
+           auto_hide_delay = 1000, -- delay before auto hiding, 0 = instant
+           mappings = {
+             next_tab       = { lhs = "<Tab>",   desc = "Next terminal tab" },
+             prev_tab       = { lhs = "<S-Tab>", desc = "Previous terminal tab" },
+             new_terminal   = { lhs = "+",       desc = "New user terminal" },
+             close_terminal = { lhs = "X",       desc = "Close current terminal tab" },
+             hide_panel     = { lhs = "q",       desc = "Hide terminal panel" },
+           },
+         },
+          -- Optional configuration for external terminals (matches nvim-dap structure)
+          external_terminal = nil,
+          projx_lsp = {
+            enabled = true,
+          },
+          lsp = {
+            enabled = true, -- Enable builtin roslyn lsp
+            set_fold_expr = false,
+            preload_roslyn = true, -- Start loading roslyn before any buffer is opened
+            roslynator_enabled = true, -- Automatically enable roslynator analyzer
+            easy_dotnet_analyzer_enabled = true, -- Enable roslyn analyzer from easy-dotnet-server
+            easy_dotnet_extension_enabled = false, -- Needs to be true for enhanced_rename and create_type_from_usage
+            enhanced_rename = false, -- auto rename file when renaming class
+            create_type_from_usage = false, -- code action for creating class from unresolved symbol in a separate file
+            restart_roslyn_on_branch_change = false, -- Restart Roslyn when Git HEAD changes
+            auto_refresh_codelens = true,
+            suggest_updates = true, -- Periodically suggest roslyn-language-server updates
+            analyzer_assemblies = {}, -- Any additional roslyn analyzers you might use like SonarAnalyzer.CSharp
+            auto_load_projects = false,
+            daemon_mode = false,
+            bulk_filewatcher_registrations = true,
+            razor = {
+              enabled = true,
+              html = {
+                enabled = true,
+                cmd = nil, -- Auto-detect project node_modules/.bin/vscode-html-language-server, then PATH
+                request_timeout = 5000,
+              },
+            },
+            config = {},
+            ---@type "Critical" | "Debug" | "Error" | "Information" | "None" | "Trace" | "Warning"
+            log_level = "Information", -- Roslyn language server log level
+          },
+          debugger = {
+            -- Path to custom coreclr DAP adapter
+            -- When set, this fully overrides `engine`; easy-dotnet-server uses this binary as-is.
+            -- When nil, easy-dotnet-server falls back to its own bundled debugger selected by `engine`.
+            bin_path = nil,
+            -- Which bundled debugger to use when `bin_path` is nil.
+            --   "netcoredbg" (default) — Samsung netcoredbg
+            --   "dncdbg"               — viewizard/dncdbg (a fork of netcoredbg with a richer set of features)
+            --   "sharpdbg"             — MattParkerDev/sharpdbg (a new debugger written in C#)
+            engine = "netcoredbg",
+            console = "integratedTerminal", -- Controls where the target app runs: "integratedTerminal" (Neovim buffer) or "externalTerminal" (OS window)
+            apply_value_converters = true,
+            auto_register_dap = true,
+            -- Sample the debugged process' CPU/memory usage so the `easy-dotnet_cpu` and `easy-dotnet_mem`
+            -- dapui widgets have data to draw. Set to false to turn sampling off and unregister the widgets.
+            mem_cpu_usage = true,
+            mappings = {
+              open_variable_viewer = { lhs = "T", desc = "open variable viewer" },
+            },
+          },
+          ---@type easy-dotnet.TestRunner.Options
+          test_runner = {
+            auto_start_testrunner = true,
+            hide_legend = false,
+            -- Set to true when using neotest to avoid duplicate signs and conflicting buffer keymaps.
+            neotest_integration = false,
+            ---@type "split" | "vsplit" | "float" | "buf"
+            viewmode = "float",
+            ---@type number|nil
+            vsplit_width = nil,
+            ---@type string|nil "topleft" | "topright"
+            vsplit_pos = nil,
+            icons = {
+              passed = "",
+              skipped = "",
+              failed = "",
+              success = "",
+              reload = "",
+              test = "",
+              sln = "󰘐",
+              project = "󰘐",
+              dir = "",
+              package = "",
+              class = "",
+              build_failed = "󰒡",
+            },
+            mappings = {
+              run_test_from_buffer = { lhs = "<leader>r", desc = "run test from buffer" },
+              run_all_tests_from_buffer = { lhs = "<leader>t", desc = "Run all tests in file" },
+              get_build_errors = { lhs = "<leader>e", desc = "get build errors" },
+              peek_stack_trace_from_buffer = { lhs = "<leader>p", desc = "peek stack trace from buffer" },
+              debug_test_from_buffer = { lhs = "<leader>d", desc = "run test from buffer" },
+              debug_test = { lhs = "<leader>d", desc = "debug test" },
+              go_to_file = { lhs = "<leader>g", desc = "go to file" },
+              run_all = { lhs = "<leader>R", desc = "run all tests" },
+              run = { lhs = "<leader>r", desc = "run test" },
+              peek_stacktrace = { lhs = "<leader>p", desc = "peek stacktrace of failed test" },
+              expand = { lhs = "o", desc = "expand" },
+              expand_node = { lhs = "E", desc = "expand node" },
+              collapse_all = { lhs = "W", desc = "collapse all" },
+              close = { lhs = "q", desc = "close testrunner" },
+              refresh_testrunner = { lhs = "<C-r>", desc = "refresh testrunner" },
+              cancel = { lhs = "<C-c>", desc = "cancel in-flight operation" },
+              next_failure = { lhs = "]f", desc = "jump to next failing test" },
+              prev_failure = { lhs = "[f", desc = "jump to previous failing test" },
+            }
+          },
+          new = {
+            project = {
+              prefix = "sln" -- "sln" | "none"
+            }
+          },
+          csproj_mappings = true,
+          fsproj_mappings = true,
+          enable_filetypes = true, -- appsettings/launchSettings/secrets.json as json5, .props as xml, .razor/.cshtml as razor
+          auto_bootstrap_namespace = {
+              --block_scoped, file_scoped
+              type = "block_scoped",
+              enabled = true,
+              use_clipboard_json = {
+                behavior = "prompt", --'auto' | 'prompt' | 'never',
+                register = "+", -- which register to check
+              },
+          },
+          server = {
+              use_visual_studio = false, -- Set true for .NET Framework support on Windows
+              ---@type nil | "Off" | "Critical" | "Error" | "Warning" | "Information" | "Verbose" | "All"
+              log_level = nil,
+          },
+          -- choose which picker to use with the plugin
+          -- possible values are "telescope" | "fzf" | "snacks" | "basic"
+          -- if no picker is specified, the plugin will determine
+          -- the available one automatically with this priority:
+          --  snacks -> fzf -> telescope ->  basic
+          picker = "snacks",
+          notifications = {
+            --Set this to false if you have configured lualine to avoid double logging
+            handler = function(start_event)
+              local spinner = require("easy-dotnet.ui-modules.spinner").new()
+              spinner:start_spinner(function() return start_event.job.name end)
+              ---@param finished_event easy-dotnet.Job.Event
+              return function(finished_event)
+                spinner:stop_spinner(finished_event.result.msg, finished_event.result.level)
+              end
+            end,
+          },
+          diagnostics = {
+            default_severity = "error",
+            setqflist = false,
+          },
+          outdated = {
+            mappings = {
+              upgrade = { lhs = "<leader>pu", desc = "upgrade package under cursor" },
+              upgrade_all = { lhs = "<leader>pa", desc = "upgrade all outdated packages" },
+            },
+          },
+        })
+
+        -- Example command
+        vim.api.nvim_create_user_command('Secrets', function()
+          dotnet.secrets()
+        end, {})
+
+        -- Example keybinding
+        vim.keymap.set("n", "<C-p>", function()
+          vim.cmd("Dotnet run profile default")
+        end)
+      end
+    }
+<
+
+
+LUALINE CONFIG ~
+
+
+SIMPLE COMPONENTS
+
+>lua
+    local dotnet = require("easy-dotnet")
+
+    require("lualine").setup {
+      sections = {
+        -- ...
+        lualine_a = { "mode", dotnet.lualine.jobs },
+        -- Shows the default startup project and its launch profile (if any),
+        -- pushed by the server whenever it changes.
+        lualine_x = { dotnet.lualine.active_project },
+        -- ...
+      },
+    }
+<
+
+
+DYNAMIC RUN/STOP COMPONENT
+
+A single component that adapts to running state:
+
+- **Idle:** `ProjectName` — left-click runs, right-click debugs
+- **Running:** `ProjectName` (green) — process alive, no debugger attached
+- **Debugging:** `ProjectName` (orange) — debugger attached
+
+Uses three Codicons <https://www.nerdfonts.com/> (requires Nerd Font):
+`nf-cod-debug_start`, `nf-cod-debug_stop`, `nf-cod-debug`.
+
+>lua
+    local dotnet = require("easy-dotnet")
+
+    require("lualine").setup {
+      sections = {
+        lualine_x = {
+          dotnet.lualine.jobs,
+          {
+            dotnet.lualine.run_status,
+            color    = dotnet.lualine.run_status_color,
+            on_click = dotnet.lualine.run_status_click,
+          },
+        },
+      },
+    }
+<
+
+
+ADVANCED PATTERNS                              *easy-dotnet-advanced-patterns*
+
+For a more complete Visual Studio-style setup with external run/debug
+terminals, AppWrapper window reuse, the built-in terminal panel, lualine
+status, and ProjX project-file features, see Advanced Patterns
+<./docs/advanced-patterns.md>.
+
+
+COMMANDS                                                *easy-dotnet-commands*
+
+
+LUA FUNCTIONS ~
+
+**Legend** - `<Picker>` -> The configured picker (`snacks`, `fzf`, `telescope`,
+or the basic fallback) - `<DArgs>` -> Dotnet args (e.g `--no-build`,
+`--configuration release`). Always optional - `<Picker Default>` -> Picker
+selection that persists for future use - `<sln>` -> Solution file (in some
+cases .csproj or .fsproj is used as fallback if no .sln file exists)
+
+  ----------------------------------------------------------------------------------------------------------------------------
+  Function                                           Description
+  -------------------------------------------------- -------------------------------------------------------------------------
+  dotnet.run_profile()                               dotnet run --project <Picker> --launch-profile <Picker>
+
+  dotnet.run()                                       dotnet run --project <Picker> <DArgs>
+
+  dotnet.run_default()                               dotnet run --project <Picker Default> <DArgs>
+
+  dotnet.run_profile_default()                       dotnet run --project <Picker Default> --launch-profile <Picker> <DArgs>
+
+
+
+  dotnet.debug_profile()                             Debug selected project with selected launch profile
+
+  dotnet.debug_attach()                              Attach the debugger to a running .NET process
+
+  dotnet.debug()                                     Debug selected project
+
+  dotnet.debug_default()                             Debug the persisted default project
+
+  dotnet.debug_profile_default()                     Debug the persisted default project with selected launch profile
+
+
+
+  dotnet.build()                                     dotnet build <Picker> <DArgs>
+
+  dotnet.build_solution()                            dotnet build <sln> <DArgs>
+
+  dotnet.build_solution_quickfix()                   dotnet build <sln> <DArgs> and opens build errors in the quickfix list
+
+  dotnet.build_quickfix()                            dotnet build <Picker> <DArgs> and opens build errors in the quickfix list
+
+  dotnet.build_default()                             dotnet build <Picker Default> <DArgs>
+
+  dotnet.build_default_quickfix()                    dotnet build <Picker Default> <DArgs> and opens build errors in the
+                                                     quickfix list
+
+  dotnet.pack()                                      dotnet pack -c release
+
+  dotnet.push()                                      dotnet pack and push
+
+
+
+  dotnet.test()                                      dotnet test <Picker> <DArgs>
+
+  dotnet.test_solution()                             dotnet test <sln> <DArgs>
+
+  dotnet.test_default()                              dotnet test <Picker Default> <DArgs>
+
+
+
+  dotnet.watch()                                     dotnet watch --project <Picker> <DArgs>
+
+  dotnet.watch_default()                             dotnet watch --project <Picker Default> <DArgs>
+
+
+
+  dotnet.restore()                                   dotnet restore <sln> <Dargs>
+
+  dotnet.clean()                                     dotnet clean <pick target>
+
+
+
+  dotnet.remove_package()
+
+  dotnet.add_package()
+
+  dotnet.add_package_prerelease()                    Same as add_package(), including prerelease versions
+
+
+
+  dotnet.testrunner()                                Shows or hides the testrunner
+
+  dotnet.try_get_selected_solution()                 If a solution is selected, returns { basename: string, path: string },
+                                                     otherwise nil
+
+  dotnet.new()                                       Picker for creating a new template based on Dotnet new
+
+  dotnet.outdated()                                  Runs Dotnet outdated in supported file types (.csproj, .fsproj,
+                                                     Directory.Packages.props, Packages.props, Directory.Build.props) and
+                                                     displays virtual text with the latest package versions.
+
+
+
+  dotnet.solution_select(path: string)               Manually set a solution file for the current working directory. Useful
+                                                     for non-standard layouts where the solution file is outside the normal
+                                                     search depth or in a different location.
+
+  dotnet.solution_add()                              dotnet sln <sln> add <Picker>.
+
+  dotnet.solution_remove()                           dotnet sln <sln> remove <Picker>.
+
+
+
+  dotnet.ef_migrations_remove()                      Removes the last applied Entity Framework migration
+
+  dotnet.ef_migrations_add(name: string)             Adds a new Entity Framework migration with the specified name.
+
+  dotnet.ef_migrations_list()                        Lists all applied Entity Framework migrations.
+
+  dotnet.ef_database_drop()                          Drops the database for the selected project.
+
+  dotnet.ef_database_update()                        Updates the database to the latest migration.
+
+  dotnet.ef_database_update_pick()                   Opens a picker to update the database to a selected migration.
+
+
+
+  dotnet.createfile(path)                            Spawns a picker for creating a new file based on a .NET new template
+
+  dotnet.create_item(path)                           Spawns a picker for creating a new file from a template in the given
+                                                     directory (used by the file explorer integrations)
+
+  dotnet.secrets()                                   Opens a picker for .NET user-secrets
+
+  dotnet.reset()                                     Deletes all files persisted by easy-dotnet.nvim. Use this if unable to
+                                                     pick a different solution or project
+
+  dotnet.stop()                                      Stops running workspace sessions
+
+
+
+  dotnet.terminal_toggle()                           Toggles the managed terminal panel
+
+  dotnet.terminal_show()                             Shows the managed terminal panel
+
+  dotnet.terminal_hide()                             Hides the managed terminal panel
+
+
+
+  dotnet.diagnostic()                                Same as diagnostics.get_workspace_diagnostics()
+
+  dotnet.diagnostic_errors()                         Same as diagnostics.get_workspace_diagnostics("error")
+
+  dotnet.diagnostic_warnings()                       Same as diagnostics.get_workspace_diagnostics("warning")
+
+  diagnostics.get_workspace_diagnostics()            Get workspace diagnostics using configured default severity
+
+  diagnostics.get_workspace_diagnostics("error")     Get workspace diagnostics for errors only
+
+  diagnostics.get_workspace_diagnostics("warning")   Get workspace diagnostics for errors and warnings
+  ----------------------------------------------------------------------------------------------------------------------------
+>lua
+    local dotnet = require("easy-dotnet")
+    dotnet.try_get_selected_solution()
+    dotnet.reset()
+    dotnet.test()
+    dotnet.test_solution()
+    dotnet.test_default()
+    dotnet.testrunner()
+    dotnet.new()
+    dotnet.outdated()
+    dotnet.add_package()
+    dotnet.add_package_prerelease()
+    dotnet.remove_package()
+    dotnet.solution_select(path: string)
+    dotnet.ef_migrations_remove()
+    dotnet.ef_migrations_add(name: string)
+    dotnet.ef_migrations_list()
+    dotnet.ef_database_drop()
+    dotnet.ef_database_update()
+    dotnet.ef_database_update_pick()
+    dotnet.createfile(path: string)
+    dotnet.build()
+    dotnet.build_solution()
+    dotnet.build_solution_quickfix()
+    dotnet.build_quickfix()
+    dotnet.build_default()
+    dotnet.build_default_quickfix()
+    dotnet.pack()
+    dotnet.push()
+    dotnet.run()
+    dotnet.run_profile_default()
+    dotnet.run_default()
+    dotnet.watch()
+    dotnet.watch_default()
+    dotnet.secrets()
+    dotnet.clean()
+    dotnet.restore()
+    dotnet.stop()
+    dotnet.create_item(path: string)
+    dotnet.terminal_toggle()
+    dotnet.terminal_show()
+    dotnet.terminal_hide()
+    dotnet.diagnostic()
+    dotnet.diagnostic_errors()
+    dotnet.diagnostic_warnings()
+
+    local diagnostics = require("easy-dotnet.actions.diagnostics")
+    diagnostics.get_workspace_diagnostics()
+    diagnostics.get_workspace_diagnostics("error")
+    diagnostics.get_workspace_diagnostics("warning")
+<
+
+
+VIM COMMANDS ~
+
+>
+    Run :Dotnet in nvim to list all commands
+<
+
+>
+    Dotnet testrunner
+    Dotnet run
+    Dotnet run default
+    Dotnet run profile
+    Dotnet run profile default
+    Dotnet debug
+    Dotnet debug attach
+    Dotnet debug default
+    Dotnet debug profile
+    Dotnet debug profile default
+    Dotnet watch
+    Dotnet watch default
+    Dotnet test
+    Dotnet test default
+    Dotnet test solution
+    Dotnet test run-settings set
+    Dotnet build
+    Dotnet build quickfix
+    Dotnet build solution
+    Dotnet build solution quickfix
+    Dotnet build default
+    Dotnet build default quickfix
+    Dotnet add package
+    Dotnet add package prerelease
+    Dotnet remove package
+    Dotnet pack
+    Dotnet push
+    Dotnet ef database update
+    Dotnet ef database update pick
+    Dotnet ef database drop
+    Dotnet ef migrations add
+    Dotnet ef migrations remove
+    Dotnet ef migrations list
+    Dotnet secrets
+    Dotnet restore
+    Dotnet clean
+    Dotnet new
+    Dotnet createfile <path>
+    Dotnet solution select [path]
+    Dotnet solution add
+    Dotnet solution remove
+    Dotnet outdated
+    Dotnet terminal toggle
+    Dotnet terminal show
+    Dotnet terminal hide
+    Dotnet diagnostic
+    Dotnet diagnostic errors
+    Dotnet diagnostic warnings
+    checkhealth easy-dotnet
+
+    -- Internal
+    Dotnet reset -- Deletes all persisted files
+    Dotnet _server restart
+    Dotnet _server update
+    Dotnet _server stop
+    Dotnet _server start
+    Dotnet _server logdump
+    Dotnet _server logdump buildserver
+    Dotnet _server logdump stdout
+    Dotnet _server loglevel <level>
+<
+
+
+ROSLYN LSP                                            *easy-dotnet-roslyn-lsp*
+
+Roslyn LSP support is enabled **out of the box** — no configuration required.
+Just open a C#, Razor, or CSHTML file and the official .NET language server
+starts automatically. If `roslyn-language-server` is missing, easy-dotnet will
+install the global tool with `dotnet tool install --global
+roslyn-language-server --prerelease`. Existing installs are not updated
+automatically; run `dotnet-easydotnet roslyn update` when an update is
+suggested.
+
+This dotnet tool exists at two places: nuget.org
+<https://www.nuget.org/packages/roslyn-language-server>, which is not updated
+that often. Azure Devops feed
+<https://dev.azure.com/azure-public/vside/_artifacts/feed/vs-impl/NuGet/roslyn-language-server.linux-x64>,
+where updates happen multiple times a day.
+
+
+  [!IMPORTANT] The version used in vscode can be extracted here
+  <https://github.com/dotnet/vscode-csharp/blob/main/package.json#L43>. The
+  extension uses the Azure Devops feed
+  <https://dev.azure.com/azure-public/vside/_artifacts/feed/vs-impl/NuGet/roslyn-language-server.linux-x64>
+  as well.
+>bash
+     # Installing the tool using the more recent Azure Devops feed
+     dotnet tool install -g roslyn-language-server --prerelease --source https://pkgs.dev.azure.com/azure-public/vside/_packaging/vs-impl/nuget/v3/index.json
+
+     # Installing the tool from nuget.org
+     dotnet tool install -g roslyn-language-server --prerelease
+
+     # Updating works the same way as installing ( by replacing "install" with "update")
+     dotnet tool update -g roslyn-language-server --prerelease --source https://pkgs.dev.azure.com/azure-public/vside/_packaging/vs-impl/nuget/v3/index.json
+<
+
+Razor support also uses VS Code’s HTML language server for markup
+completions, hover, formatting, and related requests. easy-dotnet does **not**
+bundle or auto-install this Node dependency. Install it globally with `npm
+install -g vscode-langservers-extracted`, or per project with `npm install
+--save-dev vscode-langservers-extracted`. When `vscode-html-language-server` is
+available in project `node_modules/.bin` or on `PATH`, easy-dotnet starts and
+wires it up automatically. Run `:checkhealth easy-dotnet` for dependency status
+and install guidance. Set `lsp.razor.html.cmd` to override the command, or
+disable Razor with `lsp.razor.enabled = false`.
+
+Set `lsp.restart_roslyn_on_branch_change = true` to restart Roslyn
+automatically after Git branch or detached HEAD changes. This can help when
+large file watcher bursts leave stale diagnostics, especially on Linux. It is
+disabled by default because it stops and starts the Roslyn client for the
+active root.
+
+For more information check out <./docs/lsp.md>
+
+
+TEST RUNNER                                          *easy-dotnet-test-runner*
+
+Integrated test runner inspired by Rider IDE. Powered by easy-dotnet-server
+<https://github.com/GustavEikaas/easy-dotnet-server>. The server supports both
+VSTest and Microsoft Testing Platform adapters.
+
+
+
+If you experience issues with a test adapter please open an issue.
+
+The test runner starts automatically when the server starts and runs discovery
+silently in the background, so the tree is ready before you open the window.
+
+- Test runner window
+    - Float, split and vsplit view modes
+    - Grouped by solution, project, namespace and class
+    - Jump to next / previous failing test (`]f` / `[f`, dot-repeatable)
+    - Passed, skipped, failed with live counts in header
+    - Configurable icons and highlights
+    - Collapsible hierarchy
+    - Peek stacktrace with parsed highlighting (your code in yellow, framework code in grey)
+    - Run and debug from solution, project, namespace, class or test
+    - Cancel in-flight runs
+    - Go to file
+    - Aggregate test results across projects
+- Buffer integration
+    - Gutter signs on test methods and classes
+    - Run test or class from buffer
+    - Debug test or class from buffer
+    - Peek stacktrace from buffer
+    - Flash on run and result
+
+
+KEYMAPS ~
+
+  -----------------------------------------------------------------------
+  Key                         Action
+  --------------------------- -------------------------------------------
+  o                           Expand / collapse node under cursor
+
+  E                           Expand node under cursor and all its
+                              children
+
+  W                           Collapse node under cursor and all its
+                              children
+
+  ]f / [f                     Jump to next / previous failing test
+                              (dot-repeatable with .)
+
+  <leader>r                   Run test under cursor
+
+  <leader>R                   Run all tests
+
+  <leader>d                   Debug test under cursor
+
+  <leader>p                   Peek stacktrace of failed test
+
+  <leader>g                   Go to file
+
+  <leader>e                   Show build errors (failed build)
+
+  <C-r>                       Refresh test runner node
+
+  <C-c>                       Cancel in-flight operation
+
+  q                           Close window
+  -----------------------------------------------------------------------
+
+DEBUGGING TESTS ~
+
+Use `<leader>d` on any node in the runner to start a debug session. Breakpoints
+must be set manually before starting the session.
+
+
+RUN SETTINGS ~
+
+Use `:Dotnet test run-settings set` to pick a `.runsettings` file for a
+project. The server searches the workspace, stores the selection per project,
+and applies it when running tests through the VSTest adapter.
+
+
+RUNNING TESTS FROM BUFFER ~
+
+Gutter signs appear automatically on test methods and classes once discovery
+has completed.
+
+  Key         Action
+  ----------- ----------------------------------
+  <leader>r   Run test or class under cursor
+  <leader>t   Run all tests in file
+  <leader>d   Debug test or class under cursor
+  <leader>p   Peek stacktrace of failed test
+When a run is triggered from the buffer the method or class flashes to confirm
+it was picked up. When the run finishes it flashes again in the colour of the
+result.
+
+
+
+
+NEOTEST                                                  *easy-dotnet-neotest*
+
+easy-dotnet ships a built-in neotest <https://github.com/nvim-neotest/neotest>
+adapter. It reuses the same test runner state that powers the built-in test
+runner window, so no extra discovery step is needed.
+
+
+REQUIREMENTS ~
+
+- nvim-neotest/neotest <https://github.com/nvim-neotest/neotest>
+
+
+SETUP ~
+
+**1. Enable neotest_integration in easy-dotnet**
+
+This disables the built-in buffer signs and keymaps so neotest can manage them
+instead:
+
+>lua
+    require("easy-dotnet").setup({
+      test_runner = {
+        neotest_integration = true,
+      },
+    })
+<
+
+**2. Register the adapter with neotest**
+
+>lua
+    require("neotest").setup({
+      adapters = {
+        require("easy-dotnet.neotest"),
+      },
+    })
+<
+
+
+LAZY.NVIM EXAMPLE
+
+>lua
+    {
+      "nvim-neotest/neotest",
+      dependencies = {
+        "nvim-lua/nvim-nio",
+        "nvim-lua/plenary.nvim",
+        "antoinemadec/FixCursorHold.nvim",
+        "nvim-treesitter/nvim-treesitter",
+        "GustavEikaas/easy-dotnet.nvim",
+      },
+      config = function()
+        require("neotest").setup({
+          adapters = {
+            require("easy-dotnet.neotest"),
+          },
+        })
+      end,
+    },
+    -- Make sure easy-dotnet is configured with neotest_integration = true
+    {
+      "GustavEikaas/easy-dotnet.nvim",
+      config = function()
+        require("easy-dotnet").setup({
+          test_runner = {
+            neotest_integration = true,
+          },
+        })
+      end,
+    }
+<
+
+
+WORKSPACE DIAGNOSTICS                      *easy-dotnet-workspace-diagnostics*
+
+Analyze your entire solution or individual projects for compilation errors and
+warnings using Roslyn diagnostics.
+
+
+COMMANDS ~
+
+- `Dotnet diagnostic` - Uses the configured default severity (errors by default)
+- `Dotnet diagnostic errors` - Shows only compilation errors
+- `Dotnet diagnostic warnings` - Shows both errors and warnings
+
+
+CONFIGURATION ~
+
+>lua
+    require("easy-dotnet").setup({
+      diagnostics = {
+        default_severity = "error",  -- "error" or "warning" (default: "error")
+        setqflist = false,           -- Populate quickfix list automatically (default: false)
+      },
+    })
+<
+
+
+FEATURES ~
+
+- **Solution/Project Selection**: When multiple projects or solutions are available, you’ll be prompted to select which one to analyze
+- **Roslyn Integration**: Uses the Roslyn Language Server Protocol for accurate diagnostics
+- **Neovim Diagnostics Integration**: Results are populated into Neovim’s built-in diagnostic system, allowing you to:
+    - Navigate between diagnostics using `:lua vim.diagnostic.goto_next()` and `:lua vim.diagnostic.goto_prev()`
+    - View diagnostics in the quickfix list using `:lua vim.diagnostic.setqflist()` (or automatically if configured)
+    - See inline diagnostic messages
+    - View with trouble (requires trouble.nvim <https://github.com/folke/trouble.nvim>)
+    - View with snacks diagnostic picker (requires snacks.nvim <https://github.com/folke/snacks.nvim>)
+
+The diagnostics will appear in Neovim’s diagnostic system, allowing you to
+navigate through them using your standard diagnostic keymaps. If you have
+trouble.nvim or snacks.nvim configured, the diagnostics will automatically be
+available in their respective interfaces.
+
+
+OUTDATED                                                *easy-dotnet-outdated*
+
+Run the command `Dotnet outdated` in one of the supported filetypes, virtual
+text with packages latest version will appear
+
+Supports the following filetypes
+
+- .csproj
+- .fsproj
+- Directory.Packages.props
+- Packages.props
+- Directory.Build.props
+
+After running `Dotnet outdated`, buffer-local keymaps are registered to upgrade
+packages in place (replaces the `Version="..."` attribute with the latest
+version and removes the virtual text). Both keymaps are configurable via
+`outdated.mappings`:
+
+  Default      Action
+  ------------ -----------------------------------------------
+  <leader>pu   Upgrade the outdated package under the cursor
+  <leader>pa   Upgrade all outdated packages in the buffer
+
+ADD                                                          *easy-dotnet-add*
+
+
+ADD PACKAGE ~
+
+Adding nuget packages are available using the `:Dotnet add package` command.
+This will allow you to browse for nuget packages.
+
+
+PROJECT MAPPINGS                                *easy-dotnet-project-mappings*
+
+Key mappings are available automatically within `.csproj` and `.fsproj` files
+
+
+ADD REFERENCE ~
+
+`<leader>ar` -> Opens a picker for selecting which project reference to add
+
+
+PACKAGE AUTOCOMPLETE ~
+
+Package autocomplete in `.csproj` files is provided by the ProjX LSP, which is
+enabled by default. This triggers autocomplete for `<PackageReference
+Include="<lsp-trigger>" Version="<lsp-trigger>" />`.
+
+Older configurations that manually register the `easy-dotnet` source with
+`nvim-cmp` or `blink.cmp` should be removed.
+
+
+  [!NOTE] Latest is added as a snippet to make it easier to select the latest
+  version
+
+.NET FRAMEWORK                                    *easy-dotnet-.net-framework*
+
+Basic support for .NET framework has been achieved. This means basic
+functionality like `build/run/test/test-runner` should work. If you find
+something not working feel free to file an issue.
+
+
+REQUIREMENTS ~
+
+- `choco install nuget.commandline`
+- Visual studio installation
+- `options.server.use_visual_studio == true`
+
+
+NEW                                                          *easy-dotnet-new*
+
+Create dotnet templates as with `dotnet new <templatename>` Try it out by
+running `Dotnet new`
+
+
+PROJECT ~
+
+
+https://github.com/user-attachments/assets/aa067c17-3611-4490-afc8-41d98a526729
+
+
+CONFIGURATION FILE ~
+
+If a configuration file is selected it will 1. Create the configuration file
+and place it next to your solution file. (solution files and gitignore files
+are placed in cwd)
+
+
+INTEGRATING WITH NVIM-TREE ~
+
+Adding the following configuration to your nvim-tree will allow for quickly
+creating contextual items. Today this creates C# enums, records, interfaces,
+and classes using Roslyn.
+
+>lua
+        require("nvim-tree").setup({
+          on_attach = function(bufnr)
+            local api = require('nvim-tree.api')
+
+            local function opts(desc)
+              return { desc = 'nvim-tree: ' .. desc, buffer = bufnr, noremap = true, silent = true, nowait = true }
+            end
+
+            vim.keymap.set('n', 'A', function()
+              local node = api.tree.get_node_under_cursor()
+              local path = node.type == "directory" and node.absolute_path or vim.fs.dirname(node.absolute_path)
+              require("easy-dotnet").create_item(path)
+            end, opts('Create item'))
+          end
+        })
+<
+
+
+INTEGRATING WITH NEO-TREE ~
+
+Adding the following configuration to your neo-tree will allow for quickly
+creating contextual items. Today this creates C# enums, records, interfaces,
+and classes using Roslyn.
+
+>lua
+          require("neo-tree").setup({
+          ---...other options
+            filesystem = {
+              window = {
+                mappings = {
+                  -- Make the mapping anything you want
+                  ["R"] = "easy",
+                },
+              },
+              commands = {
+                ["easy"] = function(state)
+                  local node = state.tree:get_node()
+                  local path = node.type == "directory" and node.path or vim.fs.dirname(node.path)
+                  require("easy-dotnet").create_item(path)
+                end
+              }
+            },
+          })
+<
+
+
+INTEGRATING WITH MINI FILES ~
+
+Adding the following autocmd to your config will allow for quickly creating
+contextual items.
+
+>lua
+        vim.api.nvim_create_autocmd("User", {
+          pattern = "MiniFilesBufferCreate",
+          callback = function(args)
+            local buf_id = args.data.buf_id
+            vim.keymap.set("n", "<leader>a", function()
+              local entry = require("mini.files").get_fs_entry()
+              if entry == nil then
+                vim.notify("No fd entry in mini files", vim.log.levels.WARN)
+                return
+              end
+              local target_dir = entry.path
+              if entry.fs_type == "file" then
+                target_dir = vim.fn.fnamemodify(entry.path, ":h")
+              end
+              require("easy-dotnet").create_item(target_dir)
+            end, { buffer = buf_id, desc = "Create item" })
+          end,
+        })
+<
+
+
+INTEGRATING WITH SNACKS EXPLORER ~
+
+>lua
+      {
+        "folke/snacks.nvim",
+        ---@type snacks.Config
+        opts = {
+          picker = {
+            sources = {
+              explorer = {
+                win = {
+                  list = {
+                    keys = {
+                      ["A"] = "explorer_add_dotnet",
+                    },
+                  },
+                },
+                actions = {
+                  explorer_add_dotnet = function(picker)
+                    local dir = picker:dir()
+                    local easydotnet = require("easy-dotnet")
+
+                    easydotnet.create_item(dir)
+                  end,
+                },
+              },
+            },
+          },
+        },
+      },
+<
+
+
+ENTITYFRAMEWORK                                  *easy-dotnet-entityframework*
+
+Common EntityFramework commands have been added mainly to reduce the overhead
+of writing `--project .. --startup-project ..`.
+
+
+REQUIREMENTS ~
+
+This functionality relies on dotnet-ef tool, install using `dotnet tool install
+--global dotnet-ef`
+
+
+DATABASE ~
+
+- `Dotnet ef database update`
+- `Dotnet ef database update pick` –allows to pick which migration to apply
+- `Dotnet ef database drop`
+
+
+MIGRATIONS ~
+
+- `Dotnet ef migrations add <name>`
+- `Dotnet ef migrations remove`
+- `Dotnet ef migrations list`
+
+
+LANGUAGE INJECTIONS                          *easy-dotnet-language-injections*
+
+Rider-like
+<https://www.jetbrains.com/help/rider/Language_Injections.html#use-comments>
+syntax highlighting for injected languages (sql, json and xml) based on
+comments.
+
+Just add single-line comment like `//language=json` before string to start
+using this.
+
+
+SHOWCASE ~
+
+Language injection with raw json string as an example.
+
+
+REQUIREMENTS ~
+
+This functionality is based on Treesitter
+<https://github.com/nvim-treesitter/nvim-treesitter> and parsers for `sql`,
+`json` and `xml`, so make sure you have these parsers installed: `:TSInstall
+sql json xml`.
+
+
+SUPPORT MATRIX ~
+
+
+STRINGS
+
+  string           sql   json   xml
+  ---------------- ----- ------ -----
+  quoted
+  verbatim
+  raw
+  regexpquoted
+  regexpverbatim
+  regexpraw
+
+INTERPOLATEDSTRINGS
+
+  interpolated string   json   xml
+  --------------------- ------ -----
+  quoted
+  verbatim
+  raw
+  regexpquoted
+  regexpverbatim
+  regexpraw
+
+NVIM-DAPCONFIGURATION                      *easy-dotnet-nvim-dapconfiguration*
+
+Check out debugging-setup <./docs/debugging.md> for a full walkthrough of
+debugging setup
+
+
+TROUBLESHOOTING                                  *easy-dotnet-troubleshooting*
+
+- Update the plugin to latest version
+- Run `:checkhealth easy-dotnet`
+
+
+HIGHLIGHT GROUPS                                *easy-dotnet-highlight-groups*
+
+Click to see all highlight groups ~
+
+  Highlight group                      Default
+  ------------------------------------ ----------------------
+  EasyDotnetTestRunnerSolution         Question
+  EasyDotnetTestRunnerProject          Character
+  EasyDotnetTestRunnerTest             Normal
+  EasyDotnetTestRunnerSubcase          Conceal
+  EasyDotnetTestRunnerDir              Directory
+  EasyDotnetTestRunnerPackage          Include
+  EasyDotnetTestRunnerPassed           DiagnosticOk
+  EasyDotnetTestRunnerFailed           DiagnosticError
+  EasyDotnetTestRunnerInconclusive     DiagnosticHint
+  EasyDotnetTestRunnerRunning          DiagnosticWarn
+  EasyDotnetTestRunnerQueued           Comment
+  EasyDotnetTestRunnerProbable         Comment
+  EasyDotnetDebuggerFloatVariable      Question
+  EasyDotnetDebuggerVirtualVariable    Question
+  EasyDotnetDebuggerVirtualException   DiagnosticError
+  EasyDotnetPeekTitle                  Custom (Accent)
+  EasyDotnetPeekBorder                 Custom (Accent)
+  EasyDotnetPeekMain                   Custom (Dark)
+  EasyDotnetPeekSideBar                Custom (Darker)
+  EasyDotnetPeekWinBar                 Custom (Dark)
+  EasyDotnetPeekHint                   Custom (Italic Gray)
+  EasyDotnetPeekListActive             Custom (Blue)
+
+INACTIVE PREPROCESSOR BRANCHES (#IF DEBUG) ~
+
+Roslyn reports code inside inactive preprocessor branches — for example a
+`#if DEBUG` block while the build configuration is `Release` — as an off-spec
+`excludedCode` semantic token. Neovim only links the standard LSP token types
+by default, so easy-dotnet links this one for you:
+
+  Highlight group          Default
+  ------------------------ ---------
+  @lsp.type.excludedCode   Comment
+It is set with `default = true`, so your colorscheme or config wins. To pick
+your own look:
+
+>lua
+    vim.api.nvim_set_hl(0, "@lsp.type.excludedCode", { link = "NonText" })
+<
+
+Or to turn the dimming off entirely:
+
+>lua
+    vim.api.nvim_set_hl(0, "@lsp.type.excludedCode", {})
+<
+
+Put it in a `ColorScheme` autocmd if your colorscheme is loaded after
+easy-dotnet.
+
+
+LOCAL DEVELOPMENT                              *easy-dotnet-local-development*
+
+Check out setup guide <./docs/server-development.md>
+
+
+STAR HISTORY                                        *easy-dotnet-star-history*
+
+
+
+
+CONTRIBUTORS                                        *easy-dotnet-contributors*
+
+
+
+==============================================================================
+1. Links                                                   *easy-dotnet-links*
+
+1. *Typing SVG*: https://readme-typing-svg.demolab.com?font=Fira+Code&size=32&pause=1000&width=435&lines=easy-dotnet.nvim
+2. *image*: https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113
+3. *image*: https://github.com/user-attachments/assets/00a9d38a-6afe-42ec-b971-04191fee1d59
+4. *image*: https://github.com/user-attachments/assets/dec096be-8a87-4dd8-aaec-8c22849d1640
+5. *image*: https://github.com/user-attachments/assets/81809aa8-704b-4481-9445-3985ddef6c98
+6. *image*: https://github.com/user-attachments/assets/2b59735f-941e-44d2-93cf-76b13ac3e76f
+7. *image*: https://github.com/user-attachments/assets/2057bf66-e207-479c-8bd9-35714cdb7e24
+
+Generated by panvimdoc <https://github.com/kdheepak/panvimdoc>
+
+vim:tw=78:ts=8:noet:ft=help:norl:

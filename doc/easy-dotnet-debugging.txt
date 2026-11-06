@@ -1,0 +1,171 @@
+*easy-dotnet-debugging.txt*
+                         For Neovim >= 0.11.0    Last change: 2026 November 06
+
+==============================================================================
+Table of Contents                    *easy-dotnet-debugging-table-of-contents*
+
+1. Debugging                                 |easy-dotnet-debugging-debugging|
+2. Configuration                         |easy-dotnet-debugging-configuration|
+3. Interactive Console & External Terminal|easy-dotnet-debugging-interactive-console-&-external-terminal|
+  - External Terminal Configuration Examples|easy-dotnet-debugging-interactive-console-&-external-terminal-external-terminal-configuration-examples|
+4. Programmatic Debugging       |easy-dotnet-debugging-programmatic-debugging|
+5. CPU/MEM Performance Widgets|easy-dotnet-debugging-cpu/mem-performance-widgets|
+  - Features      |easy-dotnet-debugging-cpu/mem-performance-widgets-features|
+  - Configuration Example|easy-dotnet-debugging-cpu/mem-performance-widgets-configuration-example|
+  - Preview        |easy-dotnet-debugging-cpu/mem-performance-widgets-preview|
+This guide describes how to integrate .NET Core debugging in Neovim using
+nvim-dap and netcoredbg.
+
+
+==============================================================================
+1. Debugging                                 *easy-dotnet-debugging-debugging*
+
+To start debugging do the following. Ensure you have configured the code below
+
+Dont start the project before doing this, debugger has to start it for you
+
+1. Open any `.cs` file in the project
+2. Set a breakpoint with `<leader>b`
+3. Press `<F5>`
+4. Select the project you want to debug (if your breakpoint is in a library you have to select the entry point project)
+5. Wait for breakpoint to be hit
+6. You can now `<F10>` step over, `<F11>` step into, `<F5>` continue and more (see code)
+
+In the DAP REPL, assignment expressions like `x = 5` reassign the variable in
+the current stack frame.
+
+
+==============================================================================
+2. Configuration                         *easy-dotnet-debugging-configuration*
+
+>lua
+    --lazy.nvim
+    --nvim-dap config
+    return {
+      "mfussenegger/nvim-dap",
+      config = function()
+        local dap = require "dap"
+
+        -- Keymaps for controlling the debugger
+        vim.keymap.set("n", "q", function()
+          dap.terminate()
+          dap.clear_breakpoints()
+        end, { desc = "Terminate and clear breakpoints" })
+
+        vim.keymap.set("n", "<F5>", dap.continue, { desc = "Start/continue debugging" })
+        vim.keymap.set("n", "<F10>", dap.step_over, { desc = "Step over" })
+        vim.keymap.set("n", "<F11>", dap.step_into, { desc = "Step into" })
+        vim.keymap.set("n", "<F12>", dap.step_out, { desc = "Step out" })
+        vim.keymap.set("n", "<leader>b", dap.toggle_breakpoint, { desc = "Toggle breakpoint" })
+        vim.keymap.set("n", "<leader>dO", dap.step_over, { desc = "Step over (alt)" })
+        vim.keymap.set("n", "<leader>dC", dap.run_to_cursor, { desc = "Run to cursor" })
+        vim.keymap.set("n", "<leader>dr", dap.repl.toggle, { desc = "Toggle DAP REPL" })
+        vim.keymap.set("n", "<leader>dj", dap.down, { desc = "Go down stack frame" })
+        vim.keymap.set("n", "<leader>dk", dap.up, { desc = "Go up stack frame" })
+
+        end
+    }
+<
+
+
+==============================================================================
+3. Interactive Console & External Terminal *easy-dotnet-debugging-interactive-console-&-external-terminal*
+
+`easy-dotnet` fully supports interactive console debugging (e.g.,
+`Console.ReadLine()`). You can control where your target application runs using
+the `debugger.console` option in your `easy-dotnet` setup:
+
+1. **integratedTerminal (Default):** Runs the application inside a Neovim buffer or the `nvim-dap-ui` console widget. This keeps everything inside your editor and prevents your application’s standard output from cluttering the DAP REPL.
+2. **externalTerminal:** Spawns a completely detached OS terminal window (similar to hitting F5 in Visual Studio).
+
+
+EXTERNAL TERMINAL CONFIGURATION EXAMPLES *easy-dotnet-debugging-interactive-console-&-external-terminal-external-terminal-configuration-examples*
+
+If you choose to use an `externalTerminal`, you must tell `nvim-dap` which
+terminal emulator to use on your machine. You can configure this globally in
+your Neovim configuration:
+
+>lua
+    local dap = require("dap")
+
+    -- Windows Terminal (Windows)
+    dap.defaults.fallback.external_terminal = {
+      command = "wt",
+      args = { "-w", "0", "nt", "--" },
+    }
+
+    -- Kitty (Linux/macOS)
+    dap.defaults.fallback.external_terminal = {
+      command = "kitty",
+      args = { "--hold" },
+    }
+
+    -- Alacritty (Linux/macOS)
+    dap.defaults.fallback.external_terminal = {
+      command = "alacritty",
+      args = { "-e" },
+    }
+<
+
+
+==============================================================================
+4. Programmatic Debugging       *easy-dotnet-debugging-programmatic-debugging*
+
+You can bind a key just like `<F5>` / Run in Visual Studio that triggers
+debugging for the default project or a selected profile.
+
+>lua
+    vim.keymap.set("n", "<C-p>", function()
+      vim.cmd "Dotnet debug default profile"
+    end, { nowait = true, desc = "Start debugging" })
+<
+
+
+==============================================================================
+5. CPU/MEM Performance Widgets *easy-dotnet-debugging-cpu/mem-performance-widgets*
+
+easy-dotnet.nvim provides real-time performance monitoring during debug
+sessions through two custom dapui widgets: `easy-dotnet_cpu` and
+`easy-dotnet_mem`. These widgets display live CPU usage (percentage) and memory
+consumption (bytes) of your debugged application.
+
+
+FEATURES          *easy-dotnet-debugging-cpu/mem-performance-widgets-features*
+
+- **CPU Widget**: Shows real-time CPU percentage utilization
+- **Memory Widget**: Displays current memory usage in bytes
+- **Live Updates**: Automatically refreshes during active debug sessions
+
+
+CONFIGURATION EXAMPLE *easy-dotnet-debugging-cpu/mem-performance-widgets-configuration-example*
+
+Add the widgets to your dapui layout configuration:
+
+>lua
+    local dapui = require("dapui")
+
+    dapui.setup {
+      layouts = {
+        {
+          elements = {
+            { id = "easy-dotnet_cpu", size = 0.5 },  -- CPU usage panel (50% of layout)
+            { id = "easy-dotnet_mem", size = 0.5 },  -- Memory usage panel (50% of layout)
+          },
+          size = 35,      -- Width of the sidebar
+          position = "right",
+        },
+      },
+    }
+<
+
+
+PREVIEW            *easy-dotnet-debugging-cpu/mem-performance-widgets-preview*
+
+The widgets integrate seamlessly into your debug UI, providing at-a-glance
+performance metrics:
+
+
+
+Generated by panvimdoc <https://github.com/kdheepak/panvimdoc>
+
+vim:tw=78:ts=8:noet:ft=help:norl:
