@@ -4,33 +4,21 @@
 ==============================================================================
 Table of Contents                    *easy-dotnet-debugging-table-of-contents*
 
-1. Debugging in .NET                 |easy-dotnet-debugging-debugging-in-.net|
-  - Table of Contents|easy-dotnet-debugging-debugging-in-.net-table-of-contents|
-  - Debugging              |easy-dotnet-debugging-debugging-in-.net-debugging|
-  - Configuration      |easy-dotnet-debugging-debugging-in-.net-configuration|
-  - Interactive Console & External Terminal|easy-dotnet-debugging-debugging-in-.net-interactive-console-&-external-terminal|
-  - Programmatic Debugging|easy-dotnet-debugging-debugging-in-.net-programmatic-debugging|
-  - CPU/MEM Performance Widgets|easy-dotnet-debugging-debugging-in-.net-cpu/mem-performance-widgets|
-
-==============================================================================
-1. Debugging in .NET                 *easy-dotnet-debugging-debugging-in-.net*
-
+1. Debugging                                 |easy-dotnet-debugging-debugging|
+2. Configuration                         |easy-dotnet-debugging-configuration|
+3. Interactive Console & External Terminal|easy-dotnet-debugging-interactive-console-&-external-terminal|
+  - External Terminal Configuration Examples|easy-dotnet-debugging-interactive-console-&-external-terminal-external-terminal-configuration-examples|
+4. Programmatic Debugging       |easy-dotnet-debugging-programmatic-debugging|
+5. CPU/MEM Performance Widgets|easy-dotnet-debugging-cpu/mem-performance-widgets|
+  - Features      |easy-dotnet-debugging-cpu/mem-performance-widgets-features|
+  - Configuration Example|easy-dotnet-debugging-cpu/mem-performance-widgets-configuration-example|
+  - Preview        |easy-dotnet-debugging-cpu/mem-performance-widgets-preview|
 This guide describes how to integrate .NET Core debugging in Neovim using
 nvim-dap and netcoredbg.
 
 
-TABLE OF CONTENTS  *easy-dotnet-debugging-debugging-in-.net-table-of-contents*
-
-- |easy-dotnet-debugging-debugging-in-.net|
-    - Setting up .NET Debugging with nvim-dap and netcoredbg
-        - |easy-dotnet-debugging-debugging-in-.net-debugging|
-        - |easy-dotnet-debugging-debugging-in-.net-configuration|
-        - Interactive Console & External Terminal
-        - |easy-dotnet-debugging-debugging-in-.net-programmatic-debugging|
-        - |easy-dotnet-debugging-debugging-in-.net-cpu/mem-performance-widgets|
-
-
-DEBUGGING                  *easy-dotnet-debugging-debugging-in-.net-debugging*
+==============================================================================
+1. Debugging                                 *easy-dotnet-debugging-debugging*
 
 To start debugging do the following. Ensure you have configured the code below
 
@@ -47,7 +35,8 @@ In the DAP REPL, assignment expressions like `x = 5` reassign the variable in
 the current stack frame.
 
 
-CONFIGURATION          *easy-dotnet-debugging-debugging-in-.net-configuration*
+==============================================================================
+2. Configuration                         *easy-dotnet-debugging-configuration*
 
 >lua
     --lazy.nvim
@@ -79,7 +68,8 @@ CONFIGURATION          *easy-dotnet-debugging-debugging-in-.net-configuration*
 <
 
 
-INTERACTIVE CONSOLE & EXTERNAL TERMINAL*easy-dotnet-debugging-debugging-in-.net-interactive-console-&-external-terminal*
+==============================================================================
+3. Interactive Console & External Terminal *easy-dotnet-debugging-interactive-console-&-external-terminal*
 
 `easy-dotnet` fully supports interactive console debugging (e.g.,
 `Console.ReadLine()`). You can control where your target application runs using
@@ -89,7 +79,7 @@ the `debugger.console` option in your `easy-dotnet` setup:
 2. **externalTerminal:** Spawns a completely detached OS terminal window (similar to hitting F5 in Visual Studio).
 
 
-EXTERNAL TERMINAL CONFIGURATION EXAMPLES ~
+EXTERNAL TERMINAL CONFIGURATION EXAMPLES *easy-dotnet-debugging-interactive-console-&-external-terminal-external-terminal-configuration-examples*
 
 If you choose to use an `externalTerminal`, you must tell `nvim-dap` which
 terminal emulator to use on your machine. You can configure this globally in
@@ -118,7 +108,8 @@ your Neovim configuration:
 <
 
 
-PROGRAMMATIC DEBUGGING*easy-dotnet-debugging-debugging-in-.net-programmatic-debugging*
+==============================================================================
+4. Programmatic Debugging       *easy-dotnet-debugging-programmatic-debugging*
 
 You can bind a key just like `<F5>` / Run in Visual Studio that triggers
 debugging for the default project or a selected profile.
@@ -130,7 +121,8 @@ debugging for the default project or a selected profile.
 <
 
 
-CPU/MEM PERFORMANCE WIDGETS*easy-dotnet-debugging-debugging-in-.net-cpu/mem-performance-widgets*
+==============================================================================
+5. CPU/MEM Performance Widgets *easy-dotnet-debugging-cpu/mem-performance-widgets*
 
 easy-dotnet.nvim provides real-time performance monitoring during debug
 sessions through two custom dapui widgets: `easy-dotnet_cpu` and
@@ -138,14 +130,14 @@ sessions through two custom dapui widgets: `easy-dotnet_cpu` and
 consumption (bytes) of your debugged application.
 
 
-FEATURES ~
+FEATURES          *easy-dotnet-debugging-cpu/mem-performance-widgets-features*
 
 - **CPU Widget**: Shows real-time CPU percentage utilization
 - **Memory Widget**: Displays current memory usage in bytes
 - **Live Updates**: Automatically refreshes during active debug sessions
 
 
-CONFIGURATION EXAMPLE ~
+CONFIGURATION EXAMPLE *easy-dotnet-debugging-cpu/mem-performance-widgets-configuration-example*
 
 Add the widgets to your dapui layout configuration:
 
@@ -167,7 +159,7 @@ Add the widgets to your dapui layout configuration:
 <
 
 
-PREVIEW ~
+PREVIEW            *easy-dotnet-debugging-cpu/mem-performance-widgets-preview*
 
 The widgets integrate seamlessly into your debug UI, providing at-a-glance
 performance metrics:

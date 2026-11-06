@@ -4,23 +4,19 @@
 ==============================================================================
 Table of Contents            *easy-dotnet-advanced-patterns-table-of-contents*
 
-1. Advanced Patterns         |easy-dotnet-advanced-patterns-advanced-patterns|
-  - Visual Studio-style run and debug|easy-dotnet-advanced-patterns-advanced-patterns-visual-studio-style-run-and-debug|
-  - Full setup example|easy-dotnet-advanced-patterns-advanced-patterns-full-setup-example|
-  - Built-in terminal panel|easy-dotnet-advanced-patterns-advanced-patterns-built-in-terminal-panel|
-  - Quick create menu|easy-dotnet-advanced-patterns-advanced-patterns-quick-create-menu|
-  - Lualine status|easy-dotnet-advanced-patterns-advanced-patterns-lualine-status|
-  - ProjX LSP      |easy-dotnet-advanced-patterns-advanced-patterns-projx-lsp|
-
-==============================================================================
-1. Advanced Patterns         *easy-dotnet-advanced-patterns-advanced-patterns*
-
+1. Visual Studio-style run and debug|easy-dotnet-advanced-patterns-visual-studio-style-run-and-debug|
+2. Full setup example       |easy-dotnet-advanced-patterns-full-setup-example|
+3. Built-in terminal panel|easy-dotnet-advanced-patterns-built-in-terminal-panel|
+4. Quick create menu         |easy-dotnet-advanced-patterns-quick-create-menu|
+5. Lualine status               |easy-dotnet-advanced-patterns-lualine-status|
+6. ProjX LSP                         |easy-dotnet-advanced-patterns-projx-lsp|
 This guide shows a more complete setup for users who want an IDE-like .NET
 workflow in Neovim. It focuses on external run/debug windows, the built-in
 terminal panel, lualine status, and project-file language features.
 
 
-VISUAL STUDIO-STYLE RUN AND DEBUG*easy-dotnet-advanced-patterns-advanced-patterns-visual-studio-style-run-and-debug*
+==============================================================================
+1. Visual Studio-style run and debug *easy-dotnet-advanced-patterns-visual-studio-style-run-and-debug*
 
 `external_terminal` controls where easy-dotnet launches applications for
 `:Dotnet run`. When `debugger.console = "externalTerminal"` is also set, debug
@@ -47,7 +43,8 @@ Choose the terminal command for the OS and terminal you use:
 <
 
 
-FULL SETUP EXAMPLE*easy-dotnet-advanced-patterns-advanced-patterns-full-setup-example*
+==============================================================================
+2. Full setup example       *easy-dotnet-advanced-patterns-full-setup-example*
 
 >lua
     -- lazy.nvim
@@ -114,7 +111,8 @@ With this setup:
 - easy-dotnet notifications are suppressed because lualine shows job and run state.
 
 
-BUILT-IN TERMINAL PANEL*easy-dotnet-advanced-patterns-advanced-patterns-built-in-terminal-panel*
+==============================================================================
+3. Built-in terminal panel *easy-dotnet-advanced-patterns-built-in-terminal-panel*
 
 The `:Dotnet terminal` commands open a VS Code-inspired terminal panel inside
 Neovim:
@@ -135,7 +133,8 @@ the panel after `managed_terminal.auto_hide_delay` milliseconds. User-created
 terminals stay available as normal terminal tabs.
 
 
-QUICK CREATE MENU*easy-dotnet-advanced-patterns-advanced-patterns-quick-create-menu*
+==============================================================================
+4. Quick create menu         *easy-dotnet-advanced-patterns-quick-create-menu*
 
 The quick create menu creates contextual C# items without leaving the current
 explorer location. It is designed for file explorer integrations where the
@@ -161,7 +160,8 @@ the cursor is on a file, use the file’s parent directory:
 <
 
 
-LUALINE STATUS*easy-dotnet-advanced-patterns-advanced-patterns-lualine-status*
+==============================================================================
+5. Lualine status               *easy-dotnet-advanced-patterns-lualine-status*
 
 Disabling `notifications.handler` when lualine shows active jobs and run/debug
 state:
@@ -193,7 +193,8 @@ profile. `dotnet.lualine.run_status` can run, debug, or stop the active project
 through its click handler.
 
 
-PROJX LSP          *easy-dotnet-advanced-patterns-advanced-patterns-projx-lsp*
+==============================================================================
+6. ProjX LSP                         *easy-dotnet-advanced-patterns-projx-lsp*
 
 ProjX LSP is enabled by default and improves `.csproj` editing. It is separate
 from Roslyn C# LSP and focuses on project-file intelligence.

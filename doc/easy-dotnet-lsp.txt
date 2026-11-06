@@ -4,20 +4,25 @@
 ==============================================================================
 Table of Contents                          *easy-dotnet-lsp-table-of-contents*
 
-1. Roslyn LSP integration             |easy-dotnet-lsp-roslyn-lsp-integration|
-  - Razor and CSHTML |easy-dotnet-lsp-roslyn-lsp-integration-razor-and-cshtml|
-  - Analyzers               |easy-dotnet-lsp-roslyn-lsp-integration-analyzers|
-  - LSP Settings         |easy-dotnet-lsp-roslyn-lsp-integration-lsp-settings|
-  - File Watching       |easy-dotnet-lsp-roslyn-lsp-integration-file-watching|
-  - Restart Roslyn After Git Branch Changes|easy-dotnet-lsp-roslyn-lsp-integration-restart-roslyn-after-git-branch-changes|
-  - CodeLens & Peek References|easy-dotnet-lsp-roslyn-lsp-integration-codelens-&-peek-references|
-  - Solution & Project Detection (How Roslyn LSP Decides What to Load)|easy-dotnet-lsp-roslyn-lsp-integration-solution-&-project-detection-(how-roslyn-lsp-decides-what-to-load)|
-  - Visual Overview   |easy-dotnet-lsp-roslyn-lsp-integration-visual-overview|
-2. Links                                               |easy-dotnet-lsp-links|
-
-==============================================================================
-1. Roslyn LSP integration             *easy-dotnet-lsp-roslyn-lsp-integration*
-
+1. Razor and CSHTML                         |easy-dotnet-lsp-razor-and-cshtml|
+2. Analyzers                                       |easy-dotnet-lsp-analyzers|
+3. LSP Settings                                 |easy-dotnet-lsp-lsp-settings|
+4. File Watching                               |easy-dotnet-lsp-file-watching|
+  - Enabling Neovim file watching on Linux|easy-dotnet-lsp-file-watching-enabling-neovim-file-watching-on-linux|
+5. Restart Roslyn After Git Branch Changes|easy-dotnet-lsp-restart-roslyn-after-git-branch-changes|
+6. CodeLens & Peek References     |easy-dotnet-lsp-codelens-&-peek-references|
+  - 1. Configure the Keymap|easy-dotnet-lsp-codelens-&-peek-references-1.-configure-the-keymap|
+  - 2. VS Code Visuals (Tip)|easy-dotnet-lsp-codelens-&-peek-references-2.-vs-code-visuals-(tip)|
+  - 3. Peek Preview UI|easy-dotnet-lsp-codelens-&-peek-references-3.-peek-preview-ui|
+7. Solution & Project Detection (How Roslyn LSP Decides What to Load)|easy-dotnet-lsp-solution-&-project-detection-(how-roslyn-lsp-decides-what-to-load)|
+8. Visual Overview                           |easy-dotnet-lsp-visual-overview|
+  - Solution found            |easy-dotnet-lsp-visual-overview-solution-found|
+  - Solution not found    |easy-dotnet-lsp-visual-overview-solution-not-found|
+  - Workarounds                  |easy-dotnet-lsp-visual-overview-workarounds|
+  - 1. Solution Mode        |easy-dotnet-lsp-visual-overview-1.-solution-mode|
+  - 2. Project Mode          |easy-dotnet-lsp-visual-overview-2.-project-mode|
+  - 3. Single-File Mode  |easy-dotnet-lsp-visual-overview-3.-single-file-mode|
+9. Links                                               |easy-dotnet-lsp-links|
 `easy-dotnet.nvim` provides **first-class Roslyn LSP integration** for Neovim
 out of the box. It uses the same LSP <https://github.com/dotnet/roslyn>
 implementation that powers **Visual Studio** and **VS Code**.
@@ -38,7 +43,8 @@ suggests updates, and you can update manually with:
 <
 
 
-RAZOR AND CSHTML     *easy-dotnet-lsp-roslyn-lsp-integration-razor-and-cshtml*
+==============================================================================
+1. Razor and CSHTML                         *easy-dotnet-lsp-razor-and-cshtml*
 
 `*.razor` and `*.cshtml` files are handled by Roslyn LSP and are enabled by
 default. easy-dotnet also bridges markup-backed Razor requests to VS Code’s
@@ -107,7 +113,8 @@ To disable Razor support:
 <
 
 
-ANALYZERS                   *easy-dotnet-lsp-roslyn-lsp-integration-analyzers*
+==============================================================================
+2. Analyzers                                       *easy-dotnet-lsp-analyzers*
 
 - **Roslynator** is enabled by default.
 - The language server bundles both the **Roslyn LSP** and **Roslynator analyzers**.
@@ -124,7 +131,8 @@ ANALYZERS                   *easy-dotnet-lsp-roslyn-lsp-integration-analyzers*
 <
 
 
-LSP SETTINGS             *easy-dotnet-lsp-roslyn-lsp-integration-lsp-settings*
+==============================================================================
+3. LSP Settings                                 *easy-dotnet-lsp-lsp-settings*
 
 To customize LSP settings, it’s recommended to use this neovim 0.11+ pattern:
 
@@ -191,7 +199,8 @@ easy-dotnet):
 <
 
 
-FILE WATCHING           *easy-dotnet-lsp-roslyn-lsp-integration-file-watching*
+==============================================================================
+4. File Watching                               *easy-dotnet-lsp-file-watching*
 
 Roslyn needs to know when files change on disk, and there are two ways to do
 that:
@@ -215,7 +224,7 @@ the recommended setup. `:checkhealth easy-dotnet` reports which side is
 currently watching and warns when your file descriptor limit is too low for it.
 
 
-ENABLING NEOVIM FILE WATCHING ON LINUX ~
+ENABLING NEOVIM FILE WATCHING ON LINUX *easy-dotnet-lsp-file-watching-enabling-neovim-file-watching-on-linux*
 
 Raise the limits (persist them in `/etc/sysctl.d/` and your shell’s limits
 config):
@@ -245,7 +254,8 @@ Capabilities and settings from `lsp/easy_dotnet.lua` are merged on top of
 easy-dotnet’s defaults, so anything you set there wins.
 
 
-RESTART ROSLYN AFTER GIT BRANCH CHANGES*easy-dotnet-lsp-roslyn-lsp-integration-restart-roslyn-after-git-branch-changes*
+==============================================================================
+5. Restart Roslyn After Git Branch Changes *easy-dotnet-lsp-restart-roslyn-after-git-branch-changes*
 
 Roslyn LSP keeps an in-memory project graph. After a Git branch switch, project
 files, package assets, generated files, analyzers, and source files can all
@@ -278,12 +288,13 @@ diagnostics, completion, source generators, or project references after
 checkout.
 
 
-CODELENS & PEEK REFERENCES*easy-dotnet-lsp-roslyn-lsp-integration-codelens-&-peek-references*
+==============================================================================
+6. CodeLens & Peek References     *easy-dotnet-lsp-codelens-&-peek-references*
 
 See reference counts
 
 
-1. CONFIGURE THE KEYMAP ~
+1. CONFIGURE THE KEYMAP *easy-dotnet-lsp-codelens-&-peek-references-1.-configure-the-keymap*
 
 CodeLens actions (like "Go to References") are triggered via
 vim.lsp.codelens.run(). You can map this to a key for quick access:
@@ -294,7 +305,7 @@ vim.lsp.codelens.run(). You can map this to a key for quick access:
 <
 
 
-2. VS CODE VISUALS (TIP) ~
+2. VS CODE VISUALS (TIP) *easy-dotnet-lsp-codelens-&-peek-references-2.-vs-code-visuals-(tip)*
 
 To make your CodeLens look more subtle and professional (like VS Code), add
 this highlight to your configuration:
@@ -305,13 +316,14 @@ this highlight to your configuration:
 <
 
 
-3. PEEK PREVIEW UI ~
+3. PEEK PREVIEW UI *easy-dotnet-lsp-codelens-&-peek-references-3.-peek-preview-ui*
 
 When you run a "Find References" CodeLens action, easy-dotnet provides a custom
 floating UI.
 
 
-SOLUTION & PROJECT DETECTION (HOW ROSLYN LSP DECIDES WHAT TO LOAD)*easy-dotnet-lsp-roslyn-lsp-integration-solution-&-project-detection-(how-roslyn-lsp-decides-what-to-load)*
+==============================================================================
+7. Solution & Project Detection (How Roslyn LSP Decides What to Load) *easy-dotnet-lsp-solution-&-project-detection-(how-roslyn-lsp-decides-what-to-load)*
 
 `easy-dotnet.nvim` automatically discovers which **project** or **solution**
 your current file belongs to. This determines how Roslyn behaves — what files
@@ -340,7 +352,8 @@ This is why the placement of your solution file matters.
 
 ------------------------------------------------------------------------------
 
-VISUAL OVERVIEW       *easy-dotnet-lsp-roslyn-lsp-integration-visual-overview*
+==============================================================================
+8. Visual Overview                           *easy-dotnet-lsp-visual-overview*
 
 Here is the search behavior represented visually:
 
@@ -361,7 +374,7 @@ Here is the search behavior represented visually:
 <
 
 
-SOLUTION FOUND ~
+SOLUTION FOUND                *easy-dotnet-lsp-visual-overview-solution-found*
 
 >
     repo/
@@ -374,7 +387,7 @@ Opening Bar.cs → solution is found → cross-project navigation works.
 
 ------------------------------------------------------------------------------
 
-SOLUTION NOT FOUND ~
+SOLUTION NOT FOUND        *easy-dotnet-lsp-visual-overview-solution-not-found*
 
 >
     <CWD>  ← your Neovim working directory (search stops here)
@@ -396,7 +409,7 @@ Go to definition for symbols pointing to App will jump to decompiled code
 
 ------------------------------------------------------------------------------
 
-WORKAROUNDS ~
+WORKAROUNDS                      *easy-dotnet-lsp-visual-overview-workarounds*
 
 - Open Neovim **inside the folder containing the solution**
     `cd repo-root/Source && nvim`
@@ -404,7 +417,7 @@ WORKAROUNDS ~
 
 ------------------------------------------------------------------------------
 
-1. SOLUTION MODE ~
+1. SOLUTION MODE            *easy-dotnet-lsp-visual-overview-1.-solution-mode*
 
 Triggered when a `.sln` file is found.
 
@@ -417,7 +430,7 @@ Roslyn loads:
 
 ------------------------------------------------------------------------------
 
-2. PROJECT MODE ~
+2. PROJECT MODE              *easy-dotnet-lsp-visual-overview-2.-project-mode*
 
 Triggered when no solution is found, but a `.csproj` is.
 
@@ -428,7 +441,7 @@ Roslyn loads:
 
 ------------------------------------------------------------------------------
 
-3. SINGLE-FILE MODE ~
+3. SINGLE-FILE MODE      *easy-dotnet-lsp-visual-overview-3.-single-file-mode*
 
 Triggered when neither `.sln` nor `.csproj` is found.
 
@@ -439,7 +452,7 @@ Roslyn behaves like:
 - no project context
 
 ==============================================================================
-2. Links                                               *easy-dotnet-lsp-links*
+9. Links                                               *easy-dotnet-lsp-links*
 
 1. *image*: https://github.com/user-attachments/assets/93bb557c-c97a-44a0-a51b-229cb65bddab
 2. *image*: https://github.com/user-attachments/assets/165ab152-7afe-436b-9717-eacdbe63a690
