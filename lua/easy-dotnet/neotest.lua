@@ -62,11 +62,9 @@ function M.is_test_file(file_path)
   if not vim.endswith(file_path, ".cs") then return false end
   if not await_initialization() then return false end
   local state = require("easy-dotnet.test-runner.state")
-  local norm = vim.fn.resolve(file_path)
-  for _, node in pairs(state.nodes) do
-    if node.filePath and vim.fn.resolve(node.filePath) == norm then return true end
-  end
-  return false
+  if #state.nodes_in_file(file_path) > 0 then return true end
+  local resolved = vim.fn.resolve(file_path)
+  return resolved ~= file_path and #state.nodes_in_file(resolved) > 0
 end
 
 ---@param file_path string

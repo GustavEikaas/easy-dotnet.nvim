@@ -54,12 +54,73 @@ M.root_id = nil
 M.initialized = false
 M.active_handle = nil
 
+-- parent id → set of child ids
+---@type table<string, table<string, true>>
+local children_index = {}
+-- parent id → children sorted by displayName, built lazily by M.children
+---@type table<string, easy-dotnet.TestRunner.Node[]>
+local sorted_children = {}
+-- normalized file path → set of node ids
+---@type table<string, table<string, true>>
+local file_index = {}
+-- raw path → vim.fs.normalize(path)
+---@type table<string, string>
+local normalized_paths = {}
+
 -- Statuses treated as failures for ]f / [f jump-to-failure navigation.
 local FAILURE_STATUSES = {
   Failed = true,
   Faulted = true,
   BuildFailed = true,
 }
+
+--- Memoized vim.fs.normalize; thousands of nodes share a handful of file paths.
+---@param path string|nil
+---@return string|nil
+function M.normalize_path(path)
+  if not path then return nil end
+  local normalized = normalized_paths[path]
+  if not normalized then
+    normalized = vim.fs.normalize(path)
+    normalized_paths[path] = normalized
+  end
+  return normalized
+end
+
+---@param node easy-dotnet.TestRunner.Node
+local function index_node(node)
+  if node.parentId then
+    local siblings = children_index[node.parentId]
+    if not siblings then
+      siblings = {}
+      children_index[node.parentId] = siblings
+    end
+    siblings[node.id] = true
+    sorted_children[node.parentId] = nil
+  end
+  if node.filePath then
+    local path = M.normalize_path(node.filePath)
+    local file_nodes = file_index[path]
+    if not file_nodes then
+      file_nodes = {}
+      file_index[path] = file_nodes
+    end
+    file_nodes[node.id] = true
+  end
+end
+
+---@param node easy-dotnet.TestRunner.Node
+local function unindex_node(node)
+  if node.parentId then
+    local siblings = children_index[node.parentId]
+    if siblings then siblings[node.id] = nil end
+    sorted_children[node.parentId] = nil
+  end
+  if node.filePath then
+    local file_nodes = file_index[M.normalize_path(node.filePath)]
+    if file_nodes then file_nodes[node.id] = nil end
+  end
+end
 
 --- Upsert a node. Preserves local UI state (expanded) if the node already exists.
 ---@param node easy-dotnet.TestRunner.Node
@@ -69,18 +130,24 @@ function M.register(node)
 
   if existing then
     node.expanded = existing.expanded
+    unindex_node(existing)
   else
     node.expanded = node_type == "Solution"
   end
 
   node.status = existing and existing.status or nil
   M.nodes[node.id] = node
+  index_node(node)
   if node.parentId == nil then M.root_id = node.id end
 end
 
 --- Remove a node from the state.
 ---@param id string
-function M.remove(id) M.nodes[id] = nil end
+function M.remove(id)
+  local node = M.nodes[id]
+  if node then unindex_node(node) end
+  M.nodes[id] = nil
+end
 
 --- Update cached status for a node. nil status = reset to idle.
 ---@param id string
@@ -109,19 +176,44 @@ function M.update_line_numbers(update)
 end
 
 --- Returns direct children of a node, sorted by displayName.
+--- The returned list is cached until the children change; do not mutate it.
 ---@param parent_id string
 ---@return easy-dotnet.TestRunner.Node[]
 function M.children(parent_id)
+  local cached = sorted_children[parent_id]
+  if cached then return cached end
+
   local result = {}
-  for _, node in pairs(M.nodes) do
-    if node.parentId == parent_id then table.insert(result, node) end
+  for id in pairs(children_index[parent_id] or {}) do
+    local node = M.nodes[id]
+    if node then table.insert(result, node) end
   end
-  table.sort(result, function(a, b) return a.displayName < b.displayName end)
+  table.sort(result, function(a, b)
+    if a.displayName ~= b.displayName then return a.displayName < b.displayName end
+    return a.id < b.id
+  end)
+  sorted_children[parent_id] = result
+  return result
+end
+
+--- Returns every node whose filePath normalizes to the given path, ordered by id.
+---@param path string
+---@return easy-dotnet.TestRunner.Node[]
+function M.nodes_in_file(path)
+  local result = {}
+  for id in pairs(file_index[M.normalize_path(path)] or {}) do
+    local node = M.nodes[id]
+    if node then table.insert(result, node) end
+  end
+  table.sort(result, function(a, b) return a.id < b.id end)
   return result
 end
 
 function M.clear()
   M.nodes = {}
+  children_index = {}
+  sorted_children = {}
+  file_index = {}
   M.root_id = nil
   M.initialized = false
   M.runner_status = {
