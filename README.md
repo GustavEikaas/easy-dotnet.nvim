@@ -1,3 +1,5 @@
+<!-- panvimdoc-ignore-start -->
+
 [![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&size=32&pause=1000&width=435&lines=easy-dotnet.nvim)](https://git.io/typing-svg)
 <a href="https://dotfyle.com/plugins/GustavEikaas/easy-dotnet.nvim">
 	<img src="https://dotfyle.com/plugins/GustavEikaas/easy-dotnet.nvim/shield?style=flat" />
@@ -7,6 +9,8 @@
   <img src="https://img.shields.io/badge/Discord-Join%20easy--dotnet-5865F2?logo=discord&logoColor=white&style=for-the-badge" alt="Join easy-dotnet on Discord">
 </a>
 
+<!-- panvimdoc-ignore-end -->
+
 ## Simplifying .NET development in Neovim
 easy-dotnet.nvim brings common .NET IDE workflows into Neovim: run, debug, test, manage packages, work with solutions, use Roslyn LSP, and handle project files without leaving the editor.
 
@@ -15,12 +19,23 @@ easy-dotnet.nvim brings common .NET IDE workflows into Neovim: run, debug, test,
 >Run `:Dotnet _server update` or `dotnet tool install -g EasyDotnet` to update it.
 >The plugin will attempt to detect when the server is outdated and notify you. If you encounter any issues, please don't hesitate to file an issue.
 
+<!-- panvimdoc-ignore-start -->
+
 > 📰 **Stay updated:** Major updates and new features are announced in [`news.md`](./news.md).  
 > Give it a read periodically to stay in sync with the latest capabilities!
+
+<!-- panvimdoc-ignore-end -->
+
+<!-- panvimdoc-include-comment 
+> **Stay updated:** Major updates and new features are announced in |easy-dotnet-news.txt|.
+> Give it a read periodically to stay in sync with the latest capabilities!
+ -->
 
 
 ## Motivation
 As a developer transitioning from Rider to Neovim, I found myself missing the simplicity of running projects with just a single button click. Tired of typing out lengthy terminal commands for common tasks like running, testing, and managing user secrets, I decided to create easy-dotnet.nvim. This plugin aims to bridge the gap between the convenience of IDEs like Rider and the flexibility of Neovim.
+
+<!-- panvimdoc-ignore-start -->
 
 ## Table of Contents
 
@@ -78,9 +93,11 @@ As a developer transitioning from Rider to Neovim, I found myself missing the si
 23. [Star History](#star-history)
 24. [Contributors](#contributors)
 
+<!-- panvimdoc-ignore-end -->
+
 ## Features
 
-- Roslyn LSP support out of the box — powered by the official .NET Roslyn language server (see [LSP details](./docs/lsp.md))
+- Roslyn LSP support out of the box — powered by the official .NET Roslyn language server (see [LSP details](#roslyn-lsp))
 - Debugger configured out of the box - choose between bundled [netcoredbg](https://github.com/samsung/netcoredbg), [dncdbg](https://github.com/viewizard/dncdbg) and [sharpdbg](https://github.com/MattParkerDev/sharpdbg) engines
 - Solution, slnx, csproj and fsproj support: Whether its a single project or a solution containing multiple projects easy-dotnet has you covered.
 - Action Commands: Execute common tasks like building, running, testing, cleaning and restoring with ease.
@@ -354,7 +371,13 @@ require("lualine").setup {
 
 ## Advanced Patterns
 
+<!-- panvimdoc-ignore-start -->
+
 For a more complete Visual Studio-style setup with external run/debug terminals, AppWrapper window reuse, the built-in terminal panel, lualine status, and ProjX project-file features, see [Advanced Patterns](./docs/advanced-patterns.md).
+
+<!-- panvimdoc-ignore-end -->
+
+<!-- panvimdoc-include-comment For a more complete Visual Studio-style setup with external run/debug terminals, AppWrapper window reuse, the built-in terminal panel, lualine status, and ProjX project-file features, see |easy-dotnet-advanced-patterns.txt|.  -->
 
 ## Commands
 
@@ -589,7 +612,13 @@ Set `lsp.razor.html.cmd` to override the command, or disable Razor with `lsp.raz
 
 Set `lsp.restart_roslyn_on_branch_change = true` to restart Roslyn automatically after Git branch or detached HEAD changes. This can help when large file watcher bursts leave stale diagnostics, especially on Linux. It is disabled by default because it stops and starts the Roslyn client for the active root.
 
+<!-- panvimdoc-ignore-start -->
+
 For more information [check out](./docs/lsp.md)
+
+<!-- panvimdoc-ignore-end -->
+
+<!-- panvimdoc-include-comment For more information see |easy-dotnet-lsp.txt|.  -->
 
 ## Test runner
 
@@ -786,7 +815,7 @@ Both keymaps are configurable via `outdated.mappings`:
 | `<leader>pa` | Upgrade all outdated packages in the buffer   |
 
 
-![image](https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113)
+<img alt="image" src="https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113" />
 
 ## Add
 
@@ -794,7 +823,7 @@ Both keymaps are configurable via `outdated.mappings`:
 
 Adding nuget packages are available using the `:Dotnet add package` command. This will allow you to browse for nuget packages.
 
-![image](https://github.com/user-attachments/assets/00a9d38a-6afe-42ec-b971-04191fee1d59)
+<img alt="image" src="https://github.com/user-attachments/assets/00a9d38a-6afe-42ec-b971-04191fee1d59" />
 
 ## Project mappings
 
@@ -804,7 +833,7 @@ Key mappings are available automatically within `.csproj` and `.fsproj` files
 
 `<leader>ar` -> Opens a picker for selecting which project reference to add
 
-![image](https://github.com/user-attachments/assets/dec096be-8a87-4dd8-aaec-8c22849d1640)
+<img alt="image" src="https://github.com/user-attachments/assets/dec096be-8a87-4dd8-aaec-8c22849d1640" />
 
 ### Package autocomplete
 
@@ -813,12 +842,12 @@ This triggers autocomplete for `<PackageReference Include="<lsp-trigger>" Versio
 
 Older configurations that manually register the `easy-dotnet` source with `nvim-cmp` or `blink.cmp` should be removed.
 
-![image](https://github.com/user-attachments/assets/81809aa8-704b-4481-9445-3985ddef6c98)
+<img alt="image" src="https://github.com/user-attachments/assets/81809aa8-704b-4481-9445-3985ddef6c98" />
 
 >[!NOTE]
 >Latest is added as a snippet to make it easier to select the latest version
 
-![image](https://github.com/user-attachments/assets/2b59735f-941e-44d2-93cf-76b13ac3e76f)
+<img alt="image" src="https://github.com/user-attachments/assets/2b59735f-941e-44d2-93cf-76b13ac3e76f" />
 
 
 ## .NET Framework
@@ -973,7 +1002,7 @@ Just add single-line comment like `//language=json` before string to start using
 
 Language injection with raw json string as an example.
 
-![image](https://github.com/user-attachments/assets/2057bf66-e207-479c-8bd9-35714cdb7e24)
+<img alt="image" src="https://github.com/user-attachments/assets/2057bf66-e207-479c-8bd9-35714cdb7e24" />
 
 ### Requirements
 
@@ -1006,7 +1035,13 @@ and parsers for `sql`, `json` and `xml`, so make sure you have these parsers ins
 
 ## Nvim-dap configuration
 
+<!-- panvimdoc-ignore-start -->
+
 Check out [debugging-setup](./docs/debugging.md) for a full walkthrough of debugging setup
+
+<!-- panvimdoc-ignore-end -->
+
+<!-- panvimdoc-include-comment See |easy-dotnet-debugging.txt| for a full walkthrough of debugging setup.  -->
 
 ## Troubleshooting
 
@@ -1074,7 +1109,15 @@ Put it in a `ColorScheme` autocmd if your colorscheme is loaded after easy-dotne
 
 ## Local Development
 
+<!-- panvimdoc-ignore-start -->
+
 Check out [setup guide](./docs/server-development.md)
+
+<!-- panvimdoc-ignore-end -->
+
+<!-- panvimdoc-include-comment Check out the setup guide <https://github.com/GustavEikaas/easy-dotnet.nvim/blob/main/docs/server-development.md>  -->
+
+<!-- panvimdoc-ignore-start -->
 
 ## Star History
 
@@ -1088,6 +1131,8 @@ Check out [setup guide](./docs/server-development.md)
 <a href="https://github.com/GustavEikaas/easy-dotnet.nvim/graphs/contributors">
 <img src="https://contrib.rocks/image?repo=GustavEikaas/easy-dotnet.nvim" />
 </a>
+
+<!-- panvimdoc-ignore-end -->
 
 
 [nuget.org]: https://www.nuget.org/packages/roslyn-language-server
