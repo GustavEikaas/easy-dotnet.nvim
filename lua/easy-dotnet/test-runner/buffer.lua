@@ -305,6 +305,9 @@ function M.register_buf_keymaps(bufnr, client)
   end)
 end
 
+-- Node types testrunner/syncFile drops when it can't locate them in a saved .cs file
+local sync_prunable = { TestClass = true, TheoryGroup = true, TestMethod = true, Subcase = true }
+
 local function attach_file(filepath, client)
   local bufnr = find_buf(filepath)
   if bufnr ~= -1 and vim.api.nvim_buf_is_valid(bufnr) then
@@ -358,8 +361,10 @@ local function attach_file(filepath, client)
             state.update_line_numbers(loc)
           end
 
-          for _, node in ipairs(state.nodes_in_file(filepath)) do
-            if not live_ids[node.id] and not (node.type and node.type.type == "ProbableTest") then state.remove(node.id) end
+          if vim.endswith(filepath:lower(), ".cs") then
+            for _, node in ipairs(state.nodes_in_file(filepath)) do
+              if not live_ids[node.id] and node.type and sync_prunable[node.type.type] then state.remove(node.id) end
+            end
           end
 
           M.apply_signs(filepath)
