@@ -14,15 +14,13 @@ end
 
 local norm = state.normalize_path
 
+--- bufexists only does the exact name/file-id lookup; bufnr alone falls back to
+--- pattern matching every buffer name, which is slow when nothing matches.
 ---@param filepath string|nil
 ---@return integer bufnr or -1
 local function find_buf(filepath)
-  local target = norm(filepath)
-  if not target then return -1 end
-  for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
-    if norm(vim.api.nvim_buf_get_name(bufnr)) == target then return bufnr end
-  end
-  return -1
+  if not filepath or vim.fn.bufexists(filepath) == 0 then return -1 end
+  return vim.fn.bufnr(filepath)
 end
 
 local function get_icons()
@@ -384,7 +382,8 @@ function M.attach(filepath, client)
     local batch = pending_attach
     pending_attach = {}
     for path, c in pairs(batch) do
-      attach_file(path, c)
+      local ok, err = pcall(attach_file, path, c)
+      if not ok then logger.error(string.format("Failed to attach %s: %s", path, err)) end
     end
   end)
 end
@@ -416,10 +415,9 @@ function M.refresh_signs(project_id)
     candidates[filepath] = true
   end
 
-  state.traverse_all(function(node)
-    if not node.filePath then return end
-    if project_id == nil or node.projectId == project_id then candidates[node.filePath] = true end
-  end)
+  for _, node in pairs(state.nodes) do
+    if node.filePath and (project_id == nil or node.projectId == project_id) then candidates[node.filePath] = true end
+  end
 
   for filepath in pairs(candidates) do
     local bufnr = find_buf(filepath)
