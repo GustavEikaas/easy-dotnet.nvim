@@ -1,10 +1,31 @@
-*easy-dotnet.txt*
-                         For Neovim >= 0.11.0    Last change: 2026 November 06
+*easy-dotnet.txt*                                   .NET development in Neovim
+                         For Neovim >= 0.11.0    Last change: 2026 November 07
 
-<https://git.io/typing-svg>
+==============================================================================
+Table of Contents                              *easy-dotnet-table-of-contents*
 
-
-
+  - Simplifying .NET development in Neovim|easy-dotnet-simplifying-.net-development-in-neovim|
+  - Motivation                                        |easy-dotnet-motivation|
+  - Features                                            |easy-dotnet-features|
+  - Requirements                                    |easy-dotnet-requirements|
+  - Setup                                                  |easy-dotnet-setup|
+  - Advanced Patterns                          |easy-dotnet-advanced-patterns|
+  - Commands                                            |easy-dotnet-commands|
+  - Roslyn LSP                                        |easy-dotnet-roslyn-lsp|
+  - Test runner                                      |easy-dotnet-test-runner|
+  - Neotest                                              |easy-dotnet-neotest|
+  - Workspace Diagnostics                  |easy-dotnet-workspace-diagnostics|
+  - Outdated                                            |easy-dotnet-outdated|
+  - Add                                                      |easy-dotnet-add|
+  - Project mappings                            |easy-dotnet-project-mappings|
+  - .NET Framework                                |easy-dotnet-.net-framework|
+  - New                                                      |easy-dotnet-new|
+  - EntityFramework                              |easy-dotnet-entityframework|
+  - Language injections                      |easy-dotnet-language-injections|
+  - Nvim-dapconfiguration                  |easy-dotnet-nvim-dapconfiguration|
+  - Troubleshooting                              |easy-dotnet-troubleshooting|
+  - Highlight groups                            |easy-dotnet-highlight-groups|
+  - Local Development                          |easy-dotnet-local-development|
 
 SIMPLIFYING .NET DEVELOPMENT IN NEOVIM *easy-dotnet-simplifying-.net-development-in-neovim*
 
@@ -20,9 +41,9 @@ files without leaving the editor.
   The plugin will attempt to detect when the server is outdated and notify you.
   If you encounter any issues, please don’t hesitate to file an issue.
 
-  **Stay updated:** Major updates and new features are announced in `news.md`
-  <./news.md>. Give it a read periodically to stay in sync with the latest
-  capabilities!
+  **Stay updated:** Major updates and new features are announced in
+  |easy-dotnet-news.txt|. Give it a read periodically to stay in sync with the
+  latest capabilities!
 
 MOTIVATION                                            *easy-dotnet-motivation*
 
@@ -34,78 +55,9 @@ to bridge the gap between the convenience of IDEs like Rider and the
 flexibility of Neovim.
 
 
-TABLE OF CONTENTS                              *easy-dotnet-table-of-contents*
-
-1. Simplifying .NET development in Neovim
-2. |easy-dotnet-motivation|
-3. |easy-dotnet-features|
-4. |easy-dotnet-requirements|
-5. |easy-dotnet-setup|- Without options
-- With options
-- Lualine config
-
-
-6. |easy-dotnet-advanced-patterns|
-7. |easy-dotnet-commands|- Lua functions
-- Vim commands
-
-
-8. |easy-dotnet-roslyn-lsp|
-9. |easy-dotnet-test-runner|- Keymaps
-- Debugging tests
-- Running tests from buffer
-
-
-10. |easy-dotnet-neotest|
-
-- Requirements
-- Setup
-
-1. |easy-dotnet-workspace-diagnostics|- Commands
-- Configuration
-- Features
-
-
-2. |easy-dotnet-outdated|
-3. |easy-dotnet-add|- Add package
-
-
-4. |easy-dotnet-project-mappings|- Add reference
-- Package autocomplete
-
-
-5. |easy-dotnet-.net-framework|- Requirements
-
-
-6. |easy-dotnet-new|- Project
-- Configuration file
-- Integrating with nvim-tree
-- Integrating with neo-tree
-- Integrating with mini files
-- Integrating with snacks explorer
-
-
-7. |easy-dotnet-entityframework|- Requirements
-- Database
-- Migrations
-
-
-8. |easy-dotnet-language-injections|- Showcase
-- Requirements
-- Support matrix
-
-
-9. |easy-dotnet-nvim-dapconfiguration|
-10. |easy-dotnet-troubleshooting|
-11. |easy-dotnet-highlight-groups|
-12. |easy-dotnet-local-development|
-13. |easy-dotnet-star-history|
-14. |easy-dotnet-contributors|
-
-
 FEATURES                                                *easy-dotnet-features*
 
-- Roslyn LSP support out of the box — powered by the official .NET Roslyn language server (see LSP details <./docs/lsp.md>)
+- Roslyn LSP support out of the box — powered by the official .NET Roslyn language server (see LSP details |easy-dotnet-roslyn-lsp|)
 - Debugger configured out of the box - choose between bundled netcoredbg <https://github.com/samsung/netcoredbg>, dncdbg <https://github.com/viewizard/dncdbg> and sharpdbg <https://github.com/MattParkerDev/sharpdbg> engines
 - Solution, slnx, csproj and fsproj support: Whether its a single project or a solution containing multiple projects easy-dotnet has you covered.
 - Action Commands: Execute common tasks like building, running, testing, cleaning and restoring with ease.
@@ -392,8 +344,8 @@ ADVANCED PATTERNS                              *easy-dotnet-advanced-patterns*
 
 For a more complete Visual Studio-style setup with external run/debug
 terminals, AppWrapper window reuse, the built-in terminal panel, lualine
-status, and ProjX project-file features, see Advanced Patterns
-<./docs/advanced-patterns.md>.
+status, and ProjX project-file features, see
+|easy-dotnet-advanced-patterns.txt|.
 
 
 COMMANDS                                                *easy-dotnet-commands*
@@ -722,7 +674,7 @@ large file watcher bursts leave stale diagnostics, especially on Linux. It is
 disabled by default because it stops and starts the Roslyn client for the
 active root.
 
-For more information check out <./docs/lsp.md>
+For more information see |easy-dotnet-lsp.txt|.
 
 
 TEST RUNNER                                          *easy-dotnet-test-runner*
@@ -961,6 +913,8 @@ version and removes the virtual text). Both keymaps are configurable via
   <leader>pu   Upgrade the outdated package under the cursor
   <leader>pa   Upgrade all outdated packages in the buffer
 
+
+
 ADD                                                          *easy-dotnet-add*
 
 
@@ -968,6 +922,8 @@ ADD PACKAGE ~
 
 Adding nuget packages are available using the `:Dotnet add package` command.
 This will allow you to browse for nuget packages.
+
+
 
 
 PROJECT MAPPINGS                                *easy-dotnet-project-mappings*
@@ -980,6 +936,8 @@ ADD REFERENCE ~
 `<leader>ar` -> Opens a picker for selecting which project reference to add
 
 
+
+
 PACKAGE AUTOCOMPLETE ~
 
 Package autocomplete in `.csproj` files is provided by the ProjX LSP, which is
@@ -990,8 +948,12 @@ Older configurations that manually register the `easy-dotnet` source with
 `nvim-cmp` or `blink.cmp` should be removed.
 
 
+
+
   [!NOTE] Latest is added as a snippet to make it easier to select the latest
   version
+
+
 
 .NET FRAMEWORK                                    *easy-dotnet-.net-framework*
 
@@ -1181,6 +1143,8 @@ SHOWCASE ~
 Language injection with raw json string as an example.
 
 
+
+
 REQUIREMENTS ~
 
 This functionality is based on Treesitter
@@ -1216,8 +1180,7 @@ INTERPOLATEDSTRINGS
 
 NVIM-DAPCONFIGURATION                      *easy-dotnet-nvim-dapconfiguration*
 
-Check out debugging-setup <./docs/debugging.md> for a full walkthrough of
-debugging setup
+See |easy-dotnet-debugging.txt| for a full walkthrough of debugging setup.
 
 
 TROUBLESHOOTING                                  *easy-dotnet-troubleshooting*
@@ -1284,28 +1247,8 @@ easy-dotnet.
 
 LOCAL DEVELOPMENT                              *easy-dotnet-local-development*
 
-Check out setup guide <./docs/server-development.md>
-
-
-STAR HISTORY                                        *easy-dotnet-star-history*
-
-
-
-
-CONTRIBUTORS                                        *easy-dotnet-contributors*
-
-
-
-==============================================================================
-1. Links                                                   *easy-dotnet-links*
-
-1. *Typing SVG*: https://readme-typing-svg.demolab.com?font=Fira+Code&size=32&pause=1000&width=435&lines=easy-dotnet.nvim
-2. *image*: https://github.com/user-attachments/assets/496caec1-a18b-487a-8a37-07c4bb9fa113
-3. *image*: https://github.com/user-attachments/assets/00a9d38a-6afe-42ec-b971-04191fee1d59
-4. *image*: https://github.com/user-attachments/assets/dec096be-8a87-4dd8-aaec-8c22849d1640
-5. *image*: https://github.com/user-attachments/assets/81809aa8-704b-4481-9445-3985ddef6c98
-6. *image*: https://github.com/user-attachments/assets/2b59735f-941e-44d2-93cf-76b13ac3e76f
-7. *image*: https://github.com/user-attachments/assets/2057bf66-e207-479c-8bd9-35714cdb7e24
+Check out the setup guide
+<https://github.com/GustavEikaas/easy-dotnet.nvim/blob/main/docs/server-development.md>
 
 Generated by panvimdoc <https://github.com/kdheepak/panvimdoc>
 

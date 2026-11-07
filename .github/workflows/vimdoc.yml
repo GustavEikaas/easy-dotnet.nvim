@@ -40,10 +40,11 @@ jobs:
         with:
           vimdoc: easy-dotnet
           pandoc: README.md
+          description: ".NET development in Neovim"
           version: "Neovim >= 0.11.0"
           demojify: true
-          # README has its own "Table of Contents" heading; a generated one would duplicate its tag
-          toc: false
+          # The README's own Table of Contents is panvimdoc-ignored, so the generated one takes its place
+          toc: true
 
       # The docs pages start with a "# Title"; shifting makes it the document title instead of
       # a parent heading, which would otherwise be prepended to every tag
