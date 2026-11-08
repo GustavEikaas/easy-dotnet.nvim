@@ -412,7 +412,7 @@ function M.enable(opts)
   source_generated_autocmd()
   local cmd = { "dotnet-easydotnet", "roslyn", "start" }
   local razor_enabled = not opts.razor or opts.razor.enabled ~= false
-  local roslyn_extension_enabled = opts.easy_dotnet_extension_enabled == true or opts.enhanced_rename == true or opts.create_type_from_usage == true
+  local roslyn_extension_enabled = require("easy-dotnet.roslyn.lsp.external_access").is_enabled(opts)
 
   table.insert(cmd, "--logLevel")
   table.insert(cmd, opts.log_level)
