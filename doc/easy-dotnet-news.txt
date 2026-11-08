@@ -1,5 +1,5 @@
 *easy-dotnet-news.txt*
-                         For Neovim >= 0.11.0    Last change: 2026 November 07
+                         For Neovim >= 0.11.0    Last change: 2026 November 08
 
 ==============================================================================
 Table of Contents                         *easy-dotnet-news-table-of-contents*
