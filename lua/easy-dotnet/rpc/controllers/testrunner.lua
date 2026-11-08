@@ -2,8 +2,8 @@
 ---@field _client easy-dotnet.RPC.StreamJsonRpc
 ---@field quick_discover fun(self: easy-dotnet.RPC.Client.TestRunner, solution_path: string, cb?: fun(result: table)): easy-dotnet.RPC.CallHandle
 ---@field initialize fun(self: easy-dotnet.RPC.Client.TestRunner, solution_path: string, cb?: fun(result: table)): easy-dotnet.RPC.CallHandle
----@field run fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult), source: string): easy-dotnet.RPC.CallHandle
----@field debug fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult), source: string): easy-dotnet.RPC.CallHandle
+---@field run fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string|string[], cb?: fun(result: easy-dotnet.TestRunner.OperationResult), source: string, opts?: easy-dotnet.TestRunner.RunOpts): easy-dotnet.RPC.CallHandle
+---@field debug fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string|string[], cb?: fun(result: easy-dotnet.TestRunner.OperationResult), source: string, opts?: easy-dotnet.TestRunner.RunOpts): easy-dotnet.RPC.CallHandle
 ---@field invalidate fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb?: fun(result: easy-dotnet.TestRunner.OperationResult)): easy-dotnet.RPC.CallHandle
 ---@field cancel fun(self: easy-dotnet.RPC.Client.TestRunner): boolean
 ---@field get_results fun(self: easy-dotnet.RPC.Client.TestRunner, node_id: string, cb: fun(result: easy-dotnet.TestRunner.Results)): easy-dotnet.RPC.CallHandle
@@ -13,6 +13,9 @@
 
 ---@class easy-dotnet.TestRunner.OperationResult
 ---@field success boolean
+
+---@class easy-dotnet.TestRunner.RunOpts
+---@field on_crash? fun(err: easy-dotnet.RPC.Error) called instead of cb when the server rejects the request
 
 ---@class easy-dotnet.TestRunner.Results
 ---@field found boolean
@@ -95,29 +98,42 @@ function M:initialize(solution_path, cb)
   })()
 end
 
----@param node_id string stable server-generated node ID
+--- A list of ids runs as one server operation: each project is built once and its
+--- requested nodes run in a single test session.
+---@param node_id string|string[]
+---@param source string
+local function run_params(node_id, source)
+  if type(node_id) == "table" then return { ids = node_id, source = source } end
+  return { id = node_id, source = source }
+end
+
+---@param node_id string|string[] stable server-generated node ID(s)
 ---@param cb? fun(result: table)
 ---@param source string where the run was initiated from (e.g. "testrunner"|"buffer")
-function M:run(node_id, cb, source)
+---@param opts? easy-dotnet.TestRunner.RunOpts
+function M:run(node_id, cb, source, opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   return helper.create_rpc_call({
     client = self._client,
     method = "testrunner/run",
-    params = { id = node_id, source = source },
+    params = run_params(node_id, source),
     cb = cb,
+    on_crash = opts and opts.on_crash,
   })()
 end
 
----@param node_id string
+---@param node_id string|string[] stable server-generated node ID(s)
 ---@param cb? fun(result: table)
 ---@param source string where the debug was initiated from (e.g. "testrunner"|"buffer")
-function M:debug(node_id, cb, source)
+---@param opts? easy-dotnet.TestRunner.RunOpts
+function M:debug(node_id, cb, source, opts)
   local helper = require("easy-dotnet.rpc.dotnet-client")
   return helper.create_rpc_call({
     client = self._client,
     method = "testrunner/debug",
-    params = { id = node_id, source = source },
+    params = run_params(node_id, source),
     cb = cb,
+    on_crash = opts and opts.on_crash,
   })()
 end
 

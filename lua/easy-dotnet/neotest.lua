@@ -127,48 +127,37 @@ function M.discover_positions(file_path)
   return Tree.from_list(file_root, function(pos) return pos.id end)
 end
 
+--- Server node ids covering every position in the tree. "dir" and "file" positions only
+--- exist on the neotest side, so they are replaced by their top-most namespace/test
+--- positions, whose ids are server node ids.
+---@param tree neotest.Tree
+---@return string[]
+local function collect_node_ids(tree)
+  local pos = tree:data()
+  if pos.type == "namespace" or pos.type == "test" then return { pos.id } end
+
+  local ids = {}
+  for _, child in ipairs(tree:children()) do
+    vim.list_extend(ids, collect_node_ids(child))
+  end
+  return ids
+end
+
 ---@param args neotest.RunArgs
 ---@return neotest.RunSpec|nil
 function M.build_spec(args)
-  local root = args.tree:data()
+  local node_ids = collect_node_ids(args.tree)
+  if #node_ids == 0 then return nil end
 
   local result_ids = {}
   for _, pos in args.tree:iter() do
     if pos.type == "test" then table.insert(result_ids, pos.id) end
   end
 
-  if #result_ids == 0 then result_ids = { root.id } end
-
-  local node_id = root.id
-  local first_child = args.tree:children()[1]
-
-  if root.type == "file" then
-    node_id = first_child and first_child:data().id or root.id
-  elseif root.type == "dir" then
-    local state = require("easy-dotnet.test-runner.state")
-    local dir = vim.fn.resolve(root.id)
-
-    for _, node in pairs(state.nodes) do
-      if node.type and node.type.type == "Project" and node.filePath then
-        if vim.fn.resolve(vim.fn.fnamemodify(node.filePath, ":h")) == dir then
-          node_id = node.id
-          break
-        end
-      end
-
-      -- for typical folders neotest just assigns folder path so we need to determine
-      -- proper node id that does exist on server side  based on it
-      if node.type and node.type.type == "Namespace" and node.displayName == root.name then
-        local doesChildBelongToFolder = first_child:data().path:find(root.path, 1, true) ~= nil
-        if doesChildBelongToFolder then node_id = node.id end
-      end
-    end
-  end
-
   return {
     command = {},
     context = {
-      node_id = node_id,
+      node_ids = node_ids,
       result_ids = result_ids,
       debug = args.strategy == "dap",
     },

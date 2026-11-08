@@ -6,14 +6,13 @@ local run_queue = require("easy-dotnet.neotest.run-queue")
 ---@return neotest.Process
 return function(spec, _context)
   local client = require("easy-dotnet.rpc.rpc").global_rpc_client
-  local ctx = run_context.begin_run(spec.context.node_id, spec.context.result_ids)
+  local ctx = run_context.begin_run(spec.context.result_ids)
 
   run_queue.add(function()
-    if spec.context.debug then
-      client.testrunner:debug(spec.context.node_id, nil, "neotest")
-    else
-      client.testrunner:run(spec.context.node_id, nil, "neotest")
-    end
+    local execute = spec.context.debug and client.testrunner.debug or client.testrunner.run
+    execute(client.testrunner, spec.context.node_ids, function(result) ctx:finish(result and result.success and 0 or 1) end, "neotest", {
+      on_crash = function(err) ctx:fail(err and err.message or "Test run request failed") end,
+    })
 
     ctx.completion.wait()
   end)

@@ -138,6 +138,7 @@ M.handler = function(client, method, params)
       vim.schedule(function()
         state.update_runner_status(params)
         render.schedule_refresh()
+        require("easy-dotnet.neotest.events").emit("runnerStatus", params)
       end)
     elseif method == "updateStatusBatch" then
       local state = require("easy-dotnet.test-runner.state")
