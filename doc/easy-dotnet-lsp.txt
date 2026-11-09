@@ -1,5 +1,5 @@
 *easy-dotnet-lsp.txt*
-                         For Neovim >= 0.11.0    Last change: 2026 November 07
+                         For Neovim >= 0.11.0    Last change: 2026 November 09
 
 ==============================================================================
 Table of Contents                          *easy-dotnet-lsp-table-of-contents*
