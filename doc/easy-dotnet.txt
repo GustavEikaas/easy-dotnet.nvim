@@ -1,5 +1,5 @@
 *easy-dotnet.txt*                                   .NET development in Neovim
-                         For Neovim >= 0.11.0    Last change: 2026 November 07
+                         For Neovim >= 0.11.0    Last change: 2026 November 09
 
 ==============================================================================
 Table of Contents                              *easy-dotnet-table-of-contents*
@@ -610,6 +610,7 @@ VIM COMMANDS ~
     Dotnet diagnostic
     Dotnet diagnostic errors
     Dotnet diagnostic warnings
+    Dotnet lsp fixusings
     checkhealth easy-dotnet
 
     -- Internal
