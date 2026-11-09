@@ -42,11 +42,11 @@ function M:get_workspace_diagnostics(project_path, include_warnings, cb, opts)
   opts = opts or {}
   return helper.create_enumerate_rpc_call({
     client = self._client,
-    job = {
+    job = opts.job ~= false and {
       name = "Getting workspace diagnostics...",
       on_error_text = "Failed to get diagnostics",
       on_success_text = "Diagnostics retrieved",
-    },
+    } or nil,
     method = "roslyn/get-workspace-diagnostics",
     params = {
       targetPath = project_path,

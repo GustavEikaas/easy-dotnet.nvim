@@ -13,6 +13,10 @@ local default_document_message_handlers = {
   "EasyDotnet.RoslynLanguageServices.CreateType.CreateTypeFromUsageMessageHandler",
 }
 
+local default_workspace_message_handlers = {
+  "EasyDotnet.RoslynLanguageServices.Diagnostics.WorkspaceDiagnosticsMessageHandler",
+}
+
 local function contains(values, value)
   for _, candidate in ipairs(values or {}) do
     if candidate == value then return true end
@@ -32,13 +36,15 @@ end
 
 local function document_handler_available(activation, message_name) return contains(activation and activation.document_message_handlers, message_name) end
 
+local function workspace_handler_available(activation, message_name) return contains(activation and activation.workspace_message_handlers, message_name) end
+
 local function extension_path(info) return info and (info.easyDotnetRoslynLanguageServicesPath or info.EasyDotnetRoslynLanguageServicesPath) end
 
 local function is_already_registered_error(err) return format_error(err):lower():find("already registered", 1, true) ~= nil end
 
 local function registered_activation()
   return {
-    workspace_message_handlers = {},
+    workspace_message_handlers = default_workspace_message_handlers,
     document_message_handlers = default_document_message_handlers,
   }
 end
@@ -151,7 +157,7 @@ local function activate(client, cb)
   end)
 end
 
-function M.dispatch_document(client, bufnr, message_name, message, cb)
+local function dispatch_message(client, method, params, bufnr, is_available, cb)
   local function dispatch(retried)
     activate(client, function(activation_err, activation)
       if activation_err then
@@ -159,19 +165,12 @@ function M.dispatch_document(client, bufnr, message_name, message, cb)
         return
       end
 
-      if not document_handler_available(activation, message_name) then
-        warn_missing_document_handler_once(client, message_name)
+      if not is_available(activation) then
         cb(nil, nil)
         return
       end
 
-      client:request("textDocument/_vs_dispatchExtensionMessage", {
-        textDocument = {
-          uri = vim.uri_from_bufnr(bufnr),
-        },
-        messageName = message_name,
-        message = vim.json.encode(message),
-      }, function(err, result)
+      client:request(method, params, function(err, result)
         if err then
           cb(err)
           return
@@ -206,6 +205,36 @@ function M.dispatch_document(client, bufnr, message_name, message, cb)
 
   dispatch(false)
 end
+
+function M.dispatch_document(client, bufnr, message_name, message, cb)
+  local params = {
+    textDocument = {
+      uri = vim.uri_from_bufnr(bufnr),
+    },
+    messageName = message_name,
+    message = vim.json.encode(message),
+  }
+
+  local function is_available(activation)
+    if document_handler_available(activation, message_name) then return true end
+    warn_missing_document_handler_once(client, message_name)
+    return false
+  end
+
+  dispatch_message(client, "textDocument/_vs_dispatchExtensionMessage", params, bufnr, is_available, cb)
+end
+
+---Calls cb(nil, nil) when the loaded extension does not provide the handler
+function M.dispatch_workspace(client, message_name, message, cb)
+  dispatch_message(client, "workspace/_vs_dispatchExtensionMessage", {
+    messageName = message_name,
+    message = vim.json.encode(message),
+  }, nil, function(activation) return workspace_handler_available(activation, message_name) end, cb)
+end
+
+---@param lsp_opts table
+---@return boolean
+function M.is_enabled(lsp_opts) return lsp_opts.easy_dotnet_extension_enabled == true or lsp_opts.enhanced_rename == true or lsp_opts.create_type_from_usage == true end
 
 function M.verify_document_handler(client, message_name)
   activate(client, function(err, activation)

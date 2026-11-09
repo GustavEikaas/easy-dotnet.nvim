@@ -783,7 +783,7 @@ require("easy-dotnet").setup({
 ### Features
 
 - **Solution/Project Selection**: When multiple projects or solutions are available, you'll be prompted to select which one to analyze
-- **Roslyn Integration**: Uses the Roslyn Language Server Protocol for accurate diagnostics
+- **Roslyn Integration**: Uses the Roslyn Language Server Protocol for accurate diagnostics. With `lsp.easy_dotnet_extension_enabled`, diagnostics are computed inside the running Roslyn language server (requires `roslyn-language-server` 5.13.0-1.26507.4 or newer); otherwise they are computed by the easy-dotnet server
 - **Neovim Diagnostics Integration**: Results are populated into Neovim's built-in diagnostic system, allowing you to:
   - Navigate between diagnostics using `:lua vim.diagnostic.goto_next()` and `:lua vim.diagnostic.goto_prev()`
   - View diagnostics in the quickfix list using `:lua vim.diagnostic.setqflist()` (or automatically if configured)
