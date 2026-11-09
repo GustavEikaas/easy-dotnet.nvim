@@ -590,6 +590,14 @@ M._server = {
   },
 }
 
+M.lsp = {
+  subcommands = {
+    fixusings = {
+      handle = function() require("easy-dotnet.roslyn.lsp.remove_unnecessary_usings")() end,
+    },
+  },
+}
+
 M.diagnostic = {
   handle = function() require("easy-dotnet.actions.diagnostics").get_workspace_diagnostics() end,
   subcommands = {
