@@ -61,12 +61,7 @@ function M.filter_dir(name, _rel_path, _root) return not vim.tbl_contains({ "bin
 function M.is_test_file(file_path)
   if not vim.endswith(file_path, ".cs") then return false end
   if not await_initialization() then return false end
-  local state = require("easy-dotnet.test-runner.state")
-  local norm = vim.fn.resolve(file_path)
-  for _, node in pairs(state.nodes) do
-    if node.filePath and vim.fn.resolve(node.filePath) == norm then return true end
-  end
-  return false
+  return require("easy-dotnet.test-runner.state").has_nodes_in_file(file_path)
 end
 
 ---@param file_path string

@@ -101,7 +101,7 @@ M.handler = function(client, method, params)
       vim.schedule(function()
         state.register(params.test)
         if params.test.filePath then buffer.attach(params.test.filePath, client) end
-        render.refresh()
+        render.schedule_refresh()
         require("easy-dotnet.neotest.events").emit("registerTest", params.test)
       end)
     elseif method == "removeTest" then
@@ -111,9 +111,9 @@ M.handler = function(client, method, params)
       if not params or not params.id then return end
       vim.schedule(function()
         local node = state.nodes[params.id]
-        state.nodes[params.id] = nil
+        state.remove(params.id)
         if node and node.filePath then buffer.apply_signs(node.filePath) end
-        render.refresh()
+        render.schedule_refresh()
       end)
     elseif method == "updateStatus" then
       local state = require("easy-dotnet.test-runner.state")

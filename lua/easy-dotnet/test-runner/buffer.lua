@@ -12,9 +12,14 @@ local function neotest_integration()
   return ok and opts.get_option("test_runner").neotest_integration == true
 end
 
-local function norm(path)
-  if not path then return nil end
-  return vim.fs.normalize(path)
+local norm = state.normalize_path
+
+--- bufexists guards bufnr's slow pattern-match fallback when no buffer matches.
+---@param filepath string|nil
+---@return integer bufnr or -1
+local function find_buf(filepath)
+  if not filepath or vim.fn.bufexists(filepath) == 0 then return -1 end
+  return vim.fn.bufnr(filepath)
 end
 
 local function get_icons()
@@ -44,19 +49,15 @@ local function flash_method(bufnr, sig_line, end_line, hl_group, duration)
   end, duration or 300)
 end
 
+-- Node types testrunner/syncFile drops when it can't locate them in a saved .cs file
+local sync_prunable = { TestClass = true, TheoryGroup = true, TestMethod = true, Subcase = true }
+
 local function nodes_for_file(filepath)
   local result = {}
-  local npath = norm(filepath)
-  state.traverse_all(function(node)
-    if
-      norm(node.filePath) == npath
-      and node.type
-      and (node.type.type == "TestMethod" or node.type.type == "Subcase" or node.type.type == "TheoryGroup" or node.type.type == "TestClass" or node.type.type == "ProbableTest")
-      and node.signatureLine ~= nil
-    then
-      table.insert(result, node)
-    end
-  end)
+  for _, node in ipairs(state.nodes_in_file(filepath)) do
+    local node_type = node.type and node.type.type
+    if (sync_prunable[node_type] or node_type == "ProbableTest") and node.signatureLine ~= nil then table.insert(result, node) end
+  end
   return result
 end
 
@@ -98,7 +99,6 @@ local function aggregate_status(nodes)
 end
 
 local function node_at_line(filepath, line)
-  local npath = norm(filepath)
   local groups = group_nodes_by_line(filepath)
 
   local best_nodes, best_sig, best_fin = nil, nil, nil
@@ -113,23 +113,23 @@ local function node_at_line(filepath, line)
   if best_nodes then return best_nodes, best_sig, best_fin end
 
   local class_match, class_sig, class_fin = nil, nil, nil
-  state.traverse_all(function(node)
-    if class_match then return end
-    if norm(node.filePath) == npath and node.type and node.type.type == "TestClass" then
+  for _, node in ipairs(state.nodes_in_file(filepath)) do
+    if node.type and node.type.type == "TestClass" then
       local children = state.children(node.id)
-      if #children == 0 then return end
-      local first_line, last_line = math.huge, 0
-      for _, child in ipairs(children) do
-        if child.signatureLine then first_line = math.min(first_line, child.signatureLine) end
-        if child.endLine then last_line = math.max(last_line, child.endLine) end
-      end
-      if line >= first_line and line <= last_line then
-        class_match = node
-        class_sig = first_line
-        class_fin = last_line
+      if #children > 0 then
+        local first_line, last_line = math.huge, 0
+        for _, child in ipairs(children) do
+          if child.signatureLine then first_line = math.min(first_line, child.signatureLine) end
+          if child.endLine then last_line = math.max(last_line, child.endLine) end
+        end
+        if line >= first_line and line <= last_line and (class_fin == nil or (last_line - first_line) < (class_fin - class_sig)) then
+          class_match = node
+          class_sig = first_line
+          class_fin = last_line
+        end
       end
     end
-  end)
+  end
   return class_match and { class_match } or nil, class_sig, class_fin
 end
 
@@ -189,7 +189,7 @@ end
 
 function M.apply_signs(filepath)
   if neotest_integration() then return end
-  local bufnr = vim.fn.bufnr(filepath)
+  local bufnr = find_buf(filepath)
   if bufnr == -1 or not vim.api.nvim_buf_is_valid(bufnr) then return end
 
   vim.api.nvim_buf_clear_namespace(bufnr, ns_signs, 0, -1)
@@ -203,7 +203,7 @@ end
 
 function M.update_sign(node)
   if not node.filePath or node.signatureLine == nil then return end
-  local bufnr = vim.fn.bufnr(node.filePath)
+  local bufnr = find_buf(node.filePath)
   if bufnr == -1 or not vim.api.nvim_buf_is_valid(bufnr) then return end
 
   local groups = group_nodes_by_line(node.filePath)
@@ -268,12 +268,12 @@ function M.register_buf_keymaps(bufnr, client)
   map(km.run_all_tests_from_buffer and km.run_all_tests_from_buffer.lhs or "<leader>t", "Run all tests in file", function()
     local filepath = norm(vim.api.nvim_buf_get_name(bufnr))
     local seen, project_ids = {}, {}
-    state.traverse_all(function(node)
-      if norm(node.filePath) == filepath and node.projectId and not seen[node.projectId] then
+    for _, node in ipairs(state.nodes_in_file(filepath)) do
+      if node.projectId and not seen[node.projectId] then
         seen[node.projectId] = true
         table.insert(project_ids, node.projectId)
       end
-    end)
+    end
     if #project_ids == 0 then
       logger.warn("No tests found in this file")
       return
@@ -301,10 +301,8 @@ function M.register_buf_keymaps(bufnr, client)
   end)
 end
 
-function M.attach(filepath, client)
-  if not filepath then return end
-
-  local bufnr = vim.fn.bufnr(filepath)
+local function attach_file(filepath, client)
+  local bufnr = find_buf(filepath)
   if bufnr ~= -1 and vim.api.nvim_buf_is_valid(bufnr) then
     if not neotest_integration() then
       M.apply_signs(filepath)
@@ -356,15 +354,37 @@ function M.attach(filepath, client)
             state.update_line_numbers(loc)
           end
 
-          state.traverse_all(function(node)
-            if norm(node.filePath) == norm(filepath) and not live_ids[node.id] and not (node.type and node.type.type == "ProbableTest") then state.remove(node.id) end
-          end)
+          if vim.endswith(filepath:lower(), ".cs") then
+            for _, node in ipairs(state.nodes_in_file(filepath)) do
+              if not live_ids[node.id] and node.type and sync_prunable[node.type.type] then state.remove(node.id) end
+            end
+          end
 
           M.apply_signs(filepath)
+          require("easy-dotnet.test-runner.render").schedule_refresh()
         end)
       end,
     })
   end
+end
+
+local pending_attach = {}
+
+---@param filepath string|nil
+---@param client table
+function M.attach(filepath, client)
+  if not filepath then return end
+  local flush_queued = next(pending_attach) ~= nil
+  pending_attach[filepath] = client
+  if flush_queued then return end
+  vim.schedule(function()
+    local batch = pending_attach
+    pending_attach = {}
+    for path, c in pairs(batch) do
+      local ok, err = pcall(attach_file, path, c)
+      if not ok then logger.error(string.format("Failed to attach %s: %s", path, err)) end
+    end
+  end)
 end
 
 function M.on_status_update(node)
@@ -378,7 +398,7 @@ function M.on_status_update(node)
     local hl = sign_hl_for[stype_norm]
     if not hl then return end
 
-    local bufnr = vim.fn.bufnr(node.filePath or "")
+    local bufnr = find_buf(node.filePath)
     if bufnr == -1 or not vim.api.nvim_buf_is_valid(bufnr) then return end
 
     flash_method(bufnr, node.signatureLine, node.endLine, hl, 500)
@@ -394,14 +414,12 @@ function M.refresh_signs(project_id)
     candidates[filepath] = true
   end
 
-  state.traverse_all(function(node)
-    if not node.filePath then return end
-    if project_id == nil or node.projectId == project_id then candidates[node.filePath] = true end
-  end)
+  for _, node in pairs(state.nodes) do
+    if node.filePath and (project_id == nil or node.projectId == project_id) then candidates[node.filePath] = true end
+  end
 
   for filepath in pairs(candidates) do
-    local bufnr = vim.fn.bufnr(filepath)
-    if bufnr == -1 then bufnr = vim.fn.bufnr(norm(filepath) or filepath) end
+    local bufnr = find_buf(filepath)
     if bufnr ~= -1 and vim.api.nvim_buf_is_valid(bufnr) then
       vim.api.nvim_buf_clear_namespace(bufnr, ns_signs, 0, -1)
       extmark_ids[filepath] = {}
@@ -412,7 +430,7 @@ end
 
 function M.clear_all()
   for filepath in pairs(extmark_ids) do
-    local bufnr = vim.fn.bufnr(filepath)
+    local bufnr = find_buf(filepath)
     if bufnr ~= -1 and vim.api.nvim_buf_is_valid(bufnr) then vim.api.nvim_buf_clear_namespace(bufnr, ns_signs, 0, -1) end
   end
   extmark_ids = {}
