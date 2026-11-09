@@ -63,6 +63,9 @@ local sorted_children = {}
 -- normalized file path → set of node ids
 ---@type table<string, table<string, true>>
 local file_index = {}
+-- normalized file path → nodes sorted by id, built lazily by M.nodes_in_file
+---@type table<string, easy-dotnet.TestRunner.Node[]>
+local sorted_file_nodes = {}
 -- raw path → normalized path with symlinks resolved
 ---@type table<string, string>
 local normalized_paths = {}
@@ -87,17 +90,6 @@ function M.normalize_path(path)
   return normalized
 end
 
---- True if the node's ancestor chain reaches the root, i.e. traverse_all visits it.
----@param node easy-dotnet.TestRunner.Node
----@return boolean
-local function in_tree(node)
-  while node.parentId do
-    node = M.nodes[node.parentId]
-    if not node then return false end
-  end
-  return node.id == M.root_id
-end
-
 ---@param node easy-dotnet.TestRunner.Node
 local function index_node(node)
   if node.parentId then
@@ -117,6 +109,7 @@ local function index_node(node)
       file_index[path] = file_nodes
     end
     file_nodes[node.id] = true
+    sorted_file_nodes[path] = nil
   end
 end
 
@@ -128,8 +121,10 @@ local function unindex_node(node)
     sorted_children[node.parentId] = nil
   end
   if node.filePath then
-    local file_nodes = file_index[M.normalize_path(node.filePath)]
+    local path = M.normalize_path(node.filePath)
+    local file_nodes = file_index[path]
     if file_nodes then file_nodes[node.id] = nil end
+    sorted_file_nodes[path] = nil
   end
 end
 
@@ -152,12 +147,23 @@ function M.register(node)
   if node.parentId == nil then M.root_id = node.id end
 end
 
---- Remove a node from the state.
+--- Remove a node and all of its descendants from the state.
 ---@param id string
 function M.remove(id)
-  local node = M.nodes[id]
-  if node then unindex_node(node) end
-  M.nodes[id] = nil
+  local stack = { id }
+  while #stack > 0 do
+    local current = table.remove(stack)
+    local node = M.nodes[current]
+    if node then
+      unindex_node(node)
+      M.nodes[current] = nil
+      for child_id in pairs(children_index[current] or {}) do
+        table.insert(stack, child_id)
+      end
+      children_index[current] = nil
+      sorted_children[current] = nil
+    end
+  end
 end
 
 --- Update cached status for a node. nil status = reset to idle.
@@ -207,24 +213,35 @@ function M.children(parent_id)
   return result
 end
 
---- Returns every node in the tree whose filePath matches the given path, ordered by id.
+--- Returns every node whose filePath matches the given path, ordered by id.
+--- The returned list is cached until the file's nodes change; do not mutate it.
 ---@param path string
 ---@return easy-dotnet.TestRunner.Node[]
 function M.nodes_in_file(path)
+  local normalized = M.normalize_path(path)
+  local cached = sorted_file_nodes[normalized]
+  if cached then return cached end
+
   local result = {}
-  for id in pairs(file_index[M.normalize_path(path)] or {}) do
+  for id in pairs(file_index[normalized] or {}) do
     local node = M.nodes[id]
-    if node and in_tree(node) then table.insert(result, node) end
+    if node then table.insert(result, node) end
   end
   table.sort(result, function(a, b) return a.id < b.id end)
+  sorted_file_nodes[normalized] = result
   return result
 end
+
+---@param path string
+---@return boolean
+function M.has_nodes_in_file(path) return next(file_index[M.normalize_path(path)] or {}) ~= nil end
 
 function M.clear()
   M.nodes = {}
   children_index = {}
   sorted_children = {}
   file_index = {}
+  sorted_file_nodes = {}
   normalized_paths = {}
   M.root_id = nil
   M.initialized = false

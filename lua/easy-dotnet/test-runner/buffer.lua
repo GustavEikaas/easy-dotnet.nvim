@@ -14,8 +14,7 @@ end
 
 local norm = state.normalize_path
 
---- bufexists only does the exact name/file-id lookup; bufnr alone falls back to
---- pattern matching every buffer name, which is slow when nothing matches.
+--- bufexists guards bufnr's slow pattern-match fallback when no buffer matches.
 ---@param filepath string|nil
 ---@return integer bufnr or -1
 local function find_buf(filepath)
@@ -50,16 +49,14 @@ local function flash_method(bufnr, sig_line, end_line, hl_group, duration)
   end, duration or 300)
 end
 
+-- Node types testrunner/syncFile drops when it can't locate them in a saved .cs file
+local sync_prunable = { TestClass = true, TheoryGroup = true, TestMethod = true, Subcase = true }
+
 local function nodes_for_file(filepath)
   local result = {}
   for _, node in ipairs(state.nodes_in_file(filepath)) do
-    if
-      node.type
-      and (node.type.type == "TestMethod" or node.type.type == "Subcase" or node.type.type == "TheoryGroup" or node.type.type == "TestClass" or node.type.type == "ProbableTest")
-      and node.signatureLine ~= nil
-    then
-      table.insert(result, node)
-    end
+    local node_type = node.type and node.type.type
+    if (sync_prunable[node_type] or node_type == "ProbableTest") and node.signatureLine ~= nil then table.insert(result, node) end
   end
   return result
 end
@@ -125,11 +122,10 @@ local function node_at_line(filepath, line)
           if child.signatureLine then first_line = math.min(first_line, child.signatureLine) end
           if child.endLine then last_line = math.max(last_line, child.endLine) end
         end
-        if line >= first_line and line <= last_line then
+        if line >= first_line and line <= last_line and (class_fin == nil or (last_line - first_line) < (class_fin - class_sig)) then
           class_match = node
           class_sig = first_line
           class_fin = last_line
-          break
         end
       end
     end
@@ -305,9 +301,6 @@ function M.register_buf_keymaps(bufnr, client)
   end)
 end
 
--- Node types testrunner/syncFile drops when it can't locate them in a saved .cs file
-local sync_prunable = { TestClass = true, TheoryGroup = true, TestMethod = true, Subcase = true }
-
 local function attach_file(filepath, client)
   local bufnr = find_buf(filepath)
   if bufnr ~= -1 and vim.api.nvim_buf_is_valid(bufnr) then
@@ -368,6 +361,7 @@ local function attach_file(filepath, client)
           end
 
           M.apply_signs(filepath)
+          require("easy-dotnet.test-runner.render").schedule_refresh()
         end)
       end,
     })
