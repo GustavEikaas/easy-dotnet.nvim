@@ -563,6 +563,7 @@ Dotnet terminal hide
 Dotnet diagnostic
 Dotnet diagnostic errors
 Dotnet diagnostic warnings
+Dotnet lsp fixusings
 checkhealth easy-dotnet
 
 -- Internal 
