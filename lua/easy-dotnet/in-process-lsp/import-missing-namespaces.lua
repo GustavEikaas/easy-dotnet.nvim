@@ -20,20 +20,21 @@ local diagnostics_for_initial_check = {
   CS1061 = true, -- no definition / no accessible extension method
 }
 
-local function get_roslyn_client(bufnr)
-  for _, client in ipairs(vim.lsp.get_clients({ bufnr = bufnr })) do
-    local client_name = client.name:lower()
-    if client_name:match(constants.lsp_client_name) then return client end
-  end
-end
+local using_pattern = "^using%s+([%w_%.]+);$"
+
+local function get_roslyn_client(bufnr) return vim.lsp.get_clients({ bufnr = bufnr, name = constants.lsp_client_name })[1] end
 
 local function get_target_diagnostics(bufnr)
   local result = {}
+  local seen_message = {}
 
   for _, d in ipairs(vim.diagnostic.get(bufnr)) do
     local code = tostring(d.code)
 
-    if diagnostics_for_code_action[code] then table.insert(result, d) end
+    if diagnostics_for_code_action[code] and not seen_message[d.message] then
+      seen_message[d.message] = true
+      table.insert(result, d)
+    end
   end
 
   return result
@@ -45,7 +46,7 @@ local function get_existing_using_block(lines)
   local end_line = nil
 
   for i, line in ipairs(lines) do
-    if line:match("^using%s+[%w%.]+;$") then
+    if line:match(using_pattern) then
       start_line = start_line or (i - 1)
       end_line = i
       table.insert(items, vim.trim(line))
@@ -55,6 +56,15 @@ local function get_existing_using_block(lines)
   end
 
   return items, start_line, end_line
+end
+
+local function is_system_namespace(ns) return ns == "System" or vim.startswith(ns, "System.") end
+
+local function compare_usings(a, b)
+  local ns_a, ns_b = a:match(using_pattern), b:match(using_pattern)
+  local system_a, system_b = is_system_namespace(ns_a), is_system_namespace(ns_b)
+  if system_a ~= system_b then return system_a end
+  return ns_a < ns_b
 end
 
 local function merge_usings(existing, added)
@@ -75,64 +85,41 @@ local function merge_usings(existing, added)
   add(existing)
   add(added)
 
-  table.sort(merged, function(a, b) return a < b end)
+  table.sort(merged, compare_usings)
 
   return merged
 end
 
 local function apply_using_block(bufnr, new_usings)
-  local uri = vim.uri_from_bufnr(bufnr)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local existing, start_line, end_line = get_existing_using_block(lines)
   local merged = merge_usings(existing, new_usings)
 
-  local new_text = table.concat(merged, "\n") .. "\n"
-
   if not start_line then
+    table.insert(merged, "")
     start_line = 0
     end_line = 0
-    new_text = new_text .. "\n"
   end
 
-  local edit = {
-    changes = {
-      [uri] = {
-        {
-          range = {
-            start = { line = start_line, character = 0 },
-            ["end"] = { line = end_line, character = 0 },
-          },
-          newText = new_text,
-        },
-      },
-    },
-  }
-
-  vim.lsp.util.apply_workspace_edit(edit, "utf-8")
+  vim.api.nvim_buf_set_lines(bufnr, start_line, end_line, false, merged)
 end
 
 local function request_actions_for_diag(bufnr, client, diag, cb)
+  ---@type lsp.Diagnostic
+  local lsp_diag = vim.lsp.diagnostic.from({ diag })[1]
+
   ---@type lsp.CodeActionParams
-  local params = vim.lsp.util.make_range_params(0, client.offset_encoding)
-
-  params.range = {
-    start = {
-      line = diag.lnum,
-      character = diag.col,
-    },
-    ["end"] = {
-      line = diag.end_lnum or diag.lnum,
-      character = diag.end_col or (diag.col + 1),
+  local params = {
+    textDocument = { uri = vim.uri_from_bufnr(bufnr) },
+    range = lsp_diag.range,
+    context = {
+      diagnostics = { lsp_diag },
+      only = { "quickfix" },
+      triggerKind = vim.lsp.protocol.CodeActionTriggerKind.Invoked,
     },
   }
 
-  params.context = {
-    diagnostics = { diag },
-    kind = { "quickfix" },
-    trigger = 1,
-  }
-
-  client:request("textDocument/codeAction", params, function(err, actions)
+  local sent = client:request("textDocument/codeAction", params, function(err, actions)
     if err or not actions then
       cb({})
       return
@@ -142,7 +129,7 @@ local function request_actions_for_diag(bufnr, client, diag, cb)
 
     for _, action in ipairs(actions) do
       local title = action.title
-      if title and title:match("^using%s+[%w%.]+;$") then table.insert(result, title) end
+      if title and title:match(using_pattern) then table.insert(result, title) end
     end
 
     local has_multiple_potential_namespaces = #result > 1
@@ -153,6 +140,8 @@ local function request_actions_for_diag(bufnr, client, diag, cb)
 
     cb(result)
   end, bufnr)
+
+  if not sent then cb({}) end
 end
 
 local function has_multiple_missing_import_diagnostic(bufnr)
@@ -196,7 +185,14 @@ function M.run(bufnr)
   local function finish()
     pending = pending - 1
 
-    if pending == 0 then apply_using_block(bufnr, collected) end
+    if pending > 0 then return end
+
+    if #collected == 0 then
+      logger.info("No unambiguous namespaces to import")
+      return
+    end
+
+    if vim.api.nvim_buf_is_valid(bufnr) then apply_using_block(bufnr, collected) end
   end
 
   for _, diag in ipairs(diagnostics) do

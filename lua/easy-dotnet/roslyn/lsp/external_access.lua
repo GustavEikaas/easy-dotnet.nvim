@@ -165,7 +165,7 @@ function M.dispatch_document(client, bufnr, message_name, message, cb)
         return
       end
 
-      client:request("textDocument/_vs_dipatchExtensionMessage", {
+      client:request("textDocument/_vs_dispatchExtensionMessage", {
         textDocument = {
           uri = vim.uri_from_bufnr(bufnr),
         },
