@@ -72,6 +72,10 @@ M.handler = function(client, method, params)
       handle_project_changed()
     elseif method == "activeProject/changed" then
       require("easy-dotnet.active-project").set(params)
+    elseif method == "buildConfiguration/changed" then
+      local build_configuration = require("easy-dotnet.build-configuration")
+      build_configuration.set(params)
+      vim.schedule(function() build_configuration.apply_to_lsp() end)
     elseif method == "runningProcesses/changed" then
       vim.schedule(function() require("easy-dotnet.running-sessions").set(params) end)
     elseif method == "displayError" then
