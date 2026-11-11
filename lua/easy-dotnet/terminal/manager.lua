@@ -92,6 +92,8 @@ function M.remove(id)
   local jid = Tab.job_id(tab)
   if jid then pcall(vim.fn.jobstop, jid) end
 
+  require("easy-dotnet.terminal.sessions").close_by_slot(id)
+
   table.remove(M._tabs, pos)
   M._tab_index[id] = nil
 
